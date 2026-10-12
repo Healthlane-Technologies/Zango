@@ -179,6 +179,42 @@ pages:
       honoraria awaiting advisory output, spend this quarter against the franchise budget.
       Below: spend by therapy area and event type (stacked bar), spend by state (bar), upcoming
       events with accepted vs capacity, and HCPs within 10% of their annual transfer-of-value cap.
+    preview: |
+      const ev = ctx.rows('event'), inv = ctx.rows('invitation'), sp = ctx.rows('spend_line'), hcps = ctx.rows('hcp'), outs = ctx.rows('advisory_output');
+      const now = new Date(), qS = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1), qE = new Date(qS.getFullYear(), qS.getMonth() + 3, 1);
+      const inQ = d => d && new Date(d) >= qS && new Date(d) < qE, sum = (rs, k) => rs.reduce((a, r) => a + (+r[k] || 0), 0), opts = k => ctx.entity('event').fields.find(f => f.key === k).opts || [];
+      const inr = v => v >= 1e7 ? '₹' + (v / 1e7).toFixed(2) + ' Cr' : v >= 1e5 ? '₹' + (v / 1e5).toFixed(1) + ' L' : '₹' + Math.round(v).toLocaleString('en-IN');
+      const qEv = ev.filter(e => e.status !== 'cancelled' && e.start_date && new Date(e.start_date) < qE && new Date(e.end_date || e.start_date) >= qS), qSpend = sum(sp.filter(s => inQ(s.incurred_on)), 'amount'), qBud = sum(qEv, 'budget'), pct = qBud ? Math.round(100 * qSpend / qBud) : 0;
+      const asked = inv.filter(i => ['sent', 'accepted', 'declined'].includes(i.status)), acc = asked.filter(i => i.status === 'accepted').length;
+      const hon = sp.filter(s => s.category === 'honorarium' && !outs.some(o => o.event === s.event && o.hcp === s.hcp && ['submitted', 'accepted'].includes(o.status)));
+      const evOf = id => ev.find(e => e.id === id) || {}, types = opts('event_type'), tas = opts('therapy_area'), regs = opts('region'), pal = ['#1570EF', '#7A5AF8', '#12B76A', '#F79009', '#EE46BC'];
+      const ta = tas.map(t => ({ label: t.label, segs: types.map(y => sum(sp.filter(s => evOf(s.event).therapy_area === t.id && evOf(s.event).event_type === y.id), 'amount')) })).map(t => ({ ...t, v: t.segs.reduce((a, b) => a + b, 0) }));
+      const st = regs.map(r => ({ label: r.label, v: sum(sp.filter(s => evOf(s.event).region === r.id), 'amount') })), tTop = Math.max(1, ...ta.map(t => t.v)), sTop = Math.max(1, ...st.map(s => s.v));
+      const up = ev.filter(e => ['approved', 'open'].includes(e.status) && new Date(e.end_date || e.start_date) >= new Date(now.toDateString())).sort((a, b) => String(a.start_date).localeCompare(String(b.start_date)));
+      const accOf = e => inv.filter(i => i.event === e.id && i.status === 'accepted').length || +e.accepted_count || 0;
+      const capNear = hcps.filter(h => +h.annual_cap && +h.ytd_spend >= 0.9 * +h.annual_cap).sort((a, b) => b.ytd_spend / b.annual_cap - a.ytd_spend / a.annual_cap);
+      const bar = (label, v, top, inner) => `<div style="display:grid;grid-template-columns:90px 1fr 64px;gap:10px;align-items:center;font-size:13px"><b style="font-weight:550">${ctx.esc(label)}</b><div style="display:flex;height:12px;border-radius:4px;overflow:hidden;background:#F2F4F7;width:${Math.max(2, Math.round(100 * v / top))}%">${inner}</div><span class="pv-muted" style="text-align:right">${inr(v)}</span></div>`;
+      return `
+      <div class="pv-kpis">
+        <div class="pv-kpi" data-go="events"><span>Events this quarter</span><b>${qEv.length}</b></div>
+        <div class="pv-kpi" data-go="events"><span>Awaiting compliance approval</span><b style="color:#B54708">${ev.filter(e => e.status === 'review').length}</b></div>
+        <div class="pv-kpi" data-go="invitations"><span>RSVP acceptance</span><b>${asked.length ? Math.round(100 * acc / asked.length) : 0}%</b><span>${acc} of ${asked.length} invited</span></div>
+        <div class="pv-kpi" data-go="outputs"><span>Honoraria awaiting advisory output</span><b>${hon.length}</b><span>${inr(sum(hon, 'amount'))} on hold</span></div>
+        <div class="pv-kpi" data-go="spend"><span>Spend this quarter vs franchise budget</span><b>${inr(qSpend)}</b><div class="pv-bar" style="margin-top:6px"><i style="width:${Math.min(100, pct)}%;${pct > 100 ? 'background:#D92D20' : ''}"></i></div><span>${pct}% of ${inr(qBud)}</span></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:12px;align-items:start">
+        <div class="d-panel"><h3>${ctx.icon('bar-chart-3')}Spend by therapy area and event type</h3><div style="padding:12px 16px;display:flex;flex-direction:column;gap:10px">${ta.map(t => bar(t.label, t.v, tTop, t.segs.map((s, j) => `<i style="width:${t.v ? 100 * s / t.v : 0}%;background:${pal[j % 5]}"></i>`).join(''))).join('')}
+          <div class="pv-muted" style="display:flex;flex-wrap:wrap;gap:10px">${types.map((y, j) => `<span><i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${pal[j % 5]}"></i> ${ctx.esc(y.label)}</span>`).join('')}</div></div></div>
+        <div class="d-panel"><h3>${ctx.icon('map')}Spend by state</h3><div style="padding:12px 16px;display:flex;flex-direction:column;gap:10px">${st.map(s => bar(s.label, s.v, sTop, '<i style="width:100%;background:var(--brand)"></i>')).join('')}</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:12px;align-items:start">
+        <div class="d-panel"><h3>${ctx.icon('calendar-days')}Upcoming events<span class="sp"></span><span class="pv-badge">${up.length}</span></h3><table class="z-t"><thead><tr><th>Event</th><th>Date</th><th style="width:32%">Accepted / capacity</th></tr></thead><tbody>${up.slice(0, 6).map(e => { const a = accOf(e), c = +e.capacity || 0; return `
+          <tr class="click" data-go="event_360:${e.id}"><td><b style="font-weight:550">${ctx.esc(e.title)}</b><div class="pv-muted">${ctx.esc(ctx.fmt(e, 'event_type'))} · ${ctx.esc(ctx.fmt(e, 'therapy_area'))} · ${ctx.esc(ctx.fmt(e, 'venue') || e.city || '')}</div></td><td>${ctx.esc(ctx.fmt(e, 'start_date'))}</td>
+            <td><div class="pv-bar"><i style="width:${c ? Math.min(100, Math.round(100 * a / c)) : 0}%"></i></div><span class="pv-muted">${a} / ${c || '—'}</span></td></tr>`; }).join('') || '<tr><td colspan="3" class="pv-muted">No approved events coming up.</td></tr>'}</tbody></table></div>
+        <div class="d-panel"><h3>${ctx.icon('shield-alert')}HCPs near their annual cap<span class="sp"></span><span class="pv-badge">${capNear.length}</span></h3><div style="padding:10px 14px;display:flex;flex-direction:column;gap:8px">${capNear.slice(0, 6).map(h => { const u = Math.round(100 * h.ytd_spend / h.annual_cap); return `
+          <div class="pv-card" data-go="hcp_360:${h.id}"><div style="display:flex;justify-content:space-between;gap:8px"><b style="font-weight:550">${ctx.esc(h.full_name)}</b><span style="color:${u >= 100 ? '#B42318' : '#B54708'};font-weight:600;font-size:12px">${u}% used</span></div>
+            <span class="pv-muted">${ctx.esc(ctx.fmt(h, 'speciality'))} · ${inr(+h.ytd_spend)} of ${inr(+h.annual_cap)}${h.government_official ? ' · Govt official' : ''}</span><div class="pv-bar"><i style="width:${Math.min(100, u)}%;background:${u >= 100 ? '#D92D20' : '#F79009'}"></i></div></div>`; }).join('') || '<span class="pv-muted">No HCP is within 10% of their cap.</span>'}</div></div>
+      </div>`;
 
 modules:
   - code: masters

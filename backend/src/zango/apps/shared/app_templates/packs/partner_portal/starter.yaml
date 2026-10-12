@@ -104,6 +104,40 @@ pages:
     route: /app/dashboard
     title: Dashboard
     component: PartnerDashboard
+    preview: |
+      const PT = ctx.entity('partner'), R = ctx.entity('partner_request'), partners = ctx.rows('partner'), reqs = ctx.rows('partner_request'), docs = ctx.rows('partner_document'), sc = ctx.rows('sla_scorecard');
+      const D = 864e5, now = new Date(), today = now.toISOString().slice(0, 10), ym = d => d.toISOString().slice(0, 7);
+      const open = reqs.filter(r => ['new', 'in_progress', 'awaiting_partner'].includes(r.status)), pOf = id => partners.find(p => p.id === id) || {};
+      const per = s => /^\d{4}-\d{2}$/.test(s.period) ? s.period : String(s.created_at || '').slice(0, 7);
+      const periods = [...new Set(sc.map(per).filter(Boolean))].sort().reverse(), cur = periods.includes(ym(now)) ? ym(now) : periods[0], prev = periods[periods.indexOf(cur) + 1];
+      const met = p => { const rs = sc.filter(s => per(s) === p), n = rs.reduce((a, s) => a + (+s.requests_resolved || 0), 0); return n ? rs.reduce((a, s) => a + (+s.met_pct || 0) * (+s.requests_resolved || 0), 0) / n : rs.length ? rs.reduce((a, s) => a + (+s.met_pct || 0), 0) / rs.length : null; };
+      const mNow = met(cur), mPrev = met(prev), delta = mNow != null && mPrev != null ? Math.round(mNow - mPrev) : null;
+      const states = R.fmap.sla_state.opts.filter(o => o.id !== 'met'), cols = { on_track: '#12B76A', at_risk: '#F79009', breached: '#F04438' };
+      const byType = PT.fmap.partner_type.opts.map(t => ({ label: t.label, n: states.map(s => open.filter(r => pOf(r.partner).partner_type === t.id && r.sla_state === s.id).length) })).filter(t => t.n.some(Boolean));
+      const top = Math.max(1, ...byType.map(t => t.n.reduce((a, b) => a + b, 0)));
+      const exp = docs.filter(d => d.valid_until && !['expired', 'rejected'].includes(d.status) && d.valid_until >= today && (new Date(d.valid_until) - now) / D <= 30).sort((a, b) => a.valid_until.localeCompare(b.valid_until));
+      const near = open.filter(r => r.due_at).sort((a, b) => String(a.due_at).localeCompare(String(b.due_at))).slice(0, 10);
+      const left = r => { const h = Math.round((new Date(r.due_at) - now) / 36e5); return h < 0 ? `<b style="color:#B42318;font-weight:600">${-h < 48 ? -h + 'h' : Math.round(-h / 24) + 'd'} over</b>` : h < 24 ? `<span style="color:#B54708;font-weight:550">${h}h left</span>` : Math.round(h / 24) + 'd left'; };
+      const badge = r => { const s = R.fmap.sla_state.opts.find(o => o.id === r.sla_state); if (!s) return ''; const [b, f] = ctx.tone(s.color); return `<span class="pv-badge" style="background:${b};color:${f};border-color:${b}">${ctx.esc(s.label)}</span>`; };
+      return `
+      <div class="pv-kpis">
+        <div class="pv-kpi" data-go="partners"><span>Active partners</span><b>${partners.filter(p => p.status === 'active').length}</b></div>
+        <div class="pv-kpi" data-go="partners"><span>Partners in onboarding</span><b>${partners.filter(p => ['invited', 'onboarding', 'under_review'].includes(p.status)).length}</b></div>
+        <div class="pv-kpi" data-go="requests"><span>Open requests</span><b>${open.length}</b><span style="color:${open.some(r => r.sla_state === 'breached') ? '#B42318' : 'inherit'}">${open.filter(r => r.sla_state === 'breached').length} breached</span></div>
+        <div class="pv-kpi" data-go="scorecards"><span>SLA met${cur ? ' · ' + ctx.esc(cur) : ''}</span><b>${mNow == null ? '—' : Math.round(mNow) + '%'}</b><span style="color:${delta == null ? 'inherit' : delta >= 0 ? '#067647' : '#B42318'}">${delta == null ? 'no earlier month' : (delta >= 0 ? '▲ ' : '▼ ') + Math.abs(delta) + ' pts vs ' + ctx.esc(prev)}</span></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:12px;align-items:start">
+        <div class="d-panel"><h3>${ctx.icon('bar-chart-3')}Open requests by SLA state<span class="sp"></span>${states.map(s => `<span class="pv-muted" style="margin-left:10px"><i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${cols[s.id]}"></i> ${ctx.esc(s.label)}</span>`).join('')}</h3>
+          <div style="padding:12px 16px;display:flex;flex-direction:column;gap:10px">${byType.map(t => `
+            <div style="display:grid;grid-template-columns:130px 1fr 24px;gap:10px;align-items:center;font-size:13px"><span>${ctx.esc(t.label)}</span>
+              <div style="display:flex;height:14px;border-radius:4px;overflow:hidden;width:${100 * t.n.reduce((a, b) => a + b, 0) / top}%">${t.n.map((n, j) => n ? `<i style="flex:${n};background:${cols[states[j].id]}"></i>` : '').join('')}</div><b style="font-weight:550;text-align:right">${t.n.reduce((a, b) => a + b, 0)}</b></div>`).join('') || '<span class="pv-muted">No open requests.</span>'}</div></div>
+        <div class="d-panel"><h3>${ctx.icon('file-clock')}Documents expiring in 30 days<span class="sp"></span><span class="pv-badge">${exp.length}</span></h3>
+          <div style="padding:10px 14px;display:flex;flex-direction:column;gap:8px">${exp.slice(0, 5).map(d => `
+            <div class="pv-card" data-go="partner_360:${d.partner}"><div style="display:flex;justify-content:space-between"><b style="font-weight:550">${ctx.esc(ctx.fmt(d, 'doc_type'))}</b><span style="color:#B54708;font-weight:550;font-size:12px">${Math.ceil((new Date(d.valid_until) - now) / D)} days</span></div><span class="pv-muted">${ctx.esc(ctx.fmt(d, 'partner'))} · valid until ${ctx.esc(ctx.fmt(d, 'valid_until'))}</span></div>`).join('') || '<span class="pv-muted">Nothing expires in the next 30 days.</span>'}</div></div>
+      </div>
+      <div class="d-panel"><h3>${ctx.icon('alarm-clock')}Closest to breach</h3>
+        <table class="z-t"><thead><tr><th>Request</th><th>Partner</th><th>Subject</th><th>Priority</th><th>Resolve by</th><th>SLA</th></tr></thead><tbody>${near.map(r => `
+          <tr class="click" data-go="partner_360:${r.partner}"><td><span class="z-link">${ctx.esc(r.request_ref)}</span></td><td>${ctx.esc(ctx.fmt(r, 'partner'))}</td><td>${ctx.esc(r.subject)}</td><td>${ctx.esc(ctx.fmt(r, 'priority'))}</td><td>${left(r)}</td><td>${badge(r)}</td></tr>`).join('') || '<tr><td colspan="6" class="pv-muted">No open requests.</td></tr>'}</tbody></table></div>`;
     roles: [Partner Manager, Partner Ops]
     text: >
       KPI row: active partners, partners in onboarding, open requests, SLA met % this month

@@ -166,6 +166,36 @@ pages:
       source (stacked bar, last 12 weeks), open cases by business unit and category (heat table),
       spend at issue by month, and the 10 employees with the most signals in the last 90 days
       linking to employee_360. Business Reviewers see only their business unit's cases.
+    preview: |
+      const SG = ctx.rows('signal'), CS = ctx.rows('compliance_case'), FD = ctx.rows('finding'), EM = ctx.rows('employee');
+      const now = new Date(), today = now.toISOString().slice(0, 10), age = d => (now - new Date(d)) / 864e5, opt = (e, f) => ctx.entity(e).fields.find(x => x.key === f).opts || [];
+      const inr = n => '₹' + (n >= 1e7 ? (n / 1e7).toFixed(1) + ' Cr' : n >= 1e5 ? (n / 1e5).toFixed(1) + ' L' : Math.round(n).toLocaleString('en-IN'));
+      const tw = SG.filter(s => age(s.created_at) < 7).length, lw = SG.filter(s => age(s.created_at) >= 7 && age(s.created_at) < 14).length, chg = lw ? Math.round(100 * (tw - lw) / lw) : null;
+      const open = CS.filter(c => !['closed', 'no_action'].includes(c.status)), past = open.filter(c => c.due_date && c.due_date < today);
+      const qs = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1).toISOString().slice(0, 10), shut = CS.filter(c => c.outcome && ['closed', 'no_action'].includes(c.status)), shutQ = shut.filter(c => c.closed_on >= qs), base = shutQ.length ? shutQ : shut;
+      const subst = base.length ? Math.round(100 * base.filter(c => ['substantiated', 'partial'].includes(c.outcome)).length / base.length) : null;
+      const remPast = FD.filter(f => ['planned', 'in_progress'].includes(f.status) && f.action_due && f.action_due < today).length;
+      const SRC = opt('signal', 'source'), wks = [...Array(12)].map((_, i) => 11 - i), byW = wks.map(w => SRC.map(s => SG.filter(g => g.source === s.id && Math.floor(age(g.created_at) / 7) === w).length)), wmax = Math.max(1, ...byW.map(a => a.reduce((x, y) => x + y, 0)));
+      const BU = opt('compliance_case', 'business_unit'), CAT = opt('compliance_case', 'category'), heat = (b, c) => open.filter(x => x.business_unit === b && x.category === c).length, hmax = Math.max(1, ...BU.flatMap(b => CAT.map(c => heat(b.id, c.id))));
+      const months = [...Array(6)].map((_, i) => new Date(now.getFullYear(), now.getMonth() - 5 + i, 15).toISOString().slice(0, 7)), spend = months.map(m => CS.filter(c => String(c.opened_on).slice(0, 7) === m).reduce((t, c) => t + (+c.spend_at_issue || 0), 0)), smax = Math.max(1, ...spend);
+      const top = EM.map(e => ({ e, n: SG.filter(s => s.employee === e.id && age(s.created_at) <= 90).length })).filter(x => x.n).sort((a, b) => b.n - a.n).slice(0, 10);
+      const panel = (icon, title, body) => `<div class="d-panel"><h3>${ctx.icon(icon)}${title}</h3>${body}</div>`;
+      return `
+      <div class="pv-kpis">
+        <div class="pv-kpi" data-go="signals"><span>New signals this week</span><b>${tw}</b><span style="color:${chg > 0 ? '#B42318' : '#067647'}">${chg == null ? `${lw} last week` : `${chg > 0 ? '+' : ''}${chg}% on last week`}</span></div>
+        <div class="pv-kpi" data-go="cases"><span>Open cases</span><b>${open.length}</b></div>
+        <div class="pv-kpi" data-go="cases"><span>Cases past due</span><b style="color:${past.length ? '#B42318' : 'inherit'}">${past.length}</b></div>
+        <div class="pv-kpi"><span>Substantiation rate${shutQ.length ? ', this quarter' : ''}</span><b>${subst == null ? '—' : subst + '%'}</b><div class="pv-bar" style="margin-top:8px"><i style="width:${subst || 0}%"></i></div></div>
+        <div class="pv-kpi" data-go="findings"><span>Remediation past due</span><b style="color:${remPast ? '#B42318' : 'inherit'}">${remPast}</b></div>
+      </div>
+      <div style="display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:12px;align-items:start">
+        ${panel('activity', `Signals by week and source<span class="sp"></span>${SRC.map(s => `<span class="pv-muted" style="margin-left:8px"><i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${ctx.tone(s.color)[1]}"></i> ${ctx.esc(s.label)}</span>`).join('')}`, !SG.length ? '<div class="pv-muted" style="padding:40px 16px;text-align:center">No signals visible to this role.</div>' : `<div style="display:flex;align-items:flex-end;gap:6px;height:150px;padding:14px 16px 4px">${byW.map((a, i) => `<div title="${wks[i]} weeks ago" style="flex:1;display:flex;flex-direction:column-reverse;height:${100 * a.reduce((x, y) => x + y, 0) / wmax}%;min-height:2px;border-radius:4px 4px 0 0;overflow:hidden;background:#F2F4F7">${a.map((n, k) => n ? `<i style="flex:${n};background:${ctx.tone(SRC[k].color)[1]}"></i>` : '').join('')}</div>`).join('')}</div><div class="pv-muted" style="display:flex;justify-content:space-between;padding:0 16px 10px"><span>12 weeks ago</span><span>this week</span></div>`)}
+        ${panel('grid-3x3', 'Open cases by category and BU', `<table class="z-t" style="table-layout:fixed"><colgroup><col style="width:38%"></colgroup><thead><tr><th></th>${BU.map(b => `<th style="text-align:center;font-size:11px;padding:8px 2px;white-space:normal">${ctx.esc(b.label)}</th>`).join('')}</tr></thead><tbody>${CAT.map(c => `<tr><td style="font-size:12.5px;font-weight:550">${ctx.esc(c.label)}</td>${BU.map(b => { const n = heat(b.id, c.id); return `<td style="text-align:center;padding:4px 3px"><div data-go="cases" style="border-radius:6px;padding:6px 0;font-weight:600;background:${n ? `rgba(217,45,32,${(0.12 + 0.6 * n / hmax).toFixed(2)})` : '#F9FAFB'};color:${n / hmax > .6 ? '#fff' : n ? '#7A271A' : '#D0D5DD'}">${n || '·'}</div></td>`; }).join('')}</tr>`).join('')}</tbody></table>`)}
+      </div>
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:12px;align-items:start">
+        ${panel('indian-rupee', 'Spend at issue by month', `<div style="padding:12px 16px;display:flex;flex-direction:column;gap:9px">${months.map((m, i) => `<div style="display:grid;grid-template-columns:60px 1fr 80px;gap:10px;align-items:center;font-size:13px"><span class="pv-muted">${new Date(m + '-15').toLocaleDateString('en-IN', { month: 'short', year: '2-digit' })}</span><div class="pv-bar" style="height:10px"><i style="width:${100 * spend[i] / smax}%"></i></div><b style="text-align:right;font-weight:600">${inr(spend[i])}</b></div>`).join('')}</div>`)}
+        ${panel('user-search', 'Most signals, last 90 days', `<table class="z-t"><thead><tr><th>Employee</th><th>BU</th><th>Region</th><th>Signals</th></tr></thead><tbody>${top.map(x => `<tr class="click" data-go="employee_360:${x.e.id}"><td><b style="font-weight:550">${ctx.esc(x.e.full_name)}</b> <span class="pv-muted">${ctx.esc(x.e.employee_code)}</span></td><td>${ctx.esc(ctx.fmt(x.e, 'business_unit'))}</td><td>${ctx.esc(ctx.fmt(x.e, 'region'))}</td><td><b>${x.n}</b></td></tr>`).join('') || '<tr><td colspan="4" class="pv-muted">No signals in the last 90 days.</td></tr>'}</tbody></table>`)}
+      </div>`;
 
 modules:
   - code: masters

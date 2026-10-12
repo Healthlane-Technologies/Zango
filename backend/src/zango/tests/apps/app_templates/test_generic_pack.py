@@ -173,3 +173,26 @@ class SpecExtensionTests(AppTemplatesTestBase):
         self.assertTrue(any("gantt" in m for m in messages), messages)
         self.assertIn("preview is not allowed here.", messages)
         self.assertIn("views is not allowed here.", messages)
+
+    def test_an_unsketched_custom_screen_warns_and_blocks_mark_ready(self):
+        from zango.apps.agent_mode.spec_tools import SpecWorkbench, ToolRefused
+        from zango.apps.shared.app_templates.services.spec.validate import validate_doc
+
+        doc = self.doc()
+        dashboard = next(p for p in doc["pages"] if p["code"] == "dashboard")
+        self.assertTrue(dashboard.get("preview"))  # the example ships a sketch
+        dashboard.pop("preview")
+        doc["detail_views"][0]["tabs"].append({"code": "board", "label": "Board", "type": "custom"})
+        found = {i["rule"] for i in validate_doc(doc, self.view) if i.get("rule")}
+        self.assertIn("custom_page_preview", found)
+        self.assertIn("custom_tab_preview", found)
+
+        import yaml
+
+        bench = SpecWorkbench(yaml.safe_dump(doc, sort_keys=False), self.view, emit=lambda e: None)
+        with self.assertRaises(ToolRefused) as refused:
+            bench.mark_ready("done")
+        self.assertIn("sketch these custom screens", str(refused.exception))
+
+        sketched = SpecWorkbench(self.view.example_yaml, self.view, emit=lambda e: None)
+        self.assertIn("Marked ready", sketched.mark_ready("done"))

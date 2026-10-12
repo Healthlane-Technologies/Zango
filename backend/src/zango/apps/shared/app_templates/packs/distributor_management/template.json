@@ -1,7 +1,7 @@
 {
   "slug": "distributor-management",
   "name": "Distributor Management",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "category": "Traceability & Supply Chain",
   "icon": "truck",
   "is_beta": false,
@@ -38,26 +38,75 @@
   "catalogue": {
     "description": "A distributor management system for manufacturers that sell through distributors: onboard and KYC distributors, collect weekly secondary sales and stock from each of them, watch stock days and near-expiry by region, and run trade schemes whose claims move from the distributor through the area sales manager to commercial ops and on to SAP as credit notes. Distributors sign in to see only their own uploads, stock and claims.",
     "packages": [
-      { "name": "workflow", "description": "Onboarding, upload review, scheme and claim lifecycles" },
-      { "name": "crm", "description": "Distributor master, contacts and the distributor 360 page" },
-      { "name": "forms", "description": "Onboarding, upload and claim forms with validation and duplicate checks" },
-      { "name": "documents", "description": "KYC documents, sales files and claim supporting sheets" },
-      { "name": "reports", "description": "Secondary sales, stock days and near-expiry by region" },
-      { "name": "integrations", "description": "Masters and credit notes exchanged with the ERP" }
+      {
+        "name": "workflow",
+        "description": "Onboarding, upload review, scheme and claim lifecycles"
+      },
+      {
+        "name": "crm",
+        "description": "Distributor master, contacts and the distributor 360 page"
+      },
+      {
+        "name": "forms",
+        "description": "Onboarding, upload and claim forms with validation and duplicate checks"
+      },
+      {
+        "name": "documents",
+        "description": "KYC documents, sales files and claim supporting sheets"
+      },
+      {
+        "name": "reports",
+        "description": "Secondary sales, stock days and near-expiry by region"
+      },
+      {
+        "name": "integrations",
+        "description": "Masters and credit notes exchanged with the ERP"
+      }
     ],
     "roles": [
-      { "name": "Distributor", "description": "External login: uploads secondary sales and stock and raises claims for its own business only" },
-      { "name": "Area sales manager", "description": "Onboards distributors in the area, reviews uploads and approves claims" },
-      { "name": "Commercial ops", "description": "Approves KYC, runs schemes, validates and settles claims, and watches stock and expiry by region" }
+      {
+        "name": "Distributor",
+        "description": "External login: uploads secondary sales and stock and raises claims for its own business only"
+      },
+      {
+        "name": "Area sales manager",
+        "description": "Onboards distributors in the area, reviews uploads and approves claims"
+      },
+      {
+        "name": "Commercial ops",
+        "description": "Approves KYC, runs schemes, validates and settles claims, and watches stock and expiry by region"
+      }
     ],
     "workflows": [
-      { "name": "Distributor onboarding", "description": "KYC documents, review, approval and a distributor login on activation" },
-      { "name": "Secondary sales upload", "description": "Weekly file or API upload, parsing with error rows, review and acceptance" },
-      { "name": "Stock & expiry tracking", "description": "Stock by product and batch, expiry buckets and near-expiry alerts" },
-      { "name": "Claims & schemes", "description": "Scheme launch and close; claims approved by the area manager, validated by commercial ops and settled as credit notes" }
+      {
+        "name": "Distributor onboarding",
+        "description": "KYC documents, review, approval and a distributor login on activation"
+      },
+      {
+        "name": "Secondary sales upload",
+        "description": "Weekly file or API upload, parsing with error rows, review and acceptance"
+      },
+      {
+        "name": "Stock & expiry tracking",
+        "description": "Stock by product and batch, expiry buckets and near-expiry alerts"
+      },
+      {
+        "name": "Claims & schemes",
+        "description": "Scheme launch and close; claims approved by the area manager, validated by commercial ops and settled as credit notes"
+      }
     ],
-    "data_objects": ["Distributor", "Invoice", "Stock position", "Scheme", "Claim", "Product", "KYC document"],
-    "integrations": ["SAP connector"],
+    "data_objects": [
+      "Distributor",
+      "Invoice",
+      "Stock position",
+      "Scheme",
+      "Claim",
+      "Product",
+      "KYC document"
+    ],
+    "integrations": [
+      "SAP connector"
+    ],
     "compliance": [
       "Drug licence validity checked before activation and tracked for expiry",
       "GSTIN and drug licence duplicate checks on onboarding",
@@ -69,5 +118,5 @@
     "app_name_prefill": "Distributor Hub — West",
     "app_prompt_prefill": "Distributor management for 140 distributors across West India. Distributors upload secondary sales and stock weekly, area managers approve scheme claims, and commercial ops sees stock and near-expiry by region."
   },
-  "changelog": "First version: distributor onboarding, secondary sales and stock uploads, near-expiry visibility, schemes and claims on the Zango app spec v1."
+  "changelog": "Preview sketches for every custom screen (dashboards, custom tabs and panels)."
 }

@@ -148,6 +148,41 @@ pages:
       week, grouped by area sales manager. Bottom: the 10 largest near-expiry batches with
       distributor, product, batch, expiry and value, and a stock-days heatmap (region x division).
       Area Sales Managers see only their own distributors.
+    preview: |
+      const dist = ctx.rows('distributor'), up = ctx.rows('sales_upload'), stock = ctx.rows('stock_position'), prods = ctx.rows('product'), claims = ctx.rows('claim');
+      const now = new Date(), days = d => d ? Math.floor((now - new Date(d)) / 864e5) : 1e9, mk = d => String(d || '').slice(0, 7), sum = (rs, k) => rs.reduce((a, r) => a + (+r[k] || 0), 0);
+      const inr = v => v >= 1e7 ? '₹' + (v / 1e7).toFixed(2) + ' Cr' : v >= 1e5 ? '₹' + (v / 1e5).toFixed(1) + ' L' : '₹' + Math.round(v).toLocaleString('en-IN');
+      const opts = (e, k) => ctx.entity(e).fields.find(f => f.key === k).opts || [], D = id => dist.find(d => d.id === id) || {};
+      const months = [5, 4, 3, 2, 1, 0].map(i => { const d = new Date(now.getFullYear(), now.getMonth() - i, 15); return { k: mk(d.toISOString()), label: d.toLocaleString('en', { month: 'short' }) }; });
+      const live = up.filter(u => u.status !== 'rejected'), regs = opts('distributor', 'region'), pal = ['#1570EF', '#7A5AF8', '#12B76A', '#F79009', '#EE46BC', '#06AED4', '#98A2B3', '#F04438'];
+      const cell = (m, r) => sum(live.filter(u => mk(u.week_closing) === m && D(u.distributor).region === r), 'sales_value');
+      const tot = months.map(m => sum(live.filter(u => mk(u.week_closing) === m.k), 'sales_value')), top = Math.max(1, ...tot), cur = tot[5], prev = tot[4], chg = prev ? Math.round(100 * (cur - prev) / prev) : null;
+      const near = stock.filter(s => s.expiry_date && -days(s.expiry_date) >= 0 && -days(s.expiry_date) < 90).sort((a, b) => (+b.stock_value || 0) - (+a.stock_value || 0));
+      const open = claims.filter(c => ['submitted', 'asm_approved', 'query', 'approved'].includes(c.status));
+      const missing = dist.filter(d => d.status === 'active' && !up.some(u => u.distributor === d.id && u.status === 'accepted' && days(u.week_closing) <= 14)), byAsm = {};
+      missing.forEach(d => (byAsm[ctx.fmt(d, 'area_manager') || 'Unassigned'] = byAsm[ctx.fmt(d, 'area_manager') || 'Unassigned'] || []).push(d));
+      const divs = opts('product', 'division'), heat = (r, v) => { const ds = [...new Set(stock.filter(s => D(s.distributor).region === r && (prods.find(p => p.id === s.product) || {}).division === v).map(s => s.distributor))].map(D); return ds.length ? Math.round(sum(ds, 'stock_days') / ds.length) : null; };
+      const hc = n => n == null ? '#F9FAFB' : n > 45 ? '#FEE4E2' : n > 30 ? '#FEF0C7' : '#DCFAE6';
+      return `
+      <div class="pv-kpis">
+        <div class="pv-kpi" data-go="distributors"><span>Active distributors</span><b>${dist.filter(d => d.status === 'active').length} <small class="pv-muted" style="font-weight:400">of ${dist.length}</small></b></div>
+        <div class="pv-kpi" data-go="sales_uploads"><span>Secondary sales, ${months[5].label}</span><b>${inr(cur)}</b><span style="color:${!cur || chg == null ? '#667085' : chg >= 0 ? '#067647' : '#B42318'}">${!cur ? 'no uploads yet this month' : chg == null ? 'no sales last month' : (chg >= 0 ? '▲ ' : '▼ ') + Math.abs(chg) + '% vs ' + months[4].label}</span></div>
+        <div class="pv-kpi" data-go="stock"><span>Near-expiry stock (&lt; 90 days)</span><b style="color:#B54708">${inr(sum(near, 'stock_value'))}</b><span>${near.length} batches</span></div>
+        <div class="pv-kpi" data-go="claims"><span>Open claims</span><b>${open.length}</b><span>${inr(sum(open, 'claimed_amount'))} claimed</span></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:12px;align-items:start">
+        <div class="d-panel"><h3>${ctx.icon('bar-chart-3')}Secondary sales by region, last 6 months</h3>
+          <div style="padding:12px 16px;display:flex;flex-direction:column;gap:9px">${months.map((m, i) => `<div style="display:grid;grid-template-columns:36px 1fr 70px;gap:10px;align-items:center;font-size:13px"><b style="font-weight:550">${m.label}</b>
+            <div style="display:flex;height:14px;border-radius:4px;overflow:hidden;background:#F2F4F7;width:${Math.max(2, Math.round(100 * tot[i] / top))}%">${regs.map((r, j) => `<i title="${ctx.esc(r.label)}" style="width:${tot[i] ? 100 * cell(m.k, r.id) / tot[i] : 0}%;background:${pal[j % 8]}"></i>`).join('')}</div><span class="pv-muted" style="text-align:right">${inr(tot[i])}</span></div>`).join('')}
+            <div class="pv-muted" style="display:flex;flex-wrap:wrap;gap:10px">${regs.map((r, j) => `<span><i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${pal[j % 8]}"></i> ${ctx.esc(r.label)}</span>`).join('')}</div></div></div>
+        <div class="d-panel"><h3>${ctx.icon('upload')}No accepted upload for last week<span class="sp"></span><span class="pv-badge">${missing.length}</span></h3>
+          <div style="padding:10px 14px;display:flex;flex-direction:column;gap:10px">${Object.entries(byAsm).map(([a, ds]) => `<div><div class="pv-muted" style="font-weight:600;margin-bottom:4px">${ctx.esc(a)} · ${ds.length}</div>${ds.map(d => `<div class="pv-card" data-go="distributor_360:${d.id}" style="margin-bottom:6px"><div style="display:flex;justify-content:space-between"><b style="font-weight:550">${ctx.esc(d.name)}</b><span class="pv-muted">${ctx.esc(ctx.fmt(d, 'region'))}</span></div><span class="pv-muted">Last upload ${ctx.esc(ctx.fmt(d, 'last_upload_on') || 'never')}</span></div>`).join('')}</div>`).join('') || '<span class="pv-muted">All active distributors are compliant.</span>'}</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:12px;align-items:start">
+        <div class="d-panel"><h3>${ctx.icon('hourglass')}10 largest near-expiry batches</h3><table class="z-t"><thead><tr><th>Distributor</th><th>Product</th><th>Batch</th><th>Expiry</th><th>Value</th></tr></thead><tbody>${near.slice(0, 10).map(s => `
+          <tr class="click" data-go="distributor_360:${s.distributor}"><td>${ctx.esc(ctx.fmt(s, 'distributor'))}</td><td>${ctx.esc(ctx.fmt(s, 'product'))}</td><td>${ctx.esc(s.batch_no)}</td><td style="color:#B54708;font-weight:550">${ctx.esc(ctx.fmt(s, 'expiry_date'))} · ${-days(s.expiry_date)}d</td><td>${inr(+s.stock_value || 0)}</td></tr>`).join('') || '<tr><td colspan="5" class="pv-muted">No batches expire in the next 90 days.</td></tr>'}</tbody></table></div>
+        <div class="d-panel"><h3>${ctx.icon('grid-3x3')}Stock days, region × division</h3><table class="z-t"><thead><tr><th></th>${divs.map(v => `<th>${ctx.esc(v.label)}</th>`).join('')}</tr></thead><tbody>${regs.map(r => `<tr><td><b style="font-weight:550">${ctx.esc(r.label)}</b></td>${divs.map(v => { const n = heat(r.id, v.id); return `<td style="background:${hc(n)};text-align:center">${n == null ? '<span class="pv-muted">–</span>' : n}</td>`; }).join('')}</tr>`).join('')}</tbody></table></div>
+      </div>`;
 
 # -----------------------------------------------------------------------------
 #  MODULES

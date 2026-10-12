@@ -1,7 +1,7 @@
 {
   "slug": "hcp-sampling",
   "name": "HCP Sampling",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "category": "Commercial Operations",
   "icon": "gift",
   "is_beta": false,
@@ -119,5 +119,5 @@
     "app_name_prefill": "Sample Desk",
     "app_prompt_prefill": "Sampling app where HCPs request samples through reps, sample ops allocates stock by territory, the HCP signs on delivery, and compliance reconciles quarterly."
   },
-  "changelog": "Column format number; courier tracking via a tracking_url field, so the build checker passes."
+  "changelog": "Preview sketches for every custom screen (dashboards, custom tabs and panels)."
 }

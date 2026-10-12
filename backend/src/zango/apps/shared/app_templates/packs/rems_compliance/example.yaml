@@ -167,12 +167,80 @@ roles:
       - { page: assessment_report, icon: file-bar-chart }
 
 pages:
-  - { code: dashboard,         type: custom, route: /app/dashboard, title: REMS Dashboard, component: RemsDashboard,
-      roles: [REMS Coordinator],
-      text: "KPI row: certified prescribers, certified pharmacies, enrolled patients (and how many are females of reproductive potential), authorizations in the last 7 days with the share granted. Below: a queue of certifications and enrollments awaiting review oldest first; a bar chart of denials by reason for the last 30 days; open critical non-compliance findings; and recertifications due in the next 60 days." }
-  - { code: assessment_report, type: custom, route: /app/reports/assessment, title: REMS Assessment Report, component: AssessmentReport,
-      roles: [REMS Coordinator],
-      text: "Pick a reporting period (default the last 6 months). Shows the FDA REMS assessment metrics: stakeholders certified and decertified, patients enrolled by category and channel, authorizations requested, granted and denied by reason, median time to decision, dispenses outside an authorization, pregnancies reported, and non-compliance events by type, severity and outcome. Export as Excel." }
+  - code: dashboard
+    type: custom
+    route: /app/dashboard
+    title: REMS Dashboard
+    component: RemsDashboard
+    roles: [REMS Coordinator]
+    text: "KPI row: certified prescribers, certified pharmacies, enrolled patients (and how many are females of reproductive potential), authorizations in the last 7 days with the share granted. Below: a queue of certifications and enrollments awaiting review oldest first; a bar chart of denials by reason for the last 30 days; open critical non-compliance findings; and recertifications due in the next 60 days."
+    preview: |
+      const pres = ctx.rows('prescriber'), phs = ctx.rows('pharmacy'), pts = ctx.rows('patient'), auths = ctx.rows('dispense_authorization'), ncs = ctx.rows('noncompliance_event');
+      const now = new Date(), age = d => Math.floor((now - new Date(d)) / 864e5), until = d => d ? Math.round((new Date(d) - now) / 864e5) : null;
+      const wk = auths.filter(a => age(a.created_at) <= 7), dec = wk.filter(a => !['requested', 'referred'].includes(a.status)), granted = dec.filter(a => ['authorized', 'dispensed', 'expired'].includes(a.status));
+      const queue = [...pres.filter(p => p.status === 'under_review').map(p => ({ kind: 'Prescriber', name: p.full_name, at: p.created_at, go: 'prescriber_360:' + p.id })),
+        ...phs.filter(p => p.status === 'under_review').map(p => ({ kind: 'Pharmacy', name: p.legal_name, at: p.created_at, go: 'pharmacy_360:' + p.id })),
+        ...pts.filter(p => p.status === 'pending_review').map(p => ({ kind: 'Patient', name: p.rems_id + ' · ' + ctx.fmt(p, 'category'), at: p.created_at, go: 'patient_360:' + p.id }))].sort((a, b) => String(a.at).localeCompare(String(b.at)));
+      const reasons = ctx.entity('dispense_authorization').fields.find(f => f.key === 'denial_reason').opts, denied = auths.filter(a => a.status === 'denied');
+      const d30 = denied.filter(a => age(a.created_at) <= 30), den = d30.length ? d30 : denied, byR = reasons.map(o => [o.label, den.filter(a => a.denial_reason === o.id).length]).concat([['Reason not recorded', den.filter(a => !a.denial_reason).length]]).filter((x, i, all) => x[1] || i < all.length - 1), top = Math.max(1, ...byR.map(x => x[1]));
+      const crit = ncs.filter(n => n.severity === 'critical' && n.status !== 'closed').sort((a, b) => String(a.detected_on).localeCompare(String(b.detected_on)));
+      const recert = [...pres.map(p => ({ name: p.full_name, who: 'Prescriber', d: p.recert_due, st: p.status, go: 'prescriber_360:' + p.id })), ...phs.map(p => ({ name: p.legal_name, who: 'Pharmacy', d: p.recert_due, st: p.status, go: 'pharmacy_360:' + p.id }))]
+        .filter(x => x.st === 'certified' && until(x.d) !== null && until(x.d) >= 0 && until(x.d) <= 60).sort((a, b) => String(a.d).localeCompare(String(b.d)));
+      const panel = (icon, title, n, body) => `<div class="d-panel"><h3>${ctx.icon(icon)}${title}<span class="sp"></span>${n == null ? '' : `<span class="pv-badge">${n}</span>`}</h3>${body}</div>`;
+      return `
+      <div class="pv-kpis">
+        <div class="pv-kpi" data-go="prescribers"><span>Certified prescribers</span><b>${pres.filter(p => p.status === 'certified').length}</b><span>${pres.filter(p => p.status === 'under_review').length} under review</span></div>
+        <div class="pv-kpi" data-go="pharmacies"><span>Certified pharmacies</span><b>${phs.filter(p => p.status === 'certified').length}</b><span>${phs.filter(p => p.status === 'under_review').length} under review</span></div>
+        <div class="pv-kpi" data-go="patients"><span>Enrolled patients</span><b>${pts.filter(p => p.status === 'enrolled').length}</b><span>${pts.filter(p => p.status === 'enrolled' && p.category === 'frp').length} females of reproductive potential</span></div>
+        <div class="pv-kpi" data-go="authorizations"><span>Authorizations, last 7 days</span><b>${wk.length}</b><span>${dec.length ? Math.round(100 * granted.length / dec.length) + '% granted' : 'none decided yet'}</span></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1.25fr 1fr;gap:12px;align-items:start">
+        ${panel('inbox', 'Awaiting review, oldest first', queue.length, `<table class="z-t"><thead><tr><th>Type</th><th>Name</th><th>Submitted</th><th>Waiting</th></tr></thead><tbody>${queue.slice(0, 7).map(q => `
+          <tr class="click" data-go="${q.go}"><td>${q.kind}</td><td>${ctx.esc(q.name)}</td><td>${ctx.esc(String(q.at).slice(0, 10))}</td><td style="font-weight:550;color:${age(q.at) > 14 ? '#B42318' : 'inherit'}">${age(q.at)} days</td></tr>`).join('') || '<tr><td colspan="4" class="pv-muted">Nothing awaiting review.</td></tr>'}</tbody></table>`)}
+        ${panel('bar-chart-3', d30.length ? 'Denials by reason, last 30 days' : 'Denials by reason', den.length, `<div style="padding:12px 16px;display:flex;flex-direction:column;gap:9px">${byR.map(([l, n]) => `
+          <div style="font-size:13px"><div style="display:flex;justify-content:space-between"><span>${ctx.esc(l)}</span><b style="font-weight:600">${n}</b></div><div class="pv-bar" style="margin-top:4px"><i style="width:${100 * n / top}%;background:#F04438"></i></div></div>`).join('')}</div>`)}
+        ${panel('siren', 'Open critical non-compliance', crit.length, `<div style="padding:10px 14px;display:flex;flex-direction:column;gap:8px">${crit.slice(0, 5).map(n => `
+          <div class="pv-card" data-go="noncompliance"><div style="display:flex;justify-content:space-between"><b style="font-weight:550">${ctx.esc(n.finding_ref)} · ${ctx.esc(ctx.fmt(n, 'nc_type'))}</b><span class="pv-badge" style="background:#FEF3F2;color:#B42318;border-color:#FECDCA">${ctx.esc(ctx.fmt(n, 'status'))}</span></div>
+            <span class="pv-muted">${ctx.esc(ctx.fmt(n, 'party'))} · detected ${ctx.esc(n.detected_on)}${n.tags.includes('reported_to_fda') ? ' · reported to FDA' : ''}</span></div>`).join('') || '<span class="pv-muted">No open critical findings.</span>'}</div>`)}
+        ${panel('calendar-clock', 'Recertifications due in 60 days', recert.length, `<div style="padding:10px 14px;display:flex;flex-direction:column;gap:8px">${recert.slice(0, 5).map(x => `
+          <div class="pv-card" data-go="${x.go}"><div style="display:flex;justify-content:space-between"><b style="font-weight:550">${ctx.esc(x.name)}</b><span style="color:#B54708;font-weight:550;font-size:12px">${until(x.d)} days</span></div><span class="pv-muted">${x.who} · due ${ctx.esc(x.d)}</span></div>`).join('') || '<span class="pv-muted">No recertifications due in the next 60 days.</span>'}</div>`)}
+      </div>`;
+  - code: assessment_report
+    type: custom
+    route: /app/reports/assessment
+    title: REMS Assessment Report
+    component: AssessmentReport
+    roles: [REMS Coordinator]
+    text: "Pick a reporting period (default the last 6 months). Shows the FDA REMS assessment metrics: stakeholders certified and decertified, patients enrolled by category and channel, authorizations requested, granted and denied by reason, median time to decision, dispenses outside an authorization, pregnancies reported, and non-compliance events by type, severity and outcome. Export as Excel."
+    preview: |
+      const now = new Date(), from = new Date(now.getFullYear(), now.getMonth() - 6, now.getDate()), inP = d => d && new Date(d) >= from && new Date(d) <= now;
+      const pres = ctx.rows('prescriber'), phs = ctx.rows('pharmacy'), pts = ctx.rows('patient').filter(p => inP(p.created_at)), auths = ctx.rows('dispense_authorization').filter(a => inP(a.created_at)), ncs = ctx.rows('noncompliance_event').filter(n => inP(n.detected_on));
+      const opts = (e, k) => ctx.entity(e).fields.find(f => f.key === k).opts, cnt = (rs, k, v) => rs.filter(r => r[k] === v).length;
+      const granted = auths.filter(a => ['authorized', 'dispensed', 'expired'].includes(a.status)), denied = auths.filter(a => a.status === 'denied');
+      const tt = granted.concat(denied).map(a => (new Date(a.authorized_on) - new Date(a.rx_date)) / 864e5).filter(x => x >= 0).sort((a, b) => a - b), median = tt.length ? Math.round(tt[Math.floor(tt.length / 2)]) : null;
+      const cats = opts('patient', 'category'), chans = opts('patient', 'enrollment_channel'), reasons = opts('dispense_authorization', 'denial_reason'), types = opts('noncompliance_event', 'nc_type'), sev = opts('noncompliance_event', 'severity');
+      const byR = reasons.map(o => [o.label, cnt(denied, 'denial_reason', o.id)]).concat(denied.some(a => !a.denial_reason) ? [['Reason not recorded', denied.filter(a => !a.denial_reason).length]] : []), topR = Math.max(1, ...byR.map(x => x[1]));
+      const kpi = (l, v, sub, go) => `<div class="pv-kpi"${go ? ` data-go="${go}"` : ''}><span>${l}</span><b>${v}</b>${sub ? `<span>${sub}</span>` : ''}</div>`;
+      const th = 'style="text-align:right"', td = n => `<td style="text-align:right;font-variant-numeric:tabular-nums">${n || '<span class="pv-muted">0</span>'}</td>`;
+      return `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span class="pv-muted">Reporting period</span>${['Last 6 months', 'Last 12 months', 'Custom'].map((l, i) => `<span class="pv-badge" style="${i ? 'background:#fff;color:#344054;border-color:#D0D5DD' : ''}">${l}</span>`).join('')}
+        <span class="pv-muted">${from.toISOString().slice(0, 10)} – ${now.toISOString().slice(0, 10)}</span><span style="flex:1"></span><span class="pv-badge" style="background:#fff;color:#344054;border-color:#D0D5DD">${ctx.icon('download')} Export as Excel</span></div>
+      <div class="pv-kpis">
+        ${kpi('Stakeholders certified', pres.concat(phs).filter(p => inP(p.certified_on) && !['pending_training', 'under_review'].includes(p.status)).length, `${pres.concat(phs).filter(p => p.status === 'decertified').length} decertified`, 'prescribers')}
+        ${kpi('Patients enrolled', pts.length, `${cnt(pts, 'category', 'frp')} FRP`, 'patients')}
+        ${kpi('Authorizations requested', auths.length, `${granted.length} granted · ${denied.length} denied`, 'authorizations')}
+        ${kpi('Median time to decision', median == null ? '—' : median + ' days', 'Rx date to decision')}
+        ${kpi('Dispenses outside an authorization', ncs.filter(n => ['dispense_no_auth', 'dispense_expired'].includes(n.nc_type)).length, '', 'noncompliance')}
+        ${kpi('Pregnancies reported', ncs.filter(n => n.nc_type === 'pregnancy_reported').length, '', 'noncompliance')}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start">
+        <div class="d-panel"><h3>${ctx.icon('users')}Patients enrolled by category and channel</h3><table class="z-t"><thead><tr><th>Category</th>${chans.map(c => `<th ${th}>${ctx.esc(c.label)}</th>`).join('')}<th ${th}>Total</th></tr></thead><tbody>${cats.map(c => { const rs = pts.filter(p => p.category === c.id); return `
+          <tr><td>${ctx.esc(c.label)}</td>${chans.map(ch => td(cnt(rs, 'enrollment_channel', ch.id))).join('')}<td style="text-align:right;font-weight:600">${rs.length}</td></tr>`; }).join('')}</tbody></table></div>
+        <div class="d-panel"><h3>${ctx.icon('ban')}Denials by reason<span class="sp"></span><span class="pv-badge">${denied.length}</span></h3><div style="padding:12px 16px;display:flex;flex-direction:column;gap:9px">${byR.map(([l, n]) => `
+          <div style="font-size:13px"><div style="display:flex;justify-content:space-between"><span>${ctx.esc(l)}</span><b style="font-weight:600">${n}</b></div><div class="pv-bar" style="margin-top:4px"><i style="width:${100 * n / topR}%;background:#F04438"></i></div></div>`).join('')}</div></div>
+      </div>
+      <div class="d-panel"><h3>${ctx.icon('shield-alert')}Non-compliance events by type, severity and outcome<span class="sp"></span><span class="pv-badge">${ncs.length}</span></h3><table class="z-t"><thead><tr><th>Type</th>${sev.map(s => `<th ${th}>${ctx.esc(s.label)}</th>`).join('')}<th ${th}>Closed</th><th ${th}>Open / CAPA</th><th ${th}>Reported to FDA</th></tr></thead><tbody>${types.map(t => { const rs = ncs.filter(n => n.nc_type === t.id); return `
+        <tr class="click" data-go="noncompliance"><td>${ctx.esc(t.label)}</td>${sev.map(s => td(cnt(rs, 'severity', s.id))).join('')}${td(cnt(rs, 'status', 'closed'))}${td(rs.filter(n => n.status !== 'closed').length)}${td(rs.filter(n => n.tags.includes('reported_to_fda')).length)}</tr>`; }).join('')}</tbody></table></div>`;
   - { code: prescribers,       type: crud,   entity: prescriber,              route: /app/prescribers,        title: Prescribers }
   - { code: prescriber_360,    type: detail, detail_view: prescriber_360,     route: /app/prescribers/:id }
   - { code: pharmacies,        type: crud,   entity: pharmacy,                route: /app/pharmacies,         title: Pharmacies }

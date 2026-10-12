@@ -140,6 +140,34 @@ pages:
       KPI row: speakers awaiting FMV review, contracts awaiting signature, events in the next 30 days,
       spend this quarter against the brand budget. Below: spend by HCP (top 10, stacked by spend type),
       events per month (last 6 months) and a table of speakers above 90% of their annual cap.
+    preview: |
+      const spk = ctx.rows('speaker'), con = ctx.rows('contract'), ev = ctx.rows('event'), sl = ctx.rows('spend_line');
+      const now = new Date(), q0 = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1), q1 = new Date(q0.getFullYear(), q0.getMonth() + 3, 1);
+      const inQ = d => d && new Date(d) >= q0 && new Date(d) < q1, ahead = d => d && (new Date(d) - now) / 864e5 >= -1 && (new Date(d) - now) / 864e5 <= 30, sum = (rs, k) => rs.reduce((a, r) => a + (+r[k] || 0), 0);
+      const inr = n => '₹' + (n >= 1e5 ? (n / 1e5).toFixed(1) + ' L' : Math.round(n).toLocaleString('en-IN'));
+      const spent = sum(sl.filter(l => inQ(l.incurred_on)), 'amount'), budget = sum(ev.filter(e => e.status !== 'cancelled' && inQ(e.event_date)), 'budget'), pct = budget ? Math.round(100 * spent / budget) : 0;
+      const types = ctx.entity('spend_line').fields.find(f => f.key === 'spend_type').opts, TC = ['#155EEF', '#7A5AF8', '#12B76A', '#F79009', '#EE46BC', '#98A2B3'];
+      const bySpk = spk.map(s => { const ls = sl.filter(l => l.speaker === s.id); return { s, parts: types.map(t => sum(ls.filter(l => l.spend_type === t.id), 'amount')), amt: sum(ls, 'amount') }; }).filter(x => x.amt).sort((a, b) => b.amt - a.amt).slice(0, 10), top = Math.max(1, ...bySpk.map(x => x.amt));
+      const months = [...Array(6)].map((_, i) => new Date(now.getFullYear(), now.getMonth() - 5 + i, 1)), perM = months.map(m => ev.filter(e => e.status !== 'cancelled' && e.event_date && new Date(e.event_date).getMonth() === m.getMonth() && new Date(e.event_date).getFullYear() === m.getFullYear()).length), topM = Math.max(1, ...perM);
+      const nearCap = spk.filter(s => +s.annual_cap && +s.ytd_spend > 0.9 * +s.annual_cap).sort((a, b) => b.ytd_spend / b.annual_cap - a.ytd_spend / a.annual_cap);
+      return `
+      <div class="pv-kpis">
+        <div class="pv-kpi" data-go="speakers"><span>Speakers awaiting FMV review</span><b>${spk.filter(s => s.status === 'fmv_review').length}</b></div>
+        <div class="pv-kpi" data-go="contracts"><span>Contracts awaiting signature</span><b>${con.filter(c => c.status === 'sent').length}</b></div>
+        <div class="pv-kpi" data-go="events"><span>Events in the next 30 days</span><b>${ev.filter(e => !['cancelled', 'completed', 'reconciled'].includes(e.status) && ahead(e.event_date)).length}</b></div>
+        <div class="pv-kpi" data-go="spend"><span>Spend this quarter vs brand budget</span><b>${inr(spent)} <span style="display:inline;font-size:13px;font-weight:500">of ${inr(budget)}</span></b><div class="pv-bar" style="margin-top:8px"><i style="width:${Math.min(100, pct)}%;${pct > 100 ? 'background:#D92D20' : ''}"></i></div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:12px;align-items:start">
+        <div class="d-panel"><h3>${ctx.icon('bar-chart-3')}Spend by HCP, top 10</h3><div style="padding:12px 16px;display:flex;flex-direction:column;gap:10px">${bySpk.map(x => `
+          <div data-go="speaker_360:${x.s.id}" style="cursor:pointer;display:grid;grid-template-columns:130px 1fr 70px;gap:10px;align-items:center;font-size:13px"><b style="font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ctx.esc(x.s.full_name)}</b>
+            <div style="display:flex;height:12px;border-radius:4px;overflow:hidden;width:${100 * x.amt / top}%">${x.parts.map((p, i) => p ? `<i title="${ctx.esc(types[i].label)}" style="width:${100 * p / x.amt}%;background:${TC[i % 6]}"></i>` : '').join('')}</div><span class="pv-muted" style="text-align:right">${inr(x.amt)}</span></div>`).join('') || '<span class="pv-muted">No spend recorded yet.</span>'}
+          <div class="pv-muted" style="display:flex;gap:10px;flex-wrap:wrap">${types.map((t, i) => `<span><i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${TC[i % 6]}"></i> ${ctx.esc(t.label)}</span>`).join('')}</div></div></div>
+        <div class="d-panel"><h3>${ctx.icon('calendar')}Events per month</h3><div style="padding:14px 16px"><div style="display:flex;align-items:flex-end;gap:12px;height:150px;border-bottom:1px solid #EAECF0">${perM.map(n => `<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%"><span class="pv-muted">${n}</span><i style="display:block;width:100%;height:${100 * n / topM}%;background:var(--brand);border-radius:4px 4px 0 0"></i></div>`).join('')}</div>
+          <div style="display:flex;gap:12px;margin-top:6px">${months.map(m => `<span class="pv-muted" style="flex:1;text-align:center">${m.toLocaleString('en', { month: 'short' })}</span>`).join('')}</div></div></div>
+      </div>
+      <div class="d-panel"><h3>${ctx.icon('gauge')}Speakers above 90% of annual cap<span class="sp"></span><span class="pv-badge">${nearCap.length}</span></h3>
+        <table class="z-t"><thead><tr><th>Speaker</th><th>Tier</th><th>Therapy area</th><th>YTD spend</th><th>Annual cap</th><th>Used</th></tr></thead><tbody>${nearCap.map(s => { const u = Math.round(100 * s.ytd_spend / s.annual_cap); return `
+          <tr class="click" data-go="speaker_360:${s.id}"><td>${ctx.esc(s.full_name)}</td><td>${ctx.esc(ctx.fmt(s, 'hcp_tier'))}</td><td>${ctx.esc(ctx.fmt(s, 'therapy_area'))}</td><td>${ctx.esc(ctx.fmt(s, 'ytd_spend'))}</td><td>${ctx.esc(ctx.fmt(s, 'annual_cap'))}</td><td style="font-weight:600;color:${u >= 100 ? '#B42318' : '#B54708'}">${u > 100 ? 'Over cap' : u + '%'}</td></tr>`; }).join('') || '<tr><td colspan="6" class="pv-muted">No speaker is above 90% of their cap.</td></tr>'}</tbody></table></div>`;
   - code: disclosure
     type: custom
     route: /app/disclosure
@@ -150,6 +178,25 @@ pages:
       Pick a quarter. Table of recipient HCPs with honorarium, travel, accommodation, meals and total,
       drilling into the spend lines behind each number. "Lock quarter" runs the report transition on
       every verified spend line in the quarter; "Download CSV" exports the disclosure file.
+    preview: |
+      const now = new Date(), qOf = d => { const x = new Date(d); return x.getFullYear() + '-Q' + (Math.floor(x.getMonth() / 3) + 1); };
+      const lines = ctx.rows('spend_line').filter(l => ['verified', 'reported'].includes(l.status) && l.incurred_on);
+      const qs = [...Array(4)].map((_, i) => qOf(new Date(now.getFullYear(), now.getMonth() - 3 * i, 1)));
+      const q = qs.slice().sort((a, b) => lines.filter(l => qOf(l.incurred_on) === b).length - lines.filter(l => qOf(l.incurred_on) === a).length)[0], inQ = lines.filter(l => qOf(l.incurred_on) === q);
+      const cols = ['honorarium', 'travel', 'accommodation', 'meals', 'other'], lbl = Object.fromEntries(ctx.entity('spend_line').fields.find(f => f.key === 'spend_type').opts.map(o => [o.id, o.label]).concat([['other', 'Venue and other']]));
+      const typ = l => cols.includes(l.spend_type) ? l.spend_type : 'other';
+      const inr = n => n ? '₹' + Math.round(n).toLocaleString('en-IN') : '<span class="pv-muted">—</span>';
+      const rows = ctx.rows('speaker').map(s => { const ls = inQ.filter(l => l.speaker === s.id); return { s, ls, v: cols.map(c => ls.filter(l => typ(l) === c).reduce((a, l) => a + (+l.amount || 0), 0)), tot: ls.reduce((a, l) => a + (+l.amount || 0), 0) }; }).filter(r => r.ls.length).sort((a, b) => b.tot - a.tot);
+      const colTot = cols.map((_, i) => rows.reduce((a, r) => a + r.v[i], 0)), grand = rows.reduce((a, r) => a + r.tot, 0), locked = inQ.length && inQ.every(l => l.status === 'reported');
+      const btn = (icon, t, primary) => `<span class="pv-badge" style="height:28px;padding:0 12px;gap:6px;${primary ? 'background:var(--brand);color:#fff;border-color:var(--brand)' : 'background:#fff;color:#344054;border-color:#D0D5DD'}">${ctx.icon(icon)}${t}</span>`;
+      return `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap"><span class="pv-muted">Quarter</span>${qs.map(x => `<span class="pv-badge" style="${x === q ? '' : 'background:#fff;color:#344054;border-color:#D0D5DD'}">${x}</span>`).join('')}
+        <span class="pv-muted">${inQ.length} verified lines · ${rows.length} recipients${locked ? ' · locked' : ''}</span><span style="flex:1"></span>${btn('download', 'Download CSV')}${locked ? '' : btn('lock', 'Lock quarter', true)}</div>
+      <div class="pv-kpis">${cols.map((c, i) => `<div class="pv-kpi"><span>${ctx.esc(lbl[c] || c)}</span><b style="font-size:18px">${inr(colTot[i])}</b></div>`).join('')}<div class="pv-kpi"><span>Total transfer of value</span><b style="font-size:18px">${inr(grand)}</b></div></div>
+      <div class="d-panel"><h3>${ctx.icon('file-spreadsheet')}Recipients, ${q}</h3>
+        <table class="z-t"><thead><tr><th>HCP</th><th>Registration no.</th><th>City</th>${cols.map(c => `<th style="text-align:right">${ctx.esc(lbl[c] || c)}</th>`).join('')}<th style="text-align:right">Total</th><th>Lines</th></tr></thead><tbody>${rows.map(r => `
+          <tr class="click" data-go="speaker_360:${r.s.id}"><td><b style="font-weight:550">${ctx.esc(r.s.full_name)}</b>${r.s.is_government_hcp ? ' <span class="pv-badge">Govt HCP</span>' : ''}</td><td>${ctx.esc(r.s.registration_no || '')}</td><td>${ctx.esc(r.s.city || '')}</td>${r.v.map(v => `<td style="text-align:right">${inr(v)}</td>`).join('')}<td style="text-align:right;font-weight:600">${inr(r.tot)}</td><td class="pv-muted" title="${r.ls.map(l => ctx.esc(l.line_ref)).join(', ')}" style="white-space:nowrap">${r.ls.length} ${r.ls.length === 1 ? 'line' : 'lines'} ›</td></tr>`).join('') || `<tr><td colspan="10" class="pv-muted">No verified spend in ${q}.</td></tr>`}
+        ${rows.length ? `<tr style="background:#F9FAFB"><td colspan="3"><b>Total</b></td>${colTot.map(v => `<td style="text-align:right;font-weight:600">${inr(v)}</td>`).join('')}<td style="text-align:right;font-weight:700">${inr(grand)}</td><td></td></tr>` : ''}</tbody></table></div>`;
 
 # -----------------------------------------------------------------------------
 #  MODULES
@@ -751,7 +798,23 @@ detail_views:
     sidebar:
       - { type: fields, title: Profile, fields: [speciality, therapy_area, institution, city, hcp_tier, is_government_hcp] }
       - { type: fields, title: Contact, fields: [email, phone, pan], roles: [Brand Manager, Compliance Reviewer] }
-      - { type: custom, title: Readiness, text: "Ticks for the three required documents verified, debarment screening clear and an active signed contract; shows \"3 of 5 done\"." }
+      - type: custom
+        title: Readiness
+        text: "Ticks for the three required documents verified, debarment screening clear and an active signed contract; shows \"3 of 5 done\"."
+        preview: |
+          const s = ctx.record, now = new Date(), docs = ctx.related('speaker_document', 'speaker'), cons = ctx.related('contract', 'speaker');
+          const opts = ctx.entity('speaker_document').fields.find(f => f.key === 'doc_type').opts, lbl = id => (opts.find(o => o.id === id) || {}).label || id;
+          const doc = t => docs.find(d => d.doc_type === t && d.status === 'verified'), pending = t => docs.find(d => d.doc_type === t && d.status === 'uploaded');
+          const active = cons.find(c => c.status === 'signed' && (!c.end_date || new Date(c.end_date) >= now));
+          const items = [...['cv', 'registration_cert', 'coi_declaration'].map(t => ({ label: lbl(t) + ' verified', done: !!doc(t), note: doc(t) ? 'Valid until ' + ctx.fmt(doc(t), 'valid_until') : pending(t) ? 'Uploaded, awaiting verification' : 'Not uploaded' })),
+            { label: 'Debarment screening clear', done: !['rejected', 'deactivated'].includes(s.status) && !(s.tags || []).includes('on_hold'), note: (s.tags || []).includes('on_hold') ? 'Speaker is on hold' : 'Screened at nomination' },
+            { label: 'Active signed contract', done: !!active, note: active ? active.contract_ref + ' until ' + ctx.fmt(active, 'end_date') : cons.some(c => c.status === 'sent') ? 'Sent for signature' : 'No signed contract' }];
+          const n = items.filter(i => i.done).length;
+          return `<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:13px"><b style="font-weight:600">${n} of ${items.length} done</b><span class="pv-muted">${n === items.length ? 'Ready to speak' : 'Not ready'}</span></div>
+          <div class="pv-bar" style="margin:6px 0 12px"><i style="width:${100 * n / items.length}%;${n === items.length ? 'background:#12B76A' : ''}"></i></div>
+          <div style="display:flex;flex-direction:column;gap:10px">${items.map(i => `<div style="display:flex;gap:9px;align-items:flex-start;font-size:13px">
+            <span style="flex:0 0 18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:${i.done ? '#D1FADF' : '#F2F4F7'};color:${i.done ? '#039855' : '#98A2B3'}">${ctx.icon(i.done ? 'check' : 'minus')}</span>
+            <div><div style="color:${i.done ? '#101828' : '#475467'};font-weight:${i.done ? 550 : 450}">${ctx.esc(i.label)}</div><span class="pv-muted">${ctx.esc(i.note)}</span></div></div>`).join('')}</div>`;
     tabs:
       - { code: overview, label: Overview, type: summary, sections: [ { title: Nomination, fields: [nomination_reason] }, { title: Recent events, type: mini_table, entity: event, via: speaker, columns: [event_ref, topic, event_date, status], limit: 5, sort: -event_date, see_all_tab: events } ] }
       - { code: documents, label: Documents, type: related_table, entity: speaker_document, via: speaker, count_badge: { where: status == uploaded, tone: amber }, columns: inherit, add: { label: Upload Document, prefill: { speaker: hero } }, row_actions: inherit, empty_state: { title: No documents, text: "Upload the CV, registration certificate and COI declaration to submit for FMV review.", cta: add } }

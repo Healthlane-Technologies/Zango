@@ -110,6 +110,34 @@ pages:
       target), open issues (critical in red), visit reports overdue. Below: enrollment by
       study (bar, actual vs target), upcoming milestones in the next 60 days with at-risk
       ones highlighted, and sites with the most open major or critical issues.
+    preview: |
+      const ST = ctx.rows('study'), SI = ctx.rows('site'), IS = ctx.rows('issue'), VI = ctx.rows('monitoring_visit'), MS = ctx.rows('milestone');
+      const now = new Date(), today = now.toISOString().slice(0, 10), days = d => Math.floor((now - new Date(d)) / 864e5), sum = (a, k) => a.reduce((t, r) => t + (+r[k] || 0), 0);
+      const open = IS.filter(i => i.status !== 'closed'), overdue = VI.filter(v => ['completed', 'returned'].includes(v.status) && v.report_due && v.report_due < today).length;
+      const enr = ST.filter(s => !['planning', 'closed'].includes(s.status)).map(s => { const ss = SI.filter(x => x.study === s.id); return { s, a: ss.length ? sum(ss, 'randomised') : +s.randomised || 0, t: +s.target_enrollment || 0 }; });
+      const rand = enr.reduce((t, e) => t + e.a, 0), target = enr.reduce((t, e) => t + e.t, 0), top = Math.max(1, ...enr.map(e => Math.max(e.a, e.t)));
+      const md = m => m.forecast_date || m.planned_date, due = MS.filter(m => m.status !== 'achieved' && md(m) && days(md(m)) >= -60).sort((a, b) => (b.status === 'at_risk') - (a.status === 'at_risk') || String(md(a)).localeCompare(String(md(b))));
+      const hot = SI.map(s => ({ s, crit: open.filter(i => i.site === s.id && i.severity === 'critical').length, n: open.filter(i => i.site === s.id && ['major', 'critical'].includes(i.severity)).length })).filter(x => x.n).sort((a, b) => b.n - a.n || b.crit - a.crit).slice(0, 8);
+      const badge = (E, r) => { const s = E.wf.smap[r.status] || { label: r.status, color: 'gray' }, [bg, fg] = ctx.tone(s.color); return `<span class="pv-badge" style="background:${bg};color:${fg};border-color:transparent">${ctx.esc(s.label)}</span>`; };
+      return `
+      <div class="pv-kpis">
+        <div class="pv-kpi" data-go="studies"><span>Active studies</span><b>${ST.filter(s => ['start_up', 'enrolling', 'follow_up'].includes(s.status)).length}</b></div>
+        <div class="pv-kpi" data-go="sites"><span>Active sites</span><b>${SI.filter(s => s.status === 'active').length}</b></div>
+        <div class="pv-kpi"><span>Randomised vs target</span><b>${rand} / ${target} <small style="font-size:13px;color:#667085">${target ? Math.round(100 * rand / target) : 0}%</small></b><div class="pv-bar" style="margin-top:8px"><i style="width:${target ? Math.min(100, Math.round(100 * rand / target)) : 0}%"></i></div></div>
+        <div class="pv-kpi" data-go="issues"><span>Open issues</span><b>${open.length} <small style="font-size:13px;color:#B42318">${open.filter(i => i.severity === 'critical').length} critical</small></b></div>
+        <div class="pv-kpi" data-go="visits"><span>Visit reports overdue</span><b style="color:${overdue ? '#B42318' : 'inherit'}">${overdue}</b></div>
+      </div>
+      <div class="d-panel"><h3>${ctx.icon('bar-chart-3')}Enrollment by study<span class="sp"></span><span class="pv-muted"><i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--brand)"></i> randomised · <i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#D0D5DD"></i> target</span></h3>
+        <div style="padding:12px 16px;display:flex;flex-direction:column;gap:10px">${enr.map(e => `
+          <div data-go="study_360:${e.s.id}" style="display:grid;grid-template-columns:200px 1fr 90px;gap:10px;align-items:center;font-size:13px;cursor:pointer"><span><b style="font-weight:550">${ctx.esc(e.s.protocol_no)}</b> <span class="pv-muted">${ctx.esc(ctx.fmt(e.s, 'phase'))}</span></span>
+            <div style="position:relative;height:12px;border-radius:4px;background:#F2F4F7"><i style="position:absolute;left:0;top:0;bottom:0;width:${100 * e.t / top}%;background:#D0D5DD;border-radius:4px"></i><i style="position:absolute;left:0;top:0;bottom:0;width:${100 * e.a / top}%;background:var(--brand);border-radius:4px"></i></div>
+            <span class="pv-muted" style="text-align:right">${e.a} / ${e.t}</span></div>`).join('') || '<span class="pv-muted">No studies enrolling.</span>'}</div></div>
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start">
+        <div class="d-panel"><h3>${ctx.icon('flag')}Milestones due, next 60 days<span class="sp"></span><span class="pv-badge">${due.length}</span></h3>
+          <div style="padding:10px 14px;display:flex;flex-direction:column;gap:8px">${due.slice(0, 6).map(m => `<div class="pv-card" data-go="study_360:${m.study}" style="${m.status === 'at_risk' ? 'border-color:#FEC84B;background:#FFFCF5' : ''}"><div style="display:flex;justify-content:space-between;gap:6px"><b style="font-weight:550">${ctx.esc(ctx.fmt(m, 'milestone_name'))}</b>${badge(ctx.entity('milestone'), m)}</div><span class="pv-muted">${ctx.esc(ctx.fmt(m, 'study'))} · <span style="color:${md(m) < today ? '#B42318' : 'inherit'}">${md(m) < today ? 'overdue since' : 'due'} ${ctx.esc(ctx.fmt(m, m.forecast_date ? 'forecast_date' : 'planned_date'))}</span></span></div>`).join('') || '<span class="pv-muted">Nothing due in the next 60 days.</span>'}</div></div>
+        <div class="d-panel"><h3>${ctx.icon('alert-triangle')}Sites with most open major / critical issues</h3>
+          <table class="z-t"><thead><tr><th>Site</th><th>Study</th><th>CRA</th><th>Open</th></tr></thead><tbody>${hot.map(x => `<tr class="click" data-go="site_360:${x.s.id}"><td>${ctx.esc(x.s.site_no)} · ${ctx.esc(x.s.institution)}</td><td>${ctx.esc(ctx.fmt(x.s, 'study'))}</td><td>${ctx.esc(x.s.cra || '—')}</td><td><b>${x.n}</b>${x.crit ? ` <span style="color:#B42318;font-size:12px">${x.crit} crit</span>` : ''}</td></tr>`).join('') || '<tr><td colspan="4" class="pv-muted">No open major or critical issues.</td></tr>'}</tbody></table></div>
+      </div>`;
 
 modules:
   - code: studies

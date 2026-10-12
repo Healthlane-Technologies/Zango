@@ -94,9 +94,44 @@ roles:
       - { page: commitments,   icon: list-checks }
 
 pages:
-  - { code: dashboard,     type: custom, route: /app/dashboard, title: Regulatory Portfolio, component: RegulatoryDashboard,
-      roles: [Regulatory Lead, Leadership],
-      text: "KPI row: active registrations, submissions under health-authority review, renewals due in the next 180 days, overdue commitments. Below: a product-by-market matrix coloured by registration status, and a table of submissions with an HA decision due in the next 60 days, earliest first." }
+  - code: dashboard
+    type: custom
+    route: /app/dashboard
+    title: Regulatory Portfolio
+    component: RegulatoryDashboard
+    roles: [Regulatory Lead, Leadership]
+    text: "KPI row: active registrations, submissions under health-authority review, renewals due in the next 180 days, overdue commitments. Below: a product-by-market matrix coloured by registration status, and a table of submissions with an HA decision due in the next 60 days, earliest first."
+    preview: |
+      const regs = ctx.rows('registration'), subs = ctx.rows('submission'), cmts = ctx.rows('commitment');
+      const now = new Date(), dd = d => d ? Math.round((new Date(d) - now) / 864e5) : null;
+      const live = regs.filter(r => ['approved', 'in_renewal'].includes(r.status));
+      const renew = live.filter(r => dd(r.expiry_date) !== null && dd(r.expiry_date) >= 0 && dd(r.expiry_date) <= 180);
+      const overdue = cmts.filter(c => !['fulfilled', 'waived'].includes(c.status) && dd(c.due_date) < 0);
+      const ahead = subs.filter(s => ['submitted', 'ha_questions'].includes(s.status) && dd(s.decision_due) !== null && dd(s.decision_due) >= 0).sort((a, b) => String(a.decision_due).localeCompare(String(b.decision_due)));
+      const due60 = ahead.filter(s => dd(s.decision_due) <= 60), due = due60.length ? due60 : ahead.slice(0, 5);
+      const C = { approved: '#12B76A', filed: '#2E90FA', in_renewal: '#15B79E', planned: '#D0D5DD', lapsed: '#F79009', rejected: '#F04438', withdrawn: '#98A2B3' };
+      const st = ctx.entity('registration').wf.statuses, lbl = c => (st.find(s => s.code === c) || {}).label || c;
+      const prods = ctx.rows('product').filter(p => p.status !== 'discontinued'), mkts = ctx.rows('country');
+      const cell = (p, m) => regs.find(r => r.product === p.id && r.market === m.id);
+      const counts = Object.keys(C).map(k => [k, regs.filter(r => r.status === k).length]).filter(x => x[1]), top = Math.max(1, ...counts.map(x => x[1]));
+      return `
+      <div class="pv-kpis">
+        <div class="pv-kpi" data-go="registrations"><span>Active registrations</span><b>${live.length}</b></div>
+        <div class="pv-kpi" data-go="submissions"><span>Under health-authority review</span><b>${subs.filter(s => ['submitted', 'ha_questions'].includes(s.status)).length}</b></div>
+        <div class="pv-kpi" data-go="registrations"><span>Renewals due in 180 days</span><b style="color:#B54708">${renew.length}</b></div>
+        <div class="pv-kpi" data-go="commitments"><span>Overdue commitments</span><b style="color:#B42318">${overdue.length}</b></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:12px;align-items:start">
+        <div class="d-panel"><h3>${ctx.icon('grid-3x3')}Product by market</h3><div style="padding:12px 16px;overflow-x:auto">
+          <table style="border-collapse:separate;border-spacing:3px;font-size:12px"><tr><th></th>${mkts.map(m => `<th style="font-weight:550;color:#475467;padding:0 2px;width:24px;writing-mode:vertical-rl;transform:rotate(180deg);height:70px;text-align:left">${ctx.esc(m.name)}</th>`).join('')}</tr>
+          ${prods.map(p => `<tr><td data-go="product_360:${p.id}" style="cursor:pointer;font-weight:550;padding-right:8px;white-space:nowrap">${ctx.esc(p.name)}</td>${mkts.map(m => { const r = cell(p, m); return `<td title="${r ? ctx.esc(r.reg_ref + ' · ' + lbl(r.status)) : 'Not registered'}" style="width:22px;height:22px;border-radius:5px;background:${r ? C[r.status] : '#F9FAFB'};border:1px solid ${r ? 'transparent' : '#EAECF0'}"></td>`; }).join('')}</tr>`).join('')}</table>
+          <div class="pv-muted" style="margin-top:10px;display:flex;gap:12px;flex-wrap:wrap">${Object.entries(C).map(([k, c]) => `<span><i style="display:inline-block;width:9px;height:9px;border-radius:3px;background:${c}"></i> ${ctx.esc(lbl(k))}</span>`).join('')}</div></div></div>
+        <div class="d-panel"><h3>${ctx.icon('bar-chart-3')}Registrations by status</h3><div style="padding:12px 16px;display:flex;flex-direction:column;gap:10px">${counts.map(([k, n]) => `
+          <div style="font-size:13px"><div style="display:flex;justify-content:space-between"><span>${ctx.esc(lbl(k))}</span><b style="font-weight:600">${n}</b></div><div class="pv-bar" style="margin-top:4px"><i style="width:${100 * n / top}%;background:${C[k]}"></i></div></div>`).join('')}</div></div>
+      </div>
+      <div class="d-panel"><h3>${ctx.icon('calendar-clock')}${due60.length ? 'HA decisions due in the next 60 days' : 'Next HA decisions due'}<span class="sp"></span><span class="pv-badge">${due60.length} in 60 days</span></h3>
+        <table class="z-t"><thead><tr><th>Submission</th><th>Product</th><th>Market</th><th>Type</th><th>Submitted</th><th>Decision due</th></tr></thead><tbody>${due.map(s => `
+          <tr class="click" data-go="product_360:${s.product}"><td>${ctx.esc(s.submission_ref)}</td><td>${ctx.esc(ctx.fmt(s, 'product'))}</td><td>${ctx.esc(ctx.fmt(s, 'market'))}</td><td>${ctx.esc(ctx.fmt(s, 'submission_type'))}</td><td>${ctx.esc(ctx.fmt(s, 'submitted_on'))}</td><td style="font-weight:550;color:${dd(s.decision_due) <= 14 ? '#B42318' : 'inherit'}">${ctx.esc(ctx.fmt(s, 'decision_due'))} · ${dd(s.decision_due)}d</td></tr>`).join('') || '<tr><td colspan="6" class="pv-muted">No HA decisions pending.</td></tr>'}</tbody></table></div>`;
   - { code: products,      type: crud,   entity: product,      route: /app/products,      title: Products }
   - { code: product_360,   type: detail, detail_view: product_360, route: /app/products/:id }
   - { code: registrations, type: crud,   entity: registration, route: /app/registrations, title: Registrations }

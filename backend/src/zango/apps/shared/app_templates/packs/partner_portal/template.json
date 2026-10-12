@@ -1,7 +1,7 @@
 {
   "slug": "partner-portal",
   "name": "Partner Portal",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "category": "Cross-functional",
   "icon": "apps",
   "is_beta": false,
@@ -38,25 +38,70 @@
   "catalogue": {
     "description": "A partner portal for companies that work through vendors, agencies and service partners. Partner managers invite partners, who sign in to upload their contracts and compliance documents for partner ops to verify; once active, partners and their managers raise requests (invoice queries, change requests, deliverables, incidents) that run against SLAs by type and priority. Each month the partner manager prepares an SLA scorecard with any service credit, partner ops signs it off and the partner acknowledges or disputes it.",
     "packages": [
-      { "name": "workflow", "description": "Onboarding, document verification, request and SLA scorecard lifecycles" },
-      { "name": "crm", "description": "Partner master, contacts, portfolio ownership and the partner 360 page" },
-      { "name": "forms", "description": "Invite, onboarding, request and scorecard forms with duplicate checks" },
-      { "name": "documents", "description": "Contracts, tax, insurance and compliance documents with verification and expiry" },
-      { "name": "communication", "description": "Invitations, request updates, SLA breach alerts and scorecard notifications by email" }
+      {
+        "name": "workflow",
+        "description": "Onboarding, document verification, request and SLA scorecard lifecycles"
+      },
+      {
+        "name": "crm",
+        "description": "Partner master, contacts, portfolio ownership and the partner 360 page"
+      },
+      {
+        "name": "forms",
+        "description": "Invite, onboarding, request and scorecard forms with duplicate checks"
+      },
+      {
+        "name": "documents",
+        "description": "Contracts, tax, insurance and compliance documents with verification and expiry"
+      },
+      {
+        "name": "communication",
+        "description": "Invitations, request updates, SLA breach alerts and scorecard notifications by email"
+      }
     ],
     "roles": [
-      { "name": "Partner", "description": "External login for a vendor, agency or service partner: uploads documents, raises and answers requests, and acknowledges its own SLA scorecards" },
-      { "name": "Partner manager", "description": "Owns a portfolio of partners: invites and onboards them, resolves their requests and prepares the monthly SLA scorecard" },
-      { "name": "Partner ops", "description": "Verifies documents, activates and suspends partners, maintains SLA definitions and signs off scorecards as the checker" }
+      {
+        "name": "Partner",
+        "description": "External login for a vendor, agency or service partner: uploads documents, raises and answers requests, and acknowledges its own SLA scorecards"
+      },
+      {
+        "name": "Partner manager",
+        "description": "Owns a portfolio of partners: invites and onboards them, resolves their requests and prepares the monthly SLA scorecard"
+      },
+      {
+        "name": "Partner ops",
+        "description": "Verifies documents, activates and suspends partners, maintains SLA definitions and signs off scorecards as the checker"
+      }
     ],
     "workflows": [
-      { "name": "Onboarding", "description": "Invite, partner login, document upload, review and activation; suspension and offboarding" },
-      { "name": "Documents", "description": "Upload, verification or rejection with a reason, and nightly expiry with renewal reminders" },
-      { "name": "Requests", "description": "New, in progress, awaiting partner, resolved and closed, with reopen, cancel and escalation" },
-      { "name": "SLA tracking", "description": "SLA clock per request by type and priority, breach flags, and a monthly scorecard signed off maker-checker" }
+      {
+        "name": "Onboarding",
+        "description": "Invite, partner login, document upload, review and activation; suspension and offboarding"
+      },
+      {
+        "name": "Documents",
+        "description": "Upload, verification or rejection with a reason, and nightly expiry with renewal reminders"
+      },
+      {
+        "name": "Requests",
+        "description": "New, in progress, awaiting partner, resolved and closed, with reopen, cancel and escalation"
+      },
+      {
+        "name": "SLA tracking",
+        "description": "SLA clock per request by type and priority, breach flags, and a monthly scorecard signed off maker-checker"
+      }
     ],
-    "data_objects": ["Partner", "Request", "Document", "SLA", "SLA scorecard"],
-    "integrations": ["REST API", "SSO"],
+    "data_objects": [
+      "Partner",
+      "Request",
+      "Document",
+      "SLA",
+      "SLA scorecard"
+    ],
+    "integrations": [
+      "REST API",
+      "SSO"
+    ],
     "compliance": [
       "Mandatory documents verified before a partner is activated",
       "Document expiry tracked with reminders and automatic expiry",
@@ -68,5 +113,5 @@
     "app_name_prefill": "Partner Portal — Agencies & Vendors",
     "app_prompt_prefill": "Partner portal for about 80 agencies and vendors that support our India commercial and medical teams: creative and media agencies, event and travel vendors, and field staffing partners. Partners onboard themselves with the MSA, NDA, GST, insurance and anti-bribery documents, which partner ops verifies; high-risk partners also need compliance due diligence. Partners raise invoice queries, change requests and deliverables against SOWs and see each request's SLA by priority. Partner managers prepare a monthly SLA scorecard with service credits, which partner ops signs off before the partner acknowledges it."
   },
-  "changelog": "First version: partner onboarding with documents, requests against SLAs, SLA definitions and monthly SLA scorecards on the Zango app spec v1."
+  "changelog": "Preview sketches for every custom screen (dashboards, custom tabs and panels)."
 }

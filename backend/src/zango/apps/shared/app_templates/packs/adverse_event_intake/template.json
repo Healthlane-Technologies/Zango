@@ -1,7 +1,7 @@
 {
   "slug": "adverse-event-intake",
   "name": "Adverse Event Intake",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "category": "Compliance & Quality",
   "icon": "alert",
   "is_beta": false,
@@ -112,5 +112,5 @@
     "app_name_prefill": "AE Intake",
     "app_prompt_prefill": "Adverse event intake that captures AEs and complaints from calls, email and field reps, checks duplicates, routes to PV within the SLA and tracks follow-ups."
   },
-  "changelog": "Quoted prose values cut at commas; Field Rep row scoping via where instead of own, so the build checker passes."
+  "changelog": "Preview sketches for every custom screen (dashboards, custom tabs and panels)."
 }

@@ -1,7 +1,7 @@
 {
   "slug": "medical-information-requests",
   "name": "Medical Information Requests",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "category": "Medical Affairs",
   "icon": "book",
   "is_beta": false,
@@ -114,5 +114,5 @@
     "app_name_prefill": "MedInfo Desk — Oncology & Diabetes",
     "app_prompt_prefill": "Medical information desk for our oncology and diabetes portfolio in India. HCPs ask through a portal, the toll-free line, the MI mailbox or their MSL; MI specialists answer from an approved standard response library or draft a custom answer with literature references, and a medical reviewer approves every custom answer before it goes out. Any adverse event or product complaint mentioned is captured and forwarded to pharmacovigilance within one business day, and closed inquiries are synced to our CRM."
   },
-  "changelog": "Quoted prose values; reporter sort on full_name; column format number; simpler standard-response filter, so the build checker passes."
+  "changelog": "Preview sketches for every custom screen (dashboards, custom tabs and panels)."
 }

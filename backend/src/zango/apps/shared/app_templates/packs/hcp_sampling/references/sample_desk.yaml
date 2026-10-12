@@ -124,6 +124,39 @@ pages:
       acknowledgement for more than 7 days, allocation used % this quarter. Below: allocated vs
       issued units per territory (stacked bar), batches expiring in 60 days, and the 10 oldest
       unacknowledged deliveries with the rep's name.
+    preview: |
+      const req = ctx.rows('sample_request'), del = ctx.rows('delivery'), alc = ctx.rows('allocation').filter(a => a.status === 'active');
+      const now = new Date(), days = d => Math.floor((now - new Date(d)) / 864e5);
+      const sum = (rs, k) => rs.reduce((a, r) => a + (+r[k] || 0), 0);
+      const shipped = sum(req.filter(r => ['dispatched', 'delivered'].includes(r.status) && days(r.request_date) <= 90), 'quantity');
+      const transit = del.filter(d => d.status === 'in_transit').sort((a, b) => String(a.dispatched_on).localeCompare(String(b.dispatched_on)));
+      const used = sum(alc, 'units') ? Math.round(100 * sum(alc, 'units_issued') / sum(alc, 'units')) : 0;
+      const byT = {}; alc.forEach(a => { const t = byT[a.territory] = byT[a.territory] || { name: ctx.fmt(a, 'territory'), units: 0, issued: 0 }; t.units += +a.units || 0; t.issued += +a.units_issued || 0; });
+      const terr = Object.values(byT).sort((a, b) => b.units - a.units), top = Math.max(1, ...terr.map(t => t.units));
+      const expiring = ctx.rows('sample_batch').filter(b => b.status !== 'expired' && -days(b.expiry_date) >= 0 && -days(b.expiry_date) <= 60).sort((a, b) => String(a.expiry_date).localeCompare(String(b.expiry_date)));
+      const reqOf = d => req.find(x => x.id === d.sample_request);
+      return `
+      <div class="pv-kpis">
+        <div class="pv-kpi" data-go="sample_requests"><span>Requests awaiting approval</span><b>${req.filter(r => r.status === 'submitted').length}</b></div>
+        <div class="pv-kpi"><span>Units dispatched, last 90 days</span><b>${shipped.toLocaleString()}</b></div>
+        <div class="pv-kpi" data-go="deliveries"><span>Unacknowledged over 7 days</span><b style="color:#B42318">${transit.filter(d => days(d.dispatched_on) > 7).length}</b></div>
+        <div class="pv-kpi" data-go="allocations"><span>Allocation used this quarter</span><b>${used}%</b><div class="pv-bar" style="margin-top:8px"><i style="width:${used}%"></i></div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:12px;align-items:start">
+        <div class="d-panel"><h3>${ctx.icon('map')}Allocated vs issued by territory<span class="sp"></span><span class="pv-muted"><i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--brand)"></i> issued · <i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#D0D5DD"></i> remaining</span></h3>
+          <div style="padding:12px 16px;display:flex;flex-direction:column;gap:11px">${terr.map(t => `
+            <div style="display:grid;grid-template-columns:110px 1fr 120px;gap:10px;align-items:center;font-size:13px"><b style="font-weight:550">${ctx.esc(t.name)}</b>
+              <div style="display:flex;height:12px;border-radius:4px;overflow:hidden;width:${Math.round(100 * t.units / top)}%;background:#D0D5DD"><i style="width:${Math.min(100, 100 * t.issued / (t.units || 1))}%;background:var(--brand)"></i></div>
+              <span class="pv-muted" style="text-align:right">${t.issued.toLocaleString()} / ${t.units.toLocaleString()}</span></div>`).join('') || '<span class="pv-muted">No active allocations.</span>'}</div></div>
+        <div class="d-panel"><h3>${ctx.icon('package')}Batches expiring in 60 days<span class="sp"></span><span class="pv-badge">${expiring.length}</span></h3>
+          <div style="padding:10px 14px;display:flex;flex-direction:column;gap:8px">${expiring.slice(0, 6).map(b => `
+            <div class="pv-card" data-go="batches"><div style="display:flex;justify-content:space-between"><b style="font-weight:550">${ctx.esc(b.batch_no)}</b><span style="color:#B54708;font-weight:550;font-size:12px">${-days(b.expiry_date)} days left</span></div>
+              <span class="pv-muted">${ctx.esc(ctx.fmt(b, 'product'))} · ${(+b.units_available || 0).toLocaleString()} units available</span></div>`).join('') || '<span class="pv-muted">Nothing expires in the next 60 days.</span>'}</div></div>
+      </div>
+      <div class="d-panel"><h3>${ctx.icon('clock')}Oldest unacknowledged deliveries</h3>
+        <table class="z-t"><thead><tr><th>Delivery</th><th>Request</th><th>HCP</th><th>Rep</th><th>Mode</th><th>Dispatched</th><th>Waiting</th></tr></thead><tbody>${transit.slice(0, 10).map(d => { const r = reqOf(d); return `
+          <tr class="click" data-go="${r ? 'request_360:' + r.id : 'deliveries'}"><td>${ctx.esc(d.delivery_ref)}</td><td>${ctx.esc(ctx.fmt(d, 'sample_request'))}</td><td>${ctx.esc(r ? ctx.fmt(r, 'hcp') : '')}</td><td>${ctx.esc(r ? ctx.fmt(r, 'rep') : '')}</td>
+            <td>${ctx.esc(ctx.fmt(d, 'mode'))}</td><td>${ctx.esc(ctx.fmt(d, 'dispatched_on'))}</td><td style="color:${days(d.dispatched_on) > 7 ? '#B42318' : 'inherit'};font-weight:550">${days(d.dispatched_on)} days</td></tr>`; }).join('')}</tbody></table></div>`;
 
 modules:
   # ===========================================================================
@@ -834,6 +867,20 @@ detail_views:
       - type: custom
         title: Quarterly limits
         text: One row per product sampled this quarter with units delivered vs max_per_hcp_qtr as a progress bar; red when at the limit.
+        preview: |
+          const rec = ctx.record, now = new Date(), qStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
+          const recent = ctx.related('sample_request', 'hcp').filter(r => ['approved', 'dispatched', 'delivered'].includes(r.status));
+          const inQtr = recent.filter(r => new Date(r.request_date) >= qStart);
+          const rows = inQtr.length ? inQtr : recent;
+          const byP = {}; rows.forEach(r => { byP[r.product] = byP[r.product] || { name: ctx.fmt(r, 'product'), units: 0 }; byP[r.product].units += +r.quantity || 0; });
+          const prods = ctx.rows('product');
+          const items = Object.entries(byP).map(([id, p]) => { const pr = prods.find(x => String(x.id) === id); return { ...p, max: pr ? +pr.max_per_hcp_qtr || 0 : 0 }; }).sort((a, b) => b.units / (b.max || 1) - a.units / (a.max || 1));
+          if (!items.length) return `<div class="pv-muted">No samples issued to ${ctx.esc(rec.name)} this quarter.</div>`;
+          return `<div style="display:flex;flex-direction:column;gap:12px">${items.map(p => { const pct = p.max ? Math.min(100, Math.round(100 * p.units / p.max)) : 0, full = p.max && p.units >= p.max; return `
+            <div><div style="display:flex;justify-content:space-between;gap:8px;font-size:13px"><span style="font-weight:550;color:#101828">${ctx.esc(p.name)}</span>
+              <span style="color:${full ? '#B42318' : '#667085'};font-weight:${full ? 600 : 400};font-size:12px;white-space:nowrap">${p.units} / ${p.max || '—'}${full ? ' · at limit' : ''}</span></div>
+              <div class="pv-bar" style="margin-top:5px"><i style="width:${pct}%;${full ? 'background:#D92D20' : ''}"></i></div></div>`; }).join('')}
+            <span class="pv-muted">${inQtr.length ? 'Units issued this quarter' : 'No issues yet this quarter; showing recent units'} vs the product's quarterly limit.</span></div>`;
     tabs:
       - code: requests
         label: Requests

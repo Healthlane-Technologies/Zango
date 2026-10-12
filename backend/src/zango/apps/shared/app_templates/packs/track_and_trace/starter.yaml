@@ -109,6 +109,34 @@ pages:
       movement events in exception, open recalls. Below: events per day by type (stacked bar,
       last 14 days) and a table of the 10 oldest open exceptions with event type, serial or
       SSCC, location and age.
+    preview: |
+      const now = new Date(), hrs = d => (now - new Date(d)) / 36e5, sum = (rs, k) => rs.reduce((a, r) => a + (+r[k] || 0), 0);
+      const ev = ctx.rows('movement_event'), aggs = ctx.rows('aggregation'), recalls = ctx.rows('recall');
+      const types = ctx.entity('movement_event').fields.find(f => f.key === 'event_type').opts, TC = ['#155EEF', '#7A5AF8', '#12B76A', '#0BA5EC', '#F79009', '#EE46BC', '#F04438'];
+      const daily = ev.filter(e => hrs(e.event_time) <= 14 * 24).length >= 5, unit = daily ? 864e5 : 7 * 864e5;
+      const buckets = [...Array(14)].map((_, i) => new Date(now - (13 - i) * unit)), bi = e => 13 - Math.floor((now - new Date(e.event_time)) / unit);
+      const series = buckets.map((_, i) => types.map(t => ev.filter(e => bi(e) === i && e.event_type === t.id).length)), topS = Math.max(1, ...series.map(s => s.reduce((a, b) => a + b, 0)));
+      const age = d => { const h = hrs(d); return h < 48 ? Math.round(h) + ' h' : Math.round(h / 24) + ' days'; };
+      const exc = ev.filter(e => e.status === 'exception').sort((a, b) => String(a.event_time).localeCompare(String(b.event_time))).slice(0, 10);
+      const chart = `<div class="d-panel"><h3>${ctx.icon('bar-chart-3')}Events per ${daily ? 'day' : 'week'} by type, last 14 ${daily ? 'days' : 'weeks'}</h3><div style="padding:14px 16px">
+        <div style="display:flex;align-items:flex-end;gap:6px;height:150px;border-bottom:1px solid #EAECF0">${series.map(s => `<div style="flex:1;display:flex;flex-direction:column-reverse;height:100%">${s.map((n, j) => n ? `<i title="${ctx.esc(types[j].label)}: ${n}" style="display:block;height:${100 * n / topS}%;background:${TC[j % 7]};border-radius:2px;margin-top:1px"></i>` : '').join('')}</div>`).join('')}</div>
+        <div style="display:flex;gap:6px;margin-top:5px">${buckets.map((b, i) => `<span class="pv-muted" style="flex:1;text-align:center;font-size:10.5px">${i % 2 ? '' : b.toLocaleString('en', { day: 'numeric', month: 'short' })}</span>`).join('')}</div>
+        <div class="pv-muted" style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap">${types.map((t, j) => `<span><i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${TC[j % 7]}"></i> ${ctx.esc(t.label)}</span>`).join('')}</div></div></div>`;
+      const excTable = `<div class="d-panel"><h3>${ctx.icon('triangle-alert')}Oldest open exceptions<span class="sp"></span><span class="pv-badge">${ev.filter(e => e.status === 'exception').length}</span></h3>
+        <table class="z-t"><thead><tr><th>Event</th><th>Type</th><th>Batch</th><th>SSCC</th><th>Location</th><th>Note</th><th>Age</th></tr></thead><tbody>${exc.map(e => `
+          <tr class="click" data-go="batch_360:${e.batch}"><td>${ctx.esc(e.event_ref)}</td><td>${ctx.esc(ctx.fmt(e, 'event_type'))}</td><td>${ctx.esc(ctx.fmt(e, 'batch'))}</td><td style="font-family:ui-monospace,Menlo,monospace;font-size:12px">${ctx.esc(ctx.fmt(e, 'aggregation') || '—')}</td><td>${ctx.esc(ctx.fmt(e, 'to_location') || ctx.fmt(e, 'from_location'))}</td>
+            <td class="pv-muted" style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ctx.esc(e.exception_note || '')}</td><td style="font-weight:550;color:${hrs(e.event_time) > 24 ? '#B42318' : 'inherit'}">${age(e.event_time)}</td></tr>`).join('') || '<tr><td colspan="7" class="pv-muted">No open exceptions.</td></tr>'}</tbody></table></div>`;
+      const wk = ev.filter(e => e.event_type === 'commission' && hrs(e.event_time) <= 168), sealed = aggs.filter(a => a.status !== 'open' && a.packed_at && hrs(a.packed_at) <= 168);
+      const open = recalls.filter(r => r.status === 'initiated');
+      return `
+      <div class="pv-kpis">
+        <div class="pv-kpi" data-go="serials"><span>Serials commissioned this week</span><b>${(sum(wk, 'quantity') || ctx.rows('serial_number').filter(s => s.commissioned_at && hrs(s.commissioned_at) <= 168).length).toLocaleString('en-IN')}</b></div>
+        <div class="pv-kpi" data-go="aggregations"><span>Cases / pallets sealed this week</span><b>${sealed.filter(a => a.level === 'case').length} <span style="display:inline;color:#98A2B3;font-weight:400">/</span> ${sealed.filter(a => a.level === 'pallet').length}</b></div>
+        <div class="pv-kpi" data-go="events"><span>Events in exception</span><b style="color:#B42318">${ev.filter(e => e.status === 'exception').length}</b></div>
+        <div class="pv-kpi" data-go="recalls"><span>Open recalls</span><b>${open.length}</b><span>${open.filter(r => r.recall_class === 'class_i').length} Class I</span></div>
+      </div>
+      ${chart}
+      ${excTable}`;
   - { code: batches,          type: crud,   entity: batch,           route: /app/batches,          title: Batches }
   - { code: batch_360,        type: detail, detail_view: batch_360,  route: /app/batches/:id }
   - { code: products,         type: crud,   entity: product,         route: /app/products,         title: Products }

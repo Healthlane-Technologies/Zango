@@ -155,6 +155,42 @@ pages:
       Below: open reviews by reviewer and discipline (stacked bar, overdue in red), first-pass
       approval rate by brand for the last 6 months (line), and the 10 oldest materials still in
       review with their pending reviewers and days waiting.
+    preview: |
+      const today = new Date().toISOString().slice(0, 10), in60 = new Date(Date.now() + 60 * 864e5).toISOString().slice(0, 10);
+      const qStart = (d => new Date(d.getFullYear(), Math.floor(d.getMonth() / 3) * 3, 1).toISOString().slice(0, 10))(new Date());
+      const days = (a, b) => Math.round((new Date(b) - new Date(a)) / 864e5);
+      const mats = ctx.rows('material'), revs = ctx.rows('review'), vers = ctx.rows('material_version'), prods = ctx.rows('product');
+      const inReview = mats.filter(m => ['submitted', 'in_review', 'awaiting_certification'].includes(m.status));
+      const open = revs.filter(r => ['assigned', 'in_progress'].includes(r.status)), late = r => r.due_date && r.due_date < today;
+      const firstSub = m => vers.filter(v => v.material === m.id && v.submitted_on).map(v => v.submitted_on).sort()[0];
+      const lastSub = m => vers.filter(v => v.material === m.id && v.submitted_on).map(v => v.submitted_on).sort().pop();
+      const cyc = mats.filter(m => m.certified_on >= qStart && firstSub(m)).map(m => days(firstSub(m), m.certified_on)).filter(n => n >= 0 && n <= 120).sort((a, b) => a - b);
+      const kpi = (l, v, go, c) => `<div class="pv-kpi" data-go="${go}"><span>${l}</span><b style="${c ? 'color:' + c : ''}">${v}</b></div>`;
+      const byRev = ctx.rows('reviewer').map(p => ({ p, rs: open.filter(r => r.reviewer === p.id) })).filter(x => x.rs.length).sort((a, b) => b.rs.length - a.rs.length).slice(0, 6);
+      const top = Math.max(1, ...byRev.map(x => x.rs.length));
+      const fp = prods.map(p => { const v1 = vers.filter(v => v.version_no === 1 && v.outcome && mats.some(m => m.id === v.material && m.product === p.id));
+        return { p, n: v1.length, ok: v1.filter(v => v.outcome !== 'changes_required').length }; }).filter(x => x.n);
+      const oldest = inReview.map(m => ({ m, since: lastSub(m) || String(m.created_at).slice(0, 10) })).sort((a, b) => a.since.localeCompare(b.since)).slice(0, 10);
+      return `<div class="pv-kpis">
+          ${kpi('Materials in review', inReview.length, 'materials')}
+          ${kpi('Reviews past the 5-day SLA', open.filter(late).length, 'reviews', '#B42318')}
+          ${kpi('Median submission → certification', cyc.length ? cyc[Math.floor(cyc.length / 2)] + ' days' : '—', 'materials')}
+          ${kpi('Certified, expiring in 60 days', mats.filter(m => m.status === 'certified' && m.expiry_date >= today && m.expiry_date <= in60).length, 'materials', '#B54708')}</div>
+        <div class="pv-grid" style="grid-template-columns:1fr 1fr">
+          <div class="pv-card"><b>Open reviews by reviewer</b>
+            ${byRev.map(({ p, rs }) => { const o = rs.filter(late).length; return `<div style="margin-top:9px"><div style="display:flex;justify-content:space-between;gap:8px">
+              <span>${ctx.esc(p.full_name)} <span class="pv-muted">· ${ctx.esc(ctx.fmt(p, 'discipline'))}</span></span><span class="pv-muted">${rs.length}${o ? ` · <span style="color:#B42318">${o} overdue</span>` : ''}</span></div>
+              <div class="pv-bar" style="display:flex;margin-top:4px"><i style="width:${(rs.length - o) / top * 100}%;border-radius:0"></i><i style="width:${o / top * 100}%;background:#F04438;border-radius:0"></i></div></div>`; }).join('') || '<span class="pv-muted">No open reviews.</span>'}</div>
+          <div class="pv-card"><b>First-pass approval rate by brand</b><span class="pv-muted">Version 1 approved, with or without changes</span>
+            ${fp.map(x => { const pct = Math.round(x.ok / x.n * 100); return `<div style="display:grid;grid-template-columns:110px 1fr 70px;gap:8px;align-items:center;margin-top:8px">
+              <span>${ctx.esc(x.p.name)}</span><div class="pv-bar"><i style="width:${pct}%;background:${pct >= 60 ? '#12B76A' : '#F79009'}"></i></div><span class="pv-muted" style="text-align:right">${pct}% of ${x.n}</span></div>`; }).join('') || '<span class="pv-muted">No first versions reviewed yet.</span>'}</div>
+        </div>
+        <div class="pv-card" style="padding:0;overflow:hidden;margin-top:12px"><b style="padding:10px 14px">Oldest materials still in review</b>
+          <table class="z-t"><thead><tr><th>Material</th><th>Title</th><th>Brand</th><th>Version</th><th>Days waiting</th><th>Pending reviewers</th></tr></thead><tbody>
+          ${oldest.map(({ m, since }) => `<tr class="click" data-go="material_360:${m.id}"><td>${ctx.esc(m.material_code)}</td><td>${ctx.esc(m.title)}</td><td>${ctx.esc(ctx.fmt(m, 'product'))}</td>
+            <td>v${ctx.esc(m.version)}</td><td>${Math.max(0, days(since, today))}</td>
+            <td>${ctx.esc(open.filter(r => r.material === m.id).map(r => ctx.fmt(r, 'reviewer') || ctx.fmt(r, 'discipline')).join(', ') || 'Awaiting routing')}</td></tr>`).join('')
+            || '<tr><td colspan="6" class="pv-muted">Nothing is in review.</td></tr>'}</tbody></table></div>`;
   - code: dashboard_brand
     type: custom
     route: /app/my-pipeline
@@ -166,6 +202,23 @@ pages:
       (draft, submitted, in review, changes requested, awaiting certification, certified), each
       card showing material ID, title, version, target go-live and days in the current status.
       Above it: materials expiring in 60 days with a "Start recertification" link.
+    preview: |
+      const today = new Date().toISOString().slice(0, 10), in60 = new Date(Date.now() + 60 * 864e5).toISOString().slice(0, 10);
+      const days = (a, b) => Math.max(0, Math.round((new Date(b) - new Date(a)) / 864e5));
+      const mats = ctx.rows('material'), vers = ctx.rows('material_version');
+      const since = m => vers.filter(v => v.material === m.id && v.submitted_on).map(v => v.submitted_on).sort().pop() || String(m.created_at).slice(0, 10);
+      const sts = (ctx.entity('material').workflow.statuses || []).filter(s => !['expired', 'withdrawn'].includes(s.code));
+      const expiring = mats.filter(m => m.status === 'certified' && m.expiry_date && m.expiry_date <= in60).sort((a, b) => a.expiry_date.localeCompare(b.expiry_date));
+      return `<div class="pv-card" style="margin-bottom:12px;border-color:#FEDF89;background:#FFFCF5"><b>${ctx.icon('calendar-clock')} Expiring in the next 60 days</b>
+          ${expiring.map(m => `<div style="display:flex;gap:10px;align-items:center;padding:6px 0;border-top:1px solid #FEF0C7">
+            <span style="flex:1"><b>${ctx.esc(m.material_code)}</b> · ${ctx.esc(m.title)} <span class="pv-muted">· ${ctx.esc(ctx.fmt(m, 'product'))}</span></span>
+            <span class="pv-muted">${m.expiry_date < today ? 'expired' : 'expires'} ${ctx.esc(ctx.fmt(m, 'expiry_date'))}</span>
+            <a class="z-link" data-go="material_360:${m.id}">Start recertification →</a></div>`).join('') || '<span class="pv-muted">Nothing expires in the next 60 days.</span>'}</div>
+        <div class="pv-cols">${sts.map(s => { const [bg, fg] = ctx.tone(s.color), rs = mats.filter(m => m.status === s.code);
+          return `<div class="pv-col"><h4><span class="z-badge" style="background:${bg};color:${fg};border-color:transparent"><i></i>${ctx.esc(s.label)}</span> <span class="pv-muted">${rs.length}</span></h4>
+            ${rs.map(m => `<div class="pv-card" data-go="material_360:${m.id}"><span class="pv-muted">${ctx.esc(m.material_code)} · v${ctx.esc(m.version)}</span>
+              <b style="font-weight:600">${ctx.esc(m.title)}</b>
+              <span class="pv-muted">Go-live ${ctx.esc(ctx.fmt(m, 'go_live_date') || '—')} · ${days(since(m), today)} d in status</span></div>`).join('') || '<span class="pv-muted">None</span>'}</div>`; }).join('')}</div>`;
 
 modules:
   - code: library
@@ -760,7 +813,29 @@ detail_views:
       - { label: Versions, value: { count: material_version, via: material }, tone: indigo, link_to_tab: versions }
     sidebar:
       - { type: fields, title: Approval, fields: [job_code, certified_by, certified_on, expiry_date, recert_due, dms_document_id] }
-      - { type: custom, title: Review checklist, text: "Ticks for: every claim referenced, fair balance present (HCP), abbreviated PI present (HCP), medical / legal / regulatory decisions for the current version, certification." }
+      - type: custom
+        title: Review checklist
+        text: >
+          Ticks for: every claim referenced, fair balance present (HCP), abbreviated PI present (HCP),
+          medical / legal / regulatory decisions for the current version, certification.
+        preview: |
+          const m = ctx.record, claims = ctx.related('claim', 'material'), revs = ctx.related('review', 'material');
+          const hcp = m.audience === 'hcp', unref = claims.filter(c => !c.reference).length;
+          const disc = (ctx.entity('review').fields.find(f => f.key === 'discipline') || {}).opts || [];
+          const items = [
+            { l: 'Every claim referenced', ok: claims.length > 0 && !unref, sub: claims.length ? (unref ? `${unref} of ${claims.length} claims have no reference` : `${claims.length} claim${claims.length > 1 ? "s" : ""}, all referenced`) : 'No claims logged yet' },
+            { l: 'Fair balance present', ok: !hcp || !!m.fair_balance, na: !hcp },
+            { l: 'Abbreviated PI present', ok: !hcp || !!m.pi_included, na: !hcp },
+            ...disc.map(d => { const r = revs.filter(r => r.discipline === d.id && Number(r.material_version) === Number(m.version) && r.outcome).pop();
+              return { l: `${d.label} decision (v${m.version})`, ok: !!r && r.outcome !== 'changes_required', bad: r && r.outcome === 'changes_required', sub: r ? `${ctx.fmt(r, 'outcome')} · ${ctx.fmt(r, 'reviewer')}` : 'Pending' }; }),
+            { l: 'Certification', ok: !!m.certified_on, sub: m.certified_on ? `${ctx.fmt(m, 'certified_by')} · ${ctx.fmt(m, 'certified_on')}` : m.status === 'awaiting_certification' ? 'Awaiting signatory' : '' }
+          ];
+          const done = items.filter(i => i.ok).length;
+          return `<div class="pv-muted" style="display:flex;justify-content:space-between"><span>${done} of ${items.length} done</span><span>${ctx.esc(ctx.fmt(m, 'audience'))} material · v${ctx.esc(m.version)}</span></div>
+            <div class="pv-bar" style="margin:6px 0 10px"><i style="width:${Math.round(done / items.length * 100)}%;background:${done === items.length ? '#12B76A' : 'var(--brand)'}"></i></div>
+            ${items.map(i => `<div style="display:flex;gap:8px;align-items:flex-start;padding:4px 0;font-size:13px">
+              <span style="color:${i.bad ? '#D92D20' : i.ok ? '#079455' : '#98A2B3'}">${ctx.icon(i.bad ? 'circle-x' : i.ok ? 'circle-check' : 'circle')}</span>
+              <span style="${i.ok ? '' : 'color:#667085'}">${ctx.esc(i.l)}${i.na ? ' <span class="pv-muted">· n/a, not HCP</span>' : ''}${i.sub ? `<br><span class="pv-muted" style="${i.bad ? 'color:#B42318' : ''}">${ctx.esc(i.sub)}</span>` : ''}</span></div>`).join('')}`;
     tabs:
       - { code: overview, label: Overview, type: summary, sections: [ { title: Material, columns: 2, fields: [title, product, material_type, channel, audience, version, previous_material] }, { title: Content, columns: 2, fields: [artwork, fair_balance, pi_included, go_live_date, urgent, urgent_reason] } ] }
       - code: claims

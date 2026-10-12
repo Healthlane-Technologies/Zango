@@ -97,6 +97,35 @@ pages:
       KPI row: requests awaiting approval, units dispatched this quarter, deliveries awaiting
       acknowledgement, allocation used % this quarter. Below: allocation used vs allocated per
       territory (bar) and the 10 oldest unacknowledged deliveries.
+    preview: |
+      const req = ctx.rows('sample_request'), del = ctx.rows('delivery'), alc = ctx.rows('allocation').filter(a => a.status === 'active');
+      const now = new Date();
+      const days = d => Math.floor((now - new Date(d)) / 864e5);
+      const sum = (rs, k) => rs.reduce((a, r) => a + (+r[k] || 0), 0);
+      const shipped = sum(req.filter(r => ["dispatched", "delivered"].includes(r.status) && days(r.request_date) <= 90), "quantity");
+      const transit = del.filter(d => d.status === 'in_transit').sort((a, b) => String(a.dispatched_on).localeCompare(String(b.dispatched_on)));
+      const used = sum(alc, 'units') ? Math.round(100 * sum(alc, 'units_issued') / sum(alc, 'units')) : 0;
+      const byT = {}; alc.forEach(a => { const t = byT[a.territory] = byT[a.territory] || { name: ctx.fmt(a, 'territory'), units: 0, issued: 0 }; t.units += +a.units || 0; t.issued += +a.units_issued || 0; });
+      const terr = Object.values(byT).sort((a, b) => b.units - a.units);
+      const hcpOf = d => { const r = req.find(x => x.id === d.sample_request); return r ? ctx.fmt(r, 'hcp') : ''; };
+      return `
+      <div class="pv-kpis">
+        <div class="pv-kpi" data-go="sample_requests"><span>Requests awaiting approval</span><b>${req.filter(r => r.status === 'submitted').length}</b></div>
+        <div class="pv-kpi"><span>Units dispatched, last 90 days</span><b>${shipped.toLocaleString()}</b></div>
+        <div class="pv-kpi" data-go="deliveries"><span>Awaiting acknowledgement</span><b>${transit.length}</b></div>
+        <div class="pv-kpi" data-go="allocations"><span>Allocation used this quarter</span><b>${used}%</b><div class="pv-bar" style="margin-top:8px"><i style="width:${used}%"></i></div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1.3fr;gap:12px;align-items:start">
+        <div class="d-panel"><h3>${ctx.icon('map')}Allocation used by territory<span class="sp"></span><span class="pv-muted">active allocations</span></h3>
+          <div style="padding:12px 16px;display:flex;flex-direction:column;gap:12px">${terr.map(t => `
+            <div><div style="display:flex;justify-content:space-between;font-size:13px"><b style="font-weight:550">${ctx.esc(t.name)}</b>
+              <span class="pv-muted">${t.issued.toLocaleString()} of ${t.units.toLocaleString()} units</span></div>
+              <div class="pv-bar" style="margin-top:5px"><i style="width:${Math.min(100, Math.round(100 * t.issued / (t.units || 1)))}%"></i></div></div>`).join('') || '<span class="pv-muted">No active allocations.</span>'}</div></div>
+        <div class="d-panel"><h3>${ctx.icon('clock')}Oldest unacknowledged deliveries</h3>
+          <table class="z-t"><thead><tr><th>Delivery</th><th>HCP</th><th>Mode</th><th>Dispatched</th><th>Waiting</th></tr></thead><tbody>${transit.slice(0, 10).map(d => `
+            <tr class="click" data-go="deliveries"><td>${ctx.esc(d.delivery_ref)}</td><td>${ctx.esc(hcpOf(d))}</td><td>${ctx.esc(ctx.fmt(d, 'mode'))}</td>
+              <td>${ctx.esc(ctx.fmt(d, 'dispatched_on'))}</td><td style="color:${days(d.dispatched_on) > 7 ? '#B42318' : 'inherit'};font-weight:550">${days(d.dispatched_on)} days</td></tr>`).join('')}</tbody></table></div>
+      </div>`;
 
 modules:
   - code: masters

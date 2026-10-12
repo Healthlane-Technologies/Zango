@@ -136,9 +136,50 @@ roles:
       - { page: commitments,   icon: list-checks }
 
 pages:
-  - { code: dashboard,      type: custom, route: /app/dashboard, title: Emerging Markets Portfolio, component: RegulatoryDashboard,
-      roles: [Regulatory Lead, Leadership],
-      text: "KPI row: approved registrations, submissions with health authorities, renewals due in 180 days, open HA queries, overdue commitments. Below: a 36 x 18 product-by-market matrix coloured by registration status (approved green, filed blue, in renewal teal, planned grey, lapsed amber), a bar chart of approvals per quarter by region, and a table of HA decisions due in the next 60 days." }
+  - code: dashboard
+    type: custom
+    route: /app/dashboard
+    title: Emerging Markets Portfolio
+    component: RegulatoryDashboard
+    roles: [Regulatory Lead, Leadership]
+    text: "KPI row: approved registrations, submissions with health authorities, renewals due in 180 days, open HA queries, overdue commitments. Below: a 36 x 18 product-by-market matrix coloured by registration status (approved green, filed blue, in renewal teal, planned grey, lapsed amber), a bar chart of approvals per quarter by region, and a table of HA decisions due in the next 60 days."
+    preview: |
+      const regs = ctx.rows('registration'), subs = ctx.rows('submission'), cmts = ctx.rows('commitment'), qs = ctx.rows('ha_query');
+      const now = new Date(), dd = d => d ? Math.round((new Date(d) - now) / 864e5) : null;
+      const withHA = subs.filter(s => ['submitted', 'ha_questions'].includes(s.status));
+      const renew = regs.filter(r => ['approved', 'in_renewal'].includes(r.status) && dd(r.expiry_date) !== null && dd(r.expiry_date) >= 0 && dd(r.expiry_date) <= 180);
+      const overdue = cmts.filter(c => !['fulfilled', 'waived'].includes(c.status) && dd(c.due_date) < 0);
+      const ahead = withHA.filter(s => dd(s.decision_due) !== null && dd(s.decision_due) >= 0).sort((a, b) => String(a.decision_due).localeCompare(String(b.decision_due)));
+      const due60 = ahead.filter(s => dd(s.decision_due) <= 60), due = due60.length ? due60 : ahead.slice(0, 5);
+      const C = { approved: '#12B76A', filed: '#2E90FA', in_renewal: '#15B79E', planned: '#D0D5DD', lapsed: '#F79009', rejected: '#F04438', withdrawn: '#98A2B3' };
+      const lbl = c => (ctx.entity('registration').wf.statuses.find(s => s.code === c) || {}).label || c;
+      const prods = ctx.rows('product'), mkts = ctx.rows('country'), cell = (p, m) => regs.find(r => r.product === p.id && r.market === m.id);
+      const regions = ctx.entity('country').fields.find(f => f.key === 'region').opts, RC = ['#155EEF', '#12B76A', '#F79009', '#7A5AF8', '#EE46BC'];
+      const qk = d => { const x = new Date(d); return x.getFullYear() + ' Q' + (Math.floor(x.getMonth() / 3) + 1); };
+      const quarters = [...Array(6)].map((_, i) => qk(new Date(now.getFullYear(), now.getMonth() - 3 * (5 - i), 1)));
+      const regionOf = r => (mkts.find(m => m.id === r.market) || {}).region;
+      const appr = quarters.map(q => regions.map(o => regs.filter(r => r.approval_date && qk(r.approval_date) === q && regionOf(r) === o.id).length)), top = Math.max(1, ...appr.map(a => a.reduce((x, y) => x + y, 0)));
+      return `
+      <div class="pv-kpis">
+        <div class="pv-kpi" data-go="registrations"><span>Approved registrations</span><b>${regs.filter(r => r.status === 'approved').length}</b></div>
+        <div class="pv-kpi" data-go="submissions"><span>With health authorities</span><b>${withHA.length}</b></div>
+        <div class="pv-kpi" data-go="registrations"><span>Renewals due in 180 days</span><b style="color:#B54708">${renew.length}</b></div>
+        <div class="pv-kpi" data-go="ha_queries"><span>Open HA queries</span><b>${qs.filter(q => q.status !== 'responded').length}</b></div>
+        <div class="pv-kpi" data-go="commitments"><span>Overdue commitments</span><b style="color:#B42318">${overdue.length}</b></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:12px;align-items:start">
+        <div class="d-panel"><h3>${ctx.icon('grid-3x3')}Product by market</h3><div style="padding:12px 16px;overflow-x:auto">
+          <table style="border-collapse:separate;border-spacing:3px;font-size:12px"><tr><th></th>${mkts.map(m => `<th style="font-weight:550;color:#475467;width:24px;writing-mode:vertical-rl;transform:rotate(180deg);height:76px;text-align:left">${ctx.esc(m.name)}</th>`).join('')}</tr>
+          ${prods.map(p => `<tr><td data-go="product_360:${p.id}" style="cursor:pointer;font-weight:550;padding-right:8px;white-space:nowrap">${ctx.esc(p.name)}</td>${mkts.map(m => { const r = cell(p, m); return `<td title="${r ? ctx.esc(r.reg_ref + ' · ' + lbl(r.status)) : 'Not registered'}" ${r ? `data-go="market_360:${m.id}"` : ''} style="height:22px;border-radius:5px;cursor:${r ? 'pointer' : 'default'};background:${r ? C[r.status] : '#F9FAFB'};border:1px solid ${r ? 'transparent' : '#EAECF0'}"></td>`; }).join('')}</tr>`).join('')}</table>
+          <div class="pv-muted" style="margin-top:10px;display:flex;gap:12px;flex-wrap:wrap">${Object.entries(C).map(([k, c]) => `<span><i style="display:inline-block;width:9px;height:9px;border-radius:3px;background:${c}"></i> ${ctx.esc(lbl(k))}</span>`).join('')}</div></div></div>
+        <div class="d-panel"><h3>${ctx.icon('bar-chart-3')}Approvals per quarter by region</h3><div style="padding:14px 16px">
+          <div style="display:flex;align-items:flex-end;gap:14px;height:150px;border-bottom:1px solid #EAECF0">${appr.map((a, i) => `<div style="flex:1;display:flex;flex-direction:column-reverse;height:100%;justify-content:flex-start" title="${quarters[i]}">${a.map((n, j) => n ? `<i style="display:block;height:${100 * n / top}%;background:${RC[j % 5]};border-radius:3px;margin-top:2px"></i>` : '').join('')}</div>`).join('')}</div>
+          <div style="display:flex;gap:14px;margin-top:6px">${quarters.map(q => `<span class="pv-muted" style="flex:1;text-align:center;font-size:11px">${q.slice(2)}</span>`).join('')}</div>
+          <div class="pv-muted" style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap">${regions.map((o, j) => `<span><i style="display:inline-block;width:9px;height:9px;border-radius:3px;background:${RC[j % 5]}"></i> ${ctx.esc(o.label)}</span>`).join('')}</div></div></div>
+      </div>
+      <div class="d-panel"><h3>${ctx.icon('calendar-clock')}${due60.length ? 'HA decisions due in the next 60 days' : 'Next HA decisions due'}<span class="sp"></span><span class="pv-badge">${due60.length} in 60 days</span></h3>
+        <table class="z-t"><thead><tr><th>Submission</th><th>Product</th><th>Market</th><th>Type</th><th>HA ref</th><th>Open queries</th><th>Decision due</th></tr></thead><tbody>${due.map(s => `
+          <tr class="click" data-go="submission_360:${s.id}"><td>${ctx.esc(s.submission_ref)}</td><td>${ctx.esc(ctx.fmt(s, 'product'))}</td><td>${ctx.esc(ctx.fmt(s, 'market'))}</td><td>${ctx.esc(ctx.fmt(s, 'submission_type'))}</td><td>${ctx.esc(s.ha_ref || '—')}</td><td>${qs.filter(q => q.submission === s.id && q.status !== 'responded').length}</td><td style="font-weight:550;color:${dd(s.decision_due) <= 14 ? '#B42318' : 'inherit'}">${ctx.esc(ctx.fmt(s, 'decision_due'))} · ${dd(s.decision_due)}d</td></tr>`).join('') || '<tr><td colspan="7" class="pv-muted">No HA decisions pending.</td></tr>'}</tbody></table></div>`;
   - { code: products,       type: crud,   entity: product,      route: /app/products,      title: Products }
   - { code: product_360,    type: detail, detail_view: product_360, route: /app/products/:id }
   - { code: markets,        type: crud,   entity: country,      route: /app/markets,       title: Markets }

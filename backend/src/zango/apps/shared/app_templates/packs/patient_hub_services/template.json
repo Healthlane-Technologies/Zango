@@ -1,7 +1,7 @@
 {
   "slug": "patient-hub-services",
   "name": "Patient Hub Services",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "category": "Patient Services",
   "icon": "heart",
   "is_beta": false,
@@ -137,5 +137,5 @@
     "app_name_prefill": "Immunology Hub — Dermatology",
     "app_prompt_prefill": "A hub for our self-injectable dermatology biologic. About 300 prescriber offices send referrals by fax, e-referral or the HCP portal; reimbursement specialists run the benefits investigation and prior authorization, with appeals. Case managers enroll commercial patients in the co-pay card, screen the rest for free drug, and start a bridge supply when access is delayed. A supervisor signs off every specialty pharmacy triage across our two limited-distribution pharmacies, and patients get SMS and WhatsApp updates at each step."
   },
-  "changelog": "Column formats the build knows (number, days), so the build checker passes."
+  "changelog": "Preview sketches for every custom screen (dashboards, custom tabs and panels)."
 }

@@ -1,7 +1,7 @@
 {
   "slug": "rems-compliance",
   "name": "REMS Compliance",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "category": "Advanced Therapies",
   "icon": "dna",
   "is_beta": false,
@@ -38,26 +38,75 @@
   "catalogue": {
     "description": "Run a REMS with elements to assure safe use. Prescribers train, pass the knowledge assessment and attest to certify; they enroll each patient with a signed agreement and log the required monitoring results. Pharmacies qualify through an authorized representative and request a dispense authorization before every fill, which is granted only when prescriber, patient, pharmacy and the latest safe-use test are all in good standing. The REMS coordinator reviews certifications, rules on authorizations and tracks non-compliance for assessment reports.",
     "packages": [
-      { "name": "workflow", "description": "Certification, enrollment and dispense authorization lifecycles with role-gated steps" },
-      { "name": "forms", "description": "Prescriber and pharmacy enrollment, patient enrollment and monitoring forms" },
-      { "name": "documents", "description": "Signed attestations, patient-prescriber agreements and training certificates" },
-      { "name": "consent", "description": "Patient-prescriber agreement captured and stored against the enrollment" },
-      { "name": "rules", "description": "Safe-use checks run before every dispense authorization" },
-      { "name": "reports", "description": "Certification status, authorization outcomes and REMS assessment metrics" }
+      {
+        "name": "workflow",
+        "description": "Certification, enrollment and dispense authorization lifecycles with role-gated steps"
+      },
+      {
+        "name": "forms",
+        "description": "Prescriber and pharmacy enrollment, patient enrollment and monitoring forms"
+      },
+      {
+        "name": "documents",
+        "description": "Signed attestations, patient-prescriber agreements and training certificates"
+      },
+      {
+        "name": "consent",
+        "description": "Patient-prescriber agreement captured and stored against the enrollment"
+      },
+      {
+        "name": "rules",
+        "description": "Safe-use checks run before every dispense authorization"
+      },
+      {
+        "name": "reports",
+        "description": "Certification status, authorization outcomes and REMS assessment metrics"
+      }
     ],
     "roles": [
-      { "name": "Prescriber", "description": "Certifies for the REMS, enrolls their own patients and records the required monitoring results" },
-      { "name": "Pharmacy", "description": "Qualifies through an authorized representative and requests and records dispense authorizations for its own fills" },
-      { "name": "REMS Coordinator", "description": "Reviews certifications and enrollments, rules on dispense authorizations and manages non-compliance" }
+      {
+        "name": "Prescriber",
+        "description": "Certifies for the REMS, enrolls their own patients and records the required monitoring results"
+      },
+      {
+        "name": "Pharmacy",
+        "description": "Qualifies through an authorized representative and requests and records dispense authorizations for its own fills"
+      },
+      {
+        "name": "REMS Coordinator",
+        "description": "Reviews certifications and enrollments, rules on dispense authorizations and manages non-compliance"
+      }
     ],
     "workflows": [
-      { "name": "Prescriber certification", "description": "Training, knowledge assessment, signed attestation, coordinator review, certification and recertification" },
-      { "name": "Patient enrollment", "description": "Enrollment form with patient-prescriber agreement, verification, suspension and discontinuation" },
-      { "name": "Pharmacy qualification", "description": "Authorized representative training, SOP attestation, certification and recertification" },
-      { "name": "Dispense authorization", "description": "Request, safe-use check, authorize or deny, dispense within the window or expire" }
+      {
+        "name": "Prescriber certification",
+        "description": "Training, knowledge assessment, signed attestation, coordinator review, certification and recertification"
+      },
+      {
+        "name": "Patient enrollment",
+        "description": "Enrollment form with patient-prescriber agreement, verification, suspension and discontinuation"
+      },
+      {
+        "name": "Pharmacy qualification",
+        "description": "Authorized representative training, SOP attestation, certification and recertification"
+      },
+      {
+        "name": "Dispense authorization",
+        "description": "Request, safe-use check, authorize or deny, dispense within the window or expire"
+      }
     ],
-    "data_objects": ["Prescriber", "Pharmacy", "Patient", "Monitoring result", "Authorization"],
-    "integrations": ["NPI registry lookup", "Pharmacy switch (NCPDP) for dispense checks", "Courier tracking API"],
+    "data_objects": [
+      "Prescriber",
+      "Pharmacy",
+      "Patient",
+      "Monitoring result",
+      "Authorization"
+    ],
+    "integrations": [
+      "NPI registry lookup",
+      "Pharmacy switch (NCPDP) for dispense checks",
+      "Courier tracking API"
+    ],
     "compliance": [
       "FDA REMS elements to assure safe use: certified prescribers, certified pharmacies and documented safe-use conditions",
       "No dispense without a valid authorization issued against current certification and monitoring status",
@@ -69,5 +118,5 @@
     "app_name_prefill": "Pregnancy Prevention REMS — US",
     "app_prompt_prefill": "A pregnancy prevention REMS for one teratogenic oral therapy, covering about 2,400 certified prescribers and 600 pharmacies in the US. Prescribers certify after training and a knowledge assessment, enroll each patient with a signed patient-prescriber agreement and log monthly pregnancy tests. Pharmacies certify through an authorized representative and need a dispense authorization before every fill, issued only when prescriber, patient and pharmacy are in good standing and the latest negative test is under 7 days old. The REMS coordinator reviews non-compliance and prepares the FDA assessment reports."
   },
-  "changelog": "First version: prescriber certification, patient enrollment with monitoring, pharmacy qualification and dispense authorization on the Zango app spec v1."
+  "changelog": "Preview sketches for every custom screen (dashboards, custom tabs and panels)."
 }

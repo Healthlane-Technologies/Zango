@@ -116,6 +116,39 @@ pages:
       KPI row: materials in review, reviews overdue, average review cycle days this quarter,
       approved materials expiring in 60 days. Below: open reviews by discipline and due date
       (stacked bar) and the 10 oldest materials still in review with their pending reviewers.
+    preview: |
+      const today = new Date().toISOString().slice(0, 10), in60 = new Date(Date.now() + 60 * 864e5).toISOString().slice(0, 10);
+      const qStart = (d => new Date(d.getFullYear(), Math.floor(d.getMonth() / 3) * 3, 1).toISOString().slice(0, 10))(new Date());
+      const days = (a, b) => Math.round((new Date(b) - new Date(a)) / 864e5);
+      const mats = ctx.rows('material'), revs = ctx.rows('review');
+      const inReview = mats.filter(m => ['submitted', 'in_review'].includes(m.status));
+      const open = revs.filter(r => ['assigned', 'in_progress'].includes(r.status));
+      const late = r => r.due_date && r.due_date < today;
+      const cyc = revs.filter(r => r.completed_on >= qStart).map(r => days(String(r.created_at).slice(0, 10), r.completed_on)).filter(n => n >= 0 && n <= 60);
+      const avg = cyc.length ? (cyc.reduce((s, n) => s + n, 0) / cyc.length).toFixed(1) : '—';
+      const expiring = mats.filter(m => m.status === 'approved' && m.expiry_date >= today && m.expiry_date <= in60);
+      const kpi = (l, v, go, c) => `<div class="pv-kpi" data-go="${go}"><span>${l}</span><b style="${c ? 'color:' + c : ''}">${v}</b></div>`;
+      const disc = [['medical', 'Medical'], ['legal', 'Legal'], ['regulatory', 'Regulatory']];
+      const top = Math.max(1, ...disc.map(([d]) => open.filter(r => r.discipline === d).length));
+      const oldest = inReview.slice().sort((a, b) => String(a.created_at).localeCompare(String(b.created_at))).slice(0, 10);
+      return `<div class="pv-kpis">
+          ${kpi('Materials in review', inReview.length, 'materials')}
+          ${kpi('Reviews overdue', open.filter(late).length, 'reviews', '#B42318')}
+          ${kpi('Avg review cycle (days, this quarter)', avg, 'reviews')}
+          ${kpi('Approved, expiring in 60 days', expiring.length, 'materials', '#B54708')}</div>
+        <div class="pv-grid" style="grid-template-columns:1fr 2fr">
+          <div class="pv-card"><b>Open reviews by discipline</b>
+            ${disc.map(([d, l]) => { const rs = open.filter(r => r.discipline === d), o = rs.filter(late).length;
+              return `<div style="margin-top:10px"><div style="display:flex;justify-content:space-between"><span>${l}</span><span class="pv-muted">${rs.length} open · ${o} overdue</span></div>
+                <div class="pv-bar" style="display:flex;margin-top:4px"><i style="width:${(rs.length - o) / top * 100}%;border-radius:0"></i><i style="width:${o / top * 100}%;background:#F04438;border-radius:0"></i></div></div>`; }).join('')}
+            <div class="pv-muted" style="margin-top:10px"><span style="color:var(--brand)">■</span> on time <span style="color:#F04438">■</span> overdue</div></div>
+          <div class="pv-card" style="padding:0;overflow:hidden"><b style="padding:10px 14px">Oldest materials still in review</b>
+            <table class="z-t"><thead><tr><th>Material</th><th>Title</th><th>Waiting</th><th>Pending reviewers</th></tr></thead><tbody>
+            ${oldest.map(m => `<tr class="click" data-go="material_360:${m.id}"><td>${ctx.esc(m.material_code)}</td><td>${ctx.esc(m.title)}</td>
+              <td>${Math.max(0, days(String(m.created_at).slice(0, 10), today))} d</td>
+              <td>${ctx.esc(open.filter(r => r.material === m.id).map(r => ctx.fmt(r, 'discipline') + (r.reviewer ? ' · ' + r.reviewer : '')).join(', ') || '—')}</td></tr>`).join('')
+              || '<tr><td colspan="4" class="pv-muted">Nothing is in review.</td></tr>'}</tbody></table></div>
+        </div>`;
 
 modules:
   - code: library

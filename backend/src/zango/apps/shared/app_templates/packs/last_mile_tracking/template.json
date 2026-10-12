@@ -1,7 +1,7 @@
 {
   "slug": "last-mile-tracking",
   "name": "Last-Mile Tracking",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "category": "Traceability & Supply Chain",
   "icon": "barcode",
   "is_beta": false,
@@ -38,24 +38,68 @@
   "catalogue": {
     "description": "Last-mile visibility for medicines that travel from a dispatching pharmacy to the patient: the pharmacy books the delivery and scans the serial at hand-over, the logistics partner takes it out for delivery and captures proof at the door, and supply chain ops watches every delivery against its promised-by time. Failed attempts, temperature excursions and damaged packs become route exceptions that ops signs off; packs that come back move through an approved, collected, received and dispositioned return. Couriers and pharmacies sign in to see only their own deliveries.",
     "packages": [
-      { "name": "workflow", "description": "Delivery, proof of delivery, route exception and return lifecycles" },
-      { "name": "serialization", "description": "Serial (SGTIN) scans at hand-over, at the door and on return, checked against packaging line data" },
-      { "name": "integrations", "description": "Dispatch orders and confirmations with the ERP; serials from the packaging line (L3)" },
-      { "name": "reports", "description": "On-time delivery by partner and region, SLA risk, exceptions and returns" }
+      {
+        "name": "workflow",
+        "description": "Delivery, proof of delivery, route exception and return lifecycles"
+      },
+      {
+        "name": "serialization",
+        "description": "Serial (SGTIN) scans at hand-over, at the door and on return, checked against packaging line data"
+      },
+      {
+        "name": "integrations",
+        "description": "Dispatch orders and confirmations with the ERP; serials from the packaging line (L3)"
+      },
+      {
+        "name": "reports",
+        "description": "On-time delivery by partner and region, SLA risk, exceptions and returns"
+      }
     ],
     "roles": [
-      { "name": "Logistics Partner", "description": "External courier login: takes deliveries out, captures proof of delivery, reports exceptions and collects returns, for its own deliveries only" },
-      { "name": "Pharmacy", "description": "Dispatching pharmacy: books deliveries, scans serials at hand-over, raises returns and receives them back" },
-      { "name": "Supply Chain Ops", "description": "Central team: watches SLAs, verifies proof of delivery, signs off route exceptions, closes returns and manages partners and routes" }
+      {
+        "name": "Logistics Partner",
+        "description": "External courier login: takes deliveries out, captures proof of delivery, reports exceptions and collects returns, for its own deliveries only"
+      },
+      {
+        "name": "Pharmacy",
+        "description": "Dispatching pharmacy: books deliveries, scans serials at hand-over, raises returns and receives them back"
+      },
+      {
+        "name": "Supply Chain Ops",
+        "description": "Central team: watches SLAs, verifies proof of delivery, signs off route exceptions, closes returns and manages partners and routes"
+      }
     ],
     "workflows": [
-      { "name": "Delivery tracking", "description": "Booked, handed over with a serial scan, out for delivery, failed attempts, delivered or returned, with SLA status and breach flags" },
-      { "name": "Proof of delivery", "description": "OTP, e-signature or photo with a serial scan and door temperature; verified or disputed by ops" },
-      { "name": "Returns", "description": "Requested, approved with a pick-up date, collected, received with a serial scan and closed with a disposition posted to the ERP" },
-      { "name": "Route exceptions", "description": "Delays, excursions, damage and address issues raised on the road, acknowledged and signed off with root cause and corrective action" }
+      {
+        "name": "Delivery tracking",
+        "description": "Booked, handed over with a serial scan, out for delivery, failed attempts, delivered or returned, with SLA status and breach flags"
+      },
+      {
+        "name": "Proof of delivery",
+        "description": "OTP, e-signature or photo with a serial scan and door temperature; verified or disputed by ops"
+      },
+      {
+        "name": "Returns",
+        "description": "Requested, approved with a pick-up date, collected, received with a serial scan and closed with a disposition posted to the ERP"
+      },
+      {
+        "name": "Route exceptions",
+        "description": "Delays, excursions, damage and address issues raised on the road, acknowledged and signed off with root cause and corrective action"
+      }
     ],
-    "data_objects": ["Delivery", "Proof of delivery", "Return", "Route", "Route exception", "Logistics partner", "Pharmacy"],
-    "integrations": ["Packaging line (L3) interface", "ERP connector"],
+    "data_objects": [
+      "Delivery",
+      "Proof of delivery",
+      "Return",
+      "Route",
+      "Route exception",
+      "Logistics partner",
+      "Pharmacy"
+    ],
+    "integrations": [
+      "Packaging line (L3) interface",
+      "ERP connector"
+    ],
     "compliance": [
       "Serial verification at hand-over, delivery and return against packaging line data",
       "Cold-chain packs only on cold-chain routes with qualified partners; door temperature recorded",
@@ -67,5 +111,5 @@
     "app_name_prefill": "Last-Mile Tracking — Specialty Home Delivery",
     "app_prompt_prefill": "Last-mile tracking for specialty and cold-chain medicines delivered from 6 dispatch pharmacies to about 2,400 patients' homes a month by 3 courier partners across Maharashtra and Karnataka. The pharmacy scans the serial at hand-over, the courier captures OTP and a serial scan at the door with the door temperature for cold-chain packs, and supply chain ops watches on-time delivery against a 24-hour promise. Failed attempts and temperature excursions become route exceptions that ops signs off, with excursions also signed off by QA, and returned packs are scanned back and dispositioned."
   },
-  "changelog": "First version: delivery tracking with serial scans, proof of delivery, route exceptions and returns on the Zango app spec v1."
+  "changelog": "Preview sketches for every custom screen (dashboards, custom tabs and panels)."
 }

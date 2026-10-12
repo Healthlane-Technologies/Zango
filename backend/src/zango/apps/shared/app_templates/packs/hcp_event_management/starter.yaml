@@ -106,6 +106,35 @@ pages:
       KPI row: events this quarter, events awaiting compliance approval, RSVP acceptance rate,
       spend this quarter against budget. Below: spend by event type (bar), upcoming events with
       accepted vs capacity, and HCPs within 10% of their annual transfer-of-value cap.
+    preview: |
+      const ev = ctx.rows('event'), inv = ctx.rows('invitation'), sp = ctx.rows('spend_line'), hcps = ctx.rows('hcp');
+      const now = new Date(), qS = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1), qE = new Date(qS.getFullYear(), qS.getMonth() + 3, 1);
+      const inQ = d => d && new Date(d) >= qS && new Date(d) < qE, sum = (rs, k) => rs.reduce((a, r) => a + (+r[k] || 0), 0);
+      const inr = v => v >= 1e7 ? '₹' + (v / 1e7).toFixed(2) + ' Cr' : v >= 1e5 ? '₹' + (v / 1e5).toFixed(1) + ' L' : '₹' + Math.round(v).toLocaleString('en-IN');
+      const qEv = ev.filter(e => e.status !== 'cancelled' && e.start_date && new Date(e.start_date) < qE && new Date(e.end_date || e.start_date) >= qS), qSpend = sum(sp.filter(s => inQ(s.incurred_on)), 'amount'), qBud = sum(qEv, 'budget');
+      const asked = inv.filter(i => ['sent', 'accepted', 'declined'].includes(i.status)), acc = asked.filter(i => i.status === 'accepted').length;
+      const evOf = id => ev.find(e => e.id === id) || {}, types = ctx.entity('event').fields.find(f => f.key === 'event_type').opts || [];
+      const byT = types.map(t => ({ label: t.label, v: sum(sp.filter(s => evOf(s.event).event_type === t.id), 'amount') })), top = Math.max(1, ...byT.map(t => t.v));
+      const up = ev.filter(e => ['approved', 'open'].includes(e.status) && new Date(e.end_date || e.start_date) >= new Date(now.toDateString())).sort((a, b) => String(a.start_date).localeCompare(String(b.start_date)));
+      const accOf = e => inv.filter(i => i.event === e.id && i.status === 'accepted').length || +e.accepted_count || 0;
+      const capNear = hcps.filter(h => +h.annual_cap && +h.ytd_spend >= 0.9 * +h.annual_cap).sort((a, b) => b.ytd_spend / b.annual_cap - a.ytd_spend / a.annual_cap);
+      const pct = qBud ? Math.round(100 * qSpend / qBud) : 0;
+      return `
+      <div class="pv-kpis">
+        <div class="pv-kpi" data-go="events"><span>Events this quarter</span><b>${qEv.length}</b></div>
+        <div class="pv-kpi" data-go="events"><span>Awaiting compliance approval</span><b style="color:#B54708">${ev.filter(e => e.status === 'review').length}</b></div>
+        <div class="pv-kpi" data-go="invitations"><span>RSVP acceptance</span><b>${asked.length ? Math.round(100 * acc / asked.length) : 0}%</b><span>${acc} of ${asked.length} invited</span></div>
+        <div class="pv-kpi" data-go="spend"><span>Spend this quarter vs budget</span><b>${inr(qSpend)}</b><div class="pv-bar" style="margin-top:6px"><i style="width:${Math.min(100, pct)}%;${pct > 100 ? 'background:#D92D20' : ''}"></i></div><span>${pct}% of ${inr(qBud)}</span></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1.3fr;gap:12px;align-items:start">
+        <div class="d-panel"><h3>${ctx.icon('bar-chart-3')}Spend by event type</h3><div style="padding:12px 16px;display:flex;flex-direction:column;gap:10px">${byT.map(t => `
+          <div style="display:grid;grid-template-columns:110px 1fr 70px;gap:10px;align-items:center;font-size:13px"><b style="font-weight:550">${ctx.esc(t.label)}</b><div class="pv-bar" style="height:12px"><i style="width:${Math.round(100 * t.v / top)}%"></i></div><span class="pv-muted" style="text-align:right">${inr(t.v)}</span></div>`).join('')}</div></div>
+        <div class="d-panel"><h3>${ctx.icon('calendar-days')}Upcoming events<span class="sp"></span><span class="pv-badge">${up.length}</span></h3><table class="z-t"><thead><tr><th>Event</th><th>Date</th><th>City</th><th style="width:34%">Accepted / capacity</th></tr></thead><tbody>${up.slice(0, 6).map(e => { const a = accOf(e), c = +e.capacity || 0; return `
+          <tr class="click" data-go="event_360:${e.id}"><td><b style="font-weight:550">${ctx.esc(e.title)}</b><div class="pv-muted">${ctx.esc(ctx.fmt(e, 'event_type'))} · ${ctx.esc(ctx.fmt(e, 'format'))}</div></td><td>${ctx.esc(ctx.fmt(e, 'start_date'))}</td><td>${ctx.esc(e.city || '')}</td>
+            <td><div class="pv-bar"><i style="width:${c ? Math.min(100, Math.round(100 * a / c)) : 0}%"></i></div><span class="pv-muted">${a} / ${c || '—'}</span></td></tr>`; }).join('') || '<tr><td colspan="4" class="pv-muted">No approved events coming up.</td></tr>'}</tbody></table></div>
+      </div>
+      <div class="d-panel"><h3>${ctx.icon('shield-alert')}HCPs within 10% of their annual cap<span class="sp"></span><span class="pv-badge">${capNear.length}</span></h3><table class="z-t"><thead><tr><th>HCP</th><th>Speciality</th><th>Institution</th><th>YTD spend</th><th>Annual cap</th><th>Used</th></tr></thead><tbody>${capNear.slice(0, 8).map(h => { const u = Math.round(100 * h.ytd_spend / h.annual_cap); return `
+        <tr class="click" data-go="hcps"><td><b style="font-weight:550">${ctx.esc(h.full_name)}</b>${h.government_official ? ' <span class="pv-badge">Govt official</span>' : ''}</td><td>${ctx.esc(ctx.fmt(h, 'speciality'))}</td><td>${ctx.esc(h.institution || '')}</td><td>${inr(+h.ytd_spend)}</td><td>${inr(+h.annual_cap)}</td><td style="color:${u >= 100 ? '#B42318' : '#B54708'};font-weight:600">${u}%</td></tr>`; }).join('') || '<tr><td colspan="6" class="pv-muted">No HCP is near their transfer-of-value cap.</td></tr>'}</tbody></table></div>`;
 
 modules:
   - code: masters

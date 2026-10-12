@@ -1,7 +1,7 @@
 {
   "slug": "track-and-trace",
   "name": "Track & Trace",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "category": "Traceability & Supply Chain",
   "icon": "barcode",
   "is_beta": false,
@@ -122,5 +122,5 @@
     "app_name_prefill": "Pack Traceability",
     "app_prompt_prefill": "Track and trace for two plants and 40 warehouses. Receive serial numbers from packaging lines, record case and pallet aggregation, log every movement, and let QA run a recall by batch."
   },
-  "changelog": "Aggregation moved into the serialization module so modules no longer link in a cycle, so the build checker passes."
+  "changelog": "Preview sketches for every custom screen (dashboards, custom tabs and panels)."
 }

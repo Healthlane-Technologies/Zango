@@ -161,6 +161,37 @@ pages:
       and a table of cases breaching SLA (referral not reviewed in 1 business day, BI older than 2 business days,
       PA submitted more than 10 days ago without decision), oldest first. Case Managers see only their own cases;
       the Hub Supervisor sees the whole team with a case-manager filter.
+    preview: |
+      const D = 864e5, now = new Date(), today = now.toISOString().slice(0, 10), day = s => String(s || '').slice(0, 10);
+      const ago = n => new Date(now - n * D).toISOString().slice(0, 10), days = (a, b) => Math.round((new Date(b) - new Date(a)) / D);
+      const bd = a => { let n = 0; for (let d = new Date(a); d < now; d = new Date(+d + D)) if (d.getDay() % 6) n++; return Math.max(0, n - 1); };
+      const H = ctx.entity('hub_case'), cases = ctx.rows('hub_case'), refs = ctx.rows('referral'), bis = ctx.rows('benefits_investigation'), pas = ctx.rows('prior_auth');
+      const open = cases.filter(c => c.status !== 'closed'), med = a => (a = a.sort((x, y) => x - y)).length ? a[Math.floor(a.length / 2)] : null;
+      const decided = pas.filter(p => p.submitted_on >= ago(90) && ['approved', 'denied', 'appeal_denied'].includes(p.status));
+      const appr = decided.filter(p => p.status === 'approved'), afterAppeal = appr.filter(p => p.appeal_level).length;
+      const r2f = c => { const r = refs.find(r => r.id === c.referral); const n = r && c.first_fill_date ? days(day(r.created_at), c.first_fill_date) : -1; return n >= 0 && n <= 120 ? n : null; };
+      const kpi = (l, v, sub, col, go) => `<div class="pv-kpi"${go ? ` data-go="${go}"` : ''}><span>${l}</span><b style="color:${col || '#101828'}">${v}</b><span class="pv-muted">${sub}</span></div>`;
+      const stages = H.wf.statuses.filter(s => s.code !== 'closed').map(s => [s, open.filter(c => c.status === s.code).length]), smax = Math.max(1, ...stages.map(s => s[1]));
+      const payers = ctx.rows('payer').map(p => ({ p, v: med(cases.filter(c => ctx.rows('patient').some(x => x.id === c.patient && x.primary_payer === p.id)).map(r2f).filter(n => n != null)) })).filter(x => x.v != null).sort((a, b) => a.v - b.v);
+      const pmax = Math.max(1, ...payers.map(x => x.v));
+      const breaches = [
+        ...refs.filter(r => r.status === 'received' && bd(day(r.created_at)) > 1).map(r => ({ since: day(r.created_at), what: 'Referral not reviewed', ref: r.referral_ref, who: r.patient_name, go: `referrals:${r.id}`, sla: '1 business day' })),
+        ...bis.filter(b => ['pending', 'in_progress'].includes(b.status) && bd(day(b.created_at)) > 2).map(b => ({ since: day(b.created_at), what: 'BI still open', ref: b.bi_ref, who: ctx.fmt(b, 'hub_case'), go: `case_360:${b.hub_case}`, sla: '2 business days' })),
+        ...pas.filter(p => ['submitted', 'info_requested'].includes(p.status) && p.submitted_on && p.submitted_on < ago(10)).map(p => ({ since: p.submitted_on, what: 'PA awaiting payer decision', ref: p.pa_ref, who: ctx.fmt(p, 'hub_case') + ' · ' + ctx.fmt(p, 'payer'), go: `case_360:${p.hub_case}`, sla: '10 days' }))
+      ].sort((a, b) => a.since.localeCompare(b.since)).slice(0, 10);
+      const cms = ctx.role === 'Hub Supervisor' ? [...new Set(open.map(c => c.case_manager).filter(Boolean))] : [];
+      return `${cms.length ? `<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:10px"><span class="pv-muted">Case manager</span><span class="z-chip" style="background:var(--b50);color:var(--b600)">All (${open.length})</span>${cms.map(m => `<span class="z-chip">${ctx.esc(m)} · ${open.filter(c => c.case_manager === m).length}</span>`).join('')}</div>` : ''}
+        <div class="pv-kpis">${kpi('New referrals this week', refs.filter(r => day(r.created_at) >= ago(7)).length, `${refs.filter(r => r.status === 'missing_info').length} missing info`, null, 'referrals')}
+          ${kpi('In benefits investigation', open.filter(c => c.status === 'benefits_review').length, `${bis.filter(b => b.status === 'pending').length} BIs not started`, null, 'benefits_investigations')}
+          ${kpi('PAs pending payer decision', pas.filter(p => ['submitted', 'info_requested', 'appealed'].includes(p.status)).length, `${pas.filter(p => p.status === 'appealed').length} on appeal`, null, 'prior_auths')}
+          ${kpi('PA approval rate (90 days)', decided.length ? Math.round(appr.length / decided.length * 100) + '%' : '—', `${appr.length - afterAppeal} first pass · ${afterAppeal} after appeal`, '#067647')}
+          ${kpi('Referral to first fill', (v => v == null ? '—' : v + ' days')(med(cases.map(r2f).filter(n => n != null))), 'median, all payers')}
+          ${kpi('On bridge supply', open.filter(c => c.bridge_start && (!c.first_fill_date || c.first_fill_date > today)).length, 'awaiting first commercial fill', '#B54708')}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+          <div class="d-panel"><h3>${ctx.icon('filter')}Open cases by stage</h3><div style="padding:8px 16px 12px">${stages.map(([s, n]) => `<div style="display:grid;grid-template-columns:130px 1fr 28px;gap:10px;align-items:center;margin:7px 0"><span class="pv-muted">${ctx.esc(s.label)}</span><div class="pv-bar" style="height:14px"><i style="width:${n / smax * 100}%;background:${ctx.tone(s.color)[1]}"></i></div><b style="text-align:right;font-size:13px">${n}</b></div>`).join('')}</div></div>
+          <div class="d-panel"><h3>${ctx.icon('timer')}Time to therapy by payer <span class="sp"></span><span class="pv-muted">median days</span></h3><div style="padding:8px 16px 12px">${payers.slice(0, 8).map(({ p, v }) => `<div style="display:grid;grid-template-columns:130px 1fr 40px;gap:10px;align-items:center;margin:7px 0"><span class="pv-muted">${ctx.esc(p.name)}</span><div class="pv-bar"><i style="width:${v / pmax * 100}%;background:${v > 45 ? '#F79009' : 'var(--brand)'}"></i></div><b style="text-align:right;font-size:13px">${v}d</b></div>`).join('') || '<span class="pv-muted">No cases have reached first fill yet.</span>'}</div></div></div>
+        <div class="d-panel"><h3>${ctx.icon('alarm-clock')}Cases breaching SLA <span class="sp"></span><span class="pv-badge" style="background:#FEF3F2;color:#B42318;border-color:#FECDCA">${breaches.length}</span></h3><table class="z-t"><thead><tr><th>Breach</th><th>Reference</th><th>Case / patient</th><th>Since</th><th>SLA</th><th>Days open</th></tr></thead><tbody>
+          ${breaches.map(b => `<tr class="click" data-go="${b.go}"><td><b style="color:#B42318">${b.what}</b></td><td><span class="z-link">${ctx.esc(b.ref)}</span></td><td>${ctx.esc(b.who)}</td><td>${ctx.esc(b.since)}</td><td class="pv-muted">${b.sla}</td><td>${days(b.since, today)}</td></tr>`).join('') || '<tr><td colspan="6" class="pv-muted">Nothing is breaching SLA.</td></tr>'}</tbody></table></div>`;
   - { code: referrals,               type: crud,   entity: referral,               route: /app/referrals,               title: Referrals }
   - { code: cases,                   type: crud,   entity: hub_case,               route: /app/cases,                   title: Cases }
   - { code: case_360,                type: detail, detail_view: case_360,          route: /app/cases/:id }
@@ -925,7 +956,33 @@ detail_views:
       - { label: Messages, value: { count: interaction, via: hub_case }, link_to_tab: outreach, tone: indigo }
     sidebar:
       - { type: fields, title: Case, fields: [patient, hcp_office, referral, specialty_pharmacy, bridge_start, first_fill_date, next_refill_due] }
-      - { type: custom, title: Access checklist, text: "Ticks for HIPAA authorization, enrollment form, prescription, insurance card, BI complete, PA approved or not needed, co-pay or free-drug enrolled, SP accepted." }
+      - type: custom
+        title: Access checklist
+        text: >
+          Ticks for HIPAA authorization, enrollment form, prescription, insurance card, BI complete,
+          PA approved or not needed, co-pay or free-drug enrolled, SP accepted.
+        preview: |
+          const c = ctx.record, docs = ctx.related('case_document', 'hub_case'), bis = ctx.related('benefits_investigation', 'hub_case');
+          const pas = ctx.related('prior_auth', 'hub_case'), cps = ctx.related('copay_enrollment', 'hub_case'), sps = ctx.related('sp_referral', 'hub_case');
+          const pt = ctx.rows('patient').find(p => p.id === c.patient) || {}, ref = ctx.rows('referral').find(r => r.id === c.referral) || {};
+          const doc = (t, f) => docs.some(d => d.doc_type === t) || !!ref[f];
+          const bi = bis.find(b => b.status === 'completed'), pa = pas.find(p => p.status === 'approved');
+          const items = [
+            ['HIPAA authorization', !!pt.hipaa_authorized],
+            ['Enrollment form', doc('enrollment_form', 'enrollment_form')],
+            ['Prescription', doc('prescription', 'prescription')],
+            ['Insurance card', doc('insurance_card', 'insurance_card')],
+            ['Benefits investigation complete', !!bi, bi && `${bi.bi_ref} · ${ctx.fmt(bi, 'coverage_status')}`],
+            ['PA approved or not needed', !!pa || (!!bi && !bi.pa_required), pa ? `${pa.pa_ref}${pa.valid_until ? ' · valid to ' + ctx.fmt(pa, 'valid_until') : ''}` : bi && !bi.pa_required ? 'No PA required' : ''],
+            ['Co-pay or free drug enrolled', cps.some(e => e.status === 'enrolled'), (cps.find(e => e.status === 'enrolled') || {}).enrollment_ref],
+            ['SP accepted', sps.some(s => ['accepted', 'shipped'].includes(s.status)), (x => x && ctx.fmt(x, 'specialty_pharmacy'))(sps.find(s => ['accepted', 'shipped'].includes(s.status)))]
+          ];
+          const done = items.filter(i => i[1]).length;
+          return `<div style="display:flex;justify-content:space-between" class="pv-muted"><span>${done} of ${items.length} done</span><span>${done === items.length ? 'Ready for therapy' : 'Next: ' + ctx.esc(items.find(i => !i[1])[0])}</span></div>
+            <div class="pv-bar" style="margin:6px 0 10px"><i style="width:${Math.round(done / items.length * 100)}%;background:${done === items.length ? '#12B76A' : 'var(--brand)'}"></i></div>
+            ${items.map(([l, ok, sub]) => `<div style="display:flex;gap:8px;align-items:flex-start;padding:4px 0;font-size:13px">
+              <span style="color:${ok ? '#079455' : '#98A2B3'}">${ctx.icon(ok ? 'circle-check' : 'circle')}</span>
+              <span style="${ok ? '' : 'color:#667085'}">${ctx.esc(l)}${ok && sub ? `<br><span class="pv-muted">${ctx.esc(sub)}</span>` : ''}</span></div>`).join('')}`;
     tabs:
       - { code: bi, label: Benefits, type: related_table, entity: benefits_investigation, via: hub_case, columns: inherit, count_badge: true,
           add: { label: New BI, prefill: { hub_case: hero } } }

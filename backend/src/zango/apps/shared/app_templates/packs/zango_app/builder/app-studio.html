@@ -2130,9 +2130,9 @@ const stateBox = (i, t, d, extra) => `<div class="z-state"><div class="ei">${ic(
 function renderCustom(p){
   const pv = runPreview(p.preview);
   if (pv != null) return `<div class="z-ph"><div><h1>${esc(p.title)}</h1><p>Custom page · <span class="mono">${esc(p.component || p.code)}</span> · preview sketch</p></div></div>${pv}${custText(p.text, 'What the build implements')}`;
+  // No sketch yet: say so plainly rather than inventing numbers that look real.
   return `<div class="z-ph"><div><h1>${esc(p.title)}</h1><p>Custom page · <span class="mono">${esc(p.component || p.code)}</span></p></div></div>
-    <div class="d-stats" style="margin-top:0">${[0, 1, 2, 3].map(i => `<div class="d-stat"><div class="si" style="background:${tone(['indigo', 'teal', 'amber', 'pink'][i])[0]};color:${tone(['indigo', 'teal', 'amber', 'pink'][i])[1]}">${ic(['activity', 'trending-up', 'clock', 'target'][i])}</div><div style="flex:1"><span>KPI ${i + 1}</span><b>${ri(12, 980)}</b></div></div>`).join('')}</div>
-    <div class="d-panel" style="margin-top:14px"><h3>${ic('puzzle')}Custom component</h3><div class="d-cust"><span class="tg">${ic('code-2')}hand-built</span><div>${esc(p.text || 'No description in the spec.')}</div><div class="z-skel" style="width:90%;margin-top:16px"></div><div class="z-skel" style="width:70%"></div><div class="z-skel" style="width:80%"></div></div></div>`;
+    <div class="d-panel"><h3>${ic('puzzle')}Not sketched yet</h3><div class="d-cust"><span class="tg">${ic('code-2')}custom screen</span><div>${esc(p.text || 'No description in the spec.')}</div><p style="margin-top:12px;color:var(--muted);font-size:12.5px">The preview has no sketch of this screen yet. Ask the agent to sketch it and it will appear here, drawn from the demo data.</p></div></div>`;
 }
 
 /* ═════════════════════════ tables ═════════════════════════ */

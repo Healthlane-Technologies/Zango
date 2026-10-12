@@ -1,7 +1,7 @@
 {
   "slug": "promotional-review",
   "name": "Promotional Review (PRC/MLR)",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "category": "Compliance & Quality",
   "icon": "shield",
   "is_beta": false,
@@ -118,5 +118,5 @@
     "app_name_prefill": "Cardio-Diabetes PRC",
     "app_prompt_prefill": "Promotional review app where brand managers submit detail aids, HCP emails and patient leaflets with every claim linked to a reference page. An MLR coordinator routes each version to medical, legal and regulatory reviewers within a 5-working-day SLA, and the medical reviewer substantiates claims one by one. The regulatory head certifies the final version, which gets a job code and a 24-month expiry with annual recertification. Certified PDFs go to our document management system and the reviewer roster syncs from the HR directory."
   },
-  "changelog": "Column format number, so the build checker passes."
+  "changelog": "Preview sketches for every custom screen (dashboards, custom tabs and panels)."
 }

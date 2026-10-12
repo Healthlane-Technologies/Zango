@@ -50,17 +50,24 @@ earlier ones, and the preview needs roles, pages and entities to agree:
    conditions, `on_done`) and tags; edit rules (`readonly_when`,
    `editable_in`); list columns, quick filters, row actions; row scoping per
    role.
-5. **360 pages** (`/detail_views`): one per hero, with header facts and
+5. **Sketch every custom screen.** Each `custom` page, custom tab and custom
+   sidebar section gets a `preview` (SCHEMA.md, "Custom screens with a
+   preview") that draws it from the demo data: a dashboard's real KPIs and
+   charts computed with `ctx.rows`, a board with real records. The user judges
+   the app by the preview — a placeholder where their dashboard goes reads as
+   missing. `spec_mark_ready` is refused while a custom screen has no sketch.
+6. **360 pages** (`/detail_views`): one per hero, with header facts and
    actions, stats, related tabs (`via` paths that end at the hero) and an
    activity timeline. Add the matching `detail` page and `row_click`.
-6. **The rest:** app-wide and entity `custom_requirements` for integrations,
+7. **The rest:** app-wide and entity `custom_requirements` for integrations,
    notifications, scheduled jobs and reports, written as specific, testable
    behaviour.
 
 Keep codes snake_case and reuse them exactly: a menu's `page` must be a
 declared page, a transition's `roles` declared role names, `to` a declared
 entity. Write YAML the build reads the same way (SCHEMA.md, "Writing YAML the
-build reads the same way"): quote every prose value inside `{ }`, use only the
+build reads the same way"): quote every prose value inside `{ }` (but never wrap prose in braces — in a
+`>-` or `|` block it needs no quoting at all), use only the
 listed column formats (`number`, not `integer`), and never let modules link to
 each other in a cycle. `spec_validate` includes the build's own checker
 (issues marked `build_check`). After the last section call `spec_validate` and

@@ -81,7 +81,7 @@ inside the preview's sandbox (no network, no storage, no timers).
 | member | what it is |
 |---|---|
 | `ctx.rows(entity)` | the demo records of an entity, scoped to the role being previewed |
-| `ctx.entity(entity)` | the entity's normalised definition (fields, statuses, tags, workflow) |
+| `ctx.entity(entity)` | the entity's normalised definition: `fields[]` (`key`, `type`, `label`, and `opts` — choice options `{id, label, color}`), plus its workflow (statuses, transitions, tags) |
 | `ctx.record` | on a custom tab or panel: the record the 360 page is showing |
 | `ctx.related(entity, via)` | on a tab or panel: rows of `entity` whose link field `via` points at `ctx.record` |
 | `ctx.fmt(row, field)` | a field's display value (choices, links, money, dates) as plain text |

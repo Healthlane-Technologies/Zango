@@ -87,9 +87,43 @@ roles:
           - { page: pharmacies }
 
 pages:
-  - { code: dashboard,      type: custom, route: /app/dashboard, title: REMS Dashboard, component: RemsDashboard,
-      roles: [REMS Coordinator],
-      text: "KPI row: certified prescribers, certified pharmacies, enrolled patients, authorizations today with the share authorized. Below: a queue of certifications and enrollments awaiting review, oldest first, and a list of recertifications due in the next 60 days." }
+  - code: dashboard
+    type: custom
+    route: /app/dashboard
+    title: REMS Dashboard
+    component: RemsDashboard
+    roles: [REMS Coordinator]
+    text: "KPI row: certified prescribers, certified pharmacies, enrolled patients, authorizations today with the share authorized. Below: a queue of certifications and enrollments awaiting review, oldest first, and a list of recertifications due in the next 60 days."
+    preview: |
+      const pres = ctx.rows('prescriber'), phs = ctx.rows('pharmacy'), pts = ctx.rows('patient'), auths = ctx.rows('dispense_authorization');
+      const now = new Date(), age = d => Math.floor((now - new Date(d)) / 864e5), until = d => d ? Math.round((new Date(d) - now) / 864e5) : null;
+      const ok = a => ['authorized', 'dispensed'].includes(a.status), decided = a => a.status !== 'requested';
+      const today = auths.filter(a => age(a.created_at) < 1), month = auths.filter(a => age(a.created_at) <= 30 && decided(a));
+      const share = rs => rs.filter(decided).length ? Math.round(100 * rs.filter(ok).length / rs.filter(decided).length) + '%' : '—';
+      const queue = [...pres.filter(p => p.status === 'under_review').map(p => ({ kind: 'Prescriber certification', name: p.full_name, at: p.created_at, go: 'prescribers' })),
+        ...phs.filter(p => p.status === 'under_review').map(p => ({ kind: 'Pharmacy certification', name: p.legal_name, at: p.created_at, go: 'pharmacies' })),
+        ...pts.filter(p => p.status === 'pending_review').map(p => ({ kind: 'Patient enrollment', name: p.rems_id + ' · ' + ctx.fmt(p, 'category'), at: p.created_at, go: 'patient_360:' + p.id }))].sort((a, b) => String(a.at).localeCompare(String(b.at)));
+      const recert = [...pres.map(p => ({ name: p.full_name, who: 'Prescriber', d: p.recert_due, st: p.status, go: 'prescribers' })), ...phs.map(p => ({ name: p.legal_name, who: 'Pharmacy', d: p.recert_due, st: p.status, go: 'pharmacies' }))]
+        .filter(x => x.st === 'certified' && until(x.d) !== null && until(x.d) >= 0 && until(x.d) <= 60).sort((a, b) => String(a.d).localeCompare(String(b.d)));
+      const stl = ctx.entity('dispense_authorization').wf.statuses, C = { requested: '#2E90FA', authorized: '#12B76A', dispensed: '#079455', denied: '#F04438', expired: '#98A2B3' }, top = Math.max(1, ...stl.map(s => auths.filter(a => a.status === s.code).length));
+      return `
+      <div class="pv-kpis">
+        <div class="pv-kpi" data-go="prescribers"><span>Certified prescribers</span><b>${pres.filter(p => p.status === 'certified').length}</b><span>of ${pres.length} enrolled</span></div>
+        <div class="pv-kpi" data-go="pharmacies"><span>Certified pharmacies</span><b>${phs.filter(p => p.status === 'certified').length}</b><span>of ${phs.length} enrolled</span></div>
+        <div class="pv-kpi" data-go="patients"><span>Enrolled patients</span><b>${pts.filter(p => p.status === 'enrolled').length}</b><span>${pts.filter(p => p.status === 'pending_review').length} pending review</span></div>
+        <div class="pv-kpi" data-go="authorizations"><span>Authorizations today</span><b>${today.length}</b><span>${today.length ? share(today) + ' authorized' : '30-day share authorized ' + share(month)}</span></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:12px;align-items:start">
+        <div class="d-panel"><h3>${ctx.icon('inbox')}Awaiting review<span class="sp"></span><span class="pv-badge">${queue.length}</span></h3>
+          <table class="z-t"><thead><tr><th>Request</th><th>Name</th><th>Submitted</th><th>Waiting</th></tr></thead><tbody>${queue.slice(0, 8).map(q => `
+            <tr class="click" data-go="${q.go}"><td>${ctx.esc(q.kind)}</td><td>${ctx.esc(q.name)}</td><td>${ctx.esc(String(q.at).slice(0, 10))}</td><td style="font-weight:550;color:${age(q.at) > 14 ? '#B42318' : 'inherit'}">${age(q.at)} days</td></tr>`).join('') || '<tr><td colspan="4" class="pv-muted">Nothing awaiting review.</td></tr>'}</tbody></table></div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div class="d-panel"><h3>${ctx.icon('bar-chart-3')}Authorizations by status</h3><div style="padding:12px 16px;display:flex;flex-direction:column;gap:9px">${stl.map(s => { const n = auths.filter(a => a.status === s.code).length; return `
+            <div style="font-size:13px"><div style="display:flex;justify-content:space-between"><span>${ctx.esc(s.label)}</span><b style="font-weight:600">${n}</b></div><div class="pv-bar" style="margin-top:4px"><i style="width:${100 * n / top}%;background:${C[s.code] || 'var(--brand)'}"></i></div></div>`; }).join('')}</div></div>
+          <div class="d-panel"><h3>${ctx.icon('calendar-clock')}Recertifications due in 60 days<span class="sp"></span><span class="pv-badge">${recert.length}</span></h3><div style="padding:10px 14px;display:flex;flex-direction:column;gap:8px">${recert.slice(0, 6).map(x => `
+            <div class="pv-card" data-go="${x.go}"><div style="display:flex;justify-content:space-between"><b style="font-weight:550">${ctx.esc(x.name)}</b><span style="color:#B54708;font-weight:550;font-size:12px">${until(x.d)} days</span></div><span class="pv-muted">${x.who} · due ${ctx.esc(x.d)}</span></div>`).join('') || '<span class="pv-muted">No recertifications due in the next 60 days.</span>'}</div></div>
+        </div>
+      </div>`;
   - { code: prescribers,    type: crud,   entity: prescriber,              route: /app/prescribers,     title: Prescribers }
   - { code: pharmacies,     type: crud,   entity: pharmacy,                route: /app/pharmacies,      title: Pharmacies }
   - { code: patients,       type: crud,   entity: patient,                 route: /app/patients,        title: Patients }

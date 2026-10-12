@@ -135,6 +135,33 @@ pages:
       Below: signals by risk level (stacked bar, last 8 weeks), open cases by category, and
       the 10 employees with the most signals in the last 90 days. Business Reviewers see only
       cases where they are the business reviewer.
+    preview: |
+      const SG = ctx.rows('signal'), CS = ctx.rows('compliance_case'), FD = ctx.rows('finding'), IN = ctx.rows('interaction');
+      const now = new Date(), today = now.toISOString().slice(0, 10), age = d => (now - new Date(d)) / 864e5, opt = (e, f) => ctx.entity(e).fields.find(x => x.key === f).opts || [];
+      const open = CS.filter(c => !['closed', 'no_action'].includes(c.status)), past = open.filter(c => c.due_date && c.due_date < today);
+      const findPast = FD.filter(f => ['draft', 'planned', 'in_progress'].includes(f.status) && f.action_due && f.action_due < today).length;
+      const RL = opt('interaction', 'risk_level'), s2l = n => n >= 90 ? 'critical' : n >= 70 ? 'high' : n >= 45 ? 'medium' : 'low';
+      const lvl = g => { const i = IN.find(x => x.id === g.interaction); return (i && i.risk_level) || s2l(+g.risk_score || 0); }; // the interaction's risk, else banded score
+      const wks = [7, 6, 5, 4, 3, 2, 1, 0], byW = wks.map(w => RL.map(r => SG.filter(g => lvl(g) === r.id && Math.floor(age(g.created_at) / 7) === w).length)), wmax = Math.max(1, ...byW.map(a => a.reduce((x, y) => x + y, 0)));
+      const cats = opt('compliance_case', 'category').map(c => ({ c, n: open.filter(x => x.category === c.id).length })).sort((a, b) => b.n - a.n), cmax = Math.max(1, ...cats.map(x => x.n));
+      const top = ctx.rows('employee').map(e => { const ss = SG.filter(s => s.employee === e.id && age(s.created_at) <= 90); return { e, n: ss.length, hi: ss.filter(s => ['high', 'critical'].includes(lvl(s))).length }; }).filter(x => x.n).sort((a, b) => b.n - a.n || b.hi - a.hi).slice(0, 10);
+      const key = c => `<i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${ctx.tone(c)[1]}"></i>`;
+      return `
+      <div class="pv-kpis">
+        <div class="pv-kpi" data-go="signals"><span>New signals this week</span><b>${SG.filter(s => age(s.created_at) < 7).length}</b><span class="pv-muted">${SG.filter(s => s.status === 'new').length} awaiting triage</span></div>
+        <div class="pv-kpi" data-go="cases"><span>Open cases</span><b>${open.length}</b></div>
+        <div class="pv-kpi" data-go="cases"><span>Cases past due date</span><b style="color:${past.length ? '#B42318' : 'inherit'}">${past.length}</b></div>
+        <div class="pv-kpi" data-go="findings"><span>Open findings past due</span><b style="color:${findPast ? '#B42318' : 'inherit'}">${findPast}</b></div>
+      </div>
+      <div style="display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:12px;align-items:start">
+        <div class="d-panel"><h3>${ctx.icon('activity')}Signals by risk level, last 8 weeks<span class="sp"></span>${RL.map(r => `<span class="pv-muted" style="margin-left:8px">${key(r.color)} ${ctx.esc(r.label)}</span>`).join('')}</h3>
+          ${SG.length ? `<div style="display:flex;align-items:flex-end;gap:10px;height:150px;padding:14px 16px 4px">${byW.map((a, i) => { const t = a.reduce((x, y) => x + y, 0); return `<div data-go="signals" title="${t} signals" style="flex:1;display:flex;flex-direction:column-reverse;height:${100 * t / wmax}%;min-height:2px;border-radius:4px 4px 0 0;overflow:hidden;background:#F2F4F7">${a.map((n, k) => n ? `<i style="flex:${n};background:${ctx.tone(RL[k].color)[1]}"></i>` : '').join('')}</div>`; }).join('')}</div>
+          <div class="pv-muted" style="display:flex;justify-content:space-between;padding:0 16px 10px"><span>8 weeks ago</span><span>this week</span></div>` : '<div class="pv-muted" style="padding:40px 16px;text-align:center">No signals visible to this role.</div>'}</div>
+        <div class="d-panel"><h3>${ctx.icon('folder-open')}Open cases by category<span class="sp"></span><span class="pv-badge">${open.length}</span></h3>
+          <div style="padding:12px 16px;display:flex;flex-direction:column;gap:10px">${cats.map(x => `<div data-go="cases" style="display:grid;grid-template-columns:150px 1fr 24px;gap:10px;align-items:center;font-size:13px"><span style="font-weight:550">${ctx.esc(x.c.label)}</span><div class="pv-bar" style="height:10px"><i style="width:${100 * x.n / cmax}%"></i></div><b style="text-align:right;font-weight:600">${x.n}</b></div>`).join('')}</div></div>
+      </div>
+      <div class="d-panel"><h3>${ctx.icon('user-search')}Employees with the most signals, last 90 days</h3>
+        <table class="z-t"><thead><tr><th>Employee</th><th>Designation</th><th>Region</th><th>Signals</th><th>High / critical</th></tr></thead><tbody>${top.map(x => `<tr class="click" data-go="employees"><td><b style="font-weight:550">${ctx.esc(x.e.full_name)}</b> <span class="pv-muted">${ctx.esc(x.e.employee_code)}</span></td><td>${ctx.esc(x.e.designation || '')}</td><td>${ctx.esc(ctx.fmt(x.e, 'region'))}</td><td><b>${x.n}</b></td><td style="color:${x.hi ? '#B42318' : 'inherit'};font-weight:550">${x.hi}</td></tr>`).join('') || '<tr><td colspan="5" class="pv-muted">No signals in the last 90 days.</td></tr>'}</tbody></table></div>`;
 
 modules:
   - code: masters

@@ -1,405 +1,438 @@
 [
- {
-  "id": "role_name_unique",
-  "kind": "unique",
-  "level": "error",
-  "path": "/roles/*",
-  "key": "name",
-  "message": "Two roles are named \"{value}\"."
- },
- {
-  "id": "page_code_unique",
-  "kind": "unique",
-  "level": "error",
-  "path": "/pages/*",
-  "key": "code",
-  "message": "Two pages share the code \"{value}\"."
- },
- {
-  "id": "module_code_unique",
-  "kind": "unique",
-  "level": "error",
-  "path": "/modules/*",
-  "key": "code",
-  "message": "Two modules share the code \"{value}\"."
- },
- {
-  "id": "entity_code_unique",
-  "kind": "unique",
-  "level": "error",
-  "path": "/modules/*/entities/*",
-  "key": "code",
-  "message": "Two entities share the code \"{value}\" (entity codes are unique across modules)."
- },
- {
-  "id": "field_key_unique",
-  "kind": "unique",
-  "level": "error",
-  "path": "/modules/*/entities/*/fields/*",
-  "key": "",
-  "message": "The field \"{value}\" is declared twice on this entity.",
-  "group_by_parent": true
- },
- {
-  "id": "status_code_unique",
-  "kind": "unique",
-  "level": "error",
-  "path": "/modules/*/entities/*/workflow/statuses/*",
-  "key": "code",
-  "message": "The status \"{value}\" is declared twice in this workflow.",
-  "group_by_parent": true
- },
- {
-  "id": "transition_name_unique",
-  "kind": "unique",
-  "level": "error",
-  "path": "/modules/*/entities/*/workflow/transitions/*",
-  "key": "name",
-  "message": "Two transitions in this workflow are named \"{value}\".",
-  "group_by_parent": true
- },
- {
-  "id": "tag_code_unique",
-  "kind": "unique",
-  "level": "error",
-  "path": "/modules/*/entities/*/workflow/tags/*",
-  "key": "code",
-  "message": "The tag \"{value}\" is declared twice in this workflow.",
-  "group_by_parent": true
- },
- {
-  "id": "row_action_key_unique",
-  "kind": "unique",
-  "level": "error",
-  "path": "/modules/*/entities/*/table/row_actions/*",
-  "key": "key",
-  "message": "Two row actions share the key \"{value}\".",
-  "group_by_parent": true
- },
- {
-  "id": "detail_view_code_unique",
-  "kind": "unique",
-  "level": "error",
-  "path": "/detail_views/*",
-  "key": "code",
-  "message": "Two detail views share the code \"{value}\"."
- },
- {
-  "id": "tab_code_unique",
-  "kind": "unique",
-  "level": "error",
-  "path": "/detail_views/*/tabs/*",
-  "key": "code",
-  "message": "Two tabs in this detail view share the code \"{value}\".",
-  "group_by_parent": true
- },
- {
-  "id": "choice_id_unique",
-  "kind": "unique",
-  "level": "error",
-  "path": "/choice_sets/*/*",
-  "key": "id",
-  "message": "The option \"{value}\" appears twice in this choice set.",
-  "group_by_parent": true
- },
- {
-  "id": "landing_page_known",
-  "kind": "ref",
-  "level": "error",
-  "source": "/roles/*/landing",
-  "target": "/pages/*",
-  "key": "code",
-  "message": "The landing page \"{value}\" is not in pages."
- },
- {
-  "id": "menu_page_known",
-  "kind": "ref",
-  "level": "error",
-  "source": "/roles/*/menu/*/page",
-  "target": "/pages/*",
-  "key": "code",
-  "message": "The menu points at page \"{value}\", which is not in pages."
- },
- {
-  "id": "menu_group_page_known",
-  "kind": "ref",
-  "level": "error",
-  "source": "/roles/*/menu/*/items/*/page",
-  "target": "/pages/*",
-  "key": "code",
-  "message": "The menu points at page \"{value}\", which is not in pages."
- },
- {
-  "id": "page_role_known",
-  "kind": "ref",
-  "level": "error",
-  "source": "/pages/*/roles",
-  "target": "/roles/*",
-  "key": "name",
-  "message": "\"{value}\" is not a declared role."
- },
- {
-  "id": "page_entity_known",
-  "kind": "ref",
-  "level": "error",
-  "source": "/pages/*/entity",
-  "target": "/modules/*/entities/*",
-  "key": "code",
-  "message": "The page lists entity \"{value}\", which no module declares."
- },
- {
-  "id": "page_detail_view_known",
-  "kind": "ref",
-  "level": "error",
-  "source": "/pages/*/detail_view",
-  "target": "/detail_views/*",
-  "key": "code",
-  "message": "The page shows detail view \"{value}\", which is not in detail_views."
- },
- {
-  "id": "transition_role_known",
-  "kind": "ref",
-  "level": "error",
-  "source": "/modules/*/entities/*/workflow/transitions/*/roles",
-  "target": "/roles/*",
-  "key": "name",
-  "message": "\"{value}\" is not a declared role."
- },
- {
-  "id": "tag_role_known",
-  "kind": "ref",
-  "level": "error",
-  "source": "/modules/*/entities/*/workflow/tags/*/{enable,disable}/roles",
-  "target": "/roles/*",
-  "key": "name",
-  "message": "\"{value}\" is not a declared role."
- },
- {
-  "id": "row_action_role_known",
-  "kind": "ref",
-  "level": "error",
-  "source": "/modules/*/entities/*/table/row_actions/*/roles",
-  "target": "/roles/*",
-  "key": "name",
-  "message": "\"{value}\" is not a declared role."
- },
- {
-  "id": "quick_filter_role_known",
-  "kind": "ref",
-  "level": "error",
-  "source": "/modules/*/entities/*/table/quick_filters/*/roles",
-  "target": "/roles/*",
-  "key": "name",
-  "message": "\"{value}\" is not a declared role."
- },
- {
-  "id": "column_role_known",
-  "kind": "ref",
-  "level": "error",
-  "source": "/modules/*/entities/*/table/columns/*/*/roles",
-  "target": "/roles/*",
-  "key": "name",
-  "message": "\"{value}\" is not a declared role."
- },
- {
-  "id": "form_role_known",
-  "kind": "ref",
-  "level": "error",
-  "source": "/modules/*/entities/*/form/{create,edit}/roles",
-  "target": "/roles/*",
-  "key": "name",
-  "message": "\"{value}\" is not a declared role."
- },
- {
-  "id": "app_user_role_known",
-  "kind": "ref",
-  "level": "error",
-  "source": "/modules/*/entities/*/app_user/role",
-  "target": "/roles/*",
-  "key": "name",
-  "message": "The app_user login role \"{value}\" is not a declared role."
- },
- {
-  "id": "detail_view_role_known",
-  "kind": "ref",
-  "level": "error",
-  "source": "/detail_views/*/roles",
-  "target": "/roles/*",
-  "key": "name",
-  "message": "\"{value}\" is not a declared role."
- },
- {
-  "id": "tab_role_known",
-  "kind": "ref",
-  "level": "error",
-  "source": "/detail_views/*/tabs/*/roles",
-  "target": "/roles/*",
-  "key": "name",
-  "message": "\"{value}\" is not a declared role."
- },
- {
-  "id": "choice_set_known",
-  "kind": "ref",
-  "level": "error",
-  "source": "/modules/*/entities/*/fields/*/*/choices",
-  "target": "/choice_sets",
-  "key": "",
-  "message": "The choice set \"{value}\" is not declared under choice_sets."
- },
- {
-  "id": "transition_status_known",
-  "kind": "ref",
-  "level": "error",
-  "source": "/modules/*/entities/*/workflow/transitions/*/{from,to}",
-  "target": "/modules/$1/entities/$2/workflow/statuses/*",
-  "key": "code",
-  "message": "The status \"{value}\" is not declared in this workflow."
- },
- {
-  "id": "editable_in_status_known",
-  "kind": "ref",
-  "level": "error",
-  "source": "/modules/*/entities/*/form/{create,edit}/editable_in",
-  "target": "/modules/$1/entities/$2/workflow/statuses/*",
-  "key": "code",
-  "message": "The status \"{value}\" is not declared in this workflow."
- },
- {
-  "id": "form_field_known",
-  "kind": "ref",
-  "level": "error",
-  "source": "/modules/*/entities/*/form/{create,edit}/fields",
-  "target": "/modules/$1/entities/$2/fields/*",
-  "key": "",
-  "message": "The form lists \"{value}\", which is not a field of this entity."
- },
- {
-  "id": "form_section_field_known",
-  "kind": "ref",
-  "level": "error",
-  "source": "/modules/*/entities/*/form/{create,edit}/sections/*/fields",
-  "target": "/modules/$1/entities/$2/fields/*",
-  "key": "",
-  "message": "The form lists \"{value}\", which is not a field of this entity."
- },
- {
-  "id": "display_field_known",
-  "kind": "ref",
-  "level": "warning",
-  "source": "/modules/*/entities/*/display",
-  "target": "/modules/$1/entities/$2/fields/*",
-  "key": "",
-  "message": "The display field \"{value}\" is not a field of this entity."
- },
- {
-  "id": "parent_entity_known",
-  "kind": "ref",
-  "level": "error",
-  "source": "/modules/*/entities/*/parent/entity",
-  "target": "/modules/*/entities/*",
-  "key": "code",
-  "message": "The parent entity \"{value}\" is not declared."
- },
- {
-  "id": "column_link_known",
-  "kind": "ref",
-  "level": "error",
-  "source": "/modules/*/entities/*/table/columns/*/*/link_to",
-  "target": "/detail_views/*",
-  "key": "code",
-  "message": "The column links to detail view \"{value}\", which is not in detail_views."
- },
- {
-  "id": "detail_view_hero_known",
-  "kind": "ref",
-  "level": "error",
-  "source": "/detail_views/*/hero",
-  "target": "/modules/*/entities/*",
-  "key": "code",
-  "message": "The hero entity \"{value}\" is not declared."
- },
- {
-  "id": "detail_view_back_known",
-  "kind": "ref",
-  "level": "error",
-  "source": "/detail_views/*/back_to",
-  "target": "/pages/*",
-  "key": "code",
-  "message": "back_to names page \"{value}\", which is not in pages."
- },
- {
-  "id": "tab_entity_known",
-  "kind": "ref",
-  "level": "error",
-  "source": "/detail_views/*/tabs/*/entity",
-  "target": "/modules/*/entities/*",
-  "key": "code",
-  "message": "The tab lists entity \"{value}\", which no module declares."
- },
- {
-  "id": "crud_page_entity",
-  "kind": "required_when",
-  "level": "error",
-  "path": "/pages/$1/entity",
-  "if": {
-   "path": "/pages/*/type",
-   "equals": "crud"
+  {
+    "id": "role_name_unique",
+    "kind": "unique",
+    "level": "error",
+    "path": "/roles/*",
+    "key": "name",
+    "message": "Two roles are named \"{value}\"."
   },
-  "message": "A crud page needs the entity it lists."
- },
- {
-  "id": "detail_page_view",
-  "kind": "required_when",
-  "level": "error",
-  "path": "/pages/$1/detail_view",
-  "if": {
-   "path": "/pages/*/type",
-   "equals": "detail"
+  {
+    "id": "page_code_unique",
+    "kind": "unique",
+    "level": "error",
+    "path": "/pages/*",
+    "key": "code",
+    "message": "Two pages share the code \"{value}\"."
   },
-  "message": "A detail page needs the detail_view it shows."
- },
- {
-  "id": "link_field_target",
-  "kind": "required_when",
-  "level": "error",
-  "path": "/modules/$1/entities/$2/fields/$3/$4/to",
-  "if": {
-   "path": "/modules/*/entities/*/fields/*/*/type",
-   "equals": "link"
+  {
+    "id": "module_code_unique",
+    "kind": "unique",
+    "level": "error",
+    "path": "/modules/*",
+    "key": "code",
+    "message": "Two modules share the code \"{value}\"."
   },
-  "message": "A link field needs `to`: the entity it points at."
- },
- {
-  "id": "multi_link_field_target",
-  "kind": "required_when",
-  "level": "error",
-  "path": "/modules/$1/entities/$2/fields/$3/$4/to",
-  "if": {
-   "path": "/modules/*/entities/*/fields/*/*/type",
-   "equals": "multi_link"
+  {
+    "id": "entity_code_unique",
+    "kind": "unique",
+    "level": "error",
+    "path": "/modules/*/entities/*",
+    "key": "code",
+    "message": "Two entities share the code \"{value}\" (entity codes are unique across modules)."
   },
-  "message": "A multi_link field needs `to`: the entity it points at."
- },
- {
-  "id": "choice_field_choices",
-  "kind": "required_when",
-  "level": "error",
-  "path": "/modules/$1/entities/$2/fields/$3/$4/choices",
-  "if": {
-   "path": "/modules/*/entities/*/fields/*/*/type",
-   "equals": "choice"
+  {
+    "id": "field_key_unique",
+    "kind": "unique",
+    "level": "error",
+    "path": "/modules/*/entities/*/fields/*",
+    "key": "",
+    "message": "The field \"{value}\" is declared twice on this entity.",
+    "group_by_parent": true
   },
-  "message": "A choice field needs choices (a choice set code or inline options)."
- },
- {
-  "id": "multi_choice_field_choices",
-  "kind": "required_when",
-  "level": "error",
-  "path": "/modules/$1/entities/$2/fields/$3/$4/choices",
-  "if": {
-   "path": "/modules/*/entities/*/fields/*/*/type",
-   "equals": "multi_choice"
+  {
+    "id": "status_code_unique",
+    "kind": "unique",
+    "level": "error",
+    "path": "/modules/*/entities/*/workflow/statuses/*",
+    "key": "code",
+    "message": "The status \"{value}\" is declared twice in this workflow.",
+    "group_by_parent": true
   },
-  "message": "A multi_choice field needs choices."
- }
+  {
+    "id": "transition_name_unique",
+    "kind": "unique",
+    "level": "error",
+    "path": "/modules/*/entities/*/workflow/transitions/*",
+    "key": "name",
+    "message": "Two transitions in this workflow are named \"{value}\".",
+    "group_by_parent": true
+  },
+  {
+    "id": "tag_code_unique",
+    "kind": "unique",
+    "level": "error",
+    "path": "/modules/*/entities/*/workflow/tags/*",
+    "key": "code",
+    "message": "The tag \"{value}\" is declared twice in this workflow.",
+    "group_by_parent": true
+  },
+  {
+    "id": "row_action_key_unique",
+    "kind": "unique",
+    "level": "error",
+    "path": "/modules/*/entities/*/table/row_actions/*",
+    "key": "key",
+    "message": "Two row actions share the key \"{value}\".",
+    "group_by_parent": true
+  },
+  {
+    "id": "detail_view_code_unique",
+    "kind": "unique",
+    "level": "error",
+    "path": "/detail_views/*",
+    "key": "code",
+    "message": "Two detail views share the code \"{value}\"."
+  },
+  {
+    "id": "tab_code_unique",
+    "kind": "unique",
+    "level": "error",
+    "path": "/detail_views/*/tabs/*",
+    "key": "code",
+    "message": "Two tabs in this detail view share the code \"{value}\".",
+    "group_by_parent": true
+  },
+  {
+    "id": "choice_id_unique",
+    "kind": "unique",
+    "level": "error",
+    "path": "/choice_sets/*/*",
+    "key": "id",
+    "message": "The option \"{value}\" appears twice in this choice set.",
+    "group_by_parent": true
+  },
+  {
+    "id": "landing_page_known",
+    "kind": "ref",
+    "level": "error",
+    "source": "/roles/*/landing",
+    "target": "/pages/*",
+    "key": "code",
+    "message": "The landing page \"{value}\" is not in pages."
+  },
+  {
+    "id": "menu_page_known",
+    "kind": "ref",
+    "level": "error",
+    "source": "/roles/*/menu/*/page",
+    "target": "/pages/*",
+    "key": "code",
+    "message": "The menu points at page \"{value}\", which is not in pages."
+  },
+  {
+    "id": "menu_group_page_known",
+    "kind": "ref",
+    "level": "error",
+    "source": "/roles/*/menu/*/items/*/page",
+    "target": "/pages/*",
+    "key": "code",
+    "message": "The menu points at page \"{value}\", which is not in pages."
+  },
+  {
+    "id": "page_role_known",
+    "kind": "ref",
+    "level": "error",
+    "source": "/pages/*/roles",
+    "target": "/roles/*",
+    "key": "name",
+    "message": "\"{value}\" is not a declared role."
+  },
+  {
+    "id": "page_entity_known",
+    "kind": "ref",
+    "level": "error",
+    "source": "/pages/*/entity",
+    "target": "/modules/*/entities/*",
+    "key": "code",
+    "message": "The page lists entity \"{value}\", which no module declares."
+  },
+  {
+    "id": "page_detail_view_known",
+    "kind": "ref",
+    "level": "error",
+    "source": "/pages/*/detail_view",
+    "target": "/detail_views/*",
+    "key": "code",
+    "message": "The page shows detail view \"{value}\", which is not in detail_views."
+  },
+  {
+    "id": "transition_role_known",
+    "kind": "ref",
+    "level": "error",
+    "source": "/modules/*/entities/*/workflow/transitions/*/roles",
+    "target": "/roles/*",
+    "key": "name",
+    "message": "\"{value}\" is not a declared role."
+  },
+  {
+    "id": "tag_role_known",
+    "kind": "ref",
+    "level": "error",
+    "source": "/modules/*/entities/*/workflow/tags/*/{enable,disable}/roles",
+    "target": "/roles/*",
+    "key": "name",
+    "message": "\"{value}\" is not a declared role."
+  },
+  {
+    "id": "row_action_role_known",
+    "kind": "ref",
+    "level": "error",
+    "source": "/modules/*/entities/*/table/row_actions/*/roles",
+    "target": "/roles/*",
+    "key": "name",
+    "message": "\"{value}\" is not a declared role."
+  },
+  {
+    "id": "quick_filter_role_known",
+    "kind": "ref",
+    "level": "error",
+    "source": "/modules/*/entities/*/table/quick_filters/*/roles",
+    "target": "/roles/*",
+    "key": "name",
+    "message": "\"{value}\" is not a declared role."
+  },
+  {
+    "id": "column_role_known",
+    "kind": "ref",
+    "level": "error",
+    "source": "/modules/*/entities/*/table/columns/*/*/roles",
+    "target": "/roles/*",
+    "key": "name",
+    "message": "\"{value}\" is not a declared role."
+  },
+  {
+    "id": "form_role_known",
+    "kind": "ref",
+    "level": "error",
+    "source": "/modules/*/entities/*/form/{create,edit}/roles",
+    "target": "/roles/*",
+    "key": "name",
+    "message": "\"{value}\" is not a declared role."
+  },
+  {
+    "id": "app_user_role_known",
+    "kind": "ref",
+    "level": "error",
+    "source": "/modules/*/entities/*/app_user/role",
+    "target": "/roles/*",
+    "key": "name",
+    "message": "The app_user login role \"{value}\" is not a declared role."
+  },
+  {
+    "id": "detail_view_role_known",
+    "kind": "ref",
+    "level": "error",
+    "source": "/detail_views/*/roles",
+    "target": "/roles/*",
+    "key": "name",
+    "message": "\"{value}\" is not a declared role."
+  },
+  {
+    "id": "tab_role_known",
+    "kind": "ref",
+    "level": "error",
+    "source": "/detail_views/*/tabs/*/roles",
+    "target": "/roles/*",
+    "key": "name",
+    "message": "\"{value}\" is not a declared role."
+  },
+  {
+    "id": "choice_set_known",
+    "kind": "ref",
+    "level": "error",
+    "source": "/modules/*/entities/*/fields/*/*/choices",
+    "target": "/choice_sets",
+    "key": "",
+    "message": "The choice set \"{value}\" is not declared under choice_sets."
+  },
+  {
+    "id": "transition_status_known",
+    "kind": "ref",
+    "level": "error",
+    "source": "/modules/*/entities/*/workflow/transitions/*/{from,to}",
+    "target": "/modules/$1/entities/$2/workflow/statuses/*",
+    "key": "code",
+    "message": "The status \"{value}\" is not declared in this workflow."
+  },
+  {
+    "id": "editable_in_status_known",
+    "kind": "ref",
+    "level": "error",
+    "source": "/modules/*/entities/*/form/{create,edit}/editable_in",
+    "target": "/modules/$1/entities/$2/workflow/statuses/*",
+    "key": "code",
+    "message": "The status \"{value}\" is not declared in this workflow."
+  },
+  {
+    "id": "form_field_known",
+    "kind": "ref",
+    "level": "error",
+    "source": "/modules/*/entities/*/form/{create,edit}/fields",
+    "target": "/modules/$1/entities/$2/fields/*",
+    "key": "",
+    "message": "The form lists \"{value}\", which is not a field of this entity."
+  },
+  {
+    "id": "form_section_field_known",
+    "kind": "ref",
+    "level": "error",
+    "source": "/modules/*/entities/*/form/{create,edit}/sections/*/fields",
+    "target": "/modules/$1/entities/$2/fields/*",
+    "key": "",
+    "message": "The form lists \"{value}\", which is not a field of this entity."
+  },
+  {
+    "id": "display_field_known",
+    "kind": "ref",
+    "level": "warning",
+    "source": "/modules/*/entities/*/display",
+    "target": "/modules/$1/entities/$2/fields/*",
+    "key": "",
+    "message": "The display field \"{value}\" is not a field of this entity."
+  },
+  {
+    "id": "parent_entity_known",
+    "kind": "ref",
+    "level": "error",
+    "source": "/modules/*/entities/*/parent/entity",
+    "target": "/modules/*/entities/*",
+    "key": "code",
+    "message": "The parent entity \"{value}\" is not declared."
+  },
+  {
+    "id": "column_link_known",
+    "kind": "ref",
+    "level": "error",
+    "source": "/modules/*/entities/*/table/columns/*/*/link_to",
+    "target": "/detail_views/*",
+    "key": "code",
+    "message": "The column links to detail view \"{value}\", which is not in detail_views."
+  },
+  {
+    "id": "detail_view_hero_known",
+    "kind": "ref",
+    "level": "error",
+    "source": "/detail_views/*/hero",
+    "target": "/modules/*/entities/*",
+    "key": "code",
+    "message": "The hero entity \"{value}\" is not declared."
+  },
+  {
+    "id": "detail_view_back_known",
+    "kind": "ref",
+    "level": "error",
+    "source": "/detail_views/*/back_to",
+    "target": "/pages/*",
+    "key": "code",
+    "message": "back_to names page \"{value}\", which is not in pages."
+  },
+  {
+    "id": "tab_entity_known",
+    "kind": "ref",
+    "level": "error",
+    "source": "/detail_views/*/tabs/*/entity",
+    "target": "/modules/*/entities/*",
+    "key": "code",
+    "message": "The tab lists entity \"{value}\", which no module declares."
+  },
+  {
+    "id": "crud_page_entity",
+    "kind": "required_when",
+    "level": "error",
+    "path": "/pages/$1/entity",
+    "if": {
+      "path": "/pages/*/type",
+      "equals": "crud"
+    },
+    "message": "A crud page needs the entity it lists."
+  },
+  {
+    "id": "detail_page_view",
+    "kind": "required_when",
+    "level": "error",
+    "path": "/pages/$1/detail_view",
+    "if": {
+      "path": "/pages/*/type",
+      "equals": "detail"
+    },
+    "message": "A detail page needs the detail_view it shows."
+  },
+  {
+    "id": "link_field_target",
+    "kind": "required_when",
+    "level": "error",
+    "path": "/modules/$1/entities/$2/fields/$3/$4/to",
+    "if": {
+      "path": "/modules/*/entities/*/fields/*/*/type",
+      "equals": "link"
+    },
+    "message": "A link field needs `to`: the entity it points at."
+  },
+  {
+    "id": "multi_link_field_target",
+    "kind": "required_when",
+    "level": "error",
+    "path": "/modules/$1/entities/$2/fields/$3/$4/to",
+    "if": {
+      "path": "/modules/*/entities/*/fields/*/*/type",
+      "equals": "multi_link"
+    },
+    "message": "A multi_link field needs `to`: the entity it points at."
+  },
+  {
+    "id": "choice_field_choices",
+    "kind": "required_when",
+    "level": "error",
+    "path": "/modules/$1/entities/$2/fields/$3/$4/choices",
+    "if": {
+      "path": "/modules/*/entities/*/fields/*/*/type",
+      "equals": "choice"
+    },
+    "message": "A choice field needs choices (a choice set code or inline options)."
+  },
+  {
+    "id": "multi_choice_field_choices",
+    "kind": "required_when",
+    "level": "error",
+    "path": "/modules/$1/entities/$2/fields/$3/$4/choices",
+    "if": {
+      "path": "/modules/*/entities/*/fields/*/*/type",
+      "equals": "multi_choice"
+    },
+    "message": "A multi_choice field needs choices."
+  },
+  {
+    "id": "custom_page_preview",
+    "kind": "required_when",
+    "level": "warning",
+    "path": "/pages/$1/preview",
+    "if": {
+      "path": "/pages/*/type",
+      "equals": "custom"
+    },
+    "message": "This custom page has no preview sketch, so the preview shows a placeholder. Add `preview` (SCHEMA.md: Custom screens with a preview)."
+  },
+  {
+    "id": "custom_tab_preview",
+    "kind": "required_when",
+    "level": "warning",
+    "path": "/detail_views/$1/tabs/$2/preview",
+    "if": {
+      "path": "/detail_views/*/tabs/*/type",
+      "equals": "custom"
+    },
+    "message": "This custom tab has no preview sketch, so the preview shows a placeholder. Add `preview` (SCHEMA.md: Custom screens with a preview)."
+  },
+  {
+    "id": "custom_panel_preview",
+    "kind": "required_when",
+    "level": "warning",
+    "path": "/detail_views/$1/sidebar/$2/preview",
+    "if": {
+      "path": "/detail_views/*/sidebar/*/type",
+      "equals": "custom"
+    },
+    "message": "This custom sidebar section has no preview sketch, so the preview shows a placeholder. Add `preview` (SCHEMA.md: Custom screens with a preview)."
+  }
 ]

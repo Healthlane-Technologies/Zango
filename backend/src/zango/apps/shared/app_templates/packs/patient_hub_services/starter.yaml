@@ -83,8 +83,38 @@ roles:
       - { page: prior_auths, label: Prior Authorizations, icon: file-check }
 
 pages:
-  - { code: dashboard, type: custom, route: /app/dashboard, title: Hub Dashboard, component: HubDashboard, roles: [Case Manager],
-      text: "KPI row: new referrals this week, cases in benefits investigation, PAs pending payer decision, median days referral-to-first-fill. Below: a funnel of open cases by stage, and a table of cases breaching SLA (BI older than 2 business days, PA submitted more than 10 days ago without decision), oldest first." }
+  - code: dashboard
+    type: custom
+    route: /app/dashboard
+    title: Hub Dashboard
+    component: HubDashboard
+    roles: [Case Manager]
+    text: >
+      KPI row: new referrals this week, cases in benefits investigation, PAs pending payer decision,
+      median days referral-to-first-fill. Below: a funnel of open cases by stage, and a table of cases
+      breaching SLA (BI older than 2 business days, PA submitted more than 10 days ago without decision), oldest first.
+    preview: |
+      const D = 864e5, now = new Date(), today = now.toISOString().slice(0, 10), day = s => String(s || '').slice(0, 10);
+      const ago = n => new Date(now - n * D).toISOString().slice(0, 10), days = (a, b) => Math.round((new Date(b) - new Date(a)) / D);
+      const bd = a => { let n = 0; for (let d = new Date(a); d < now; d = new Date(+d + D)) if (d.getDay() % 6) n++; return Math.max(0, n - 1); };
+      const H = ctx.entity('hub_case'), cases = ctx.rows('hub_case'), refs = ctx.rows('referral'), bis = ctx.rows('benefits_investigation'), pas = ctx.rows('prior_auth');
+      const open = cases.filter(c => c.status !== 'closed'), med = a => (a = a.sort((x, y) => x - y)).length ? a[Math.floor(a.length / 2)] : null;
+      const r2f = med(cases.map(c => { const r = refs.find(r => r.id === c.referral); const n = r && c.first_fill_date ? days(day(r.created_at), c.first_fill_date) : -1; return n >= 0 && n <= 120 ? n : null; }).filter(n => n != null));
+      const kpi = (l, v, sub, go) => `<div class="pv-kpi" data-go="${go}"><span>${l}</span><b>${v}</b><span class="pv-muted">${sub}</span></div>`;
+      const stages = H.wf.statuses.filter(s => s.code !== 'closed').map(s => [s, open.filter(c => c.status === s.code).length]), smax = Math.max(1, ...stages.map(s => s[1]));
+      const breaches = [
+        ...bis.filter(b => ['pending', 'in_progress'].includes(b.status) && bd(day(b.created_at)) > 2).map(b => ({ since: day(b.created_at), what: 'BI older than 2 business days', ref: b.bi_ref, c: b.hub_case, x: ctx.fmt(b, 'payer') })),
+        ...pas.filter(p => ['submitted', 'info_requested'].includes(p.status) && p.submitted_on && p.submitted_on < ago(10)).map(p => ({ since: p.submitted_on, what: 'PA without decision > 10 days', ref: p.pa_ref, c: p.hub_case, x: ctx.fmt(p, 'payer') }))
+      ].sort((a, b) => a.since.localeCompare(b.since)).slice(0, 10);
+      const cno = id => (cases.find(c => c.id === id) || {}).case_no || '—';
+      return `<div class="pv-kpis">${kpi('New referrals this week', refs.filter(r => day(r.created_at) >= ago(7)).length, `${refs.filter(r => r.status === 'missing_info').length} missing info`, 'referrals')}
+          ${kpi('In benefits investigation', open.filter(c => c.status === 'benefits_review').length, `${bis.filter(b => b.status === 'pending').length} BIs not started`, 'benefits_investigations')}
+          ${kpi('PAs pending payer decision', pas.filter(p => ['submitted', 'info_requested', 'appealed'].includes(p.status)).length, `${pas.filter(p => p.status === 'info_requested').length} with info requested`, 'prior_auths')}
+          ${kpi('Referral to first fill', r2f == null ? '—' : r2f + ' days', 'median', 'cases')}</div>
+        <div style="display:grid;grid-template-columns:1fr 1.5fr;gap:12px">
+          <div class="d-panel"><h3>${ctx.icon('filter')}Open cases by stage</h3><div style="padding:8px 16px 12px">${stages.map(([s, n]) => `<div style="display:grid;grid-template-columns:120px 1fr 28px;gap:10px;align-items:center;margin:7px 0"><span class="pv-muted">${ctx.esc(s.label)}</span><div class="pv-bar" style="height:14px"><i style="width:${n / smax * 100}%;background:${ctx.tone(s.color)[1]}"></i></div><b style="text-align:right;font-size:13px">${n}</b></div>`).join('')}</div></div>
+          <div class="d-panel"><h3>${ctx.icon('alarm-clock')}Cases breaching SLA <span class="sp"></span><span class="pv-badge" style="background:#FEF3F2;color:#B42318;border-color:#FECDCA">${breaches.length}</span></h3><table class="z-t"><thead><tr><th>Case</th><th>Breach</th><th>Reference</th><th>Payer</th><th>Days</th></tr></thead><tbody>
+            ${breaches.map(b => `<tr class="click" data-go="case_360:${b.c}"><td><span class="z-link">${ctx.esc(cno(b.c))}</span></td><td><b style="color:#B42318">${b.what}</b></td><td>${ctx.esc(b.ref)}</td><td>${ctx.esc(b.x)}</td><td>${days(b.since, today)}</td></tr>`).join('') || '<tr><td colspan="5" class="pv-muted">Nothing is breaching SLA.</td></tr>'}</tbody></table></div></div>`;
   - { code: referrals,               type: crud,   entity: referral,               route: /app/referrals,               title: Referrals }
   - { code: cases,                   type: crud,   entity: hub_case,               route: /app/cases,                   title: Cases }
   - { code: case_360,                type: detail, detail_view: case_360,          route: /app/cases/:id }

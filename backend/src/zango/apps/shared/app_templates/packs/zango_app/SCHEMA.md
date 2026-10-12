@@ -187,12 +187,13 @@ views:
 
 ### Custom screens with a preview: `preview`
 
-For what nothing above can express — a workload board per person, a seating
-plan, a gantt — keep the `custom` page, tab (`type: custom`) or sidebar
+Every `custom` screen gets a sketch: dashboards included (compute their KPIs
+and charts from `ctx.rows`). For what nothing above can express — a workload
+board per person, a seating plan, a gantt — keep the `custom` page, tab (`type: custom`) or sidebar
 section (`type: custom`) with its `component` and a precise `text`, and add
 `preview`: the body of a JavaScript function `ctx => html` that sketches it
 from the demo data, so the user sees it. It is preview-only; the build reads
-`text`. `ctx.rows(entity)` (role-scoped demo rows), `ctx.entity(entity)`,
+`text`. `ctx.rows(entity)` (role-scoped demo rows: field keys, `id`, `status`, links as ids), `ctx.entity(entity)` (`fields[]` with `key`, `type`, `label`, `opts` for choices),
 `ctx.record` and `ctx.related(entity, via)` (on tabs and panels), `ctx.fmt(row, field)`,
 `ctx.esc(text)`, `ctx.icon(name)`, `ctx.tone(color)`, `ctx.role`, `ctx.user`.
 Return a string; synchronous, no network. Style with `pv-cols`, `pv-col`,

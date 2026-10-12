@@ -101,6 +101,37 @@ pages:
     route: /app/dashboard
     title: Dashboard
     component: MiDashboard
+    preview: |
+      const I = ctx.entity('inquiry'), inq = ctx.rows('inquiry'), resp = ctx.rows('response'), aes = ctx.rows('ae_report');
+      const now = new Date(), today = now.toISOString().slice(0, 10), D = 864e5, dueIn = r => Math.round((new Date(r.due_on) - new Date(today)) / D);
+      const open = inq.filter(r => ['new', 'in_progress', 'awaiting_info'].includes(r.status));
+      const due2 = open.filter(r => r.due_on && dueIn(r) >= 0 && dueIn(r) <= 2).length, late = open.filter(r => r.due_on && dueIn(r) < 0).length;
+      const month = inq.filter(r => String(r.received_on).slice(0, 7) === today.slice(0, 7)), src = month.length ? month : inq;
+      const cats = I.fmap.category.opts.map(o => ({ label: o.label, n: src.filter(r => r.category === o.id).length })).sort((a, b) => b.n - a.n), top = Math.max(1, ...cats.map(c => c.n));
+      const sent = resp.filter(r => ['approved', 'sent'].includes(r.status)), std = sent.filter(r => r.response_type === 'standard').length, stdPct = sent.length ? Math.round(100 * std / sent.length) : 0;
+      const badge = r => { const s = I.wf.smap[r.status], [b, f] = ctx.tone(s.color); return `<span class="pv-badge" style="background:${b};color:${f};border-color:${b}">${ctx.esc(s.label)}</span>`; };
+      const queue = open.filter(r => r.due_on).sort((a, b) => String(a.due_on).localeCompare(String(b.due_on))).slice(0, 10);
+      return `
+      <div class="pv-kpis">
+        <div class="pv-kpi" data-go="inquiries"><span>Open inquiries</span><b>${open.length}</b><span style="color:${late ? '#B42318' : 'inherit'}">${late ? late + ' overdue' : 'none overdue'}</span></div>
+        <div class="pv-kpi" data-go="inquiries"><span>Due in the next 2 days</span><b style="color:${due2 ? '#B54708' : '#101828'}">${due2}</b></div>
+        <div class="pv-kpi" data-go="responses"><span>Responses awaiting medical review</span><b>${resp.filter(r => r.status === 'in_review').length}</b></div>
+        <div class="pv-kpi" data-go="ae_reports"><span>AEs not yet forwarded to PV</span><b style="color:${aes.some(a => a.status === 'captured') ? '#B42318' : '#101828'}">${aes.filter(a => a.status === 'captured').length}</b></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:12px;align-items:start">
+        <div class="d-panel"><h3>${ctx.icon('bar-chart-3')}Inquiries by category<span class="sp"></span><span class="pv-muted">${month.length ? 'this month' : 'all time'}</span></h3>
+          <div style="padding:12px 16px;display:flex;flex-direction:column;gap:9px">${cats.map(c => `
+            <div style="display:grid;grid-template-columns:150px 1fr 28px;gap:10px;align-items:center;font-size:13px"><span>${ctx.esc(c.label)}</span>
+              <div class="pv-bar" style="height:10px"><i style="width:${Math.round(100 * c.n / top)}%"></i></div><b style="text-align:right;font-weight:550">${c.n}</b></div>`).join('')}</div></div>
+        <div class="d-panel"><h3>${ctx.icon('file-check-2')}Standard vs custom answers</h3>
+          <div style="padding:14px 16px"><div style="font-size:28px;font-weight:650;color:#101828">${stdPct}%</div><span class="pv-muted">of ${sent.length} approved or sent responses used a standard response</span>
+            <div style="display:flex;height:12px;border-radius:6px;overflow:hidden;margin-top:12px;background:#D0D5DD"><i style="width:${stdPct}%;background:var(--brand)"></i></div>
+            <div class="pv-muted" style="display:flex;justify-content:space-between;margin-top:6px"><span>Standard ${std}</span><span>Custom ${sent.length - std}</span></div></div></div>
+      </div>
+      <div class="d-panel"><h3>${ctx.icon('clock')}Closest to due date</h3>
+        <table class="z-t"><thead><tr><th>Inquiry</th><th>Reporter</th><th>Product</th><th>Category</th><th>Priority</th><th>Due</th><th>Status</th></tr></thead><tbody>${queue.map(r => `
+          <tr class="click" data-go="inquiry_360:${r.id}"><td><span class="z-link">${ctx.esc(r.inquiry_ref)}</span></td><td>${ctx.esc(ctx.fmt(r, 'reporter'))}</td><td>${ctx.esc(ctx.fmt(r, 'product'))}</td><td>${ctx.esc(ctx.fmt(r, 'category'))}</td><td>${ctx.esc(ctx.fmt(r, 'priority'))}</td>
+            <td style="color:${dueIn(r) < 0 ? '#B42318' : dueIn(r) <= 2 ? '#B54708' : 'inherit'};font-weight:550">${dueIn(r) < 0 ? -dueIn(r) + 'd overdue' : dueIn(r) === 0 ? 'Today' : 'in ' + dueIn(r) + 'd'}</td><td>${badge(r)}</td></tr>`).join('') || '<tr><td colspan="7" class="pv-muted">No open inquiries.</td></tr>'}</tbody></table></div>`;
     roles: [MI Specialist]
     text: >
       KPI row: open inquiries, inquiries due in the next 2 days, responses awaiting medical review,

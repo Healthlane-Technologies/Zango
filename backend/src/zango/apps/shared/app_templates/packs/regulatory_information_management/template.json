@@ -1,7 +1,7 @@
 {
   "slug": "regulatory-information-management",
   "name": "Regulatory Information Management",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "category": "Regulatory Affairs",
   "icon": "file",
   "is_beta": false,
@@ -38,24 +38,66 @@
   "catalogue": {
     "description": "One regulatory system of record across markets. The regulatory lead keeps the product registry, plans submissions and approves dossiers, affiliate RA teams file locally, track their registrations and renewals and work on commitments, and leadership sees the whole portfolio: what is approved where, what is under review, what expires soon and which commitments are overdue.",
     "packages": [
-      { "name": "workflow", "description": "Registration, submission and commitment lifecycles with role-gated steps" },
-      { "name": "documents", "description": "Dossier links, approval letters and commitment evidence" },
-      { "name": "tasks", "description": "Renewal reminders, HA response deadlines and commitment due dates" },
-      { "name": "reports", "description": "Portfolio matrix, approvals by market and overdue commitments" }
+      {
+        "name": "workflow",
+        "description": "Registration, submission and commitment lifecycles with role-gated steps"
+      },
+      {
+        "name": "documents",
+        "description": "Dossier links, approval letters and commitment evidence"
+      },
+      {
+        "name": "tasks",
+        "description": "Renewal reminders, HA response deadlines and commitment due dates"
+      },
+      {
+        "name": "reports",
+        "description": "Portfolio matrix, approvals by market and overdue commitments"
+      }
     ],
     "roles": [
-      { "name": "Regulatory lead", "description": "Owns the product registry, plans submissions, approves dossiers for filing and signs off commitments" },
-      { "name": "Affiliate RA", "description": "Keeps their markets' registrations current, files submissions, answers HA questions and works on local commitments" },
-      { "name": "Leadership", "description": "Read-only portfolio view of approvals, renewals and overdue commitments across markets" }
+      {
+        "name": "Regulatory lead",
+        "description": "Owns the product registry, plans submissions, approves dossiers for filing and signs off commitments"
+      },
+      {
+        "name": "Affiliate RA",
+        "description": "Keeps their markets' registrations current, files submissions, answers HA questions and works on local commitments"
+      },
+      {
+        "name": "Leadership",
+        "description": "Read-only portfolio view of approvals, renewals and overdue commitments across markets"
+      }
     ],
     "workflows": [
-      { "name": "Product registry", "description": "Products with their active ingredient, form, strengths and lifecycle from development to discontinuation" },
-      { "name": "Registrations", "description": "Marketing authorisation per product and market: planned, filed, approved, in renewal, lapsed or withdrawn, with expiry alerts" },
-      { "name": "Submissions", "description": "Plan, prepare, review internally, file, answer HA questions and record the decision" },
-      { "name": "Commitments", "description": "Post-approval conditions with owner, due date, evidence and sign-off" }
+      {
+        "name": "Product registry",
+        "description": "Products with their active ingredient, form, strengths and lifecycle from development to discontinuation"
+      },
+      {
+        "name": "Registrations",
+        "description": "Marketing authorisation per product and market: planned, filed, approved, in renewal, lapsed or withdrawn, with expiry alerts"
+      },
+      {
+        "name": "Submissions",
+        "description": "Plan, prepare, review internally, file, answer HA questions and record the decision"
+      },
+      {
+        "name": "Commitments",
+        "description": "Post-approval conditions with owner, due date, evidence and sign-off"
+      }
     ],
-    "data_objects": ["Product", "Market", "Registration", "Submission", "Commitment"],
-    "integrations": ["eCTD publishing tool", "Document management system"],
+    "data_objects": [
+      "Product",
+      "Market",
+      "Registration",
+      "Submission",
+      "Commitment"
+    ],
+    "integrations": [
+      "eCTD publishing tool",
+      "Document management system"
+    ],
     "compliance": [
       "Audit trail of every status change and approval, aligned to 21 CFR Part 11 and EU Annex 11 expectations",
       "Dossier approval before filing, by a different person from the one who prepared it",
@@ -67,5 +109,5 @@
     "app_name_prefill": "RIM — Emerging Markets",
     "app_prompt_prefill": "Regulatory information management for 36 generic products across 18 markets in APAC, the Middle East and Latin America. The global regulatory lead plans submission waves and approves every dossier, affiliate RA teams file locally, answer health-authority questions and keep renewals current, and leadership sees the product-by-market portfolio. Post-approval commitments are maker-checker: the affiliate submits evidence and a regulatory lead signs it off."
   },
-  "changelog": "First version: product registry, registrations with renewal tracking, submissions with HA questions, and signed-off commitments on the Zango app spec v1."
+  "changelog": "Preview sketches for every custom screen (dashboards, custom tabs and panels)."
 }

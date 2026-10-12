@@ -1,7 +1,7 @@
 {
   "slug": "rebate-chargeback",
   "name": "Rebate & Chargeback Management",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "category": "Market Access",
   "icon": "card",
   "is_beta": false,
@@ -38,24 +38,68 @@
   "catalogue": {
     "description": "A rebate and chargeback system for manufacturers that contract with wholesalers, GPOs, health systems and payers: set up agreements with product-level contract prices and rebate rates, take in rebate claims and chargeback lines from customers, validate them against contract terms and sales data, route exceptions to market access, pay and credit through the ERP, and book monthly accruals with maker-checker sign-off. Customers sign in to submit claims and chargebacks and see only their own.",
     "packages": [
-      { "name": "workflow", "description": "Agreement approval, claim validation, chargeback and accrual lifecycles" },
-      { "name": "rules", "description": "Eligibility, contract-price, duplicate and unit checks on claims and chargebacks" },
-      { "name": "integrations", "description": "ERP masters, payments, credit memos and accrual journals; customer claims data feeds" },
-      { "name": "reports", "description": "Gross-to-net, accrual versus paid and exception ageing by customer and quarter" }
+      {
+        "name": "workflow",
+        "description": "Agreement approval, claim validation, chargeback and accrual lifecycles"
+      },
+      {
+        "name": "rules",
+        "description": "Eligibility, contract-price, duplicate and unit checks on claims and chargebacks"
+      },
+      {
+        "name": "integrations",
+        "description": "ERP masters, payments, credit memos and accrual journals; customer claims data feeds"
+      },
+      {
+        "name": "reports",
+        "description": "Gross-to-net, accrual versus paid and exception ageing by customer and quarter"
+      }
     ],
     "roles": [
-      { "name": "Finance", "description": "Approves agreement pricing, approves claim payments, credits chargebacks and books accruals" },
-      { "name": "Market access lead", "description": "Owns agreements and product terms, resolves claim exceptions and watches gross-to-net" },
-      { "name": "Customer", "description": "External login for a wholesaler, GPO, IDN or payer: submits claims and chargebacks for its own agreements" }
+      {
+        "name": "Finance",
+        "description": "Approves agreement pricing, approves claim payments, credits chargebacks and books accruals"
+      },
+      {
+        "name": "Market access lead",
+        "description": "Owns agreements and product terms, resolves claim exceptions and watches gross-to-net"
+      },
+      {
+        "name": "Customer",
+        "description": "External login for a wholesaler, GPO, IDN or payer: submits claims and chargebacks for its own agreements"
+      }
     ],
     "workflows": [
-      { "name": "Agreements", "description": "Draft, product terms, finance approval, activation, expiry and termination" },
-      { "name": "Claim validation", "description": "Automatic validation, exception resolution, payment approval and remittance" },
-      { "name": "Chargebacks", "description": "Line-level contract price checks, disputes, resubmission and credit memos" },
-      { "name": "Accruals", "description": "Monthly accrual per agreement, maker-checker posting, true-up and reversal" }
+      {
+        "name": "Agreements",
+        "description": "Draft, product terms, finance approval, activation, expiry and termination"
+      },
+      {
+        "name": "Claim validation",
+        "description": "Automatic validation, exception resolution, payment approval and remittance"
+      },
+      {
+        "name": "Chargebacks",
+        "description": "Line-level contract price checks, disputes, resubmission and credit memos"
+      },
+      {
+        "name": "Accruals",
+        "description": "Monthly accrual per agreement, maker-checker posting, true-up and reversal"
+      }
     ],
-    "data_objects": ["Agreement", "Product term", "Claim", "Chargeback", "Accrual", "Customer", "Product"],
-    "integrations": ["ERP connector", "Claims data feed"],
+    "data_objects": [
+      "Agreement",
+      "Product term",
+      "Claim",
+      "Chargeback",
+      "Accrual",
+      "Customer",
+      "Product"
+    ],
+    "integrations": [
+      "ERP connector",
+      "Claims data feed"
+    ],
     "compliance": [
       "Maker-checker sign-off on accrual postings and claim payments",
       "Duplicate checks on chargeback invoice lines and claims per agreement and quarter",
@@ -67,5 +111,5 @@
     "app_name_prefill": "Rebates & Chargebacks — US Specialty",
     "app_prompt_prefill": "Rebate and chargeback management for our US specialty portfolio: about 40 GPO, IDN and PBM agreements and three national wholesalers sending chargebacks daily. Rebate claims arrive quarterly with utilisation data and are validated against contract terms and 867 sales data, with exceptions going to market access. Finance books monthly accruals with maker-checker sign-off and posts them, along with payments and credit memos, to SAP."
   },
-  "changelog": "First version: agreements with product terms, rebate claim validation, chargebacks and monthly accruals on the Zango app spec v1."
+  "changelog": "Preview sketches for every custom screen (dashboards, custom tabs and panels)."
 }

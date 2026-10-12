@@ -1,7 +1,7 @@
 {
   "slug": "ordering-portal",
   "name": "Ordering Portal",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "category": "Commercial Operations",
   "icon": "cart",
   "is_beta": false,
@@ -118,5 +118,5 @@
     "app_name_prefill": "Clinic Ordering",
     "app_prompt_prefill": "Ordering portal for clinics to order vaccines, with a catalogue, credit limits per clinic, distributor fulfilment and delivery tracking."
   },
-  "changelog": "Quoted prose values cut at commas, so the build checker passes."
+  "changelog": "Preview sketches for every custom screen (dashboards, custom tabs and panels)."
 }

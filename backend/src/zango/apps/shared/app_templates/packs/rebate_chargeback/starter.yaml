@@ -102,6 +102,31 @@ pages:
       accrual balance versus paid to date. Below: rebate and chargeback spend by customer
       type (bar, last 4 quarters), claims in exception older than 15 days, and the
       agreements expiring in the next 90 days.
+    preview: |
+      const D = 864e5, now = new Date(), today = now.toISOString().slice(0, 10), day = s => String(s || '').slice(0, 10), plus = n => new Date(+now + n * D).toISOString().slice(0, 10);
+      const $ = n => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'compact', maximumFractionDigits: 1 }).format(n || 0), sum = (a, f) => a.reduce((s, x) => s + (Number(f(x)) || 0), 0);
+      const agrs = ctx.rows('agreement'), claims = ctx.rows('rebate_claim'), cbs = ctx.rows('chargeback'), accr = ctx.rows('accrual').filter(a => a.status === 'posted'), custs = ctx.rows('customer');
+      const openC = claims.filter(c => ['submitted', 'exception', 'validated', 'approved'].includes(c.status)), mon = today.slice(0, 7), cbM = cbs.filter(c => day(c.created_at).slice(0, 7) === mon);
+      const accrued = sum(accr, a => (a.accrual_amount || 0) + (a.true_up || 0)), paidTD = sum(accr, a => a.paid_to_date);
+      const kpi = (l, v, sub, go) => `<div class="pv-kpi" data-go="${go}"><span>${l}</span><b>${v}</b><span class="pv-muted">${sub}</span></div>`;
+      const ctype = id => (custs.find(c => c.id === id) || {}).customer_type, agCust = id => (agrs.find(g => g.id === id) || {}).customer;
+      const since = plus(-365), types = (ctx.entity('customer').fields.find(f => f.key === 'customer_type') || {}).opts || [];
+      const byType = types.map(t => ({ t, cb: sum(cbs.filter(c => ['validated', 'credited'].includes(c.status) && (c.invoice_date || '') >= since && ctype(agCust(c.agreement)) === t.id), c => c.amount),
+        rb: sum(claims.filter(c => ['approved', 'paid'].includes(c.status) && ctype(c.customer) === t.id), c => c.validated_amount) })).filter(x => x.cb + x.rb), tmax = Math.max(1, ...byType.map(x => x.cb + x.rb));
+      const age = d => Math.round((now - new Date(d)) / D);
+      const exc = claims.filter(c => c.status === 'exception' && day(c.created_at) < plus(-15)).sort((a, b) => a.created_at.localeCompare(b.created_at));
+      const exp = agrs.filter(g => g.status === 'active' && g.end_date >= today && g.end_date <= plus(90)).sort((a, b) => a.end_date.localeCompare(b.end_date));
+      return `<div class="pv-kpis">${kpi('Active agreements', agrs.filter(g => g.status === 'active').length, `${agrs.filter(g => g.status === 'pending_approval').length} pending approval`, 'agreements')}
+          ${kpi('Open claims value', $(sum(openC, c => c.claimed_amount)), `${openC.length} claims · ${openC.filter(c => c.status === 'exception').length} in exception`, 'claims')}
+          ${kpi('Chargebacks received this month', cbM.length, `${$(sum(cbM, c => c.amount))} claimed`, 'chargebacks')}
+          <div class="pv-kpi" data-go="accruals"><span>Accrual balance vs paid to date</span><b>${$(accrued - paidTD)}</b><div class="pv-bar" style="margin-top:6px"><i style="width:${accrued > 0 ? Math.min(100, paidTD / accrued * 100) : 0}%"></i></div><span class="pv-muted">${$(paidTD)} paid of ${$(accrued)} accrued</span></div></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+          <div class="d-panel"><h3>${ctx.icon('chart-bar')}Spend by customer type <span class="sp"></span><span class="pv-muted" style="display:inline-flex;gap:4px;align-items:center"><i style="width:8px;height:8px;border-radius:2px;background:#2E90FA"></i>Chargebacks <i style="width:8px;height:8px;border-radius:2px;background:#9E77ED;margin-left:6px"></i>Rebates</span></h3><div style="padding:8px 16px 12px">
+            ${byType.map(x => `<div style="margin:9px 0"><div style="display:flex;justify-content:space-between"><span>${ctx.esc(x.t.label)}</span><b style="font-size:13px">${$(x.cb + x.rb)}</b></div><div class="pv-bar" style="display:flex;margin-top:4px;height:10px"><i style="width:${x.cb / tmax * 100}%;background:#2E90FA;border-radius:0"></i><i style="width:${x.rb / tmax * 100}%;background:#9E77ED;border-radius:0"></i></div></div>`).join('') || '<span class="pv-muted">No spend in the last 4 quarters.</span>'}</div></div>
+          <div class="d-panel" style="min-width:0;overflow:auto"><h3>${ctx.icon('triangle-alert')}Claims in exception > 15 days <span class="sp"></span><span class="pv-badge">${exc.length}</span></h3><table class="z-t"><thead><tr><th>Claim</th><th>Customer</th><th>Claimed</th><th>Exceptions</th><th>Age</th></tr></thead><tbody>
+            ${exc.slice(0, 6).map(c => `<tr class="click" data-go="agreement_360:${c.agreement}"><td><span class="z-link">${ctx.esc(c.claim_ref)}</span></td><td>${ctx.esc(ctx.fmt(c, 'customer'))}</td><td>${$(c.claimed_amount)}</td><td>${ctx.esc(c.exception_count)}</td><td><b style="color:#B42318">${age(c.created_at)}d</b></td></tr>`).join('') || '<tr><td colspan="5" class="pv-muted">No claims stuck in exception.</td></tr>'}</tbody></table></div></div>
+        <div class="d-panel"><h3>${ctx.icon('calendar-clock')}Agreements expiring in the next 90 days <span class="sp"></span><span class="pv-badge">${exp.length}</span></h3><table class="z-t"><thead><tr><th>Contract</th><th>Title</th><th>Customer</th><th>Structure</th><th>Ends</th><th>Days left</th></tr></thead><tbody>
+          ${exp.map(g => `<tr class="click" data-go="agreement_360:${g.id}"><td><span class="z-link">${ctx.esc(g.contract_no)}</span></td><td>${ctx.esc(g.title)}</td><td>${ctx.esc(ctx.fmt(g, 'customer'))}</td><td>${ctx.esc(ctx.fmt(g, 'rebate_structure'))}</td><td>${ctx.esc(ctx.fmt(g, 'end_date'))}</td><td>${age(today) - age(g.end_date)}</td></tr>`).join('') || '<tr><td colspan="6" class="pv-muted">No active agreement ends in the next 90 days.</td></tr>'}</tbody></table></div>`;
 
 modules:
   - code: masters

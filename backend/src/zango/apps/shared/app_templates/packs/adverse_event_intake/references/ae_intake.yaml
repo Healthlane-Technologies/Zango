@@ -192,6 +192,39 @@ pages:
       overdue. Below: cases by channel (stacked bar, last 8 weeks), cases by product
       (top 10), the 10 open cases closest to their SLA, and exports rejected by the
       safety database. PV Associates see their own assigned cases highlighted.
+    preview: |
+      const C = ctx.entity('case'), cases = ctx.rows('case'), fus = ctx.rows('follow_up'), exps = ctx.rows('safety_export');
+      const D = 864e5, now = new Date(), today = now.toISOString().slice(0, 10), mk = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+      const thisM = mk(now), lastM = mk(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+      const open = cases.filter(c => !['closed', 'duplicate', 'non_case'].includes(c.status));
+      const queue = open.filter(c => ['new', 'dup_check'].includes(c.status)).sort((a, b) => a.sla_hours_left - b.sla_hours_left);
+      const inM = m => cases.filter(c => c.received_at.slice(0, 7) === m), recv = inM(thisM).length, prev = inM(lastM).length;
+      const routedM = inM(thisM).concat(inM(lastM)).filter(c => !['new', 'dup_check'].includes(c.status)), pct = routedM.length ? Math.round(routedM.filter(c => c.sla_hours_left >= 0).length / routedM.length * 100) : 100;
+      const dueIn = c => Math.round((new Date(c.report_due_on) - now) / D), ser = open.filter(c => c.seriousness === 'serious' && c.report_due_on);
+      const due3 = ser.filter(c => dueIn(c) <= 3).length, next = ser.length ? Math.min(...ser.map(dueIn)) : null;
+      const fuLate = fus.filter(f => f.status === 'overdue' || (f.status === 'open' && f.due_date && f.due_date < today)).length;
+      const kpi = (l, v, sub, col) => `<div class="pv-kpi"><span>${l}</span><b style="color:${col || '#101828'}">${v}</b><span>${sub}</span></div>`;
+      const badge = r => { const s = C.wf.smap[r.status], [b, f] = ctx.tone(s.color); return `<span class="pv-badge" style="background:${b};color:${f};border-color:${b}">${ctx.esc(s.label)}</span>`; };
+      const sla = h => h < 0 ? `<b style="color:#B42318">Breached ${-h}h ago</b>` : h < 4 ? `<b style="color:#B54708">${h}h left</b>` : `${h}h left`;
+      const chans = C.fmap.channel.opts, months = [...Array(6)].map((_, i) => new Date(now.getFullYear(), now.getMonth() - 5 + i, 1));
+      const cols = months.map(d => chans.map(o => [o, inM(mk(d)).filter(c => c.channel === o.id).length])), cmax = Math.max(1, ...cols.map(c => c.reduce((a, x) => a + x[1], 0)));
+      const prods = Object.entries(cases.reduce((a, c) => (c.product && (a[c.product] = (a[c.product] || 0) + 1), a), {})).sort((a, b) => b[1] - a[1]).slice(0, 10);
+      const pname = id => ctx.fmt(cases.find(c => c.product == id), 'product'), pmax = Math.max(1, ...prods.map(p => p[1]));
+      const rej = exps.filter(e => e.status === 'rejected');
+      return `<div class="pv-kpis">
+        ${kpi('Received this month', recv, `${recv >= prev ? '▲' : '▼'} ${Math.abs(recv - prev)} vs last month (${prev})`)}${kpi('Open cases', open.length, `${open.filter(c => c.seriousness === 'serious').length} serious`)}
+        ${kpi('SLA at risk', queue.filter(c => c.sla_hours_left < 4).length, 'under 4h to route', queue.some(c => c.sla_hours_left < 4) ? '#B42318' : null)}
+        ${kpi('Routed within SLA', pct + '%', 'this and last month', pct >= 90 ? '#067647' : '#B54708')}
+        ${kpi('Reports due ≤ 3 days', due3, next == null ? 'no serious cases open' : `next one in ${next} days`, due3 ? '#B42318' : null)}${kpi('Follow-ups overdue', fuLate, 'past due date', fuLate ? '#B42318' : null)}</div>
+      <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:12px">
+        <div class="d-panel"><h3>${ctx.icon('radio-tower')}Cases by channel <span class="sp"></span>${chans.map(o => `<span class="pv-muted" style="display:inline-flex;align-items:center;gap:4px"><i style="width:8px;height:8px;border-radius:2px;background:${ctx.tone(o.color)[1]}"></i>${ctx.esc(o.label)}</span>`).join('')}</h3>
+          <div style="display:flex;gap:14px;align-items:flex-end;height:170px;padding:14px 18px">${cols.map((c, i) => `<div style="flex:1;text-align:center"><b style="font-size:12px">${c.reduce((a, x) => a + x[1], 0)}</b><div style="display:flex;flex-direction:column-reverse;height:120px;justify-content:flex-start;margin-top:4px">${c.map(([o, n]) => n ? `<div title="${ctx.esc(o.label)}" style="height:${n / cmax * 120}px;background:${ctx.tone(o.color)[1]};border-top:2px solid #fff"></div>` : '').join('')}</div><span class="pv-muted">${months[i].toLocaleString('en', { month: 'short' })}</span></div>`).join('')}</div></div>
+        <div class="d-panel"><h3>${ctx.icon('pill')}Cases by product</h3><div style="padding:8px 16px 12px">${prods.map(([id, n]) => `<div style="display:grid;grid-template-columns:120px 1fr 24px;gap:10px;align-items:center;margin:7px 0"><span class="pv-muted">${ctx.esc(pname(id))}</span><div class="pv-bar"><i style="width:${n / pmax * 100}%"></i></div><b style="text-align:right;font-size:13px">${n}</b></div>`).join('')}</div></div></div>
+      <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:12px">
+        <div class="d-panel"><h3>${ctx.icon('alarm-clock')}Closest to the 24h routing SLA</h3><table class="z-t"><thead><tr><th>Case</th><th>Channel</th><th>Product</th><th>Status</th><th>SLA</th></tr></thead><tbody>
+          ${queue.slice(0, 10).map(c => `<tr data-go="case_360:${c.id}"${c.assigned_to === ctx.user ? ' style="background:#FFF1F3"' : ''}><td><span class="z-link">${ctx.esc(c.case_ref)}</span>${c.seriousness === 'serious' ? ' <span class="z-chip" style="background:#FEF3F2;color:#B42318">Serious</span>' : ''}</td><td>${ctx.esc(ctx.fmt(c, 'channel'))}</td><td>${ctx.esc(ctx.fmt(c, 'product'))}</td><td>${badge(c)}</td><td>${sla(c.sla_hours_left)}</td></tr>`).join('') || '<tr><td colspan="5" class="pv-muted">Nothing waiting to be routed.</td></tr>'}</tbody></table></div>
+        <div class="d-panel"><h3>${ctx.icon('database-zap')}Rejected by the safety database <span class="sp"></span><span class="pv-badge" style="background:#FEF3F2;color:#B42318;border-color:#FECDCA">${rej.length}</span></h3><div style="padding:10px 14px;display:flex;flex-direction:column;gap:8px">
+          ${rej.slice(0, 5).map(e => `<div class="pv-card" data-go="case_360:${e.case}"><b>${ctx.esc(e.export_ref)} · ${ctx.esc(ctx.fmt(e, 'case'))}</b><span class="pv-muted">${ctx.esc(ctx.fmt(e, 'version'))} · ${ctx.esc(e.ack_message || 'No acknowledgement text')}</span></div>`).join('') || (exps.length ? '<span class="pv-muted">No rejected exports.</span>' : '<span class="pv-muted">Exports are visible to PV only.</span>')}</div></div></div>`;
 
 modules:
   - code: masters

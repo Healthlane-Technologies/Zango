@@ -107,6 +107,40 @@ pages:
     text: >
       KPI row: vendors pending approval, open POs, PO value this month, invoices overdue.
       Below: PO value by month (bar, last 6 months) and a table of the 10 oldest POs awaiting approval.
+    preview: |
+      const vendors = ctx.rows('vendor'), pos = ctx.rows('purchase_order'), invoices = ctx.rows('invoice');
+      const today = new Date().toISOString().slice(0, 10), month = today.slice(0, 7);
+      const open = pos.filter(p => !['closed', 'cancelled', 'draft'].includes(p.status));
+      const value = pos.filter(p => String(p.order_date || '').startsWith(month))
+        .reduce((s, p) => s + (Number(p.total_amount) || 0), 0);
+      const overdue = invoices.filter(i => i.status !== 'paid' && i.status !== 'rejected' && i.due_date && i.due_date < today);
+      const kpi = (label, n, go) => `<div class="pv-kpi" ${go ? `data-go="${go}"` : ''}><span>${label}</span><b>${n}</b></div>`;
+      const money = n => '₹' + Math.round(n).toLocaleString('en-IN');
+      const months = [...Array(6)].map((_, k) => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 5 + k); return d.toISOString().slice(0, 7); });
+      const byMonth = months.map(m => pos.filter(p => String(p.order_date || '').startsWith(m)).reduce((s, p) => s + (Number(p.total_amount) || 0), 0));
+      const top = Math.max(1, ...byMonth);
+      const waiting = pos.filter(p => p.status === 'pending_approval')
+        .sort((a, b) => String(a.order_date).localeCompare(String(b.order_date))).slice(0, 10);
+      return `
+        <div class="pv-kpis">
+          ${kpi('Vendors pending approval', vendors.filter(v => v.status === 'pending_approval').length, 'vendors')}
+          ${kpi('Open POs', open.length, 'purchase_orders')}
+          ${kpi('PO value this month', money(value), 'purchase_orders')}
+          ${kpi('Invoices overdue', overdue.length, 'invoices')}
+        </div>
+        <div class="pv-grid" style="grid-template-columns:1fr 1fr">
+          <div class="pv-card"><b>PO value by month</b>
+            ${months.map((m, k) => `<div style="display:grid;grid-template-columns:56px 1fr 90px;gap:8px;align-items:center;margin-top:6px">
+              <span class="pv-muted">${m}</span><div class="pv-bar"><i style="width:${Math.round(byMonth[k] / top * 100)}%"></i></div>
+              <span class="pv-muted" style="text-align:right">${money(byMonth[k])}</span></div>`).join('')}
+          </div>
+          <div class="pv-card"><b>Oldest POs awaiting approval</b>
+            ${waiting.length ? waiting.map(p => `<div data-go="po_360:${p.id}" style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid #F2F4F7;cursor:pointer">
+              <span>${ctx.esc(p.po_ref || '')} · ${ctx.esc(ctx.fmt(p, 'vendor'))}</span>
+              <span class="pv-muted">${ctx.esc(ctx.fmt(p, 'order_date'))}</span></div>`).join('')
+              : '<span class="pv-muted">Nothing is waiting for approval.</span>'}
+          </div>
+        </div>`;
 
 # -----------------------------------------------------------------------------
 #  MODULES  →  one backend/<code>/ folder each, holding its entities
@@ -850,6 +884,18 @@ detail_views:
         text: >
           Checklist of the 4 document types with a tick when a verified vendor_document of that
           type exists, plus "GSTIN verified" from the GST lookup. Shows "3 of 5 done".
+        preview: |
+          const docs = ctx.related('vendor_document', 'vendor');
+          const field = (ctx.entity('vendor_document').fields || []).find(f => f.key === 'doc_type') || {};
+          const types = (field.opts || field.choices || []).map(c => ({ id: c.id, label: c.label || c.id }));
+          const items = types.map(t => ({ label: t.label, done: docs.some(d => d.doc_type === t.id && d.status === 'verified') }));
+          items.push({ label: 'GSTIN verified', done: !!ctx.record.gstin && ctx.record.status !== 'draft' });
+          const done = items.filter(i => i.done).length;
+          return `<div class="pv-muted" style="margin-bottom:8px">${done} of ${items.length} done</div>
+            <div class="pv-bar" style="margin-bottom:10px"><i style="width:${Math.round(done / items.length * 100)}%"></i></div>
+            ${items.map(i => `<div style="display:flex;gap:8px;align-items:center;padding:4px 0;font-size:13px">
+              <span style="color:${i.done ? '#079455' : '#98A2B3'}">${ctx.icon(i.done ? 'circle-check' : 'circle')}</span>
+              <span style="${i.done ? '' : 'color:#667085'}">${ctx.esc(i.label)}</span></div>`).join('')}`;
 
     tabs:
       - code: overview

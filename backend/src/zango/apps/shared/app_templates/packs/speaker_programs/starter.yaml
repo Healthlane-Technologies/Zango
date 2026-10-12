@@ -96,6 +96,30 @@ pages:
       KPI row: speakers pending FMV review, contracts awaiting signature, events this month,
       spend this quarter against budget. Below: spend by HCP (top 10 bar) and a table of
       speakers within 10% of their annual cap.
+    preview: |
+      const spk = ctx.rows('speaker'), con = ctx.rows('contract'), ev = ctx.rows('event'), sl = ctx.rows('spend_line');
+      const now = new Date(), q0 = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1), q1 = new Date(q0.getFullYear(), q0.getMonth() + 3, 1);
+      const inQ = d => d && new Date(d) >= q0 && new Date(d) < q1, sum = (rs, k) => rs.reduce((a, r) => a + (+r[k] || 0), 0);
+      const inr = n => '₹' + (n >= 1e5 ? (n / 1e5).toFixed(1) + ' L' : Math.round(n).toLocaleString('en-IN'));
+      const month = ev.filter(e => e.status !== 'cancelled' && e.event_date && new Date(e.event_date).getMonth() === now.getMonth() && new Date(e.event_date).getFullYear() === now.getFullYear());
+      const spent = sum(sl.filter(l => inQ(l.incurred_on)), 'amount'), budget = sum(ev.filter(e => e.status !== 'cancelled' && inQ(e.event_date)), 'budget'), pct = budget ? Math.round(100 * spent / budget) : 0;
+      const bySpk = spk.map(s => ({ s, amt: sum(sl.filter(l => l.speaker === s.id), 'amount') })).filter(x => x.amt).sort((a, b) => b.amt - a.amt).slice(0, 10), top = Math.max(1, ...bySpk.map(x => x.amt));
+      const nearCap = spk.filter(s => +s.annual_cap && +s.ytd_spend >= 0.9 * +s.annual_cap).sort((a, b) => b.ytd_spend / b.annual_cap - a.ytd_spend / a.annual_cap);
+      return `
+      <div class="pv-kpis">
+        <div class="pv-kpi" data-go="speakers"><span>Speakers pending FMV review</span><b>${spk.filter(s => s.status === 'fmv_review').length}</b></div>
+        <div class="pv-kpi" data-go="contracts"><span>Contracts awaiting signature</span><b>${con.filter(c => c.status === 'sent').length}</b></div>
+        <div class="pv-kpi" data-go="events"><span>Events this month</span><b>${month.length}</b></div>
+        <div class="pv-kpi" data-go="spend"><span>Spend this quarter vs budget</span><b>${inr(spent)} <span style="display:inline;font-size:13px;font-weight:500">of ${inr(budget)}</span></b><div class="pv-bar" style="margin-top:8px"><i style="width:${Math.min(100, pct)}%;${pct > 100 ? 'background:#D92D20' : ''}"></i></div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start">
+        <div class="d-panel"><h3>${ctx.icon('bar-chart-3')}Spend by HCP, top 10</h3><div style="padding:12px 16px;display:flex;flex-direction:column;gap:10px">${bySpk.map(x => `
+          <div data-go="speaker_360:${x.s.id}" style="cursor:pointer;display:grid;grid-template-columns:130px 1fr 70px;gap:10px;align-items:center;font-size:13px"><b style="font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ctx.esc(x.s.full_name)}</b>
+            <div class="pv-bar" style="height:12px;border-radius:4px"><i style="width:${100 * x.amt / top}%;border-radius:4px"></i></div><span class="pv-muted" style="text-align:right">${inr(x.amt)}</span></div>`).join('') || '<span class="pv-muted">No spend recorded yet.</span>'}</div></div>
+        <div class="d-panel"><h3>${ctx.icon('gauge')}Speakers within 10% of annual cap<span class="sp"></span><span class="pv-badge">${nearCap.length}</span></h3>
+          <table class="z-t"><thead><tr><th>Speaker</th><th>Tier</th><th>YTD spend</th><th>Annual cap</th><th>Used</th></tr></thead><tbody>${nearCap.map(s => { const u = Math.round(100 * s.ytd_spend / s.annual_cap); return `
+            <tr class="click" data-go="speaker_360:${s.id}"><td>${ctx.esc(s.full_name)}</td><td>${ctx.esc(ctx.fmt(s, 'hcp_tier'))}</td><td>${ctx.esc(ctx.fmt(s, 'ytd_spend'))}</td><td>${ctx.esc(ctx.fmt(s, 'annual_cap'))}</td><td style="font-weight:600;color:${u >= 100 ? '#B42318' : '#B54708'}">${u > 100 ? 'Over cap' : u + '%'}</td></tr>`; }).join('') || '<tr><td colspan="5" class="pv-muted">No speaker is within 10% of their cap.</td></tr>'}</tbody></table></div>
+      </div>`;
 
 modules:
   - code: masters

@@ -128,6 +128,39 @@ pages:
       logistics partner (bar, last 4 weeks). Right: deliveries by status per region. Bottom:
       the at-risk and breached deliveries with partner, route, promised-by time and last scan,
       and open temperature excursions.
+    preview: |
+      const dl = ctx.rows('delivery'), pods = ctx.rows('proof_of_delivery'), exc = ctx.rows('route_exception'), rets = ctx.rows('delivery_return'), routes = ctx.rows('route'), parts = ctx.rows('logistics_partner');
+      const now = new Date(), H = d => d ? (new Date(d) - now) / 36e5 : null, today = now.toISOString().slice(0, 10), pct = (n, t) => t ? Math.round(100 * n / t) : 0;
+      const OPEN = ['booked', 'handed_over', 'out_for_delivery', 'attempt_failed', 'returning'], done = dl.filter(d => d.status === 'delivered');
+      const win = done.filter(d => -H(d.delivered_at || d.promised_by) <= 720), base = win.length ? win : done, onTime = pct(base.filter(d => d.sla_status !== 'breached').length, base.length);
+      const risk = dl.filter(d => OPEN.includes(d.status) && (['at_risk', 'breached'].includes(d.sla_status) || H(d.promised_by) < 0)).sort((a, b) => H(a.promised_by) - H(b.promised_by));
+      const openEx = exc.filter(e => e.status !== 'resolved'), temp = openEx.filter(e => e.exception_type === 'temp_excursion');
+      const hrs = h => Math.abs(h) >= 48 ? `${Math.round(Math.abs(h) / 24)}d ${h < 0 ? 'overdue' : 'left'}` : `${Math.round(Math.abs(h))}h ${h < 0 ? 'overdue' : 'left'}`;
+      const scan = d => pods.filter(p => p.delivery === d.id && p.captured_at).sort((a, b) => String(b.captured_at).localeCompare(String(a.captured_at)))[0];
+      const recent = dl.filter(d => -H(d.promised_by) <= 28 * 24), pb = (recent.length > 2 ? recent : dl), bp = parts.map(p => { const rs = pb.filter(d => d.logistics_partner === p.id); return { p, n: rs.length, v: pct(rs.filter(d => d.sla_status !== 'breached').length, rs.length) }; }).filter(x => x.n).sort((a, b) => b.v - a.v);
+      const regOf = d => (routes.find(r => r.id === d.route) || {}).region, regs = ctx.entity('route').fields.find(f => f.key === 'region').opts || [];
+      const sts = ['booked', 'handed_over', 'out_for_delivery', 'attempt_failed', 'delivered', 'returning'], sc = ['#98A2B3', '#53B1FD', '#1570EF', '#F04438', '#12B76A', '#7A5AF8'], slab = s => ctx.esc(s.replace(/_/g, ' '));
+      const rTop = Math.max(1, ...regs.map(r => dl.filter(d => regOf(d) === r.id).length));
+      return `
+      <div class="pv-kpis">
+        <div class="pv-kpi" data-go="deliveries"><span>Deliveries today</span><b>${dl.filter(d => d.status === 'out_for_delivery').length + done.filter(d => String(d.delivered_at || '').slice(0, 10) === today).length}</b><span>out for delivery or delivered</span></div>
+        <div class="pv-kpi"><span>On-time${win.length ? ', last 30 days' : ''}</span><b style="color:${onTime >= 95 ? '#067647' : '#B42318'}">${onTime}%</b><span>${base.length} delivered</span></div>
+        <div class="pv-kpi" data-go="deliveries"><span>At risk of breaching SLA</span><b style="color:#B42318">${risk.length}</b></div>
+        <div class="pv-kpi" data-go="exceptions"><span>Open route exceptions</span><b>${openEx.length}</b><span>${temp.length} temperature</span></div>
+        <div class="pv-kpi" data-go="returns"><span>Returns in transit</span><b>${rets.filter(r => r.status === 'in_transit').length}</b></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1.2fr;gap:12px;align-items:start">
+        <div class="d-panel"><h3>${ctx.icon('bar-chart-3')}On-time % by partner${recent.length > 2 ? ', last 4 weeks' : ''}</h3><div style="padding:12px 16px;display:flex;flex-direction:column;gap:10px">${bp.slice(0, 6).map(x => `
+          <div style="display:grid;grid-template-columns:130px 1fr 40px;gap:10px;align-items:center;font-size:13px"><b style="font-weight:550;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${ctx.esc(x.p.name)}</b><div class="pv-bar" style="height:12px"><i style="width:${x.v}%;${x.v < 80 ? 'background:#F04438' : ''}"></i></div><span class="pv-muted" style="text-align:right">${x.v}%</span></div>`).join('') || '<span class="pv-muted">No deliveries yet.</span>'}</div></div>
+        <div class="d-panel"><h3>${ctx.icon('map')}Deliveries by status per region</h3><div style="padding:12px 16px;display:flex;flex-direction:column;gap:10px">${regs.map(r => { const rs = dl.filter(d => regOf(d) === r.id); return `<div style="display:grid;grid-template-columns:70px 1fr 24px;gap:10px;align-items:center;font-size:13px"><b style="font-weight:550">${ctx.esc(r.label)}</b><div style="display:flex;height:12px;border-radius:4px;overflow:hidden;background:#F2F4F7;width:${Math.max(2, 100 * rs.length / rTop)}%">${sts.map((s, j) => `<i title="${slab(s)}" style="width:${rs.length ? 100 * rs.filter(d => d.status === s).length / rs.length : 0}%;background:${sc[j]}"></i>`).join('')}</div><span class="pv-muted">${rs.length}</span></div>`; }).join('')}
+          <div class="pv-muted" style="display:flex;flex-wrap:wrap;gap:8px">${sts.map((s, j) => `<span><i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${sc[j]}"></i> ${slab(s)}</span>`).join('')}</div></div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1.8fr 1fr;gap:12px;align-items:start">
+        <div class="d-panel"><h3>${ctx.icon('siren')}At-risk and breached deliveries<span class="sp"></span><span class="pv-badge">${risk.length}</span></h3><table class="z-t"><thead><tr><th>Delivery</th><th>Partner</th><th>Route</th><th>Promised by</th><th>Last scan</th></tr></thead><tbody>${risk.slice(0, 8).map(d => { const s = scan(d), h = H(d.promised_by); return `
+          <tr class="click" data-go="delivery_360:${d.id}"><td><b style="font-weight:550">${ctx.esc(d.delivery_ref)}</b><div class="pv-muted">${ctx.esc(ctx.fmt(d, 'status'))}</div></td><td>${ctx.esc(ctx.fmt(d, 'logistics_partner'))}</td><td>${ctx.esc(ctx.fmt(d, 'route'))}</td><td>${ctx.esc(ctx.fmt(d, 'promised_by'))}<div style="color:#B42318;font-size:12px;font-weight:600">${hrs(h)}</div></td><td>${s ? `${ctx.esc(ctx.fmt(s, 'method'))}<div class="pv-muted">${ctx.esc(ctx.fmt(s, 'captured_at'))}</div>` : '<span class="pv-muted">No scan yet</span>'}</td></tr>`; }).join('') || '<tr><td colspan="5" class="pv-muted">Every open delivery is on track.</td></tr>'}</tbody></table></div>
+        <div class="d-panel"><h3>${ctx.icon('thermometer')}Open temperature excursions<span class="sp"></span><span class="pv-badge">${temp.length}</span></h3><div style="padding:10px 14px;display:flex;flex-direction:column;gap:8px">${temp.map(e => `
+          <div class="pv-card" data-go="delivery_360:${e.delivery}"><div style="display:flex;justify-content:space-between;gap:8px"><b style="font-weight:550">${ctx.esc(e.exception_ref)}</b><span>${ctx.fmt(e, 'severity') ? `<span class="pv-badge">${ctx.esc(ctx.fmt(e, 'severity'))}</span>` : ''}</span></div><span class="pv-muted">${ctx.esc(ctx.fmt(e, 'delivery'))} · ${ctx.esc(ctx.fmt(e, 'status'))} · ${ctx.esc(ctx.fmt(e, 'reported_at'))}</span></div>`).join('') || '<span class="pv-muted">No open temperature excursions.</span>'}</div></div>
+      </div>`;
 
 modules:
   - code: network

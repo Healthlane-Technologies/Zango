@@ -1,7 +1,7 @@
 {
   "slug": "hcp-event-management",
   "name": "HCP Event Management",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "category": "Commercial Operations",
   "icon": "cart",
   "is_beta": false,
@@ -117,5 +117,5 @@
     "app_name_prefill": "Oncology HCP Events — South",
     "app_prompt_prefill": "HCP event app for our oncology franchise: event managers plan advisory boards, regional CMEs and congress sponsorships, and compliance approves each agenda, venue and budget per HCP before invitations go out. Verified HCPs RSVP in their own login with travel and stay needs, and attendance is captured per session by QR scan. Advisory board honoraria are paid only after the panelist's written output is accepted. Every spend line is verified against an invoice and reported per HCP each quarter, with a compliance reviewer preparing and the compliance head signing off."
   },
-  "changelog": "Quoted prose values cut at commas; is_empty instead of is_not_set, so the build checker passes."
+  "changelog": "Preview sketches for every custom screen (dashboards, custom tabs and panels)."
 }

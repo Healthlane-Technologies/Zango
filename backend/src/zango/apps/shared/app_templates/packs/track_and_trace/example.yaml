@@ -150,6 +150,42 @@ pages:
       recalls with % of affected units recovered. Below: events per day by type (stacked bar,
       last 14 days), pallets in transit by destination region, and a table of the 10 oldest
       open exceptions with event type, SSCC, location and age.
+    preview: |
+      const now = new Date(), hrs = d => (now - new Date(d)) / 36e5, sum = (rs, k) => rs.reduce((a, r) => a + (+r[k] || 0), 0);
+      const ev = ctx.rows('movement_event'), aggs = ctx.rows('aggregation'), recalls = ctx.rows('recall');
+      const types = ctx.entity('movement_event').fields.find(f => f.key === 'event_type').opts, TC = ['#155EEF', '#7A5AF8', '#12B76A', '#0BA5EC', '#F79009', '#EE46BC', '#F04438'];
+      const daily = ev.filter(e => hrs(e.event_time) <= 14 * 24).length >= 5, unit = daily ? 864e5 : 7 * 864e5;
+      const buckets = [...Array(14)].map((_, i) => new Date(now - (13 - i) * unit)), bi = e => 13 - Math.floor((now - new Date(e.event_time)) / unit);
+      const series = buckets.map((_, i) => types.map(t => ev.filter(e => bi(e) === i && e.event_type === t.id).length)), topS = Math.max(1, ...series.map(s => s.reduce((a, b) => a + b, 0)));
+      const age = d => { const h = hrs(d); return h < 48 ? Math.round(h) + ' h' : Math.round(h / 24) + ' days'; };
+      const exc = ev.filter(e => e.status === 'exception').sort((a, b) => String(a.event_time).localeCompare(String(b.event_time))).slice(0, 10);
+      const chart = `<div class="d-panel"><h3>${ctx.icon('bar-chart-3')}Events per ${daily ? 'day' : 'week'} by type, last 14 ${daily ? 'days' : 'weeks'}</h3><div style="padding:14px 16px">
+        <div style="display:flex;align-items:flex-end;gap:6px;height:150px;border-bottom:1px solid #EAECF0">${series.map(s => `<div style="flex:1;display:flex;flex-direction:column-reverse;height:100%">${s.map((n, j) => n ? `<i title="${ctx.esc(types[j].label)}: ${n}" style="display:block;height:${100 * n / topS}%;background:${TC[j % 7]};border-radius:2px;margin-top:1px"></i>` : '').join('')}</div>`).join('')}</div>
+        <div style="display:flex;gap:6px;margin-top:5px">${buckets.map((b, i) => `<span class="pv-muted" style="flex:1;text-align:center;font-size:10.5px">${i % 2 ? '' : b.toLocaleString('en', { day: 'numeric', month: 'short' })}</span>`).join('')}</div>
+        <div class="pv-muted" style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap">${types.map((t, j) => `<span><i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${TC[j % 7]}"></i> ${ctx.esc(t.label)}</span>`).join('')}</div></div></div>`;
+      const excTable = `<div class="d-panel"><h3>${ctx.icon('triangle-alert')}Oldest open exceptions<span class="sp"></span><span class="pv-badge">${ev.filter(e => e.status === 'exception').length}</span></h3>
+        <table class="z-t"><thead><tr><th>Event</th><th>Type</th><th>Batch</th><th>SSCC</th><th>Location</th><th>Note</th><th>Age</th></tr></thead><tbody>${exc.map(e => `
+          <tr class="click" data-go="batch_360:${e.batch}"><td>${ctx.esc(e.event_ref)}</td><td>${ctx.esc(ctx.fmt(e, 'event_type'))}</td><td>${ctx.esc(ctx.fmt(e, 'batch'))}</td><td style="font-family:ui-monospace,Menlo,monospace;font-size:12px">${ctx.esc(ctx.fmt(e, 'aggregation') || '—')}</td><td>${ctx.esc(ctx.fmt(e, 'to_location') || ctx.fmt(e, 'from_location'))}</td>
+            <td class="pv-muted" style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ctx.esc(e.exception_note || '')}</td><td style="font-weight:550;color:${hrs(e.event_time) > 24 ? '#B42318' : 'inherit'}">${age(e.event_time)}</td></tr>`).join('') || '<tr><td colspan="7" class="pv-muted">No open exceptions.</td></tr>'}</tbody></table></div>`;
+      const reqs = ctx.rows('serial_request').filter(r => r.requested_at && hrs(r.requested_at) <= 168), rel = ctx.rows('batch').filter(b => b.status === 'released');
+      const cov = sum(rel, 'planned_qty') ? Math.min(100, Math.round(100 * sum(rel, 'serialized_qty') / sum(rel, 'planned_qty'))) : 0;
+      const open = recalls.filter(r => ['initiated', 'recovering'].includes(r.status)), recov = sum(open, 'units_affected') ? Math.round(100 * sum(open, 'units_recovered') / sum(open, 'units_affected')) : 0;
+      const locs = ctx.rows('location'), regions = ctx.entity('location').fields.find(f => f.key === 'region').opts, transit = aggs.filter(a => a.status === 'in_transit');
+      const byR = regions.map(o => { const rs = transit.filter(a => (locs.find(l => l.id === a.destination) || {}).region === o.id); return { o, p: rs.filter(a => a.level === 'pallet').length, c: rs.filter(a => a.level === 'case').length }; }), topR = Math.max(1, ...byR.map(x => x.p + x.c));
+      return `
+      <div class="pv-kpis">
+        <div class="pv-kpi" data-go="serial_requests"><span>Serials commissioned this week</span><b>${(sum(reqs, 'commissioned_qty') || sum(ev.filter(e => e.event_type === 'commission' && hrs(e.event_time) <= 168), 'quantity')).toLocaleString('en-IN')}</b><span>both plants</span></div>
+        <div class="pv-kpi" data-go="batches"><span>Serialization coverage, released batches</span><b>${cov}%</b><div class="pv-bar" style="margin-top:8px"><i style="width:${cov}%"></i></div></div>
+        <div class="pv-kpi" data-go="events"><span>Exceptions older than 24 h</span><b style="color:#B42318">${ev.filter(e => e.status === 'exception' && hrs(e.event_time) > 24).length}</b></div>
+        <div class="pv-kpi" data-go="recalls"><span>Open recalls</span><b>${open.length}</b><span>${recov}% of affected units recovered</span></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:12px;align-items:start">${chart}
+        <div class="d-panel"><h3>${ctx.icon('truck')}In transit by destination region</h3><div style="padding:12px 16px;display:flex;flex-direction:column;gap:11px">${byR.map(x => `
+          <div style="display:grid;grid-template-columns:56px 1fr 74px;gap:10px;align-items:center;font-size:13px"><b style="font-weight:550">${ctx.esc(x.o.label)}</b>
+            <div style="display:flex;height:12px;border-radius:4px;overflow:hidden;background:#F2F4F7"><i style="width:${100 * x.p / topR}%;background:var(--brand)"></i><i style="width:${100 * x.c / topR}%;background:#D6BBFB"></i></div><span class="pv-muted" style="text-align:right">${x.p} pal · ${x.c} cs</span></div>`).join('')}
+          <span class="pv-muted"><i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--brand)"></i> pallets · <i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#D6BBFB"></i> loose cases</span></div></div>
+      </div>
+      ${excTable}`;
   - { code: batches,          type: crud,   entity: batch,           route: /app/batches,          title: Batches }
   - { code: batch_360,        type: detail, detail_view: batch_360,  route: /app/batches/:id }
   - { code: products,         type: crud,   entity: product,         route: /app/products,         title: Products }

@@ -1,7 +1,7 @@
 {
   "slug": "cell-therapy",
   "name": "Cell Therapy Orchestration",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "category": "Advanced Therapies",
   "icon": "dna",
   "is_beta": false,
@@ -121,5 +121,5 @@
     "app_name_prefill": "CAR-T Scheduling — East",
     "app_prompt_prefill": "CAR-T scheduling for 12 authorised treatment centres. Coordinators request apheresis slots, manufacturing confirms capacity, couriers log every custody handoff, and the site confirms infusion. Every step carries the chain-of-identity ID."
   },
-  "changelog": "Column formats the build knows (number, days), so the build checker passes."
+  "changelog": "Preview sketches for every custom screen (dashboards, custom tabs and panels)."
 }

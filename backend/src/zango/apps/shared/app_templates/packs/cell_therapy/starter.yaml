@@ -81,9 +81,41 @@ roles:
       - { page: custody_events, label: Custody Log,  icon: link }
 
 pages:
-  - { code: dashboard,           type: custom, route: /app/dashboard, title: Orchestration Dashboard, component: OrchestrationDashboard,
-      roles: [Site Coordinator, Manufacturing Scheduler],
-      text: "KPI row: slots booked this month, batches in manufacturing, shipments in transit, on-time infusion rate. Below: a 4-week capacity strip per manufacturing site (booked vs available slots) and a table of patients by stage with days in stage, oldest first. Site Coordinators see only their own site's numbers." }
+  - code: dashboard
+    type: custom
+    route: /app/dashboard
+    title: Orchestration Dashboard
+    component: OrchestrationDashboard
+    roles: [Site Coordinator, Manufacturing Scheduler]
+    text: "KPI row: slots booked this month, batches in manufacturing, shipments in transit, on-time infusion rate. Below: a 4-week capacity strip per manufacturing site (booked vs available slots) and a table of patients by stage with days in stage, oldest first. Site Coordinators see only their own site's numbers."
+    preview: |
+      const P = ctx.rows('patient'), sl = ctx.rows('slot'), PE = ctx.entity('patient');
+      const now = new Date(), days = d => Math.floor((now - new Date(d)) / 864e5), thisM = now.toISOString().slice(0, 7), sd = s => s.apheresis_date || s.preferred_date;
+      const inf = P.filter(p => p.status === 'infused' && p.infusion_date);
+      const onTime = inf.length ? Math.round(100 * inf.filter(p => !p.expected_infusion_date || p.infusion_date <= p.expected_infusion_date).length / inf.length) : null;
+      const iso = d => d.toISOString().slice(0, 10), mon = new Date(); mon.setHours(0, 0, 0, 0); mon.setDate(mon.getDate() - (mon.getDay() + 6) % 7);
+      const weeks = [0, 1, 2, 3].map(i => { const a = new Date(mon); a.setDate(a.getDate() + 7 * i); const b = new Date(a); b.setDate(b.getDate() + 7); return { a: iso(a), b: iso(b), label: a.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) }; });
+      const held = (s, w) => ['confirmed', 'used'].includes(s.status) && sd(s) && sd(s) < w.b && (s.expected_release || sd(s)) >= w.a;
+      const strip = ctx.rows('manufacturing_site').map(m => ({ m, cap: +m.weekly_capacity || 0, w: weeks.map(w => sl.filter(s => s.manufacturing_site === m.id && held(s, w)).length) }));
+      const pipe = P.filter(p => !['infused', 'withdrawn'].includes(p.status)).map(p => ({ p, d: Math.max(0, days(p.created_at)) })).sort((a, b) => b.d - a.d);
+      const badge = r => { const s = PE.wf.smap[r.status] || { label: r.status, color: 'gray' }, [bg, fg] = ctx.tone(s.color); return `<span class="pv-badge" style="background:${bg};color:${fg};border-color:transparent">${ctx.esc(s.label)}</span>`; };
+      return `
+      <div class="pv-kpis">
+        <div class="pv-kpi" data-go="slots"><span>Slots booked this month</span><b>${sl.filter(s => ['confirmed', 'used'].includes(s.status) && String(sd(s)).slice(0, 7) === thisM).length}</b></div>
+        <div class="pv-kpi" data-go="batches"><span>Batches in manufacturing</span><b>${ctx.rows('batch').filter(b => ['in_manufacturing', 'qc_testing'].includes(b.status)).length}</b></div>
+        <div class="pv-kpi" data-go="shipments"><span>Shipments in transit</span><b>${ctx.rows('shipment').filter(s => ['picked_up', 'in_transit'].includes(s.status)).length}</b></div>
+        <div class="pv-kpi"><span>On-time infusion</span><b>${onTime == null ? '—' : onTime + '%'}</b><div class="pv-bar" style="margin-top:8px"><i style="width:${onTime || 0}%"></i></div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);gap:12px;align-items:start">
+        <div class="d-panel"><h3>${ctx.icon('factory')}Capacity, next 4 weeks<span class="sp"></span><span class="pv-muted">booked / weekly slots</span></h3>
+          <div style="padding:12px 16px;display:flex;flex-direction:column;gap:12px">${strip.map(x => `
+            <div><div style="font-size:13px;font-weight:550;margin-bottom:5px">${ctx.esc(x.m.name)}</div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">${x.w.map((n, i) => { const pct = x.cap ? Math.min(100, Math.round(100 * n / x.cap)) : 100; return `
+              <div title="w/c ${weeks[i].label}"><div class="pv-bar"><i style="width:${pct}%;${pct >= 100 ? 'background:#D92D20' : ''}"></i></div><span class="pv-muted">${weeks[i].label} · ${n}/${x.cap}</span></div>`; }).join('')}</div></div>`).join('') || '<span class="pv-muted">No manufacturing sites.</span>'}</div></div>
+        <div class="d-panel"><h3>${ctx.icon('users')}Patients by stage<span class="sp"></span><span class="pv-badge">${pipe.length} active</span></h3>
+          <div style="overflow-x:auto"><table class="z-t"><thead><tr><th>COI</th><th>Site</th><th>Stage</th><th>Target infusion</th><th>Days</th></tr></thead><tbody>${pipe.slice(0, 8).map(x => `
+            <tr class="click" data-go="patient_360:${x.p.id}"><td><b style="font-weight:550">${ctx.esc(x.p.coi_id)}</b></td><td style="max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${ctx.esc(ctx.fmt(x.p, 'treatment_site'))}</td><td>${badge(x.p)}</td>
+              <td>${ctx.esc(ctx.fmt(x.p, 'expected_infusion_date') || '—')}</td><td style="font-weight:550;color:${x.d > 30 ? '#B42318' : 'inherit'}">${x.d}</td></tr>`).join('')}</tbody></table></div></div>
+      </div>`;
   - { code: patients,            type: crud,   entity: patient,            route: /app/patients,            title: Patients }
   - { code: patient_360,         type: detail, detail_view: patient_360,   route: /app/patients/:id }
   - { code: slots,               type: crud,   entity: slot,               route: /app/slots,               title: Slots }

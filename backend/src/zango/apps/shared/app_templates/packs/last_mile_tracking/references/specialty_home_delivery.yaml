@@ -226,6 +226,42 @@ pages:
       open deliveries by status per city (stacked bar). Bottom: a live table of at-risk and
       breached deliveries with delivery, city, partner, route, promised-by, hours remaining and
       last event, sorted by hours remaining; clicking a row opens the delivery 360.
+    preview: |
+      const dl = ctx.rows('delivery'), pods = ctx.rows('proof_of_delivery'), exc = ctx.rows('route_exception'), rets = ctx.rows('delivery_return'), parts = ctx.rows('logistics_partner');
+      const now = new Date(), H = d => d ? (new Date(d) - now) / 36e5 : null, day = d => String(d || '').slice(0, 10), today = day(now.toISOString()), wkAgo = day(new Date(now - 7 * 864e5).toISOString());
+      const OPEN = ['booked', 'handed_over', 'out_for_delivery', 'attempt_failed', 'on_hold', 'returning'], open = dl.filter(d => OPEN.includes(d.status)), done = dl.filter(d => d.status === 'delivered');
+      const win = done.filter(d => -H(d.delivered_at || d.promised_by) <= 720), base = win.length ? win : done, pct = (n, t) => t ? Math.round(100 * n / t) : 0;
+      const onTime = pct(base.filter(d => d.sla_status !== 'breached').length, base.length), first = pct(done.filter(d => (+d.attempts || 1) <= 1).length, done.length);
+      const risk = dl.filter(d => OPEN.includes(d.status) && (['at_risk', 'breached'].includes(d.sla_status) || H(d.promised_by) < 0)).sort((a, b) => H(a.promised_by) - H(b.promised_by));
+      const exQA = exc.filter(e => e.exception_type === 'temp_excursion' && e.status !== 'resolved');
+      const hrs = h => h == null ? '—' : Math.abs(h) >= 48 ? `${Math.round(Math.abs(h) / 24)}d ${h < 0 ? 'overdue' : 'left'}` : `${Math.round(Math.abs(h))}h ${h < 0 ? 'overdue' : 'left'}`;
+      const last = d => [['Handed over', d.handed_over_at], ...pods.filter(p => p.delivery === d.id).map(p => ['POD ' + ctx.fmt(p, 'method'), p.captured_at]), ...exc.filter(e => e.delivery === d.id).map(e => [ctx.fmt(e, 'exception_type'), e.reported_at])].filter(x => x[1]).sort((a, b) => String(b[1]).localeCompare(String(a[1])))[0];
+      const weeks = [7, 6, 5, 4, 3, 2, 1, 0], pal = ['#1570EF', '#7A5AF8', '#12B76A', '#F79009'], P = id => parts.find(p => p.id === id) || {};
+      const top4 = [...new Set(dl.map(d => d.logistics_partner).filter(Boolean))].sort((a, b) => dl.filter(d => d.logistics_partner === b).length - dl.filter(d => d.logistics_partner === a).length).slice(0, 4);
+      const series = top4.map(pid => { let prev = null; return weeks.map(w => { const rs = dl.filter(d => d.logistics_partner === pid && Math.floor(-H(d.promised_by) / 168) >= w); prev = rs.length ? pct(rs.filter(d => d.sla_status !== 'breached').length, rs.length) : prev; return prev; }); });
+      const X = i => 30 + i * 52, Y = v => 150 - v * 1.3, line = s => s.map((v, i) => v == null ? '' : `${X(i)},${Y(v)}`).filter(Boolean).join(' ');
+      const cities = ctx.entity('delivery').fields.find(f => f.key === 'city').opts || [], sts = ['booked', 'handed_over', 'out_for_delivery', 'attempt_failed', 'on_hold', 'returning'], sc = ['#98A2B3', '#53B1FD', '#1570EF', '#F04438', '#F79009', '#7A5AF8'];
+      const cTop = Math.max(1, ...cities.map(c => open.filter(d => d.city === c.id).length)), slab = s => ctx.esc(s.replace(/_/g, ' '));
+      return `
+      <div class="pv-kpis">
+        <div class="pv-kpi" data-go="deliveries"><span>Deliveries today</span><b>${open.filter(d => d.status === 'out_for_delivery').length + done.filter(d => day(d.delivered_at) === today).length}</b><span>${done.filter(d => day(d.delivered_at) === wkAgo).length} delivered same day last week</span></div>
+        <div class="pv-kpi"><span>On-time vs 24h promise${win.length ? ', 30 days' : ''}</span><b style="color:${onTime >= 95 ? '#067647' : '#B42318'}">${onTime}%</b><span>target 95%</span></div>
+        <div class="pv-kpi"><span>First-attempt success</span><b>${first}%</b><span>${done.length} delivered</span></div>
+        <div class="pv-kpi" data-go="deliveries"><span>At risk or breached now</span><b style="color:#B42318">${risk.length}</b></div>
+        <div class="pv-kpi" data-go="exceptions"><span>Excursions awaiting QA</span><b style="color:#B54708">${exQA.length}</b></div>
+        <div class="pv-kpi" data-go="returns"><span>Returns in transit</span><b>${rets.filter(r => r.status === 'in_transit').length}</b></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:12px;align-items:start">
+        <div class="d-panel"><h3>${ctx.icon('line-chart')}On-time % to date by partner, last 8 weeks</h3><div style="padding:10px 16px">
+          <svg viewBox="0 0 420 175" style="width:100%;height:auto;font:10px sans-serif;fill:#98A2B3">${[0, 50, 95, 100].map(v => `<line x1="30" x2="404" y1="${Y(v)}" y2="${Y(v)}" stroke="${v === 95 ? '#FDA29B' : '#EAECF0'}" stroke-dasharray="${v === 95 ? '4 3' : ''}"/>${v === 95 ? '' : `<text x="0" y="${Y(v) + 3}">${v}%</text>`}`).join('')}${weeks.map((w, i) => `<text x="${X(i) - 8}" y="170">${w ? 'W-' + w : 'Now'}</text>`).join('')}
+            ${series.map((s, j) => `<polyline points="${line(s)}" fill="none" stroke="${pal[j]}" stroke-width="2"/>${s.map((v, i) => v == null ? '' : `<circle cx="${X(i)}" cy="${Y(v)}" r="2.5" fill="${pal[j]}"/>`).join('')}`).join('')}</svg>
+          <div class="pv-muted" style="display:flex;flex-wrap:wrap;gap:10px">${top4.map((pid, j) => `<span data-go="partner_360:${pid}"><i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${pal[j]}"></i> ${ctx.esc(P(pid).legal_name)}</span>`).join('')}</div></div></div>
+        <div class="d-panel"><h3>${ctx.icon('map-pin')}Open deliveries by city</h3><div style="padding:12px 16px;display:flex;flex-direction:column;gap:10px">${cities.map(c => { const rs = open.filter(d => d.city === c.id); return `<div style="display:grid;grid-template-columns:80px 1fr 24px;gap:10px;align-items:center;font-size:13px"><b style="font-weight:550">${ctx.esc(c.label)}</b><div style="display:flex;height:12px;border-radius:4px;overflow:hidden;background:#F2F4F7;width:${Math.max(2, 100 * rs.length / cTop)}%">${sts.map((s, j) => `<i title="${slab(s)}" style="width:${rs.length ? 100 * rs.filter(d => d.status === s).length / rs.length : 0}%;background:${sc[j]}"></i>`).join('')}</div><span class="pv-muted">${rs.length}</span></div>`; }).join('')}
+          <div class="pv-muted" style="display:flex;flex-wrap:wrap;gap:8px">${sts.map((s, j) => `<span><i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${sc[j]}"></i> ${slab(s)}</span>`).join('')}</div></div></div>
+      </div>
+      <div class="d-panel"><h3>${ctx.icon('siren')}At-risk and breached deliveries<span class="sp"></span><span class="pv-badge">${risk.length}</span></h3><table class="z-t"><thead><tr><th>Delivery</th><th>City</th><th>Partner</th><th>Route</th><th>Promised by</th><th>Hours remaining</th><th>Last event</th></tr></thead><tbody>${risk.slice(0, 10).map(d => { const h = H(d.promised_by), e = last(d); return `
+        <tr class="click" data-go="delivery_360:${d.id}"><td><b style="font-weight:550">${ctx.esc(d.delivery_ref)}</b> ${d.tags.includes('cold_chain') ? '<span class="pv-badge">Cold</span>' : ''}<div class="pv-muted">${ctx.esc(ctx.fmt(d, 'status'))}</div></td><td>${ctx.esc(ctx.fmt(d, 'city'))}</td><td>${ctx.esc(ctx.fmt(d, 'logistics_partner'))}</td><td>${ctx.esc(ctx.fmt(d, 'route'))}</td><td>${ctx.esc(ctx.fmt(d, 'promised_by'))}</td>
+          <td style="color:${h < 0 ? '#B42318' : '#B54708'};font-weight:600">${hrs(h)}</td><td>${e ? `${ctx.esc(e[0])}<div class="pv-muted">${ctx.esc(String(e[1]).slice(0, 16).replace('T', ' '))}</div>` : '<span class="pv-muted">Booked, no scans</span>'}</td></tr>`; }).join('') || '<tr><td colspan="7" class="pv-muted">Every open delivery is on track.</td></tr>'}</tbody></table></div>`;
 
 # -----------------------------------------------------------------------------
 #  MODULES
@@ -959,7 +995,30 @@ detail_views:
       - { type: fields, title: Order, fields: [erp_order_no, pharmacy, city, delivery_type, preferred_slot] }
       - { type: fields, title: Recipient, fields: [patient_ref, delivery_address, pincode] }
       - { type: fields, title: Pack, fields: [product, serial_no, batch_no, quantity, temperature_class, logger_id] }
-      - { type: custom, title: Journey, text: "A vertical stepper: booked, handed over, out for delivery, each failed attempt, delivered or returned, each with its time and the scan that confirmed it; the current step highlighted and the promised-by time marked." }
+      - type: custom
+        title: Journey
+        text: "A vertical stepper: booked, handed over, out for delivery, each failed attempt, delivered or returned, each with its time and the scan that confirmed it; the current step highlighted and the promised-by time marked."
+        preview: |
+          const d = ctx.record, pods = ctx.related('proof_of_delivery', 'delivery'), exc = ctx.related('route_exception', 'delivery'), rets = ctx.related('delivery_return', 'delivery');
+          const t = v => v ? String(v).slice(0, 16).replace('T', ' ') : '', rank = { booked: 0, handed_over: 1, out_for_delivery: 2, attempt_failed: 3, on_hold: 3, delivered: 4, returning: 4, returned: 5, cancelled: 0 }[d.status] || 0;
+          const pod = pods.slice().sort((a, b) => String(b.captured_at).localeCompare(String(a.captured_at)))[0], ret = rets[0];
+          const fails = Math.max(d.status === 'attempt_failed' ? 1 : 0, (+d.attempts || 0) - (d.status === 'delivered' ? 1 : 0)), why = exc.filter(e => ['recipient_absent', 'address_issue'].includes(e.exception_type));
+          const steps = [
+            { label: 'Booked', at: d.created_at, scan: d.erp_order_no && 'ERP order ' + d.erp_order_no, done: true },
+            { label: 'Handed over', at: d.handed_over_at, scan: d.serial_no && 'Serial ' + d.serial_no + ' scanned at pickup', done: rank >= 1 },
+            { label: 'Out for delivery', at: null, scan: d.logger_id && 'Logger ' + d.logger_id + ' started', done: rank >= 2 },
+            ...Array.from({ length: fails }, (_, i) => ({ label: `Attempt ${i + 1} failed`, at: why[i] && why[i].reported_at, scan: why[i] ? ctx.fmt(why[i], 'exception_type') : 'No exception logged', done: true, bad: true })),
+            ['returning', 'returned'].includes(d.status)
+              ? { label: d.status === 'returned' ? 'Returned' : 'Returning to pharmacy', at: ret && (ret.received_at || ret.pickup_date), scan: ret && (ret.received_serial ? 'Serial ' + ret.received_serial + ' received' : ctx.fmt(ret, 'reason')), done: rank >= 4, bad: true }
+              : { label: 'Delivered', at: d.delivered_at, scan: pod && `${ctx.fmt(pod, 'method')}${pod.scanned_serial ? ' · serial ' + pod.scanned_serial : ''}${pod.received_by ? ' · ' + pod.received_by : ''}`, done: rank >= 4 }];
+          const cur = d.status === 'cancelled' ? -1 : steps.map(s => s.done).lastIndexOf(true), late = d.promised_by && new Date(d.promised_by) < new Date(d.delivered_at || Date.now());
+          return `<div style="display:flex;flex-direction:column">${steps.map((s, i) => { const on = i === cur, col = s.bad ? '#D92D20' : s.done ? 'var(--brand)' : '#D0D5DD'; return `
+            ${i === steps.length - 1 && d.promised_by ? `<div style="margin:0 0 8px 22px;padding:4px 8px;border:1px dashed ${late ? '#FDA29B' : '#D0D5DD'};border-radius:6px;font-size:12px;color:${late ? '#B42318' : '#667085'}">Promised by ${ctx.esc(ctx.fmt(d, 'promised_by'))}${late ? ' · missed' : ''}</div>` : ''}
+            <div style="display:grid;grid-template-columns:14px 1fr;gap:8px;min-height:46px">
+              <div style="display:flex;flex-direction:column;align-items:center"><i style="width:12px;height:12px;border-radius:50%;margin-top:3px;background:${s.done ? col : '#fff'};border:2px solid ${col};${on ? 'box-shadow:0 0 0 4px var(--b100)' : ''}"></i>${i < steps.length - 1 ? `<i style="flex:1;width:2px;background:${steps[i + 1].done ? col : '#EAECF0'}"></i>` : ''}</div>
+              <div style="padding-bottom:10px"><div style="font-size:13px;font-weight:${on ? 650 : 550};color:${s.done ? '#101828' : '#98A2B3'}">${ctx.esc(s.label)}${on ? ' <span class="pv-badge">Current</span>' : ''}</div>
+                <div class="pv-muted">${ctx.esc(s.done ? t(s.at) || 'time not captured' : 'pending')}</div>${s.scan && s.done ? `<div class="pv-muted" style="color:#475467">${ctx.esc(s.scan)}</div>` : ''}</div></div>`; }).join('')}
+            ${d.status === 'cancelled' ? '<span class="pv-badge" style="background:#FEF3F2;color:#B42318;border-color:#FECDCA">Cancelled</span>' : ''}</div>`;
     tabs:
       - code: pod
         label: Proof of Delivery
@@ -1054,5 +1113,27 @@ detail_views:
         label: Scorecard
         type: custom
         text: "On-time % and first-attempt % per week for the last 12 weeks (line), excursions and disputed PODs per month (bar), and a by-city table of deliveries, on-time %, failed attempts and returns."
+        preview: |
+          const dl = ctx.related('delivery', 'logistics_partner'), ids = dl.map(d => d.id), mine = r => ids.includes(r.delivery);
+          const exc = ctx.rows('route_exception').filter(mine).filter(e => e.exception_type === 'temp_excursion'), disp = ctx.rows('proof_of_delivery').filter(mine).filter(p => p.status === 'disputed'), rets = ctx.rows('delivery_return').filter(mine);
+          const now = new Date(), wk = d => Math.floor((now - new Date(d)) / 6048e5), pct = (n, t) => t ? Math.round(100 * n / t) : null;
+          const W = Array.from({ length: 12 }, (_, i) => 11 - i), ot = [], fa = []; let po = null, pf = null;
+          W.forEach(w => { const rs = dl.filter(d => d.promised_by && wk(d.promised_by) >= w), del = rs.filter(d => d.status === 'delivered'); po = rs.length ? pct(rs.filter(d => d.sla_status !== 'breached').length, rs.length) : po; pf = del.length ? pct(del.filter(d => (+d.attempts || 1) <= 1).length, del.length) : pf; ot.push(po); fa.push(pf); });
+          const X = i => 30 + i * 34, Y = v => 130 - v * 1.1, pl = s => s.map((v, i) => v == null ? '' : `${X(i)},${Y(v)}`).filter(Boolean).join(' ');
+          const months = [5, 4, 3, 2, 1, 0].map(i => { const d = new Date(now.getFullYear(), now.getMonth() - i, 15); return { k: d.toISOString().slice(0, 7), label: d.toLocaleString('en', { month: 'short' }) }; });
+          const mc = (rs, f) => months.map(m => rs.filter(r => String(r[f] || '').slice(0, 7) === m.k).length), ex = mc(exc, 'reported_at'), dp = mc(disp, 'captured_at'), mTop = Math.max(1, ...ex, ...dp);
+          const cities = (ctx.entity('delivery').fields.find(f => f.key === 'city').opts || []).map(c => { const rs = dl.filter(d => d.city === c.id); return { c, n: rs.length, ot: pct(rs.filter(d => d.sla_status !== 'breached').length, rs.length), fail: rs.reduce((a, d) => a + Math.max(0, (+d.attempts || 0) - (d.status === 'delivered' ? 1 : 0)), 0), ret: rets.filter(r => rs.some(d => d.id === r.delivery)).length }; }).filter(x => x.n);
+          const legend = (c, l) => `<span><i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${c}"></i> ${l}</span>`;
+          if (!dl.length) return `<div class="pv-muted">No deliveries assigned to ${ctx.esc(ctx.record.legal_name)} yet.</div>`;
+          return `<div style="display:grid;grid-template-columns:1.4fr 1fr;gap:12px;align-items:start">
+            <div class="pv-card"><b style="font-weight:600">On-time and first-attempt % to date, last 12 weeks</b>
+              <svg viewBox="0 0 420 150" style="width:100%;height:auto;font:10px sans-serif;fill:#98A2B3">${[0, 50, 95, 100].map(v => `<line x1="30" x2="408" y1="${Y(v)}" y2="${Y(v)}" stroke="${v === 95 ? '#FDA29B' : '#EAECF0'}" stroke-dasharray="${v === 95 ? '4 3' : ''}"/>${v === 95 ? '' : `<text x="0" y="${Y(v) + 3}">${v}%</text>`}`).join('')}${W.map((w, i) => i % 2 ? '' : `<text x="${X(i) - 8}" y="146">${w ? 'W-' + w : 'Now'}</text>`).join('')}
+                ${[[ot, '#1570EF'], [fa, '#12B76A']].map(([s, c]) => `<polyline points="${pl(s)}" fill="none" stroke="${c}" stroke-width="2"/>${s.map((v, i) => v == null ? '' : `<circle cx="${X(i)}" cy="${Y(v)}" r="2.5" fill="${c}"/>`).join('')}`).join('')}</svg>
+              <div class="pv-muted" style="display:flex;gap:12px">${legend('#1570EF', 'On-time')}${legend('#12B76A', 'First attempt')}${legend('#FDA29B', '95% target')}</div></div>
+            <div class="pv-card"><b style="font-weight:600">Excursions and disputed PODs per month</b>
+              <div style="display:flex;align-items:flex-end;gap:10px;height:110px;margin-top:10px">${months.map((m, i) => `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><div style="display:flex;align-items:flex-end;gap:3px;height:86px">${[[ex[i], '#F04438'], [dp[i], '#F79009']].map(([v, c]) => `<i title="${v}" style="width:10px;height:${Math.max(2, 86 * v / mTop)}px;background:${v ? c : '#EAECF0'};border-radius:3px 3px 0 0"></i>`).join('')}</div><span class="pv-muted">${m.label}</span></div>`).join('')}</div>
+              <div class="pv-muted" style="display:flex;gap:12px">${legend('#F04438', `Excursions (${exc.length})`)}${legend('#F79009', `Disputed PODs (${disp.length})`)}</div></div>
+          </div>
+          <table class="z-t" style="margin-top:12px"><thead><tr><th>City</th><th>Deliveries</th><th>On-time %</th><th>Failed attempts</th><th>Returns</th></tr></thead><tbody>${cities.map(x => `<tr><td><b style="font-weight:550">${ctx.esc(x.c.label)}</b></td><td>${x.n}</td><td style="color:${x.ot < 95 ? '#B42318' : '#067647'};font-weight:600">${x.ot}%</td><td>${x.fail}</td><td>${x.ret}</td></tr>`).join('')}</tbody></table>`;
     states:
       not_found: { title: Partner not found, back_to: partners }

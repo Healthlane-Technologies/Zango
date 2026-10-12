@@ -122,6 +122,33 @@ pages:
       24-hour routing SLA, serious cases awaiting assessment, follow-ups overdue.
       Below: cases by channel (bar, last 8 weeks), the 10 open cases closest to their
       SLA deadline, and the share of cases routed to PV within the SLA by week.
+    preview: |
+      const C = ctx.entity('case'), cases = ctx.rows('case'), fus = ctx.rows('follow_up');
+      const D = 864e5, now = new Date(), today = now.toISOString().slice(0, 10), age = c => (now - new Date(c.received_at)) / D;
+      const open = cases.filter(c => !['closed', 'duplicate', 'non_case'].includes(c.status));
+      const queue = open.filter(c => ['new', 'dup_check'].includes(c.status)).sort((a, b) => a.sla_hours_left - b.sla_hours_left);
+      const month = cases.filter(c => c.received_at.slice(0, 7) === today.slice(0, 7)).length;
+      const serious = open.filter(c => c.seriousness === 'serious' && ['new', 'dup_check', 'in_assessment'].includes(c.status)).length;
+      const fuLate = fus.filter(f => f.status === 'overdue' || (f.status === 'open' && f.due_date && f.due_date < today)).length;
+      const kpi = (l, v, sub, red) => `<div class="pv-kpi"><span>${l}</span><b style="color:${red && v ? '#B42318' : '#101828'}">${v}</b><span>${sub}</span></div>`;
+      const badge = r => { const s = C.wf.smap[r.status], [b, f] = ctx.tone(s.color); return `<span class="pv-badge" style="background:${b};color:${f};border-color:${b}">${ctx.esc(s.label)}</span>`; };
+      const sla = h => h < 0 ? `<b style="color:#B42318">Breached ${-h}h ago</b>` : h < 4 ? `<b style="color:#B54708">${h}h left</b>` : `${h}h left`;
+      const recent = cases.filter(c => age(c) <= 56), byCh = C.fmap.channel.opts.map(o => [o, recent.filter(c => c.channel === o.id).length]);
+      const mx = Math.max(1, ...byCh.map(x => x[1]));
+      const routed = cases.filter(c => !['new', 'dup_check'].includes(c.status));
+      const mon = [...Array(6)].map((_, i) => { const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1), k = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'), rs = routed.filter(c => c.received_at.slice(0, 7) === k); return { n: rs.length, ok: rs.filter(c => c.sla_hours_left >= 0).length, m: d.toLocaleString('en', { month: 'short' }) }; });
+      const inSla = routed.filter(c => c.sla_hours_left >= 0).length, pct = routed.length ? Math.round(inSla / routed.length * 100) : 0;
+      return `<div class="pv-kpis">
+        ${kpi('Received this month', month, 'cases logged')}${kpi('Open cases', open.length, 'not yet closed')}
+        ${kpi('SLA at risk', queue.filter(c => c.sla_hours_left < 4).length, 'under 4h to route', true)}
+        ${kpi('Serious, awaiting assessment', serious, 'need medical review', true)}${kpi('Follow-ups overdue', fuLate, 'past due date', true)}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="d-panel"><h3>${ctx.icon('radio-tower')}Cases by channel <span class="sp"></span><span class="pv-muted">last 8 weeks</span></h3><div style="padding:8px 16px 12px">
+          ${byCh.map(([o, n]) => `<div style="display:grid;grid-template-columns:110px 1fr 28px;gap:10px;align-items:center;margin:8px 0"><span class="pv-muted">${ctx.esc(o.label)}</span><div class="pv-bar"><i style="width:${n / mx * 100}%;background:${ctx.tone(o.color)[1]}"></i></div><b style="text-align:right;font-size:13px">${n}</b></div>`).join('')}</div></div>
+        <div class="d-panel"><h3>${ctx.icon('timer')}Routed to PV within the 24h SLA <span class="sp"></span><b style="color:${pct >= 90 ? '#067647' : '#B54708'}">${pct}%</b><span class="pv-muted">${inSla} of ${routed.length}</span></h3><div style="display:flex;gap:10px;align-items:flex-end;height:150px;padding:12px 16px">
+          ${mon.map(w => { const p = w.n ? Math.round(w.ok / w.n * 100) : 0; return `<div style="flex:1;text-align:center;font-size:11.5px"><b style="font-size:12px">${w.n ? p + '%' : '–'}</b><div style="height:${w.n ? Math.max(6, p * .9) : 3}px;background:${p >= 90 ? '#12B76A' : p >= 70 ? '#F79009' : w.n ? '#F04438' : '#EAECF0'};border-radius:4px 4px 0 0;margin-top:4px"></div><span class="pv-muted">${w.m} · ${w.n}</span></div>`; }).join('')}</div></div></div>
+      <div class="d-panel"><h3>${ctx.icon('alarm-clock')}Open cases closest to the routing SLA</h3><table class="z-t"><thead><tr><th>Case</th><th>Type</th><th>Channel</th><th>Product</th><th>Status</th><th>SLA</th></tr></thead><tbody>
+        ${queue.slice(0, 10).map(c => `<tr data-go="case_360:${c.id}"><td><span class="z-link">${ctx.esc(c.case_ref)}</span></td><td>${ctx.esc(ctx.fmt(c, 'case_type'))}</td><td>${ctx.esc(ctx.fmt(c, 'channel'))}</td><td>${ctx.esc(ctx.fmt(c, 'product'))}</td><td>${badge(c)}</td><td>${sla(c.sla_hours_left)}</td></tr>`).join('') || '<tr><td colspan="6" class="pv-muted">No cases waiting to be routed.</td></tr>'}</tbody></table></div>`;
 
 modules:
   - code: masters

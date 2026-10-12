@@ -118,6 +118,40 @@ pages:
     route: /app/dashboard
     title: Dashboard
     component: OrderingDashboard
+    preview: |
+      const P = ctx.entity('product'), ord = ctx.rows('order'), lines = ctx.rows('order_line'), shp = ctx.rows('shipment'), prods = ctx.rows('product'), clinics = ctx.rows('clinic');
+      const D = 864e5, now = new Date(), m = now.toISOString().slice(0, 7), inr = n => '₹' + Math.round(n).toLocaleString('en-IN');
+      const live = ord.filter(o => !['draft', 'cancelled'].includes(o.status)), thisM = live.filter(o => String(o.order_date).slice(0, 7) === m);
+      const holds = ord.filter(o => o.status === 'credit_hold').sort((a, b) => String(a.order_date).localeCompare(String(b.order_date)));
+      const exc = shp.filter(s => (s.tags || []).includes('excursion')), excM = exc.filter(s => String(s.dispatched_on).slice(0, 7) === m).length;
+      const types = P.fmap.vaccine_type.opts, cols = ['var(--brand)', '#0BA5EC', '#F79009', '#7A5AF8'], vt = id => (prods.find(p => p.id === id) || {}).vaccine_type;
+      const wk = [...Array(12)].map((_, i) => { const end = new Date(now - (11 - i) * 7 * D), st = new Date(end - 7 * D), os = new Set(live.filter(o => new Date(o.order_date) > st && new Date(o.order_date) <= end).map(o => o.id));
+        return { label: end.toISOString().slice(5, 10), n: types.map(t => lines.filter(l => os.has(l.order) && vt(l.product) === t.id).reduce((a, l) => a + (+l.quantity || 0), 0)) }; });
+      const top = Math.max(1, ...wk.map(w => w.n.reduce((a, b) => a + b, 0)));
+      const byD = {}; shp.filter(s => s.status === 'delivered').forEach(s => { const o = ord.find(x => x.id === s.order); if (!o) return; const d = byD[o.distributor] = byD[o.distributor] || { name: ctx.fmt(o, 'distributor'), n: 0, ok: 0 }; d.n++; if (!s.expected_delivery || (s.delivered_on || '') <= s.expected_delivery) d.ok++; });
+      const dist = Object.values(byD).map(d => ({ ...d, pct: Math.round(100 * d.ok / d.n) })).sort((a, b) => b.pct - a.pct);
+      const clin = id => clinics.find(c => c.id === id) || {};
+      return `
+      <div class="pv-kpis">
+        <div class="pv-kpi" data-go="orders"><span>Orders placed this month</span><b>${thisM.length}</b></div>
+        <div class="pv-kpi"><span>Order value this month</span><b>${inr(thisM.reduce((a, o) => a + (+o.total_amount || 0), 0))}</b></div>
+        <div class="pv-kpi" data-go="orders"><span>Orders on credit hold</span><b style="color:${holds.length ? '#B54708' : '#101828'}">${holds.length}</b></div>
+        <div class="pv-kpi" data-go="shipments"><span>Temperature excursions this month</span><b style="color:${excM ? '#B42318' : '#101828'}">${excM}</b><span>${exc.length} flagged in total</span></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:12px;align-items:start">
+        <div class="d-panel"><h3>${ctx.icon('syringe')}Packs ordered by vaccine type<span class="sp"></span><span class="pv-muted">last 12 weeks</span></h3>
+          <div style="padding:14px 16px"><div style="display:flex;align-items:flex-end;gap:7px;height:140px">${wk.map(w => `
+            <div title="${w.n.reduce((a, b) => a + b, 0)} packs" style="flex:1;display:flex;flex-direction:column-reverse;height:100%">${w.n.map((n, j) => n ? `<i style="display:block;height:${100 * n / top}%;background:${cols[j]};border-top:1px solid #fff"></i>` : '').join('')}</div>`).join('')}</div>
+            <div style="display:flex;gap:7px;margin-top:5px">${wk.map(w => `<span class="pv-muted" style="flex:1;text-align:center;font-size:10.5px">${w.label}</span>`).join('')}</div>
+            <div style="display:flex;gap:12px;margin-top:10px">${types.map((t, j) => `<span class="pv-muted"><i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${cols[j]}"></i> ${ctx.esc(t.label)}</span>`).join('')}</div></div></div>
+        <div class="d-panel"><h3>${ctx.icon('truck')}On-time delivery by distributor</h3><div style="padding:12px 16px;display:flex;flex-direction:column;gap:11px">${dist.map(d => `
+          <div><div style="display:flex;justify-content:space-between;font-size:13px"><b style="font-weight:550">${ctx.esc(d.name)}</b><span style="font-weight:550;color:${d.pct < 80 ? '#B42318' : '#067647'}">${d.pct}%</span></div>
+            <div class="pv-bar" style="margin-top:5px"><i style="width:${d.pct}%;${d.pct < 80 ? 'background:#F04438' : ''}"></i></div><span class="pv-muted">${d.ok} of ${d.n} delivered by the expected date</span></div>`).join('') || '<span class="pv-muted">No delivered shipments yet.</span>'}</div></div>
+      </div>
+      <div class="d-panel"><h3>${ctx.icon('shield-alert')}Oldest credit holds</h3>
+        <table class="z-t"><thead><tr><th>Order</th><th>Clinic</th><th>Placed</th><th style="text-align:right">Amount</th><th style="text-align:right">Outstanding</th><th style="text-align:right">Limit</th></tr></thead><tbody>${holds.slice(0, 10).map(o => { const c = clin(o.clinic), over = (+c.outstanding || 0) + (+o.total_amount || 0) > (+c.credit_limit || 0); return `
+          <tr class="click" data-go="order_360:${o.id}"><td><span class="z-link">${ctx.esc(o.order_ref)}</span></td><td>${ctx.esc(ctx.fmt(o, 'clinic'))}</td><td>${ctx.esc(ctx.fmt(o, 'order_date'))}</td><td style="text-align:right">${inr(+o.total_amount || 0)}</td>
+            <td style="text-align:right;color:${over ? '#B42318' : 'inherit'};font-weight:550">${inr(+c.outstanding || 0)}</td><td style="text-align:right">${inr(+c.credit_limit || 0)}</td></tr>`; }).join('') || '<tr><td colspan="6" class="pv-muted">No orders on credit hold.</td></tr>'}</tbody></table></div>`;
     roles: [Customer Service, Credit Controller]
     text: >
       KPI row: orders placed this month, order value this month, orders on credit hold,

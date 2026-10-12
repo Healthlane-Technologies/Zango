@@ -26,6 +26,8 @@ from collections.abc import Callable
 
 
 MAX_RESULT_ISSUES = 25
+# Template rules that flag a custom page/tab/panel without a preview sketch.
+UNSKETCHED_RULES = {"custom_page_preview", "custom_tab_preview", "custom_panel_preview"}
 
 
 class SpecWorkbench:
@@ -421,11 +423,20 @@ class SpecWorkbench:
                 "Not ready — the user still has open decisions to answer. Clear them with "
                 "spec_open_decisions once they are answered."
             )
-        errors = [i for i in self.issues(strict=True) if i["level"] == "error"]
+        issues = self.issues(strict=True)
+        errors = [i for i in issues if i["level"] == "error"]
         if errors:
             raise ToolRefused(
                 "Not ready — fix these first (ask the user where you need to):\n"
                 + _format_issues(errors)
+            )
+        # Every custom screen is sketched before the user is asked to review:
+        # otherwise the preview shows them a placeholder where their screen goes.
+        unsketched = [i for i in issues if i.get("rule") in UNSKETCHED_RULES]
+        if unsketched:
+            raise ToolRefused(
+                "Not ready — sketch these custom screens with a `preview` first, so the user "
+                "sees them in the preview:\n" + _format_issues(unsketched)
             )
         self.ready_summary = (summary or "").strip() or "The spec is complete."
         return "Marked ready. Tell the user the spec is ready for them to review and approve."

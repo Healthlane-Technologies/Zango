@@ -82,6 +82,30 @@ pages:
     route: /app/dashboard
     title: Dashboard
     component: OrderingDashboard
+    preview: |
+      const ord = ctx.rows('order'), shp = ctx.rows('shipment'), clinics = ctx.rows('clinic');
+      const D = 864e5, now = new Date(), today = now.toISOString().slice(0, 10), m = today.slice(0, 7), inr = n => '₹' + Math.round(n).toLocaleString('en-IN');
+      const live = ord.filter(o => !['draft', 'cancelled'].includes(o.status)), thisM = live.filter(o => String(o.order_date).slice(0, 7) === m);
+      const value = thisM.reduce((a, o) => a + (+o.total_amount || 0), 0), holds = ord.filter(o => o.status === 'credit_hold').sort((a, b) => String(a.order_date).localeCompare(String(b.order_date)));
+      const late = shp.filter(s => !['delivered', 'failed'].includes(s.status) && s.expected_delivery && s.expected_delivery < today).length + shp.filter(s => s.status === 'failed').length;
+      const wk = [...Array(12)].map((_, i) => { const end = new Date(now - (11 - i) * 7 * D), st = new Date(end - 7 * D); return { label: end.toISOString().slice(5, 10), v: live.filter(o => new Date(o.order_date) > st && new Date(o.order_date) <= end).reduce((a, o) => a + (+o.total_amount || 0), 0) }; });
+      const top = Math.max(1, ...wk.map(w => w.v));
+      const clin = id => clinics.find(c => c.id === id) || {};
+      return `
+      <div class="pv-kpis">
+        <div class="pv-kpi" data-go="orders"><span>Orders placed this month</span><b>${thisM.length}</b></div>
+        <div class="pv-kpi"><span>Order value this month</span><b>${inr(value)}</b></div>
+        <div class="pv-kpi" data-go="orders"><span>Orders on credit hold</span><b style="color:${holds.length ? '#B54708' : '#101828'}">${holds.length}</b><span>${inr(holds.reduce((a, o) => a + (+o.total_amount || 0), 0))} blocked</span></div>
+        <div class="pv-kpi" data-go="shipments"><span>Shipments delayed</span><b style="color:${late ? '#B42318' : '#101828'}">${late}</b><span>past expected delivery or failed</span></div>
+      </div>
+      <div class="d-panel"><h3>${ctx.icon('bar-chart-3')}Order value by week<span class="sp"></span><span class="pv-muted">last 12 weeks</span></h3>
+        <div style="padding:14px 16px"><div style="display:flex;align-items:flex-end;gap:8px;height:150px">${wk.map(w => `
+          <div title="${inr(w.v)}" style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%;gap:4px"><span class="pv-muted" style="text-align:center;font-size:10.5px">${w.v ? Math.round(w.v / 1000) + 'k' : ''}</span><i style="display:block;height:${Math.max(w.v ? 3 : 0, 100 * w.v / top)}%;background:var(--brand);border-radius:4px 4px 0 0"></i></div>`).join('')}</div>
+          <div style="display:flex;gap:8px;margin-top:6px">${wk.map(w => `<span class="pv-muted" style="flex:1;text-align:center;font-size:10.5px">${w.label}</span>`).join('')}</div></div></div>
+      <div class="d-panel"><h3>${ctx.icon('shield-alert')}Oldest orders on credit hold</h3>
+        <table class="z-t"><thead><tr><th>Order</th><th>Clinic</th><th>Placed</th><th>Waiting</th><th style="text-align:right">Amount</th><th style="text-align:right">Credit headroom</th></tr></thead><tbody>${holds.slice(0, 10).map(o => { const c = clin(o.clinic), head = (+c.credit_limit || 0) - (+c.outstanding || 0); return `
+          <tr class="click" data-go="order_360:${o.id}"><td><span class="z-link">${ctx.esc(o.order_ref)}</span></td><td>${ctx.esc(ctx.fmt(o, 'clinic'))}</td><td>${ctx.esc(ctx.fmt(o, 'order_date'))}</td><td>${Math.max(0, Math.floor((now - new Date(o.order_date)) / D))} days</td>
+            <td style="text-align:right">${inr(+o.total_amount || 0)}</td><td style="text-align:right;font-weight:550;color:${head < (+o.total_amount || 0) ? '#B42318' : '#067647'}">${inr(head)}</td></tr>`; }).join('') || '<tr><td colspan="6" class="pv-muted">No orders on credit hold.</td></tr>'}</tbody></table></div>`;
     roles: [Customer Service]
     text: >
       KPI row: orders placed this month, order value this month, orders on credit hold,

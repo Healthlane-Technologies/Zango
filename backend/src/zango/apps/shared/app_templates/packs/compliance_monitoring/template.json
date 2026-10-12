@@ -1,7 +1,7 @@
 {
   "slug": "compliance-monitoring",
   "name": "Compliance Monitoring Workbench",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "category": "Compliance & Quality",
   "icon": "eye",
   "is_beta": true,
@@ -116,5 +116,5 @@
     "app_name_prefill": "Compliance Monitor",
     "app_prompt_prefill": "Compliance monitoring that ingests field interactions and expenses, scores risk with rules and AI, opens cases for analysts, and tracks remediation to closure."
   },
-  "changelog": "Quoted prose values cut at commas, so the build checker passes."
+  "changelog": "Preview sketches for every custom screen (dashboards, custom tabs and panels)."
 }

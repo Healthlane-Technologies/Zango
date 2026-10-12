@@ -156,6 +156,36 @@ pages:
     route: /app/dashboard
     title: Desk Today
     component: MiDeskDashboard
+    preview: |
+      const I = ctx.entity('inquiry'), inq = ctx.rows('inquiry'), resp = ctx.rows('response'), aes = ctx.rows('ae_report');
+      const D = 864e5, today = new Date().toISOString().slice(0, 10), dueIn = r => Math.round((new Date(r.due_on) - new Date(today)) / D);
+      const open = inq.filter(r => ['new', 'in_progress', 'awaiting_info'].includes(r.status));
+      const soon = open.filter(r => r.due_on && dueIn(r) >= 0 && dueIn(r) <= 1).length, late = open.filter(r => r.due_on && dueIn(r) < 0).length;
+      const unfwd = aes.filter(a => a.status === 'captured'), breach = unfwd.filter(a => (a.forward_due && a.forward_due < today) || (a.awareness_date && (new Date(today) - new Date(a.awareness_date)) / D > 1)).length;
+      const mine = open.filter(r => r.assigned_to === ctx.user), queue = (mine.length ? mine : open).slice().sort((a, b) => String(a.due_on || '9').localeCompare(String(b.due_on || '9'))).slice(0, 8);
+      const chans = I.fmap.channel.opts, cols = ['var(--brand)', '#0BA5EC', '#F79009', '#7A5AF8'];
+      const recent = new Set(inq.filter(r => (Date.now() - new Date(r.received_on)) / D < 14).map(r => r.received_on)).size, step = recent >= 4 ? 1 : 7;
+      const days = [...Array(14)].map((_, i) => new Date(Date.now() - (13 - i) * step * D).toISOString().slice(0, 10)), inB = (r, d) => r.received_on <= d && (new Date(d) - new Date(r.received_on)) / D < step;
+      const per = days.map(d => chans.map(c => inq.filter(r => inB(r, d) && r.channel === c.id).length)), top = Math.max(1, ...per.map(p => p.reduce((a, b) => a + b, 0)));
+      const badge = r => { const s = I.wf.smap[r.status], [b, f] = ctx.tone(s.color); return `<span class="pv-badge" style="background:${b};color:${f};border-color:${b}">${ctx.esc(s.label)}</span>`; };
+      const kpi = (l, v, col, go) => `<div class="pv-kpi" data-go="${go}"><span>${l}</span><b style="color:${col || '#101828'}">${v}</b></div>`;
+      return `
+      <div class="pv-kpis">
+        ${kpi('Open inquiries', open.length, '', 'inquiries')}${kpi('Due today or tomorrow', soon, soon ? '#B54708' : '', 'inquiries')}${kpi('Overdue', late, late ? '#B42318' : '', 'inquiries')}
+        ${kpi('Custom responses in medical review', resp.filter(r => r.status === 'in_review' && r.response_type !== 'standard').length, '', 'responses')}
+        <div class="pv-kpi" data-go="ae_reports"><span>AE reports not forwarded</span><b style="color:${breach ? '#B42318' : '#101828'}">${unfwd.length}</b><span style="color:${breach ? '#B42318' : 'inherit'}">${breach ? breach + ' past one business day' : 'all within one business day'}</span></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:12px;align-items:start">
+        <div class="d-panel"><h3>${ctx.icon('inbox')}${mine.length ? 'My queue' : 'Open queue'}<span class="sp"></span><span class="pv-muted">by due date</span></h3>
+          <table class="z-t"><thead><tr><th>Inquiry</th><th>Reporter</th><th>Product</th><th>Category</th><th>Due</th><th>Status</th></tr></thead><tbody>${queue.map(r => `
+            <tr class="click" data-go="inquiry_360:${r.id}"><td><span class="z-link">${ctx.esc(r.inquiry_ref)}</span>${r.priority === 'urgent' ? ' <span class="z-chip" style="background:#FEF3F2;color:#B42318">Urgent</span>' : ''}</td><td>${ctx.esc(ctx.fmt(r, 'reporter'))}</td><td>${ctx.esc(ctx.fmt(r, 'product'))}</td><td>${ctx.esc(ctx.fmt(r, 'category'))}</td>
+              <td style="color:${!r.due_on ? 'inherit' : dueIn(r) < 0 ? '#B42318' : dueIn(r) <= 1 ? '#B54708' : 'inherit'};font-weight:550">${!r.due_on ? '—' : dueIn(r) < 0 ? -dueIn(r) + 'd overdue' : dueIn(r) === 0 ? 'Today' : dueIn(r) === 1 ? 'Tomorrow' : ctx.esc(ctx.fmt(r, 'due_on'))}</td><td>${badge(r)}</td></tr>`).join('') || '<tr><td colspan="6" class="pv-muted">Queue is clear.</td></tr>'}</tbody></table></div>
+        <div class="d-panel"><h3>${ctx.icon('bar-chart-3')}Received per ${step === 1 ? 'day, last 14 days' : 'week, last 14 weeks'}</h3>
+          <div style="padding:14px 16px"><div style="display:flex;align-items:flex-end;gap:5px;height:140px">${per.map((p, i) => `
+            <div title="${days[i]}" style="flex:1;display:flex;flex-direction:column-reverse;height:100%">${p.map((n, j) => n ? `<i style="display:block;height:${100 * n / top}%;background:${cols[j % 4]};border-top:1px solid #fff"></i>` : '').join('')}</div>`).join('')}</div>
+            <div class="pv-muted" style="display:flex;justify-content:space-between;margin-top:4px"><span>${ctx.esc(days[0].slice(5))}</span><span>today</span></div>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px">${chans.map((c, j) => `<span class="pv-muted"><i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${cols[j % 4]}"></i> ${ctx.esc(c.label)}</span>`).join('')}</div></div></div>
+      </div>`;
     roles: [MI Specialist]
     text: >
       KPI row: open inquiries, due today or tomorrow, overdue, custom responses awaiting medical
@@ -167,6 +197,37 @@ pages:
     route: /app/metrics
     title: MI Metrics
     component: MiMetrics
+    preview: |
+      const I = ctx.entity('inquiry'), all = ctx.rows('inquiry'), resp = ctx.rows('response'), srd = ctx.rows('standard_response').filter(s => s.status === 'approved');
+      const D = 864e5, m = new Date().toISOString().slice(0, 7), inM = all.filter(r => String(r.received_on).slice(0, 7) === m && resp.some(x => x.inquiry === r.id && x.status === 'sent')), inq = inM.length ? all.filter(r => String(r.received_on).slice(0, 7) === m) : all;
+      const sentFor = r => resp.filter(x => x.inquiry === r.id && x.status === 'sent' && x.sent_on).sort((a, b) => String(a.sent_on).localeCompare(String(b.sent_on)))[0];
+      const answered = inq.map(r => ({ r, s: sentFor(r) })).filter(x => x.s), pct = (n, d) => d ? Math.round(100 * n / d) + '%' : '—';
+      const inSla = answered.filter(x => !x.r.due_on || x.s.sent_on <= x.r.due_on).length, std = answered.filter(x => x.s.response_type === 'standard').length;
+      const tts = answered.map(x => Math.max(0, Math.round((new Date(x.s.sent_on) - new Date(x.r.received_on)) / D))).sort((a, b) => a - b), med = tts.length ? tts[Math.floor(tts.length / 2)] : '—';
+      const ids = new Set(inq.map(r => r.id)), aes = ctx.rows('ae_report').filter(a => ids.has(a.inquiry)), fwd = aes.filter(a => ['forwarded', 'acknowledged'].includes(a.status) && !(a.tags || []).includes('day1_breach')).length;
+      const cats = I.fmap.category.opts, cols = ['var(--brand)', '#0BA5EC', '#F79009', '#7A5AF8', '#12B76A', '#F04438', '#EE46BC', '#667085'];
+      const prods = [...new Set(inq.map(r => r.product))].map(p => ({ name: ctx.fmt(inq.find(r => r.product === p), 'product') || 'No product', n: cats.map(c => inq.filter(r => r.product === p && r.category === c.id).length) }));
+      const topP = Math.max(1, ...prods.map(p => p.n.reduce((a, b) => a + b, 0)));
+      const ch = I.fmap.channel.opts.map((c, i) => ({ label: c.label, n: inq.filter(r => r.channel === c.id).length, col: cols[i] })); let acc = 0;
+      const donut = ch.map(c => { const a = acc; acc += 100 * c.n / (inq.length || 1); return `${c.col} ${a}% ${acc}%`; }).join(',');
+      const gaps = Object.values(inq.reduce((g, r) => { const k = r.product + '|' + r.category; if (!srd.some(s => s.product === r.product && s.category === r.category)) (g[k] = g[k] || { p: ctx.fmt(r, 'product'), c: ctx.fmt(r, 'category'), n: 0 }).n++; return g; }, {})).sort((a, b) => b.n - a.n).slice(0, 10);
+      const kpi = (l, v, s) => `<div class="pv-kpi"><span>${l}</span><b>${v}</b>${s ? `<span>${s}</span>` : ''}</div>`;
+      return `
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px"><select class="z-in" style="width:180px"><option>${new Date().toLocaleString('en', { month: 'long', year: 'numeric' })}</option></select>
+        <span class="pv-muted">${inM.length ? '' : 'Nothing answered this month yet; showing all months'}</span><span style="flex:1"></span><button class="z-btn">${ctx.icon('download')}Export to Excel</button></div>
+      <div class="pv-kpis">${kpi('Inquiries received', inq.length)}${kpi('Answered within SLA', pct(inSla, answered.length), answered.length + ' answered')}${kpi('Standard response used', pct(std, answered.length))}
+        ${kpi('Median days to respond', med)}${kpi('AE reports captured', aes.length, pct(fwd, aes.length) + ' forwarded in 1 business day')}</div>
+      <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:12px;align-items:start">
+        <div class="d-panel"><h3>${ctx.icon('bar-chart-3')}Inquiries by product and category</h3><div style="padding:12px 16px;display:flex;flex-direction:column;gap:10px">${prods.map(p => `
+          <div style="display:grid;grid-template-columns:120px 1fr 30px;gap:10px;align-items:center;font-size:13px"><span>${ctx.esc(p.name)}</span>
+            <div style="display:flex;height:14px;border-radius:4px;overflow:hidden;width:${100 * p.n.reduce((a, b) => a + b, 0) / topP}%">${p.n.map((n, j) => n ? `<i title="${ctx.esc(cats[j].label)}" style="flex:${n};background:${cols[j]}"></i>` : '').join('')}</div><b style="font-weight:550;text-align:right">${p.n.reduce((a, b) => a + b, 0)}</b></div>`).join('')}
+          <div style="display:flex;flex-wrap:wrap;gap:10px">${cats.map((c, j) => `<span class="pv-muted"><i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${cols[j]}"></i> ${ctx.esc(c.label)}</span>`).join('')}</div></div></div>
+        <div class="d-panel"><h3>${ctx.icon('pie-chart')}By channel</h3><div style="padding:14px 16px;display:flex;gap:16px;align-items:center">
+          <div style="width:110px;height:110px;border-radius:50%;background:conic-gradient(${donut || '#EAECF0 0 100%'});-webkit-mask:radial-gradient(circle,transparent 32px,#000 33px);mask:radial-gradient(circle,transparent 32px,#000 33px)"></div>
+          <div style="display:flex;flex-direction:column;gap:6px;font-size:13px">${ch.map(c => `<span><i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${c.col}"></i> ${ctx.esc(c.label)} <b style="font-weight:550">${c.n}</b></span>`).join('')}</div></div></div>
+      </div>
+      <div class="d-panel"><h3>${ctx.icon('file-question')}Most asked without an approved standard response<span class="sp"></span><span class="pv-muted">candidates for new SRDs</span></h3>
+        <table class="z-t"><thead><tr><th>Product</th><th>Category</th><th>Inquiries</th></tr></thead><tbody>${gaps.map(g => `<tr class="click" data-go="standard_responses"><td>${ctx.esc(g.p)}</td><td>${ctx.esc(g.c)}</td><td><b style="font-weight:550">${g.n}</b></td></tr>`).join('') || '<tr><td colspan="3" class="pv-muted">Every asked topic has an approved standard response.</td></tr>'}</tbody></table></div>`;
     roles: [Medical Reviewer]
     text: >
       Month picker. KPIs: inquiries received, % answered within SLA, % answered with a standard
@@ -723,7 +784,21 @@ detail_views:
       - { label: Adverse events, value: { count: ae_report, via: inquiry }, tone: red, link_to_tab: adverse_events, roles: [MI Specialist, Medical Reviewer, PV Associate] }
     sidebar:
       - { type: fields, title: Reporter, fields: [reporter, channel, language] }
-      - { type: custom, title: Matching standard responses, roles: [MI Specialist], text: "Approved standard responses for this product and category, best match first, each with a Use button that creates a standard response prefilled with its text." }
+      - type: custom
+        title: Matching standard responses
+        preview: |
+          const r = ctx.record, srd = ctx.rows('standard_response').filter(s => s.status === 'approved' && (s.product === r.product || s.category === r.category));
+          const rep = ctx.rows('reporter').find(x => x.id === r.reporter), aud = rep && ['patient', 'caregiver'].includes(rep.reporter_type) ? 'patient' : 'hcp';
+          const score = s => (s.product === r.product ? 2 : 0) + (s.category === r.category ? 2 : 0) + (s.audience === aud ? 1 : 0);
+          const list = srd.sort((a, b) => score(b) - score(a) || (+b.times_used || 0) - (+a.times_used || 0)).slice(0, 4);
+          if (!list.length) return `<div class="pv-muted">No approved standard response for ${ctx.esc(ctx.fmt(r, 'product'))} · ${ctx.esc(ctx.fmt(r, 'category'))}. Draft a custom response.</div>`;
+          return `<div style="display:flex;flex-direction:column;gap:8px">${list.map(s => { const exact = s.product === r.product && s.category === r.category; return `
+            <div class="pv-card"><div style="display:flex;justify-content:space-between;gap:8px"><b style="font-weight:550">${ctx.esc(s.title)}</b>${exact ? '<span class="pv-badge">Best match</span>' : ''}</div>
+              <span class="pv-muted">${ctx.esc(s.srd_ref)} · v${ctx.esc(s.version)} · ${ctx.esc(ctx.fmt(s, 'audience'))} · used ${+s.times_used || 0}×</span>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px"><span class="pv-muted">${s.review_due && s.review_due < new Date().toISOString().slice(0, 10) ? '<b style="color:#B54708">Review overdue</b>' : 'Review due ' + ctx.esc(ctx.fmt(s, 'review_due'))}</span>
+                <button class="z-btn sm">${ctx.icon('copy-plus')}Use</button></div></div>`; }).join('')}</div>`;
+        roles: [MI Specialist]
+        text: "Approved standard responses for this product and category, best match first, each with a Use button that creates a standard response prefilled with its text."
     tabs:
       - { code: question, label: Question, type: summary, sections: [ { title: Inquiry, columns: 2, fields: [product, category, priority, received_on, ae_mentioned, pqc_mentioned] }, { title: Question, columns: 1, fields: [question] } ] }
       - code: responses

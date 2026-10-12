@@ -126,6 +126,39 @@ pages:
       on-time infusion rate (infused on or before target infusion, last 90 days). Below: vein-to-vein
       time by site (median days, enrolment to infusion) and a table of patients by stage with COI, site,
       stage, slot date and days in stage, oldest first. Site Coordinators see only their own centre.
+    preview: |
+      const P = ctx.rows('patient'), sl = ctx.rows('slot'), sh = ctx.rows('shipment'), PE = ctx.entity('patient');
+      const now = new Date(), days = d => Math.floor((now - new Date(d)) / 864e5), ym = d => String(d || '').slice(0, 7);
+      const thisM = now.toISOString().slice(0, 7), lastM = new Date(now.getFullYear(), now.getMonth() - 1, 15).toISOString().slice(0, 7);
+      const slotDate = s => s.apheresis_date || s.preferred_date, booked = s => ['confirmed', 'used'].includes(s.status);
+      const slotsM = sl.filter(s => booked(s) && ym(slotDate(s)) === thisM).length, slotsL = sl.filter(s => booked(s) && ym(slotDate(s)) === lastM).length;
+      const inf = P.filter(p => p.status === 'infused' && p.infusion_date), inf90 = inf.filter(p => days(p.infusion_date) <= 90), base = inf90.length ? inf90 : inf;
+      const onTime = base.length ? Math.round(100 * base.filter(p => !p.expected_infusion_date || p.infusion_date <= p.expected_infusion_date).length / base.length) : null;
+      const med = a => { a = a.slice().sort((x, y) => x - y); return a.length ? a[Math.floor((a.length - 1) / 2)] : 0; };
+      const bySite = {}; P.filter(p => p.status !== 'withdrawn').forEach(p => { const end = p.infusion_date || p.expected_infusion_date, d = end ? Math.round((new Date(end) - new Date(p.created_at)) / 864e5) : null; if (d > 0) (bySite[p.treatment_site] = bySite[p.treatment_site] || { name: ctx.fmt(p, 'treatment_site'), d: [] }).d.push(d); });
+      const sites = Object.values(bySite).map(s => ({ ...s, m: med(s.d) })).sort((a, b) => a.m - b.m), top = Math.max(1, ...sites.map(s => s.m));
+      const stageStart = p => ({ apheresis_collected: p.collection_date, infused: p.infusion_date })[p.status] || p.created_at;
+      const pipe = P.filter(p => !['infused', 'withdrawn'].includes(p.status)).map(p => ({ p, s: sl.filter(s => s.patient === p.id && s.status !== 'cancelled').sort((a, b) => String(slotDate(b)).localeCompare(String(slotDate(a))))[0], d: Math.max(0, days(stageStart(p))) })).sort((a, b) => b.d - a.d);
+      const badge = r => { const s = PE.wf.smap[r.status] || { label: r.status, color: 'gray' }, [bg, fg] = ctx.tone(s.color); return `<span class="pv-badge" style="background:${bg};color:${fg};border-color:transparent">${ctx.esc(s.label)}</span>`; };
+      const delta = slotsM - slotsL;
+      return `
+      <div class="pv-kpis">
+        <div class="pv-kpi" data-go="slots"><span>Slots this month</span><b>${slotsM}</b><span style="color:${delta >= 0 ? '#067647' : '#B42318'}">${delta >= 0 ? '+' : ''}${delta} vs last month</span></div>
+        <div class="pv-kpi" data-go="patients"><span>Patients in manufacturing</span><b>${P.filter(p => p.status === 'in_manufacturing').length}</b></div>
+        <div class="pv-kpi" data-go="shipments"><span>Shipments in transit</span><b>${sh.filter(s => ['picked_up', 'in_transit'].includes(s.status)).length}</b><span style="color:#B42318">${sh.filter(s => s.status === 'exception').length} exceptions</span></div>
+        <div class="pv-kpi"><span>On-time infusion${inf90.length ? ', last 90 days' : ''}</span><b>${onTime == null ? '—' : onTime + '%'}</b><div class="pv-bar" style="margin-top:8px"><i style="width:${onTime || 0}%"></i></div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.7fr);gap:12px;align-items:start">
+        <div class="d-panel"><h3>${ctx.icon('timer')}Vein-to-vein by site<span class="sp"></span><span class="pv-muted">median days</span></h3>
+          <div style="padding:12px 16px;display:flex;flex-direction:column;gap:10px">${sites.map(s => `
+            <div style="display:grid;grid-template-columns:130px 1fr 44px;gap:10px;align-items:center;font-size:13px"><span style="font-weight:550;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${ctx.esc(s.name)}</span>
+              <div class="pv-bar" style="height:10px"><i style="width:${Math.round(100 * s.m / top)}%"></i></div><b style="text-align:right;font-weight:600">${s.m}d</b></div>`).join('') || '<span class="pv-muted">No enrolments yet.</span>'}
+            <span class="pv-muted">Enrolment to infusion; planned infusion date for patients not yet infused.</span></div></div>
+        <div class="d-panel"><h3>${ctx.icon('users')}Patients by stage<span class="sp"></span><span class="pv-badge">${pipe.length} active</span></h3>
+          <div style="overflow-x:auto"><table class="z-t"><thead><tr><th>COI</th><th>Site</th><th>Stage</th><th>Slot date</th><th>Days</th></tr></thead><tbody>${pipe.slice(0, 8).map(x => `
+            <tr class="click" data-go="patient_360:${x.p.id}"><td><b style="font-weight:550">${ctx.esc(x.p.coi_id)}</b></td><td style="max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${ctx.esc(ctx.fmt(x.p, 'treatment_site'))}</td><td>${badge(x.p)}</td>
+              <td>${x.s ? ctx.esc(ctx.fmt(x.s, x.s.apheresis_date ? 'apheresis_date' : 'preferred_date')) : '<span class="pv-muted">No slot</span>'}</td><td style="font-weight:550;color:${x.d > 30 ? '#B42318' : 'inherit'}">${x.d}</td></tr>`).join('')}</tbody></table></div></div>
+      </div>`;
   - code: capacity_planner
     type: custom
     route: /app/capacity
@@ -136,6 +169,28 @@ pages:
       A 8-week grid, one row per manufacturing site, one column per week: booked / total slots, coloured
       green under 75%, amber to 100%, red when full. Clicking a cell lists the confirmed and waitlisted
       slots for that week. A side panel shows each treatment site's quota use this month.
+    preview: |
+      const ms = ctx.rows('manufacturing_site'), cw = ctx.rows('capacity_week'), sl = ctx.rows('slot').filter(s => ['confirmed', 'used', 'waitlisted'].includes(s.status));
+      const iso = d => d.toISOString().slice(0, 10), mon = new Date(); mon.setHours(0, 0, 0, 0); mon.setDate(mon.getDate() - (mon.getDay() + 6) % 7);
+      const weeks = [...Array(8)].map((_, i) => { const a = new Date(mon); a.setDate(a.getDate() + 7 * i); const b = new Date(a); b.setDate(b.getDate() + 7); return { a: iso(a), b: iso(b), label: a.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) }; });
+      const inW = (d, w) => d && d >= w.a && d < w.b, sd = s => s.apheresis_date || s.preferred_date;
+      const occ = (s, w) => { const a = sd(s), b = s.expected_release || a; return a && a < w.b && b >= w.a; }; // a slot holds capacity from apheresis to release
+      const cell = (m, w) => { const c = cw.find(x => x.manufacturing_site === m.id && inW(x.week_start, w)), ss = sl.filter(s => s.manufacturing_site === m.id && occ(s, w));
+        const total = c ? +c.total_slots || 0 : +m.default_capacity || 0, booked = c ? +c.booked_slots || 0 : ss.filter(s => s.status !== 'waitlisted').length; return { total, booked, wait: ss.filter(s => s.status === 'waitlisted').length, pct: total ? booked / total : 1 }; };
+      const col = p => p >= 1 ? ['#FEE4E2', '#B42318'] : p >= .75 ? ['#FEF0C7', '#B54708'] : ['#DCFAE6', '#067647'];
+      const month = new Date().toISOString().slice(0, 7), P = ctx.rows('patient');
+      const quota = ctx.rows('treatment_site').filter(t => t.is_authorised !== false).map(t => { const ids = P.filter(p => p.treatment_site === t.id).map(p => p.id); const used = sl.filter(s => s.status !== 'waitlisted' && ids.includes(s.patient) && String(sd(s)).slice(0, 7) === month).length; return { t, used, q: +t.monthly_quota || 0 }; }).sort((a, b) => b.used / (b.q || 1) - a.used / (a.q || 1));
+      return `
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:12px;align-items:start">
+        <div class="d-panel"><h3>${ctx.icon('calendar-range')}Booked / total slots, next 8 weeks<span class="sp"></span><span class="pv-muted">green &lt;75% · amber to 100% · red full</span></h3>
+          <table class="z-t" style="table-layout:fixed"><colgroup><col style="width:180px"></colgroup><thead><tr><th>Site · week of</th>${weeks.map(w => `<th style="text-align:center;padding:8px 2px">${w.label}</th>`).join('')}</tr></thead><tbody>${ms.map(m => `
+            <tr><td><b style="font-weight:550">${ctx.esc(m.name)}</b><div class="pv-muted">${ctx.esc(m.city || '')} · ${+m.turnaround_days || '—'}d turnaround</div></td>${weeks.map(w => { const c = cell(m, w), [bg, fg] = col(c.pct); return `
+              <td style="padding:4px 3px"><div data-go="slots" title="${c.wait} waitlisted" style="cursor:pointer;background:${bg};color:${fg};border-radius:8px;padding:7px 4px;text-align:center;font-weight:600;font-size:12.5px">${c.booked}/${c.total}${c.wait ? `<div style="font-weight:500;font-size:11px">+${c.wait} wait</div>` : ''}</div></td>`; }).join('')}</tr>`).join('')}</tbody></table></div>
+        <div class="d-panel"><h3>${ctx.icon('hospital')}Site quota, this month</h3>
+          <div style="padding:12px 14px;display:flex;flex-direction:column;gap:11px">${quota.map(x => { const pct = x.q ? Math.min(100, Math.round(100 * x.used / x.q)) : 0, full = x.q && x.used >= x.q; return `
+            <div data-go="treatment_sites"><div style="display:flex;justify-content:space-between;font-size:13px"><span style="font-weight:550">${ctx.esc(x.t.centre_name)}</span><span style="font-size:12px;color:${full ? '#B42318' : '#667085'}">${x.used} / ${x.q}</span></div>
+              <div class="pv-bar" style="margin-top:5px"><i style="width:${pct}%;${full ? 'background:#D92D20' : ''}"></i></div></div>`; }).join('') || '<span class="pv-muted">No authorised sites.</span>'}</div></div>
+      </div>`;
   - { code: patients,            type: crud,   entity: patient,            route: /app/patients,       title: Patients }
   - { code: patient_360,         type: detail, detail_view: patient_360,   route: /app/patients/:id }
   - { code: slots,               type: crud,   entity: slot,               route: /app/slots,          title: Slot Requests }
@@ -842,7 +897,34 @@ detail_views:
     sidebar:
       - { type: fields, title: Patient, fields: [patient_initials, year_of_birth, weight_kg, indication, therapy_product, priority] }
       - { type: fields, title: Sites, fields: [treatment_site, apheresis_centre, treating_physician] }
-      - { type: custom, title: Vein-to-vein, text: "A vertical stepper: enrolled, slot confirmed, collected, manufacturing, released, shipped, received, infused, each with its date and days since the previous step; the current step highlighted." }
+      - type: custom
+        title: Vein-to-vein
+        text: "A vertical stepper: enrolled, slot confirmed, collected, manufacturing, released, shipped, received, infused, each with its date and days since the previous step; the current step highlighted."
+        preview: |
+          const p = ctx.record, slot = ctx.related('slot', 'patient').filter(s => ['confirmed', 'used'].includes(s.status))[0];
+          const batch = ctx.related('batch', 'patient').filter(b => b.status !== 'failed')[0], out = ctx.related('shipment', 'patient').filter(s => s.leg === 'outbound')[0];
+          const order = ['enrolled', 'apheresis_scheduled', 'apheresis_collected', 'in_manufacturing', 'ready_to_infuse', 'infused'];
+          const steps = [
+            { label: 'Enrolled', date: String(p.created_at || '').slice(0, 10), at: 0 },
+            { label: 'Slot confirmed', date: slot && (slot.apheresis_date || slot.preferred_date), at: 1 },
+            { label: 'Collected', date: p.collection_date, at: 2 },
+            { label: 'Manufacturing', date: batch && batch.material_received_on, at: 3 },
+            { label: 'Released', date: batch && batch.status === 'released' && batch.expected_release, at: 3.5 },
+            { label: 'Shipped', date: out && out.pickup_date, at: 3.7 },
+            { label: 'Received', date: out && ['received'].includes(out.status) && String(out.delivered_at || out.expected_delivery || '').slice(0, 10), at: 4 },
+            { label: 'Infused', date: p.infusion_date, at: 5 },
+          ];
+          const cur = order.indexOf(p.status), stalled = cur < 0;
+          const curStep = stalled ? -1 : steps.reduce((k, s, i) => s.at <= cur ? i : k, 0);
+          let prev = null;
+          return `<div style="display:flex;flex-direction:column">${stalled ? `<div class="pv-badge" style="margin-bottom:8px;background:#FEF0C7;color:#B54708;border-color:transparent">${ctx.esc(ctx.fmt(p, 'status'))}</div>` : ''}${steps.map((s, i) => {
+            const done = !stalled && i < curStep, now = i === curStep, d = (done || now) && s.date ? s.date : null;
+            const gap = d && prev ? Math.round((new Date(d) - new Date(prev)) / 864e5) : null; if (d) prev = d;
+            const dot = now ? 'var(--brand)' : done ? '#12B76A' : '#D0D5DD';
+            return `<div style="display:grid;grid-template-columns:18px 1fr;gap:10px">
+              <div style="display:flex;flex-direction:column;align-items:center"><i style="width:12px;height:12px;border-radius:50%;margin-top:3px;background:${dot};${now ? 'box-shadow:0 0 0 4px var(--b100)' : ''}"></i>${i < steps.length - 1 ? `<i style="flex:1;width:2px;background:${done ? '#12B76A' : '#EAECF0'};min-height:18px"></i>` : ''}</div>
+              <div style="padding-bottom:10px"><div style="font-size:13px;font-weight:${now ? 650 : 550};color:${done || now ? '#101828' : '#98A2B3'}">${s.label}</div>
+                <div class="pv-muted">${d ? ctx.esc(new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })) + (gap > 0 ? ` · +${gap}d` : '') : now ? 'In progress' : '—'}</div></div></div>`; }).join('')}</div>`;
     tabs:
       - code: slots
         label: Slots
