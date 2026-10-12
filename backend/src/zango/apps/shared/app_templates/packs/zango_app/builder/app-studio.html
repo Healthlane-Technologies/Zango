@@ -401,6 +401,12 @@ textarea.z-in{height:auto;padding:9px 11px;resize:vertical;line-height:1.45}
 .ui-prog{display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:#475467}
 .ui-board{display:flex;gap:12px;overflow-x:auto;padding:12px 16px}
 .ui-board .pv-col{flex:0 0 230px}.pv-req .d-cust{background:#FCFCFD}
+.pv-notes{margin-top:14px;font-size:12.5px;color:#667085}
+.pv-notes>summary{display:inline-flex;align-items:center;gap:6px;cursor:pointer;list-style:none;padding:4px 10px;border:1px solid #EAECF0;border-radius:999px;background:#fff;font-weight:500;user-select:none}
+.pv-notes>summary::-webkit-details-marker{display:none}
+.pv-notes>summary svg{width:13px;height:13px}
+.pv-notes[open]>summary{color:#344054}
+.pv-notes-b{margin-top:8px;padding:12px 14px;background:#fff;border:1px solid #EAECF0;border-radius:10px;line-height:1.55;color:#475467;max-width:860px}
 </style>
 </head>
 <body>
@@ -2429,7 +2435,13 @@ function runPreview(code, extra){
     return `<div class="pv-err">${ic('triangle-alert')}<div><b>The agent's preview code failed</b><code>${esc((e && e.message) || String(e))}</code></div></div>`;
   }
 }
-function custText(text, label){ return text ? `<div class="d-panel pv-req"><h3>${ic('file-text')}${esc(label)}</h3><div class="d-cust"><span class="tg">${ic('code-2')}built from this</span><div>${esc(text)}</div></div></div>` : ''; }
+// The requirement the build implements, behind a small toggle: the preview should read as the
+// app, not as its spec. Open state survives re-renders.
+function custText(text, label){
+  if (!text) return '';
+  const open = S.ui && S.ui.notesOpen;
+  return `<details class="pv-notes" ${open ? 'open' : ''} data-ch="${A((v, el) => { S.ui.notesOpen = el.open; })}" ontoggle="this.dispatchEvent(new Event('change',{bubbles:true}))"><summary>${ic('file-text')}Build notes</summary><div class="pv-notes-b">${esc(text)}</div></details>`;
+}
 
 /* ═════════════════════════ actions ═════════════════════════ */
 function editableNow(E, row){ const ed = E.form.edit; if (!ed) return false; if (ed.editable_in && E.wf && !arr(ed.editable_in).includes(row.status)) return false; return true; }
