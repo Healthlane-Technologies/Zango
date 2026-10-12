@@ -13,7 +13,6 @@ from packaging.specifiers import SpecifierSet
 from packaging.version import Version
 
 from django.conf import settings
-from django.core import signing
 from django.db import connection
 
 import zango
@@ -127,6 +126,8 @@ def get_all_packages(request, tenant=None):
                     "installed_version": installed_packages[local_package],
                 }
             )
+    from zango.apps.dynamic_models.permissions import platform_user_token
+
     for package in resp_data:
         url = get_package_configuration_url(request, tenant, package["name"])
         if len(url) > 0:
@@ -134,7 +135,7 @@ def get_all_packages(request, tenant=None):
                 resp = requests.get(url)
                 if resp.status_code == 200:
                     package["config_url"] = (
-                        f"{url}?token={signing.dumps(request.user.id)}"
+                        f"{url}?token={platform_user_token(request)}"
                     )
                 else:
                     package["config_url"] = None

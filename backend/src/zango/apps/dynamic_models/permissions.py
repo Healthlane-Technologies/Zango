@@ -12,6 +12,20 @@ from zango.apps.shared.platformauth.models import PlatformUserModel
 TOKEN_MAX_AGE_SECONDS = 7200
 
 
+def platform_user_token(request) -> str:
+    """The ?token= for the platform user making ``request``.
+
+    Signs the *platform user's* id, which is what ``get_platform_user`` looks
+    up. ``request.user`` is the Django auth user behind it, a different row
+    with its own id: signing that instead yields a token that resolves to
+    whichever platform user happens to carry that number (or none), so it
+    only works for accounts whose two ids coincide — the first superadmin.
+    """
+    user = request.user
+    platform_user = user if isinstance(user, PlatformUserModel) else user.platform_user
+    return signing.dumps(platform_user.id)
+
+
 def get_platform_user(request):
     try:
         token = request.GET.get("token", None)

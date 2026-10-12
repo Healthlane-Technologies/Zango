@@ -1,5 +1,5 @@
-from django.core import signing
 
+from zango.apps.dynamic_models.permissions import platform_user_token
 from zango.apps.shared.tenancy.models import Domain, TenantModel
 from zango.core.api import ZangoGenericPlatformAPIView, get_api_response
 from zango.core.api.utils import ZangoAPIPagination
@@ -29,9 +29,7 @@ class PackagesViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
                 return get_api_response(False, resp, status)
 
             try:
-                token = signing.dumps(
-                    request.user.id,
-                )
+                token = platform_user_token(request)
                 url = get_package_configuration_url(
                     request, tenant, request.GET.get("package_name")
                 )
