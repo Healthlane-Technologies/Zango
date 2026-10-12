@@ -18,6 +18,7 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from zango.apps.agent_mode.models import (
     AgentRequirementDocument,
     RUN_PHASE_ORDER,
+    ACTIVE_STATUSES,
     TERMINAL_STATUSES,
     AgentRequirement,
     AgentRun,
@@ -133,6 +134,10 @@ class AgentRunListCreateView(
     def get(self, request, app_uuid, *args, **kwargs):
         try:
             _bind_tenant(self, app_uuid)
+            for stopping in AgentRun.objects.filter(
+                abort_requested=True, status__in=list(ACTIVE_STATUSES)
+            ):
+                _close_if_abandoned(stopping)
             qs = AgentRun.objects.all()
             status_filter = request.GET.get("status")
             if status_filter:
@@ -308,6 +313,7 @@ class AgentRunDetailView(ZangoGenericPlatformAPIView, TenantMixin):
                 run = AgentRun.objects.get(object_uuid=run_uuid)
             except AgentRun.DoesNotExist:
                 return get_api_response(False, {"message": "run not found"}, 404)
+            _close_if_abandoned(run)
             data = AgentRunDetailSerializer(run).data
             if data.get("report") and _report_file(run) is not None:
                 data["report"]["html_url"] = (
@@ -480,6 +486,14 @@ class AgentRunAbortView(ZangoGenericPlatformAPIView, TenantMixin):
                 )
                 return get_api_response(True, {"status": run.status, "abort_requested": True}, 200)
 
+            if run.abort_requested:
+                # Asked again: the first stop may have gone to a worker that
+                # is no longer there.
+                _close_if_abandoned(run)
+                return get_api_response(
+                    True, {"status": run.status, "abort_requested": True}, 200
+                )
+
             run.abort_requested = True
             run.save(update_fields=["abort_requested", "modified_at"])
 
@@ -511,6 +525,17 @@ class AgentRunAbortView(ZangoGenericPlatformAPIView, TenantMixin):
         except Exception as exc:  # noqa: BLE001
             log.exception("agent_mode: abort failed")
             return get_api_response(False, {"message": str(exc)}, 500)
+
+
+def _close_if_abandoned(run) -> bool:
+    """Close a stopped run no worker is finishing; never fails the request."""
+    try:
+        from zango.apps.agent_mode.liveness import close_if_abandoned
+
+        return close_if_abandoned(run)
+    except Exception:  # noqa: BLE001
+        log.exception("agent_mode: could not check a stopped run")
+        return False
 
 
 def _report_file(run):

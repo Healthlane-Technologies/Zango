@@ -657,6 +657,7 @@ def _drive_stream(agent_stream, run_state, *, run, recorder) -> dict:
 
     failure: dict = {}
     last_abort_check = 0.0
+    stopping = False
     for item in agent_stream:
         if item.kind == "idle":
             recorder.flush_if_stale()
@@ -696,12 +697,14 @@ def _drive_stream(agent_stream, run_state, *, run, recorder) -> dict:
         now = time.monotonic()
         if now - last_abort_check >= ABORT_POLL_SECONDS:
             last_abort_check = now
-            if _abort_requested(run.pk):
+            if not stopping and _abort_requested(run.pk):
+                stopping = True
                 recorder.emit(
                     EventKind.SYS,
                     "Abort requested — interrupting the agent.",
                     level=EventLevel.WARN,
                 )
+                recorder.flush()
                 agent_stream.request_stop()
 
     return failure
@@ -1270,6 +1273,15 @@ def sweep_stuck_agent_runs() -> dict:
                     update_fields=["is_thinking", "error_message", "modified_at"]
                 )
                 reaped += 1
+
+            # A stop nobody answered: the worker holding the run is gone.
+            from .liveness import close_if_abandoned
+
+            for stopping in AgentRun.objects.filter(
+                abort_requested=True, status__in=list(ACTIVE_STATUSES)
+            ):
+                if close_if_abandoned(stopping, now=now):
+                    reaped += 1
 
             # WAITING is not in ACTIVE_STATUSES: it has no worker and may sit
             # for as long as the user takes. A continued run is measured from

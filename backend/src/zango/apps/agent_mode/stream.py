@@ -35,6 +35,10 @@ logger = logging.getLogger("zango.agent_mode")
 # batches its inserts, so blocking here is rare.
 DEFAULT_QUEUE_MAX = 2_000
 DEFAULT_POLL_TIMEOUT = 0.25
+# How often the pump looks at the stop flag, and how long it gives an
+# interrupted agent to wind down before closing the client under it.
+STOP_POLL_SECONDS = 0.25
+STOP_GRACE_SECONDS = 20.0
 
 
 @dataclass
@@ -137,12 +141,38 @@ class AgentStream:
 
             async with ClaudeSDKClient(options=self.options) as client:
                 await client.query(self.prompt)
-                async for message in client.receive_response():
-                    self._q.put(StreamItem("message", message))
-                    if self.cancel.is_set():
-                        with contextlib.suppress(Exception):
-                            await client.interrupt()
-                        break
+                # The stop flag is watched alongside the stream, not only when
+                # a message arrives: during a long tool call or a subagent the
+                # SDK may send nothing for minutes, and a stop has to land then.
+                messages = client.receive_response().__aiter__()
+                pending = asyncio.ensure_future(messages.__anext__())
+                loop = asyncio.get_running_loop()
+                give_up_at = None
+                try:
+                    while True:
+                        done, _ = await asyncio.wait({pending}, timeout=STOP_POLL_SECONDS)
+                        if done:
+                            try:
+                                message = pending.result()
+                            except StopAsyncIteration:
+                                break
+                            self._q.put(StreamItem("message", message))
+                            pending = asyncio.ensure_future(messages.__anext__())
+                        if not self.cancel.is_set():
+                            continue
+                        if give_up_at is None:
+                            give_up_at = loop.time() + STOP_GRACE_SECONDS
+                            with contextlib.suppress(Exception):
+                                await client.interrupt()
+                        elif loop.time() >= give_up_at:
+                            # The agent did not wind down after the interrupt:
+                            # leave it; closing the client ends its process.
+                            break
+                finally:
+                    if not pending.done():
+                        pending.cancel()
+                    with contextlib.suppress(BaseException):
+                        await pending
 
         try:
             # A fresh event loop per run, closed on exit. Correct under a
