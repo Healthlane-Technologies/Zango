@@ -108,39 +108,33 @@ pages:
       KPI row: vendors pending approval, open POs, PO value this month, invoices overdue.
       Below: PO value by month (bar, last 6 months) and a table of the 10 oldest POs awaiting approval.
     preview: |
+      const { ui } = ctx;
       const vendors = ctx.rows('vendor'), pos = ctx.rows('purchase_order'), invoices = ctx.rows('invoice');
-      const today = new Date().toISOString().slice(0, 10), month = today.slice(0, 7);
-      const open = pos.filter(p => !['closed', 'cancelled', 'draft'].includes(p.status));
-      const value = pos.filter(p => String(p.order_date || '').startsWith(month))
-        .reduce((s, p) => s + (Number(p.total_amount) || 0), 0);
-      const overdue = invoices.filter(i => i.status !== 'paid' && i.status !== 'rejected' && i.due_date && i.due_date < today);
-      const kpi = (label, n, go) => `<div class="pv-kpi" ${go ? `data-go="${go}"` : ''}><span>${label}</span><b>${n}</b></div>`;
       const money = n => '₹' + Math.round(n).toLocaleString('en-IN');
+      const month = ctx.today.slice(0, 7);
+      const sum = list => list.reduce((s, p) => s + (Number(p.total_amount) || 0), 0);
+      const open = pos.filter(p => !['draft', 'closed', 'cancelled'].includes(p.status));
+      const overdue = invoices.filter(i => !['paid', 'rejected'].includes(i.status) && i.due_date && i.due_date < ctx.today);
       const months = [...Array(6)].map((_, k) => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 5 + k); return d.toISOString().slice(0, 7); });
-      const byMonth = months.map(m => pos.filter(p => String(p.order_date || '').startsWith(m)).reduce((s, p) => s + (Number(p.total_amount) || 0), 0));
-      const top = Math.max(1, ...byMonth);
-      const waiting = pos.filter(p => p.status === 'pending_approval')
-        .sort((a, b) => String(a.order_date).localeCompare(String(b.order_date))).slice(0, 10);
-      return `
-        <div class="pv-kpis">
-          ${kpi('Vendors pending approval', vendors.filter(v => v.status === 'pending_approval').length, 'vendors')}
-          ${kpi('Open POs', open.length, 'purchase_orders')}
-          ${kpi('PO value this month', money(value), 'purchase_orders')}
-          ${kpi('Invoices overdue', overdue.length, 'invoices')}
-        </div>
-        <div class="pv-grid" style="grid-template-columns:1fr 1fr">
-          <div class="pv-card"><b>PO value by month</b>
-            ${months.map((m, k) => `<div style="display:grid;grid-template-columns:56px 1fr 90px;gap:8px;align-items:center;margin-top:6px">
-              <span class="pv-muted">${m}</span><div class="pv-bar"><i style="width:${Math.round(byMonth[k] / top * 100)}%"></i></div>
-              <span class="pv-muted" style="text-align:right">${money(byMonth[k])}</span></div>`).join('')}
-          </div>
-          <div class="pv-card"><b>Oldest POs awaiting approval</b>
-            ${waiting.length ? waiting.map(p => `<div data-go="po_360:${p.id}" style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid #F2F4F7;cursor:pointer">
-              <span>${ctx.esc(p.po_ref || '')} · ${ctx.esc(ctx.fmt(p, 'vendor'))}</span>
-              <span class="pv-muted">${ctx.esc(ctx.fmt(p, 'order_date'))}</span></div>`).join('')
-              : '<span class="pv-muted">Nothing is waiting for approval.</span>'}
-          </div>
-        </div>`;
+      const waiting = pos.filter(p => p.status === 'pending_approval').sort((a, b) => String(a.order_date).localeCompare(String(b.order_date)));
+      return ui.stack(
+        ui.kpis([
+          { label: 'Vendors pending approval', value: vendors.filter(v => v.status === 'pending_approval').length, icon: 'building-2', tone: 'amber', go: 'vendors' },
+          { label: 'Open POs', value: open.length, icon: 'shopping-cart', tone: 'indigo', go: 'purchase_orders' },
+          { label: 'PO value this month', value: money(sum(pos.filter(p => String(p.order_date || '').startsWith(month)))), icon: 'indian-rupee', tone: 'teal' },
+          { label: 'Invoices overdue', value: overdue.length, icon: 'clock', tone: overdue.length ? 'red' : 'green', go: 'invoices' },
+        ]),
+        ui.grid(
+          ui.bars('PO value by month', months.map(m => {
+            const v = sum(pos.filter(p => String(p.order_date || '').startsWith(m)));
+            return { label: m, value: v, display: money(v) };
+          }), { icon: 'bar-chart-3' }),
+          ui.list('Oldest POs awaiting approval', waiting, {
+            primary: 'po_ref', secondary: 'vendor', meta: 'order_date', limit: 10,
+            go: p => `po_360:${p.id}`, empty: 'Nothing is waiting for approval.', icon: 'hourglass',
+          }),
+        ),
+      );
 
 # -----------------------------------------------------------------------------
 #  MODULES  →  one backend/<code>/ folder each, holding its entities

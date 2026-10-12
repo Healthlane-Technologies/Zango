@@ -78,6 +78,8 @@ def validate_doc(doc, template, *, strict: bool = False) -> list:
     for issue in rules_mod.evaluate(doc, template.rules):
         issue["structural"] = False
         issues.append(issue)
+    if getattr(template, "spec_dialect", "") == "zango-app/1":
+        issues.extend(_braced_prose(doc))
     # What the build itself will stop on (never blocks an individual edit).
     from .build_check import build_issues
 
@@ -88,6 +90,42 @@ def validate_doc(doc, template, *, strict: bool = False) -> list:
     order = {"error": 0, "warning": 1}
     issues.sort(key=lambda i: (order.get(i["level"], 2), i["path"]))
     return issues
+
+
+PROSE_KEYS = {"text", "on_done", "on_create", "computed", "description", "condition_msg", "message"}
+
+
+def _braced_prose(doc) -> list:
+    """Prose written as "{...}": the braces show literally in the app and the build."""
+    found = []
+
+    def walk(node, path):
+        if isinstance(node, dict):
+            for key, value in node.items():
+                if (
+                    key in PROSE_KEYS
+                    and isinstance(value, str)
+                    and value.strip().startswith("{")
+                    and value.strip().endswith("}")
+                ):
+                    found.append(
+                        {
+                            "level": "warning",
+                            "path": to_pointer([*path, key]),
+                            "message": "This text is wrapped in braces, which show literally. "
+                            "Remove the { } — a block scalar (>- or |) needs no quoting.",
+                            "code": "prose_braces",
+                            "structural": False,
+                        }
+                    )
+                else:
+                    walk(value, [*path, key])
+        elif isinstance(node, list):
+            for i, item in enumerate(node):
+                walk(item, [*path, i])
+
+    walk(doc, [])
+    return found
 
 
 def validate_text(text: str, template, *, strict: bool = False):

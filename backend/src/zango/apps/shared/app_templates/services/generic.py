@@ -55,6 +55,21 @@ def borrows(version) -> bool:
     )
 
 
+def follow_current(version):
+    """The version a requirement on ``version`` actually works with.
+
+    An app pinned to an older version of the generic template itself follows
+    its current version — schema, rules, guidance, preview page and build
+    skill — because those are how a generic spec is written, previewed and
+    built, and they only get better. Every other template keeps its pin (a
+    template with an engine is built against exactly the version it chose).
+    """
+    if version is None or version.template.slug != GENERIC_SLUG or version.spec_dialect != GENERIC_DIALECT:
+        return version
+    current = generic_version()
+    return current if current is not None and current.spec_dialect == GENERIC_DIALECT else version
+
+
 def build_skill_source(version):
     """The generic version whose build skill ``version`` is built with, or None.
 

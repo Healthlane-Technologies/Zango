@@ -81,7 +81,7 @@ inside the preview's sandbox (no network, no storage, no timers).
 | member | what it is |
 |---|---|
 | `ctx.rows(entity)` | the demo records of an entity, scoped to the role being previewed |
-| `ctx.entity(entity)` | the entity's normalised definition: `fields[]` (`key`, `type`, `label`, and `opts` — choice options `{id, label, color}`), plus its workflow (statuses, transitions, tags) |
+| `ctx.entity(entity)` | the entity's normalised definition: `fields[]` (`key`, `type`, `label`, and `opts` — choice options `{id, label, color}`), plus `wf` when it has a workflow: `wf.statuses[]` and `wf.tags[]` (`code`, `label`, `color`), `wf.trs[]` |
 | `ctx.record` | on a custom tab or panel: the record the 360 page is showing |
 | `ctx.related(entity, via)` | on a tab or panel: rows of `entity` whose link field `via` points at `ctx.record` |
 | `ctx.fmt(row, field)` | a field's display value (choices, links, money, dates) as plain text |
@@ -89,11 +89,44 @@ inside the preview's sandbox (no network, no storage, no timers).
 | `ctx.icon(name)` | a lucide icon as inline SVG |
 | `ctx.tone(color)` | `[background, foreground]` for a spec colour name |
 | `ctx.role`, `ctx.user` | the role and demo user being previewed |
+| `ctx.today` | today's date, `YYYY-MM-DD` |
+| `ctx.ui` | the component kit below |
 
-Markup may use the preview's classes: `pv-cols`, `pv-col`, `pv-card`,
-`pv-grid`, `pv-muted`, `pv-badge`, `pv-kpis`, `pv-kpi`, `pv-bar`, and the App
-Studio `z-*` classes. `data-go="<page>[:<id>]"` on any element navigates to that
-page (and record) when clicked. An error in the function is shown in place of
+**Compose with `ctx.ui`** — the preview's component kit — rather than writing
+markup and CSS yourself; it renders in the same style as the rest of the app.
+Text arguments are escaped for you; `body`/blocks are the HTML other `ui`
+calls return. `go` values are `"<page>"` or `"<page>:<id>"`.
+
+| call | draws |
+|---|---|
+| `ui.stack(...blocks)` / `ui.grid(...blocks)` | blocks one under another / side by side (responsive) |
+| `ui.kpis([{label, value, icon, tone, hint, go}])` | a row of stat tiles (`icon`: a lucide name, `tone`: a spec colour) |
+| `ui.bars(title, [{label, value, display, tone, go}], {icon, empty})` | a horizontal bar chart in a panel |
+| `ui.list(title, rows, {primary, secondary, meta, badge, go, limit, empty, icon})` | a list of records; `primary`/`secondary`/`meta` are a field key or `row => text`, `badge` is `row => ({text, tone})`, `go` is `row => "page:id"` |
+| `ui.table(title, rows, [{label, value, align, badge}], {go, limit, empty, icon})` | a table of records |
+| `ui.board(title, [{title, tone, items: [{title, subtitle, go}]}])` | columns of cards |
+| `ui.panel(title, body, {icon, note})`, `ui.progress(done, total, label)`, `ui.badge(text, tone)`, `ui.empty(text)` | the pieces |
+
+`ctx.today` is today's date (`YYYY-MM-DD`) for overdue and "this month"
+comparisons.
+
+```js
+const { ui } = ctx;
+const open = ctx.rows('task').filter(t => t.status !== 'done');
+return ui.stack(
+  ui.kpis([{ label: 'Open tasks', value: open.length, icon: 'list-checks', go: 'tasks' },
+           { label: 'Overdue', value: open.filter(t => t.due_date < ctx.today).length, icon: 'clock', tone: 'red' }]),
+  ui.grid(
+    ui.bars('Open by status', ctx.entity('task').wf.statuses.map(s => ({ label: s.label, value: open.filter(t => t.status === s.code).length }))),
+    ui.list('Due soonest', open.sort((a, b) => String(a.due_date).localeCompare(String(b.due_date))),
+      { primary: 'title', secondary: 'assignee', meta: 'due_date', go: t => `task_360:${t.id}` })));
+```
+
+Hand-written markup (with the `pv-*` classes: `pv-cols`, `pv-col`, `pv-card`,
+`pv-grid`, `pv-muted`, `pv-badge`, `pv-bar`) is only for what the kit cannot
+draw; `data-go="<page>[:<id>]"` makes any element navigate.
+
+An error in the function is shown in place of
 the component, with its message; it never breaks the rest of the preview.
 
 ## What the build should do with them

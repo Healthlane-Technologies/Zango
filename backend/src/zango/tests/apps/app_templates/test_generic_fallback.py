@@ -316,7 +316,10 @@ class PinnedGenericTests(StudioSkillTests):
         )
         catalogue.clear_caches()
         view = catalogue.get_template(GENERIC_SLUG, version_uuid=str(old.object_uuid))
-        self.assertEqual(view.version, "0.9.0")
+        # It follows the current generic version: guidance, rules, preview and skill.
+        self.assertEqual(view.version, self.generic.version)
+        self.assertEqual(view.version_uuid, str(self.generic.object_uuid))
+        self.assertTrue(any(r.get("id") == "custom_page_preview" for r in view.rules))
         self.assertEqual(view.qualified_skill, "zango-tpl-zango-app:zango-app-studio")
         self.assertTrue((Path(view.build_plugin_dir) / "skills" / "zango-app-studio" / "SKILL.md").is_file())
 
@@ -347,3 +350,18 @@ class BuildCheckTests(StudioSkillTests):
         errors = [i for i in build_issues(broken, view) if i["level"] == "error"]
         self.assertTrue(any("cut at a comma" in i["message"] for i in errors), errors)
         self.assertTrue(all(i["code"] == "build_check" and not i["structural"] for i in errors))
+
+
+class ProseBracesTests(StudioSkillTests):
+    def test_prose_wrapped_in_braces_warns(self):
+        from zango.apps.shared.app_templates.services.spec import yamlio
+        from zango.apps.shared.app_templates.services.spec.validate import validate_doc
+
+        view = catalogue.get_template(GENERIC_SLUG)
+        doc = yamlio.to_plain(yamlio.load(view.example_yaml))
+        page = next(p for p in doc["pages"] if p["code"] == "dashboard")
+        page["text"] = "{A role-scoped home screen: tiles per role.}"
+        found = [i for i in validate_doc(doc, view) if i.get("code") == "prose_braces"]
+        self.assertEqual(len(found), 1)
+        self.assertTrue(found[0]["path"].endswith("/text"))
+        self.assertEqual(found[0]["level"], "warning")

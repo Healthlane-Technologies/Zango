@@ -382,7 +382,25 @@ textarea.z-in{height:auto;padding:9px 11px;resize:vertical;line-height:1.45}
 [data-go]{cursor:pointer}
 .pv-err{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border:1px solid #FECDCA;background:#FEF3F2;color:#B42318;border-radius:10px;font-size:12.5px;line-height:1.5}
 .pv-err b{display:block;font-weight:650}.pv-err code{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:#912018;white-space:pre-wrap;word-break:break-word}
-.pv-req{margin-top:12px}.pv-req .d-cust{background:#FCFCFD}
+.pv-req{margin-top:12px}
+.ui-stack{display:flex;flex-direction:column;gap:12px}
+.ui-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px;align-items:start}
+.ui-grid>.d-panel,.ui-stack>.d-panel{margin-bottom:0}
+.ui-body{padding:12px 16px}
+.ui-bar{display:grid;grid-template-columns:minmax(80px,30%) 1fr auto;gap:10px;align-items:center;padding:5px 0;font-size:12.5px;color:#475467}
+.ui-bar .pv-bar{height:10px}
+.ui-bar b{font-weight:600;color:#101828;font-variant-numeric:tabular-nums;min-width:48px;text-align:right}
+.ui-li{display:flex;gap:10px;align-items:center;padding:9px 16px;border-top:1px solid #F2F4F7;font-size:13px;color:#101828}
+.ui-li:first-child{border-top:0}
+.ui-li.click:hover{background:#F9FAFB}
+.ui-li .ui-main{flex:1;min-width:0}
+.ui-li .ui-main>div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ui-li .ui-sub{font-size:12px;color:#667085;margin-top:1px}
+.ui-li .ui-meta{font-size:12px;color:#667085;white-space:nowrap}
+.ui-empty{padding:18px 16px;font-size:12.5px;color:#98A2B3;text-align:center}
+.ui-prog{display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:#475467}
+.ui-board{display:flex;gap:12px;overflow-x:auto;padding:12px 16px}
+.ui-board .pv-col{flex:0 0 230px}.pv-req .d-cust{background:#FCFCFD}
 </style>
 </head>
 <body>
@@ -2363,20 +2381,48 @@ function tlViewHTML(cfg, v, rows){
 /* ═════════════════════════ agent-written previews ═════════════════════════ */
 const PV_FN = new Map();
 function rowEntity(row){ for (const E of S.M.entList){ if (rowsOf(E.code).includes(row)) return E; } return null; }
+/* ctx.ui: the components a preview sketch composes (SPEC_EXTENSIONS.md). Text
+   arguments are escaped; arguments named body/blocks are HTML from other ui calls. */
+function previewUI(ctx){
+  const val = (row, f) => typeof f === 'function' ? f(row) : f == null ? '' : ctx.fmt(row, f);
+  const goAttr = g => g ? ` data-go="${esc(g)}"` : '';
+  const ui = {
+    stack: (...blocks) => `<div class="ui-stack">${blocks.flat().filter(Boolean).join('')}</div>`,
+    grid: (...blocks) => `<div class="ui-grid">${blocks.flat().filter(Boolean).join('')}</div>`,
+    panel: (title, body, o = {}) => `<div class="d-panel"><h3>${o.icon ? ic(o.icon) : ''}${esc(title)}${o.note ? `<span class="sp"></span><span class="pv-muted">${esc(o.note)}</span>` : ''}</h3>${body || ui.empty()}</div>`,
+    empty: (text) => `<div class="ui-empty">${esc(text || 'Nothing to show yet')}</div>`,
+    badge: (text, color) => { const [bg, fg] = tone(color || 'gray'); return `<span class="pv-badge" style="background:${bg};color:${fg};border-color:transparent">${esc(text)}</span>`; },
+    kpis: (items) => `<div class="d-stats" style="margin-top:0">${(items || []).map(k => { const [bg, fg] = tone(k.tone || 'indigo');
+      return `<div class="d-stat ${k.go ? 'click' : ''}"${goAttr(k.go)}><div class="si" style="background:${bg};color:${fg}">${ic(k.icon || 'activity')}</div><div style="flex:1;min-width:0"><span>${esc(k.label)}</span><b>${esc(k.value == null ? '—' : k.value)}</b>${k.hint ? `<span style="margin-top:2px;font-size:11.5px">${esc(k.hint)}</span>` : ''}</div></div>`; }).join('')}</div>`,
+    bars: (title, items, o = {}) => { const list = items || []; const top = Math.max(1, ...list.map(i => Number(i.value) || 0)); const [, fg] = tone(o.tone || 'indigo');
+      return ui.panel(title, list.length ? `<div class="ui-body">${list.map(i => `<div class="ui-bar"${goAttr(i.go)}><span>${esc(i.label)}</span><div class="pv-bar"><i style="width:${Math.round((Number(i.value) || 0) / top * 100)}%;background:${i.tone ? tone(i.tone)[1] : fg}"></i></div><b>${esc(i.display != null ? i.display : i.value)}</b></div>`).join('')}</div>` : ui.empty(o.empty), o); },
+    list: (title, rows, o = {}) => { const items = (rows || []).slice(0, o.limit || 8);
+      return ui.panel(title, items.length ? items.map(r => { const g = o.go && o.go(r); const b = o.badge && o.badge(r);
+        return `<div class="ui-li ${g ? 'click' : ''}"${goAttr(g)}><div class="ui-main"><div>${esc(val(r, o.primary))}</div>${o.secondary ? `<div class="ui-sub">${esc(val(r, o.secondary))}</div>` : ''}</div>${b ? ui.badge(b.text, b.tone) : ''}${o.meta ? `<span class="ui-meta">${esc(val(r, o.meta))}</span>` : ''}</div>`; }).join('') : ui.empty(o.empty), { ...o, note: o.note || (rows && rows.length > items.length ? `${items.length} of ${rows.length}` : '') }); },
+    table: (title, rows, columns, o = {}) => { const items = (rows || []).slice(0, o.limit || 10);
+      return ui.panel(title, items.length ? `<div class="z-tbl-w"><table class="z-t"><thead><tr>${columns.map(c => `<th style="text-align:${c.align || 'left'}">${esc(c.label)}</th>`).join('')}</tr></thead><tbody>${items.map(r => { const g = o.go && o.go(r);
+        return `<tr class="${g ? 'click' : ''}"${goAttr(g)}>${columns.map(c => `<td style="text-align:${c.align || 'left'}">${c.badge ? (b => b ? ui.badge(b.text, b.tone) : '')(c.badge(r)) : esc(val(r, c.value))}</td>`).join('')}</tr>`; }).join('')}</tbody></table></div>` : ui.empty(o.empty), o); },
+    board: (title, columns, o = {}) => ui.panel(title, `<div class="ui-board">${(columns || []).map(c => `<div class="pv-col"><h4>${c.tone ? ui.badge(c.title, c.tone) : esc(c.title)} <span class="pv-muted">${(c.items || []).length}</span></h4>${(c.items || []).map(i => `<div class="pv-card"${goAttr(i.go)}>${esc(i.title)}${i.subtitle ? `<span class="pv-muted">${esc(i.subtitle)}</span>` : ''}</div>`).join('') || '<span class="pv-muted">—</span>'}</div>`).join('')}</div>`, o),
+    progress: (done, total, label) => { const pct = total ? Math.round(done / total * 100) : 0; return `<div class="ui-prog"><span>${esc(label || `${done} of ${total} done`)}</span><div class="pv-bar"><i style="width:${pct}%"></i></div></div>`; },
+  };
+  return Object.freeze(ui);
+}
 function runPreview(code, extra){
   if (!code || !String(code).trim()) return null;
   let fn = PV_FN.get(code);
   try {
     if (!fn){ fn = new Function('ctx', '"use strict";\n' + code); PV_FN.set(code, fn); }
     const record = extra && extra.record;
-    const ctx = Object.freeze({
+    const ctx = ({
       rows: c => { const E = S.M.ents[c]; return E ? visibleRows(E).slice() : []; },
       entity: c => S.M.ents[c] || null,
       record: record || null,
       related: (c, via) => { const T = S.M.ents[c]; return T && record ? relatedRows(T, via, record) : []; },
       fmt: (row, field) => { if (!row) return ''; const E = rowEntity(row); return E ? plain(E, row, field) : (row[field] == null ? '' : String(row[field])); },
       esc, icon: n => ic(n), tone: c => tone(c).slice(0, 2), role: S.role, user: curUser(),
+      today: new Date().toISOString().slice(0, 10),
     });
+    ctx.ui = previewUI(ctx); Object.freeze(ctx);
     const out = fn(ctx);
     return `<div class="pv-host">${out == null ? '' : String(out)}</div>`;
   } catch (e){

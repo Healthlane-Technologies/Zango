@@ -124,8 +124,11 @@ class TemplateBuilderView(ZangoGenericPlatformAPIView):
             from zango.apps.shared.app_templates.services.generic import (
                 effective,
                 fallback_for,
+                follow_current,
                 preview_version,
             )
+
+            version = follow_current(version)
 
             generic = fallback_for(version)
             page, preview_source = preview_version(version)

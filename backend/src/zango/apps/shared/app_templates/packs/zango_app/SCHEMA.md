@@ -193,14 +193,45 @@ board per person, a seating plan, a gantt — keep the `custom` page, tab (`type
 section (`type: custom`) with its `component` and a precise `text`, and add
 `preview`: the body of a JavaScript function `ctx => html` that sketches it
 from the demo data, so the user sees it. It is preview-only; the build reads
-`text`. `ctx.rows(entity)` (role-scoped demo rows: field keys, `id`, `status`, links as ids), `ctx.entity(entity)` (`fields[]` with `key`, `type`, `label`, `opts` for choices),
+`text`. `ctx.rows(entity)` (role-scoped demo rows: field keys, `id`, `status`, links as ids), `ctx.entity(entity)` (`fields[]` with `key`, `type`, `label`, `opts` for choices; `wf.statuses[]` with `code`, `label`, `color`),
 `ctx.record` and `ctx.related(entity, via)` (on tabs and panels), `ctx.fmt(row, field)`,
 `ctx.esc(text)`, `ctx.icon(name)`, `ctx.tone(color)`, `ctx.role`, `ctx.user`.
-Return a string; synchronous, no network. Style with `pv-cols`, `pv-col`,
-`pv-card`, `pv-grid`, `pv-muted`, `pv-badge`, `pv-kpis`, `pv-kpi`, `pv-bar`;
-`data-go="<page>[:<id>]"` makes an element navigate. Always escape values with
-`ctx.esc`. Write it as a YAML block scalar (`preview: |`). The full contract is
-in `SPEC_EXTENSIONS.md` next to this file.
+Return a string; synchronous, no network. Write it as a YAML block scalar
+(`preview: |`). The full contract is in `SPEC_EXTENSIONS.md` next to this file.
+
+**Compose with `ctx.ui`** — the preview's component kit — rather than writing
+markup and CSS yourself; it renders in the same style as the rest of the app.
+Text arguments are escaped for you; `body`/blocks are the HTML other `ui`
+calls return. `go` values are `"<page>"` or `"<page>:<id>"`.
+
+| call | draws |
+|---|---|
+| `ui.stack(...blocks)` / `ui.grid(...blocks)` | blocks one under another / side by side (responsive) |
+| `ui.kpis([{label, value, icon, tone, hint, go}])` | a row of stat tiles (`icon`: a lucide name, `tone`: a spec colour) |
+| `ui.bars(title, [{label, value, display, tone, go}], {icon, empty})` | a horizontal bar chart in a panel |
+| `ui.list(title, rows, {primary, secondary, meta, badge, go, limit, empty, icon})` | a list of records; `primary`/`secondary`/`meta` are a field key or `row => text`, `badge` is `row => ({text, tone})`, `go` is `row => "page:id"` |
+| `ui.table(title, rows, [{label, value, align, badge}], {go, limit, empty, icon})` | a table of records |
+| `ui.board(title, [{title, tone, items: [{title, subtitle, go}]}])` | columns of cards |
+| `ui.panel(title, body, {icon, note})`, `ui.progress(done, total, label)`, `ui.badge(text, tone)`, `ui.empty(text)` | the pieces |
+
+`ctx.today` is today's date (`YYYY-MM-DD`) for overdue and "this month"
+comparisons.
+
+```js
+const { ui } = ctx;
+const open = ctx.rows('task').filter(t => t.status !== 'done');
+return ui.stack(
+  ui.kpis([{ label: 'Open tasks', value: open.length, icon: 'list-checks', go: 'tasks' },
+           { label: 'Overdue', value: open.filter(t => t.due_date < ctx.today).length, icon: 'clock', tone: 'red' }]),
+  ui.grid(
+    ui.bars('Open by status', ctx.entity('task').wf.statuses.map(s => ({ label: s.label, value: open.filter(t => t.status === s.code).length }))),
+    ui.list('Due soonest', open.sort((a, b) => String(a.due_date).localeCompare(String(b.due_date))),
+      { primary: 'title', secondary: 'assignee', meta: 'due_date', go: t => `task_360:${t.id}` })));
+```
+
+Hand-written markup (with the `pv-*` classes: `pv-cols`, `pv-col`, `pv-card`,
+`pv-grid`, `pv-muted`, `pv-badge`, `pv-bar`) is only for what the kit cannot
+draw; `data-go="<page>[:<id>]"` makes any element navigate.
 
 ## `modules` and entities
 

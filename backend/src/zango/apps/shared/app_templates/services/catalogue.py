@@ -267,6 +267,9 @@ def get_template(slug, version_uuid=None):
             .filter(object_uuid=version_uuid, template__slug=slug)
             .first()
         )
+        from .generic import follow_current
+
+        version = follow_current(version)
         return _view_for(version) if version else None
     return _current_versions().get(slug)
 
