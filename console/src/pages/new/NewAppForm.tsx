@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
 	AVAILABILITY_REASONS,
@@ -77,9 +77,10 @@ export function NewAppForm({ onStarted }: { onStarted: (s: Scaffold) => void }) 
 	const preselected = params.get('template');
 	const [source, setSource] = useState<StartingPoint>(preselected ? 'template' : 'brief');
 	const [templateSlug, setTemplateSlug] = useState<string | null>(preselected);
-	const [prompt, setPrompt] = useState('');
+	// Deep links from the template pages: a description to start from, an example journey.
+	const [prompt, setPrompt] = useState(() => params.get('prompt') ?? '');
 	const [files, setFiles] = useState<File[]>([]);
-	const [reference, setReference] = useState('');
+	const [reference, setReference] = useState(() => params.get('reference') ?? '');
 	const { data: availability, isLoading: checking } = useAgentAvailability();
 	const templates = useTemplates();
 	const create = useApiMutation({ fn: createScaffold, onSuccess: (s) => onStarted(s) });
@@ -89,7 +90,12 @@ export function NewAppForm({ onStarted }: { onStarted: (s: Scaffold) => void }) 
 	// References come with the template's detail, not the catalogue list.
 	const detail = useTemplate(template?.slug);
 	const references = detail.data?.references;
-	useEffect(() => setReference(''), [template?.slug]);
+	// A different template's examples don't apply (the deep-linked one survives first load).
+	const shownSlug = useRef<string | undefined>(undefined);
+	useEffect(() => {
+		if (shownSlug.current && template?.slug !== shownSlug.current) setReference('');
+		shownSlug.current = template?.slug;
+	}, [template?.slug]);
 	// A deep link to a template that isn't published (any more) falls back to the first one.
 	useEffect(() => {
 		if (source !== 'template' || !templates.data?.length) return;

@@ -24,7 +24,7 @@ export default defineConfig(({ command }) => ({
 		outDir: '../backend/src/zango/assets/console',
 		emptyOutDir: true,
 		sourcemap: false,
-		// One stylesheet (about 78 kB): the template links a single console.<stamp>.min.css,
+		// One stylesheet (about 93 kB): the template links a single console.<stamp>.min.css,
 		// and split CSS chunks would need names outside that pattern.
 		cssCodeSplit: false,
 		rollupOptions: {

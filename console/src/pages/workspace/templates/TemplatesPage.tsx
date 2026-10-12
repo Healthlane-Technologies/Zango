@@ -1,28 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTemplates, type TemplateSummary } from '@/api/templates';
-import {
-	Button,
-	ButtonLink,
-	EmptyState,
-	ErrorState,
-	Icon,
-	Page,
-	PageHeader,
-	Skeleton,
-	cx,
-} from '@/ui';
+import { Button, ButtonLink, ErrorState, Icon, Page, PageHeader, Skeleton, cx } from '@/ui';
 import {
 	SORTS,
-	categories,
 	categoryStyle,
+	describeMatches,
+	featured,
 	filterTemplates,
-	groupTemplates,
 	hasAgents,
+	orderedCategories,
+	tokens,
+	type Match,
 	type SortKey,
 } from './catalog';
-import { AgentsTag, BetaBadge, Highlighted, TemplateIcon } from './parts';
+import { CardVisual, FeaturedCard, TemplateCard } from './parts';
 import { TemplateQuickView } from './TemplateQuickView';
+import './gallery.css';
 
 /** Focus the search box on `/`, unless the user is already typing somewhere. */
 function useSlashFocus(ref: React.RefObject<HTMLInputElement>) {
@@ -40,30 +34,188 @@ function useSlashFocus(ref: React.RefObject<HTMLInputElement>) {
 	}, [ref]);
 }
 
-function Row({ t, q, onOpen }: { t: TemplateSummary; q: string; onOpen: () => void }) {
+const SHELF_SIZE = 8;
+
+/** "What do you want to build?" — a description matched against the catalogue. */
+function DescribeHero({
+	all,
+	value,
+	onSubmit,
+}: {
+	all: TemplateSummary[];
+	value: string;
+	onSubmit: (text: string) => void;
+}) {
+	const [text, setText] = useState(value);
+	useEffect(() => setText(value), [value]);
+	// Examples in the catalogue's own words: what the most used templates are also called.
+	const examples = useMemo(
+		() =>
+			featured(all, 4)
+				.map((t) => t.catalogue.aka?.[1] ?? t.catalogue.aka?.[0] ?? t.name)
+				.filter(Boolean),
+		[all],
+	);
 	return (
-		<button type="button" className="trow" onClick={onOpen}>
-			<TemplateIcon template={t} size={30} />
-			<span className="tm">
-				<b>
-					<Highlighted text={t.name} q={q} /> {t.is_beta && <BetaBadge />}
-				</b>
-				<small>{t.one_liner || t.catalogue.description}</small>
-			</span>
-			<span className="tx">
-				<AgentsTag count={t.catalogue.recommended_agents?.length ?? 0} />
-				{t.apps_using > 0 && (
-					<span className="num" title="Apps built on this template">
-						{t.apps_using} {t.apps_using === 1 ? 'app' : 'apps'}
+		<section className="ghero">
+			<div className="gh-in">
+				<div className="gh-t">
+					<span className="gh-k">
+						<Icon name="zap" size={13} />
+						Describe it
 					</span>
+					<h2>What do you want to build?</h2>
+					<p>
+						Describe the process in a sentence. We find the closest templates, or the agent
+						starts your app from the description.
+					</p>
+				</div>
+				<form
+					className="gh-box"
+					onSubmit={(e) => {
+						e.preventDefault();
+						onSubmit(text.trim());
+					}}
+				>
+					<textarea
+						rows={2}
+						value={text}
+						placeholder="e.g. Clinics order vaccines with credit limits, distributors fulfil and we track delivery"
+						aria-label="Describe what you want to build"
+						onChange={(e) => setText(e.target.value)}
+						onKeyDown={(e) => {
+							if (e.key === 'Enter' && !e.shiftKey) {
+								e.preventDefault();
+								onSubmit(text.trim());
+							}
+						}}
+					/>
+					<Button type="submit" variant="primary" icon="search" disabled={!text.trim()}>
+						Find templates
+					</Button>
+				</form>
+				{!!examples.length && (
+					<div className="gh-ex">
+						<span>Try</span>
+						{examples.map((x) => (
+							<button key={x} type="button" className="gchip" onClick={() => onSubmit(x)}>
+								{x}
+							</button>
+						))}
+					</div>
 				)}
-				<span className="mono">v{t.version}</span>
-			</span>
-		</button>
+			</div>
+		</section>
 	);
 }
 
-/** The template gallery (prototype vTemplates). Filters live in the URL so they survive a reload. */
+function Matches({
+	text,
+	matches,
+	onOpen,
+	onClear,
+}: {
+	text: string;
+	matches: Match[];
+	onOpen: (t: TemplateSummary) => void;
+	onClear: () => void;
+}) {
+	const navigate = useNavigate();
+	const blank = `/apps/new?prompt=${encodeURIComponent(text)}`;
+	return (
+		<section>
+			<div className="gsec-h">
+				<h2>Closest templates</h2>
+				<span className="muted">for “{text}”</span>
+				<Button size="xs" variant="ghost" className="ml-auto" onClick={onClear}>
+					Clear
+				</Button>
+			</div>
+			{matches.length ? (
+				<div className="gm-grid">
+					{matches.map(({ template: t, workflows, roles }) => (
+						<div key={t.slug} className="gmc">
+							<CardVisual template={t} />
+							<div className="gc-b">
+								<div className="gf-h">
+									<b className="flex-1">{t.name}</b>
+								</div>
+								<ul className="tp-c gwhy">
+									<li>
+										<Icon name="check" weight={2.4} />
+										{workflows.length ? `Covers ${workflows.join(', ')}` : `${t.category} workflows`}
+									</li>
+									{!!roles.length && (
+										<li>
+											<Icon name="check" weight={2.4} />
+											For {roles.join(' and ')}
+										</li>
+									)}
+									<li>
+										<Icon name="check" weight={2.4} />
+										{t.apps_using
+											? `Running in ${t.apps_using} ${t.apps_using === 1 ? 'app' : 'apps'}`
+											: 'Newly published'}{' '}
+										· v{t.version}
+									</li>
+								</ul>
+								<div className="gm-f">
+									<Button size="sm" onClick={() => onOpen(t)}>
+										Details
+									</Button>
+									<Button
+										size="sm"
+										variant="primary"
+										onClick={() =>
+											navigate(
+												`/apps/new?template=${t.slug}&prompt=${encodeURIComponent(text)}`,
+											)
+										}
+									>
+										Use template
+									</Button>
+								</div>
+							</div>
+						</div>
+					))}
+				</div>
+			) : (
+				<div className="card">
+					<div className="empty">
+						<b>No close match</b>
+						Start from your description and the agent composes the app for you.
+					</div>
+				</div>
+			)}
+			<div className="gm-blank">
+				<Icon name="blank" />
+				<span className="flex-1">None of these? The agent can build it from your description.</span>
+				<ButtonLink to={blank} size="sm">
+					Start from this description
+				</ButtonLink>
+			</div>
+		</section>
+	);
+}
+
+function CardSkeletons({ n }: { n: number }) {
+	return (
+		<div className="ggrid">
+			{Array.from({ length: n }, (_, i) => (
+				<div key={i} className="gcard">
+					<Skeleton height={92} />
+					<div className="gc-b grid gap-2">
+						<Skeleton width="60%" />
+						<Skeleton width="90%" />
+						<Skeleton width="40%" />
+					</div>
+				</div>
+			))}
+		</div>
+	);
+}
+
+/** The template gallery (mockup vTemplates). Filters live in the URL so they survive a reload. */
 export function TemplatesPage() {
 	const { data: all, isLoading, error, refetch } = useTemplates();
 	const [params, setParams] = useSearchParams();
@@ -71,7 +223,7 @@ export function TemplatesPage() {
 	const category = params.get('category') ?? '';
 	const sort = (params.get('sort') as SortKey) in SORTS ? (params.get('sort') as SortKey) : 'used';
 	const withAgents = params.get('agents') === '1';
-	const used = params.get('used') === '1';
+	const ask = params.get('ask') ?? '';
 	const [open, setOpen] = useState<TemplateSummary | null>(null);
 	const searchRef = useRef<HTMLInputElement>(null);
 	useSlashFocus(searchRef);
@@ -88,179 +240,206 @@ export function TemplatesPage() {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [q]);
 
-	const filters = { q, category, sort, withAgents, used };
+	const templates = useMemo(() => all ?? [], [all]);
 	const list = useMemo(
-		() => filterTemplates(all ?? [], filters),
-		[all, q, category, sort, withAgents, used],
-	); // eslint-disable-line react-hooks/exhaustive-deps
-	const groups = useMemo(() => groupTemplates(list, { q, category }), [list, q, category]);
-	const cats = useMemo(() => categories(all ?? []), [all]);
+		() => filterTemplates(templates, { q, category, sort, withAgents, used: false }),
+		[templates, q, category, sort, withAgents],
+	);
+	const cats = useMemo(() => orderedCategories(templates), [templates]);
+	const feat = useMemo(() => featured(templates), [templates]);
+	const matches = useMemo(() => (ask ? describeMatches(templates, ask) : []), [templates, ask]);
+	const anyAgents = templates.some(hasAgents);
+	const browse = !category && !tokens(q).length && !withAgents;
 	const clear = () => {
 		setQ('');
 		setParams({}, { replace: true });
 	};
 
+	let body;
+	if (isLoading) {
+		body = <CardSkeletons n={8} />;
+	} else if (browse) {
+		body = (
+			<>
+				{!!feat.length && (
+					<section>
+						<div className="gsec-h">
+							<h2>Featured</h2>
+							<span className="muted">The most used templates, running live with demo data</span>
+						</div>
+						<div className="gfeat-g">
+							{feat.map((t) => (
+								<FeaturedCard key={t.slug} template={t} onOpen={() => setOpen(t)} />
+							))}
+						</div>
+					</section>
+				)}
+				{cats.map(([name, count]) => {
+					const items = templates
+						.filter((t) => t.category === name)
+						.sort(SORTS[sort][1])
+						.slice(0, SHELF_SIZE);
+					return (
+						<section key={name} className="gshelf">
+							<div className="gsec-h">
+								<span className="sw" style={{ background: categoryStyle(name).fg }} />
+								<h2>{name}</h2>
+								<span className="muted num">{count}</span>
+								{count > 4 && (
+									<button
+										type="button"
+										className="link ml-auto text-[12.5px]"
+										onClick={() => setParam('category', name)}
+									>
+										See all
+									</button>
+								)}
+							</div>
+							<div className="grow">
+								{items.map((t) => (
+									<TemplateCard key={t.slug} template={t} onOpen={() => setOpen(t)} />
+								))}
+							</div>
+						</section>
+					);
+				})}
+			</>
+		);
+	} else if (list.length) {
+		body = (
+			<section>
+				<div className="gsec-h">
+					<h2>{tokens(q).length ? `Results for “${q.trim()}”` : category || 'All templates'}</h2>
+					<span className="muted num">{list.length}</span>
+				</div>
+				<div className="ggrid">
+					{list.map((t) => (
+						<TemplateCard key={t.slug} template={t} q={q} onOpen={() => setOpen(t)} />
+					))}
+				</div>
+			</section>
+		);
+	} else {
+		body = (
+			<div className="card">
+				<div className="empty">
+					<b>{q.trim() ? `No templates match “${q.trim()}”` : 'No templates match'}</b>
+					{templates.length
+						? 'Clear a filter, or describe the app above and we suggest the closest fit.'
+						: 'No templates have been published yet.'}
+					<div className="mt-3 flex justify-center gap-2">
+						<Button size="sm" onClick={clear}>
+							Clear filters
+						</Button>
+						<ButtonLink to="/apps/new" size="sm">
+							Start blank
+						</ButtonLink>
+					</div>
+				</div>
+			</div>
+		);
+	}
+
 	return (
 		<Page wide>
-			<PageHeader
-				title="Templates"
-				description="Validated starting points the agent tailors to your requirements."
-				actions={
-					<ButtonLink to="/apps/new" icon="plus">
-						Start blank
-					</ButtonLink>
-				}
-			/>
-			{error ? (
-				<div className="card">
-					<ErrorState error={error} onRetry={() => refetch()} />
-				</div>
-			) : (
-				<div className="tlib">
-					<nav className="trail" aria-label="Template categories">
-						<button
-							type="button"
-							className={cx('tr-i', !category && 'on')}
-							onClick={() => setParam('category', '')}
-						>
-							<span className="sw" style={{ background: 'var(--t3)' }} />
-							<span className="tl">All templates</span>
-							<span className="tc num">{all?.length ?? '–'}</span>
-						</button>
-						{cats.map(([name, count]) => (
-							<button
-								key={name}
-								type="button"
-								className={cx('tr-i', category === name && 'on')}
-								onClick={() => setParam('category', name)}
-							>
-								<span className="sw" style={{ background: categoryStyle(name).fg }} />
-								<span className="tl">{name}</span>
-								<span className="tc num">{count}</span>
-							</button>
-						))}
-						<div className="tr-f">
-							<h4>Show only</h4>
-							<label className="tchk">
-								<input
-									type="checkbox"
-									checked={withAgents}
-									disabled={!all?.some(hasAgents)}
-									onChange={(e) => setParam('agents', e.target.checked ? '1' : '')}
-								/>
-								<span>Includes AI agents</span>
-							</label>
-							<label className="tchk">
-								<input
-									type="checkbox"
-									checked={used}
-									onChange={(e) => setParam('used', e.target.checked ? '1' : '')}
-								/>
-								<span>Used by an app</span>
-							</label>
-						</div>
-					</nav>
-
-					<section className="tmain">
-						<div className="toolbar tbar">
-							<label className="tsearch">
-								<Icon name="search" />
-								<input
-									ref={searchRef}
-									value={q}
-									onChange={(e) => setQ(e.target.value)}
-									placeholder="Search templates"
-									aria-label="Search templates"
-									autoComplete="off"
-								/>
-								<kbd>/</kbd>
-							</label>
-							<select
-								className="select w-[200px]"
-								aria-label="Category"
-								value={category}
-								onChange={(e) => setParam('category', e.target.value)}
-							>
-								<option value="">All categories</option>
-								{cats.map(([name]) => (
-									<option key={name} value={name}>
+			<div className="gpage">
+				<PageHeader
+					title="Templates"
+					description={
+						all
+							? `${all.length} validated starting points. The agent tailors any of them to your requirements.`
+							: 'Validated starting points the agent tailors to your requirements.'
+					}
+					actions={
+						<ButtonLink to="/apps/new" icon="blank">
+							Start blank
+						</ButtonLink>
+					}
+				/>
+				{error ? (
+					<div className="card">
+						<ErrorState error={error} onRetry={() => refetch()} />
+					</div>
+				) : (
+					<>
+						<DescribeHero all={templates} value={ask} onSubmit={(text) => setParam('ask', text)} />
+						{ask && !isLoading && (
+							<Matches
+								text={ask}
+								matches={matches}
+								onOpen={setOpen}
+								onClear={() => setParam('ask', '')}
+							/>
+						)}
+						<div className="gbar">
+							<div className="gtabs" role="tablist" aria-label="Template categories">
+								<button
+									type="button"
+									role="tab"
+									aria-selected={!category}
+									className={cx(!category && 'on')}
+									onClick={() => setParam('category', '')}
+								>
+									All<span className="num">{templates.length}</span>
+								</button>
+								{cats.map(([name, count]) => (
+									<button
+										key={name}
+										type="button"
+										role="tab"
+										aria-selected={category === name}
+										className={cx(category === name && 'on')}
+										onClick={() => setParam('category', category === name ? '' : name)}
+									>
 										{name}
-									</option>
-								))}
-							</select>
-							<select
-								className="select w-[170px]"
-								aria-label="Sort"
-								value={sort}
-								onChange={(e) => setParam('sort', e.target.value === 'used' ? '' : e.target.value)}
-							>
-								{(Object.keys(SORTS) as SortKey[]).map((k) => (
-									<option key={k} value={k}>
-										{SORTS[k][0]}
-									</option>
-								))}
-							</select>
-							{all && (
-								<span className="num ml-auto text-[12.5px] text-t3">
-									{list.length} of {all.length}
-								</span>
-							)}
-						</div>
-
-						{isLoading && (
-							<div className="tlist">
-								{Array.from({ length: 4 }, (_, i) => (
-									<div key={i} className="trow">
-										<Skeleton width={30} height={30} />
-										<span className="tm grid gap-1.5">
-											<Skeleton width="40%" />
-											<Skeleton width="70%" />
-										</span>
-									</div>
+										<span className="num">{count}</span>
+									</button>
 								))}
 							</div>
-						)}
-
-						{all && !list.length && (
-							<div className="card">
-								<EmptyState
-									title={q.trim() ? `No templates match “${q.trim()}”` : 'No templates match'}
-									action={
-										<div className="flex gap-2">
-											<Button size="sm" onClick={clear}>
-												Clear filters
-											</Button>
-											<ButtonLink to="/apps/new" size="sm">
-												Start blank
-											</ButtonLink>
-										</div>
+							<div className="gbar-r">
+								{anyAgents && (
+									<button
+										type="button"
+										className={cx('gtog', withAgents && 'on')}
+										aria-pressed={withAgents}
+										onClick={() => setParam('agents', withAgents ? '' : '1')}
+									>
+										<Icon name="bot" size={14} />
+										With AI agents
+									</button>
+								)}
+								<label className="tsearch">
+									<Icon name="search" />
+									<input
+										ref={searchRef}
+										value={q}
+										onChange={(e) => setQ(e.target.value)}
+										placeholder="Search"
+										aria-label="Search templates"
+										autoComplete="off"
+									/>
+									<kbd>/</kbd>
+								</label>
+								<select
+									className="select w-[150px]"
+									aria-label="Sort"
+									value={sort}
+									onChange={(e) =>
+										setParam('sort', e.target.value === 'used' ? '' : e.target.value)
 									}
 								>
-									{all.length
-										? 'Clear a filter or search for a workflow, role or category.'
-										: 'No templates have been published yet.'}
-								</EmptyState>
-							</div>
-						)}
-
-						{groups.map(([heading, items]) => (
-							<div key={heading ?? 'all'}>
-								{heading && (
-									<div className="tgh">
-										<h2>{heading}</h2>
-										<span className="num">{items.length}</span>
-									</div>
-								)}
-								<div className={cx('tlist', !heading && 'mt-1')}>
-									{items.map((t) => (
-										<Row key={t.slug} t={t} q={q} onOpen={() => setOpen(t)} />
+									{(Object.keys(SORTS) as SortKey[]).map((k) => (
+										<option key={k} value={k}>
+											{SORTS[k][0]}
+										</option>
 									))}
-								</div>
+								</select>
 							</div>
-						))}
-					</section>
-				</div>
-			)}
+						</div>
+						{body}
+					</>
+				)}
+			</div>
 			<TemplateQuickView template={open} onClose={() => setOpen(null)} />
 		</Page>
 	);

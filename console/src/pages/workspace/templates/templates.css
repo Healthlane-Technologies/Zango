@@ -1,181 +1,20 @@
-/* Template gallery, quick view, detail and picker — ported from design/prototype.html
-   (vTemplates, tplModalHTML, vTemplate, vNew .tpick). Plain CSS, so nothing is purged. */
+/* Template gallery,
+quick view,
+detail and picker — ported from design/prototype.html
+   (vTemplates,
+tplModalHTML,
+vTemplate,
+vNew .tpick). Plain CSS,
+so nothing is purged. */
 
 .page-wide {
 	max-width: 1280px;
 	padding-top: 24px;
 }
-
-.tlib {
-	display: grid;
-	grid-template-columns: 224px minmax(0, 1fr);
-	gap: 28px;
-	align-items: start;
-}
-.trail {
-	position: sticky;
-	top: 16px;
-	display: flex;
-	flex-direction: column;
-	gap: 1px;
-	padding-top: 2px;
-}
-.tr-i {
-	display: flex;
-	align-items: center;
-	gap: 9px;
-	height: 30px;
-	padding: 0 8px;
-	border-radius: 6px;
-	color: var(--t2);
-	text-align: left;
-	width: 100%;
-}
-.tr-i:hover {
-	background: var(--hover);
-	color: var(--t1);
-}
-.tr-i.on {
-	background: var(--subtle);
-	color: var(--t1);
-	font-weight: 550;
-}
-.tr-i .sw {
-	width: 8px;
-	height: 8px;
-	border-radius: 2px;
-	flex-shrink: 0;
-	opacity: 0.85;
-}
-.tr-i .tl {
-	flex: 1;
-	min-width: 0;
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
-.tr-i .tc {
-	font-size: 11.5px;
-	color: var(--t4);
-	font-weight: 500;
-}
-.tr-f {
-	margin-top: 18px;
-	padding: 14px 8px 0;
-	border-top: 1px solid var(--border-soft);
-	display: flex;
-	flex-direction: column;
-	gap: 8px;
-}
-.tr-f h4,
 .tp-s h4 {
 	font-size: 12px;
 	font-weight: 600;
 	color: var(--t3);
-}
-.tchk {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	color: var(--t2);
-	cursor: pointer;
-}
-.tchk input {
-	accent-color: var(--accent);
-	width: 14px;
-	height: 14px;
-	margin: 0;
-}
-
-.tmain {
-	min-width: 0;
-}
-.tbar .tsearch {
-	flex: 1;
-	width: auto;
-	min-width: 200px;
-	max-width: 420px;
-}
-.tbar .tsearch kbd {
-	margin-left: 0;
-}
-.tgh {
-	display: flex;
-	align-items: baseline;
-	gap: 8px;
-	padding: 18px 2px 8px;
-}
-.tbar + .tgh {
-	padding-top: 6px;
-}
-.tgh h2 {
-	font-size: 13px;
-	font-weight: 600;
-	color: var(--t1);
-}
-.tgh span {
-	font-size: 12px;
-	color: var(--t4);
-}
-.tlist {
-	border: 1px solid var(--border);
-	border-radius: 10px;
-	background: var(--panel);
-	overflow: hidden;
-}
-.trow {
-	display: flex;
-	align-items: center;
-	gap: 12px;
-	width: 100%;
-	padding: 10px 14px;
-	text-align: left;
-	border-top: 1px solid var(--border-soft);
-	position: relative;
-}
-.trow:first-child {
-	border-top: 0;
-}
-.trow:hover {
-	background: #fafafb;
-}
-.trow:focus-visible {
-	outline-offset: -2px;
-	border-radius: 0;
-}
-.trow .tm {
-	flex: 1;
-	min-width: 0;
-}
-.trow .tm b {
-	display: block;
-	font-weight: 550;
-	color: var(--t1);
-	font-size: 13.5px;
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
-.trow .tm small {
-	display: block;
-	color: var(--t3);
-	font-size: 12.5px;
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
-.trow .tb {
-	height: 17px;
-	font-size: 10.5px;
-	vertical-align: 1px;
-}
-.trow .tx {
-	display: flex;
-	align-items: center;
-	gap: 12px;
-	flex-shrink: 0;
-	color: var(--t4);
-	font-size: 12px;
 }
 .tag-ai {
 	display: inline-flex;
@@ -353,17 +192,6 @@ mark {
 	grid-template-columns: minmax(0, 1fr) 340px;
 	gap: 16px;
 	align-items: start;
-}
-.tdg2 {
-	display: grid;
-	grid-template-columns: 1fr 1fr;
-	gap: 16px;
-}
-@media (max-width: 1100px) {
-	.tdg,
-	.tdg2 {
-		grid-template-columns: 1fr;
-	}
 }
 .steps-ol {
 	list-style: none;

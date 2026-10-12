@@ -177,3 +177,97 @@ export function formatUpdated(iso: string | null): string {
 		? '—'
 		: d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 }
+
+/** The gallery's category order (the mockup's CATS); others follow alphabetically. */
+const CATEGORY_ORDER = [
+	'Patient Services',
+	'Advanced Therapies',
+	'Commercial Operations',
+	'Traceability & Supply Chain',
+	'Compliance & Quality',
+	'Regulatory Affairs',
+	'Medical Affairs',
+	'Clinical Operations',
+	'Market Access',
+	'Cross-functional',
+];
+
+export function orderedCategories(all: TemplateSummary[]): Array<[name: string, count: number]> {
+	const rank = (c: string) => {
+		const i = CATEGORY_ORDER.indexOf(c);
+		return i < 0 ? CATEGORY_ORDER.length : i;
+	};
+	return categories(all).sort((a, b) => rank(a[0]) - rank(b[0]) || a[0].localeCompare(b[0]));
+}
+
+/** Three to feature: the most used, then the most complete catalogue entries. */
+export function featured(all: TemplateSummary[], n = 3): TemplateSummary[] {
+	const richness = (t: TemplateSummary) =>
+		(t.catalogue.workflows?.length ?? 0) + (t.catalogue.roles?.length ?? 0);
+	return [...all]
+		.filter((t) => !t.is_beta)
+		.sort(
+			(a, b) =>
+				b.apps_using - a.apps_using ||
+				richness(b) - richness(a) ||
+				a.name.localeCompare(b.name),
+		)
+		.slice(0, n);
+}
+
+const STOP = new Set(
+	'a an and are as at be by for from has have in into is it its of on or our that the their them they this to we when where which who will with want need app apps system track manage build'.split(
+		' ',
+	),
+);
+
+export interface Match {
+	template: TemplateSummary;
+	score: number;
+	/** What in the template the description touched: workflow and role names. */
+	workflows: string[];
+	roles: string[];
+}
+
+/** Templates ranked against a free-text description of what someone wants to build. */
+export function describeMatches(all: TemplateSummary[], text: string, n = 3): Match[] {
+	const words = [
+		...new Set(
+			text
+				.toLowerCase()
+				.split(/[^a-z0-9]+/)
+				.filter((w) => w.length > 2 && !STOP.has(w)),
+		),
+	];
+	if (!words.length) return [];
+	const stem = (w: string) => w.replace(/(ies|es|s|ing|ed)$/, '');
+	const hit = (hay: string) => words.some((w) => hay.toLowerCase().includes(stem(w)));
+	return all
+		.map((t) => {
+			const c = t.catalogue;
+			const fields: Array<[string, number]> = [
+				[t.name, 4],
+				[(c.aka ?? []).join(' '), 3],
+				[t.one_liner + ' ' + (c.description ?? ''), 1.5],
+				[(c.fits_when ?? []).join(' '), 1.5],
+				[(c.workflows ?? []).map((w) => w.name + ' ' + (w.description ?? '')).join(' '), 2],
+				[(c.roles ?? []).map((r) => r.name).join(' '), 1],
+				[(c.data_objects ?? []).join(' '), 1],
+				[t.category, 0.5],
+			];
+			let score = 0;
+			for (const w of words) {
+				const s = stem(w);
+				for (const [hay, weight] of fields) if (hay.toLowerCase().includes(s)) score += weight;
+			}
+			return {
+				template: t,
+				score,
+				workflows: (c.workflows ?? []).map((w) => w.name).filter(hit).slice(0, 3),
+				roles: (c.roles ?? []).map((r) => r.name).filter(hit).slice(0, 2),
+			};
+		})
+		.filter((m) => m.score > 0)
+		.sort((a, b) => b.score - a.score || b.template.apps_using - a.template.apps_using)
+		.slice(0, n);
+}
