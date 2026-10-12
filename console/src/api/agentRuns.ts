@@ -22,6 +22,63 @@ export interface RunSummary {
 	total_cost_usd: string | null;
 	num_turns: number | null;
 	requires_restart: boolean;
+	/** App Studio builds: a compact count of the checks, when the list serializer provides it. */
+	checks?: ChecksSummary | null;
+}
+
+export interface ChecksSummary {
+	passed: number;
+	failed: number;
+	not_verified: number;
+	total: number;
+}
+
+/** Something only the user can do before a paused (`waiting`) build can go on. */
+export interface PendingAction {
+	id: string;
+	kind: 'hosts_entry' | 'install_playwright' | string;
+	title: string;
+	detail: string;
+	/** A shell command to copy, or "". */
+	command: string;
+	/** The steps or checks it blocks. */
+	blocks: string[];
+	/** Set on a refused continue: why the fix isn't detected yet. */
+	still_failing_reason?: string;
+}
+
+export type LayerName =
+	'app_shell' | 'audit_holes' | 'design_lint' | 'api' | 'ui' | 'design' | 'scenarios';
+
+export interface CheckFailure {
+	id: string;
+	title?: string;
+	role?: string;
+	spec_path?: string;
+	detail?: string;
+}
+
+export interface CheckLayer {
+	status: 'pass' | 'fail' | 'skip';
+	counts?: { pass?: number; fail?: number; skip?: number };
+	failures?: CheckFailure[];
+	reason?: string;
+}
+
+/** An App Studio build's checks (AgentRun.studio_report as the run detail exposes it). */
+export interface StudioReport {
+	ok: boolean;
+	bring_up_ok: boolean;
+	frontend?: boolean;
+	frontend_reason?: string;
+	verdict?: string;
+	not_verified?: string[];
+	rounds?: number;
+	skipped?: Array<{ layer: string; reason: string }>;
+	layers?: Partial<Record<LayerName | string, CheckLayer>>;
+	report?: { summary_md?: string; md_path?: string; html_path?: string; verdict?: string };
+	/** The full HTML report (runs/<run>/report.html), or null when none was written. */
+	html_url?: string | null;
 }
 
 export interface TestUser {
@@ -80,6 +137,8 @@ export interface RunDetail extends RunSummary {
 	post_steps: PostStep[] | null;
 	test_users: TestUser[] | null;
 	can_resume: boolean;
+	pending_actions?: PendingAction[] | null;
+	report?: StudioReport | null;
 	restart_hint?: string;
 	app_access?: { domain: string; url: string; path: string };
 }
@@ -231,4 +290,63 @@ export function useResumeRun(
 			toast.error(err.message);
 		},
 	});
+}
+
+/**
+ * Go on with a build that paused for the user (`waiting`). `skip` finishes without the blocked
+ * checks. A 409 that lists `pending_actions` means the fix isn't detected yet; the error's
+ * `actions` carry the reason per action.
+ */
+export class ContinueRefused extends Error {
+	constructor(
+		message: string,
+		readonly actions: PendingAction[],
+	) {
+		super(message);
+	}
+}
+
+export function useContinueRun(appId: string, runId: string, onContinued?: () => void) {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: async (skip: boolean) => {
+			try {
+				return await api<{ status: RunStatus }>(`${base(appId)}/runs/${runId}/continue/`, 'POST', {
+					skip,
+				});
+			} catch (err) {
+				if (err instanceof ApiError && err.status === 409) {
+					const body = (
+						err.body as { response?: { message?: string; pending_actions?: PendingAction[] } }
+					)?.response;
+					throw new ContinueRefused(body?.message || err.message, body?.pending_actions ?? []);
+				}
+				throw err;
+			}
+		},
+		onSuccess: async () => {
+			await Promise.all([
+				qc.invalidateQueries({ queryKey: agentKeys.run(appId, runId) }),
+				qc.invalidateQueries({ queryKey: agentKeys.runs(appId) }),
+				qc.invalidateQueries({ queryKey: agentKeys.all(appId) }),
+			]);
+			onContinued?.();
+		},
+	});
+}
+
+/** "6/7 passed · 1 not verified", from a run's report or the list's compact counts. */
+export function checksOf(
+	source: StudioReport | ChecksSummary | null | undefined,
+): ChecksSummary | null {
+	if (!source) return null;
+	if ('total' in source) return source;
+	const layers = Object.values(source.layers ?? {}).filter(Boolean) as CheckLayer[];
+	if (!layers.length) return null;
+	return {
+		total: layers.length,
+		passed: layers.filter((l) => l.status === 'pass').length,
+		failed: layers.filter((l) => l.status === 'fail').length,
+		not_verified: layers.filter((l) => l.status === 'skip').length,
+	};
 }

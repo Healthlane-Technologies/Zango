@@ -491,57 +491,7 @@ def _execute(run, tenant, creds, ws_root, build_app_context) -> dict:
         )
 
         def _drive(agent_stream, run_state) -> dict:
-            """Run one agent stream to its end; returns error fields, or {}."""
-            failure: dict = {}
-            last_abort_check = 0.0
-            for item in agent_stream:
-                if item.kind == "idle":
-                    recorder.flush_if_stale()
-                elif item.kind == "hook":
-                    payload = item.payload or {}
-                    recorder.emit(
-                        EventKind.HOOK_DENY,
-                        payload.get("reason", "blocked by policy"),
-                        level=EventLevel.ERR,
-                        tool_name=payload.get("tool_name", ""),
-                        is_error=True,
-                        data={"tool_input": payload.get("tool_input")},
-                    )
-                elif item.kind == "message":
-                    recorder.set_phase(_phase_for_message(item.payload, recorder.phase))
-                    record_message(item.payload, recorder, run_state)
-                    recorder.flush_if_stale()
-                elif item.kind == "done":
-                    break
-                elif item.kind == "error":
-                    exc = item.payload
-                    failure = {
-                        "error_type": type(exc).__name__[:128],
-                        "error_message": str(exc)[:8000],
-                        "error_traceback": "".join(
-                            traceback.format_exception(type(exc), exc, exc.__traceback__)
-                        )[:20000],
-                    }
-                    recorder.emit(
-                        EventKind.ERROR,
-                        f"{type(exc).__name__}: {exc}",
-                        level=EventLevel.ERR,
-                        is_error=True,
-                    )
-                    break
-
-                now = time.monotonic()
-                if now - last_abort_check >= ABORT_POLL_SECONDS:
-                    last_abort_check = now
-                    if _abort_requested(run.pk):
-                        recorder.emit(
-                            EventKind.SYS,
-                            "Abort requested — interrupting the agent.",
-                            level=EventLevel.WARN,
-                        )
-                        agent_stream.request_stop()
-
-            return failure
+            return _drive_stream(agent_stream, run_state, run=run, recorder=recorder)
 
         extra = _drive(stream, state)
 
@@ -675,7 +625,8 @@ def _execute(run, tenant, creds, ws_root, build_app_context) -> dict:
             is_error=True,
         )
     finally:
-        recorder.set_phase(RunPhase.DONE)
+        if status != RunStatus.WAITING:
+            recorder.set_phase(RunPhase.DONE)
         if stream is not None:
             stream.request_stop()
             stream.join(timeout=15)
@@ -685,8 +636,75 @@ def _execute(run, tenant, creds, ws_root, build_app_context) -> dict:
             logger.exception("agent_mode: failed to apply run state")
         recorder.flush()
 
-    run.finalize(status, **extra)
+    return _conclude(run, status, extra, recorder)
+
+
+def _conclude(run, status, extra, recorder) -> dict:
+    """Finalize the run — or park it, when the build is waiting for the user."""
+    from .models import RunStatus
+
+    if status == RunStatus.WAITING:
+        run.pause(extra.get("pending_actions") or [], extra.get("studio_checkpoint") or {})
+    else:
+        run.finalize(status, **extra)
     return {"status": run.status, "events": recorder.seq}
+
+
+def _drive_stream(agent_stream, run_state, *, run, recorder) -> dict:
+    """Run one agent stream to its end; returns error fields, or {}."""
+    from .mapper import record_message
+    from .models import EventKind, EventLevel
+
+    failure: dict = {}
+    last_abort_check = 0.0
+    for item in agent_stream:
+        if item.kind == "idle":
+            recorder.flush_if_stale()
+        elif item.kind == "hook":
+            payload = item.payload or {}
+            recorder.emit(
+                EventKind.HOOK_DENY,
+                payload.get("reason", "blocked by policy"),
+                level=EventLevel.ERR,
+                tool_name=payload.get("tool_name", ""),
+                is_error=True,
+                data={"tool_input": payload.get("tool_input")},
+            )
+        elif item.kind == "message":
+            recorder.set_phase(_phase_for_message(item.payload, recorder.phase))
+            record_message(item.payload, recorder, run_state)
+            recorder.flush_if_stale()
+        elif item.kind == "done":
+            break
+        elif item.kind == "error":
+            exc = item.payload
+            failure = {
+                "error_type": type(exc).__name__[:128],
+                "error_message": str(exc)[:8000],
+                "error_traceback": "".join(
+                    traceback.format_exception(type(exc), exc, exc.__traceback__)
+                )[:20000],
+            }
+            recorder.emit(
+                EventKind.ERROR,
+                f"{type(exc).__name__}: {exc}",
+                level=EventLevel.ERR,
+                is_error=True,
+            )
+            break
+
+        now = time.monotonic()
+        if now - last_abort_check >= ABORT_POLL_SECONDS:
+            last_abort_check = now
+            if _abort_requested(run.pk):
+                recorder.emit(
+                    EventKind.SYS,
+                    "Abort requested — interrupting the agent.",
+                    level=EventLevel.WARN,
+                )
+                agent_stream.request_stop()
+
+    return failure
 
 
 def _finish_classic(*, run, tenant, ctx, changes, recorder):
@@ -855,8 +873,16 @@ def _finish_studio(
     baseline_manifest,
     service_account,
     rounds,
+    checkpoint=None,
+    skip=False,
+    prior_steps=(),
 ):
-    """After an App Studio build's agent turn: the platform's half of the skill. (status, extra)."""
+    """After an App Studio build's agent turn: the platform's half of the skill. (status, extra).
+
+    ``checkpoint`` continues a build that paused for the user (``skip``:
+    without the checks it was waiting to run); ``prior_steps`` are the steps
+    recorded before the pause. The status is WAITING when the build pauses.
+    """
     from .models import EventKind, EventLevel, RunPhase, RunStatus
     from .postrun import requires_restart
     from .snapshot import diff_manifest, workspace_manifest
@@ -880,18 +906,20 @@ def _finish_studio(
             recorder.set_phase(RunPhase.APPLYING)
         return not failure and not fix_state.get("is_error")
 
+    more = {"checkpoint": checkpoint, "skip": skip} if checkpoint is not None else {}
     try:
         with service_account(tenant) as platform_creds:
             outcome = studio.finish(
-                platform_creds, resume_agent=resume_agent, rounds=rounds, emit=emit
+                platform_creds, resume_agent=resume_agent, rounds=rounds, emit=emit, **more
             )
     finally:
-        run.post_steps = [r.to_dict() for r in studio.steps]
+        run.post_steps = [*prior_steps, *(r.to_dict() for r in studio.steps)]
         run.save(update_fields=["post_steps", "modified_at"])
 
-    changes = diff_manifest(baseline_manifest, workspace_manifest(studio.workspace))
-    run.files_changed = changes.to_dict()
-    run.requires_restart = requires_restart(changes)
+    if baseline_manifest is not None:
+        changes = diff_manifest(baseline_manifest, workspace_manifest(studio.workspace))
+        run.files_changed = changes.to_dict()
+        run.requires_restart = requires_restart(changes)
     run.test_users = studio.test_users() or None
     skipped = [
         {"layer": name, "reason": layer.reason}
@@ -920,6 +948,22 @@ def _finish_studio(
             "modified_at",
         ]
     )
+
+    if getattr(outcome, "waiting", False):
+        # The worker is released; `continue` picks the build up from here.
+        titles = "; ".join(a.get("title", "") for a in outcome.pending_actions)
+        recorder.emit(
+            EventKind.SYS,
+            f"Waiting for you: {titles}. Everything that does not depend on it has run; "
+            "the build continues from here when you say it is done.",
+            level=EventLevel.WARN,
+            data={"pending_actions": outcome.pending_actions},
+        )
+        saved = _save_baseline(studio.run_dir, baseline_manifest)
+        return RunStatus.WAITING, {
+            "pending_actions": outcome.pending_actions,
+            "studio_checkpoint": {**(outcome.checkpoint or {}), "baseline": saved},
+        }
 
     def counts(layer):
         c = layer.counts or {}
@@ -985,6 +1029,207 @@ def _finish_studio(
     return RunStatus.PARTIAL, {"error_type": "StudioChecksFailed", "error_message": message[:8000]}
 
 
+def _save_baseline(run_dir: str, manifest) -> str:
+    """Keep the pre-agent file manifest beside the run, so a continuation can still diff."""
+    import json
+
+    if manifest is None:
+        return ""
+    path = os.path.join(run_dir, "baseline_manifest.json")
+    try:
+        os.makedirs(run_dir, exist_ok=True)
+        with open(path, "w", encoding="utf-8") as fh:
+            json.dump(manifest, fh)
+    except Exception:  # noqa: BLE001 - the diff is a nicety, never worth failing a build
+        logger.exception("agent_mode: could not save the baseline manifest")
+        return ""
+    return path
+
+
+def _load_baseline(path: str):
+    import json
+
+    if not path or not os.path.isfile(path):
+        return None
+    try:
+        with open(path, encoding="utf-8") as fh:
+            return json.load(fh)
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _state_from_run(run) -> dict:
+    """The stream state a continuation starts from: the run's session and its totals so far."""
+    state = {
+        "session_id": run.session_id or "",
+        "result_subtype": run.result_subtype,
+        "terminal_reason": run.terminal_reason,
+        "result_text": run.result_text,
+        "num_turns": run.num_turns,
+        "duration_api_ms": run.duration_api_ms,
+        "api_error_status": run.api_error_status,
+        "tool_use_counts": dict(run.tool_use_counts or {}),
+        "model_usage": run.model_usage,
+    }
+    if run.total_cost_usd is not None:
+        state["total_cost_usd"] = float(run.total_cost_usd)
+    for key in ("input_tokens", "output_tokens", "cache_read_tokens", "cache_creation_tokens"):
+        if getattr(run, key) is not None:
+            state[key] = getattr(run, key)
+    return state
+
+
+@shared_task(bind=True, name="zango.agent_mode.agent_run_continue")
+def agent_run_continue(self, run_uuid: str, tenant_name: str, skip: bool = False) -> dict:
+    """Go on with an App Studio build that paused for the user.
+
+    Runs only what the pause held back — the AppBuilder routes, the checks
+    that need the app or a browser — then fix rounds (resuming the agent's
+    session), the report and the usual outcome. ``skip`` finishes without
+    them, recorded as skipped by the user.
+    """
+    from zango.apps.shared.tenancy.models import TenantModel
+
+    from .context import build_app_context, workspaces_root
+    from .credentials import resolve_credentials
+    from .models import AgentRun, RunStatus
+
+    creds = resolve_credentials()  # public-schema read, before set_tenant
+    tenant = TenantModel.objects.get(name=tenant_name)
+    connection.set_tenant(tenant)
+    try:
+        run = AgentRun.objects.get(object_uuid=run_uuid)
+    except AgentRun.DoesNotExist:
+        logger.error("agent_mode: run %s not found in %s", run_uuid, tenant_name)
+        return {"status": "missing"}
+    if run.status != RunStatus.SYNCING or not run.studio_checkpoint:
+        return {"status": run.status}
+
+    run.celery_task_id = (self.request.id or "")[:64]
+    run.save(update_fields=["celery_task_id", "modified_at"])
+    return _continue(run, tenant, creds, workspaces_root(), build_app_context, skip=skip)
+
+
+def _continue(run, tenant, creds, ws_root, build_app_context, *, skip=False) -> dict:
+    from django.conf import settings as dj
+
+    from .config import load_config
+    from .models import AgentRunEvent, EventKind, EventLevel, RunPhase, RunStatus
+    from .recorder import EventRecorder
+    from .settings_writer import write_run_settings
+    from .studio_build import StudioBuild, StudioError, fix_rounds, service_account
+    from .template_build import TemplateBuild
+
+    checkpoint = dict(run.studio_checkpoint or {})
+    last_seq = (
+        AgentRunEvent.objects.filter(run_id=run.id).order_by("-seq").values_list("seq", flat=True).first()
+    ) or 0
+    recorder = EventRecorder(run, start_seq=last_seq)
+    recorder.set_phase(RunPhase.APPLYING)
+    levels = {"sys": EventLevel.SYS, "warn": EventLevel.WARN, "err": EventLevel.ERR}
+
+    def emit(kind, message, *, level="info", is_error=False, data=None):
+        recorder.emit(
+            kind, message, level=levels.get(level, EventLevel.INFO), is_error=is_error, data=data
+        )
+        recorder.flush_if_stale(0.5)
+
+    state = _state_from_run(run)
+    status = RunStatus.FAILED
+    extra: dict = {}
+    try:
+        ctx = build_app_context(tenant)
+        studio = StudioBuild.from_checkpoint(checkpoint)
+        recorder.emit(
+            EventKind.SYS,
+            "Continuing the build"
+            + (" without the checks it was waiting to run." if skip else " from where it paused."),
+            level=EventLevel.SYS,
+        )
+
+        # Fix rounds resume the agent's session; that needs the same options a build has.
+        requirement = getattr(run, "requirement", None)
+        template = requirement.template if requirement is not None and requirement.template_slug else None
+        template_build = (
+            TemplateBuild(template=template, spec_path=run.spec_path or studio.spec_path)
+            if template is not None
+            else None
+        )
+        agent_cfg = load_config()
+        settings_path = write_run_settings(
+            run_dir=studio.run_dir,
+            workspace_path=ctx.workspace_path,
+            workspaces_root=ws_root,
+            base_dir=str(dj.BASE_DIR),
+            project_name=os.path.basename(str(dj.BASE_DIR)),
+        )
+
+        def new_stream(digest):
+            if template_build is None:
+                recorder.emit(
+                    EventKind.SYS,
+                    "The template behind this build no longer loads; no fix round.",
+                    level=EventLevel.WARN,
+                )
+                return None
+            return _resume_stream(
+                digest, run, ctx, creds, settings_path, template_build, state, agent_cfg, recorder
+            )
+
+        status, extra = _finish_studio(
+            run=run,
+            tenant=tenant,
+            studio=studio,
+            state=state,
+            recorder=recorder,
+            emit=emit,
+            drive=lambda agent_stream, run_state: _drive_stream(
+                agent_stream, run_state, run=run, recorder=recorder
+            ),
+            new_stream=new_stream,
+            baseline_manifest=_load_baseline(checkpoint.get("baseline", "")),
+            service_account=service_account,
+            rounds=fix_rounds(),
+            checkpoint=checkpoint,
+            skip=skip,
+            prior_steps=list(run.post_steps or []),
+        )
+    except StudioError as exc:
+        status = RunStatus.FAILED
+        extra = {"error_type": exc.error_type[:128], "error_message": str(exc)[:8000]}
+        recorder.emit(
+            EventKind.ERROR, f"{exc.error_type}: {str(exc)[:2000]}", level=EventLevel.ERR, is_error=True
+        )
+    except SoftTimeLimitExceeded:
+        status = RunStatus.TIMEOUT
+        extra = {
+            "error_type": "SoftTimeLimitExceeded",
+            "error_message": "The run exceeded its time limit.",
+        }
+        recorder.emit(EventKind.ERROR, "Run timed out.", level=EventLevel.ERR, is_error=True)
+    except Exception as exc:  # noqa: BLE001
+        status = RunStatus.FAILED
+        extra = {
+            "error_type": type(exc).__name__[:128],
+            "error_message": str(exc)[:8000],
+            "error_traceback": traceback.format_exc()[:20000],
+        }
+        logger.exception("agent_mode: continuing run %s failed", run.object_uuid)
+        recorder.emit(
+            EventKind.ERROR, f"{type(exc).__name__}: {exc}", level=EventLevel.ERR, is_error=True
+        )
+    finally:
+        if status != RunStatus.WAITING:
+            recorder.set_phase(RunPhase.DONE)
+        try:
+            _apply_state(run, state)
+        except Exception:  # noqa: BLE001
+            logger.exception("agent_mode: failed to apply run state")
+        recorder.flush()
+
+    return _conclude(run, status, extra, recorder)
+
+
 @shared_task(name="zango.agent_mode.sweep_stuck_agent_runs")
 def sweep_stuck_agent_runs() -> dict:
     """Reap runs whose worker died, and runs stranded with no worker at all."""
@@ -992,6 +1237,7 @@ def sweep_stuck_agent_runs() -> dict:
 
     from django.conf import settings as dj
     from django.db import connection as conn
+    from django.db.models import Q
 
     from zango.apps.shared.tenancy.models import TenantModel
 
@@ -1025,8 +1271,12 @@ def sweep_stuck_agent_runs() -> dict:
                 )
                 reaped += 1
 
+            # WAITING is not in ACTIVE_STATUSES: it has no worker and may sit
+            # for as long as the user takes. A continued run is measured from
+            # when it was picked up again, not from when it first started.
             stale = AgentRun.objects.filter(status__in=list(ACTIVE_STATUSES)).filter(
-                started_at__lt=running_cutoff
+                Q(resumed_at__isnull=True, started_at__lt=running_cutoff)
+                | Q(resumed_at__lt=running_cutoff)
             ) | AgentRun.objects.filter(
                 status=RunStatus.QUEUED, queued_at__lt=queued_cutoff
             )

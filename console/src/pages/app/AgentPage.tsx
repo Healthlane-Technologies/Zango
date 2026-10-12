@@ -204,7 +204,7 @@ export function AgentPage() {
 
 	const blocked = availability ? !availability.available : false;
 	const open = active?.status === 'gathering' || active?.status === 'ready';
-	const { stage, failed } = stageOf(active);
+	const { stage, failed, waiting: buildWaiting } = stageOf(active);
 	const stageIdx = activeRound ? STAGES.findIndex(([k]) => k === stage) : -1;
 	const lastAssistant = [...(active?.messages ?? [])].reverse().find((m) => m.role === 'assistant');
 	const openQuestions = open && !active?.is_thinking ? (lastAssistant?.questions.length ?? 0) : 0;
@@ -444,6 +444,7 @@ export function AgentPage() {
 										i < stageIdx && 'done',
 										i === stageIdx && 'cur',
 										i === stageIdx && failed && 'bad',
+										i === stageIdx && k === 'build' && buildWaiting && 'wait',
 									)}
 									aria-current={i === stageIdx ? 'step' : undefined}
 								>
@@ -452,7 +453,11 @@ export function AgentPage() {
 									) : i === stageIdx ? (
 										<i className="cd" />
 									) : null}
-									{k === 'build' && failed ? 'Build failed' : label}
+									{k === 'build' && failed
+										? 'Build failed'
+										: k === 'build' && buildWaiting && i === stageIdx
+											? 'Waiting for you'
+											: label}
 								</span>
 							</Fragment>
 						);
@@ -460,6 +465,21 @@ export function AgentPage() {
 				</div>
 				<div className="r">{actions}</div>
 			</div>
+
+			{buildWaiting && tab !== 'builds' && (
+				<div className="ws-alert" role="status">
+					<Icon name="alert" className="mt-[2px]" />
+					<div className="flex flex-1 flex-wrap items-center gap-x-3 gap-y-1">
+						<span>
+							<b className="font-[550]">The build is waiting for you.</b> It paused for something
+							only you can do, and continues once that is done.
+						</span>
+						<Button size="xs" onClick={() => setView({ round: null, tab: 'builds' })}>
+							See what's needed
+						</Button>
+					</div>
+				</div>
+			)}
 
 			{blocked && availability && (
 				<div className="ws-alert" role="status">
@@ -552,6 +572,7 @@ export function AgentPage() {
 									label: 'Builds',
 									count: viewed?.summary.run_count || undefined,
 									disabled: !viewed,
+									attention: viewed?.detail?.runs[0]?.status === 'waiting',
 								},
 							]}
 						/>

@@ -62,6 +62,12 @@
 .ws .stepline span.cur.bad .cd {
 	background: var(--red);
 }
+.ws .stepline span.cur.wait {
+	color: var(--amber-t);
+}
+.ws .stepline span.cur.wait .cd {
+	background: var(--amber);
+}
 .ws .stepline .ar {
 	color: var(--border-2);
 }

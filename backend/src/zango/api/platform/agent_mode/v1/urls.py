@@ -13,9 +13,11 @@ from .views import (
     AgentRequirementSpecValidateView,
     AgentRequirementSpecView,
     AgentRunAbortView,
+    AgentRunContinueView,
     AgentRunDetailView,
     AgentRunEventTailView,
     AgentRunListCreateView,
+    AgentRunReportView,
     AgentRunResumeView,
 )
 
@@ -63,4 +65,6 @@ urlpatterns = [
     path("runs/<uuid:run_uuid>/event-tail/", AgentRunEventTailView.as_view()),
     path("runs/<uuid:run_uuid>/abort/", AgentRunAbortView.as_view()),
     path("runs/<uuid:run_uuid>/resume/", AgentRunResumeView.as_view()),
+    path("runs/<uuid:run_uuid>/continue/", AgentRunContinueView.as_view()),
+    path("runs/<uuid:run_uuid>/report.html", AgentRunReportView.as_view()),
 ]

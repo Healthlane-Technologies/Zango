@@ -84,7 +84,10 @@ export function useRunTail(
 			sawLive = true;
 			timer = setTimeout(
 				poll,
-				isRunActive(r.status) && r.status !== 'queued' ? POLL_RUNNING_MS : POLL_QUEUED_MS,
+				// Queued and waiting-for-the-user runs change nothing by themselves.
+				isRunActive(r.status) && r.status !== 'queued' && r.status !== 'waiting'
+					? POLL_RUNNING_MS
+					: POLL_QUEUED_MS,
 			);
 		};
 		poll();

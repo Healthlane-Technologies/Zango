@@ -305,3 +305,268 @@
 	font-family: var(--mono);
 	font-size: 11px;
 }
+
+/* Checks (App Studio builds) and the paused-for-you state. */
+.rp-okc.wait {
+	background: var(--amber);
+}
+.rp-steps li.wait .n {
+	background: var(--amber-soft);
+	border-color: var(--amber);
+	color: var(--amber-t);
+}
+.rp-steps li.wait small {
+	color: var(--amber-t);
+}
+.rc-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	height: 20px;
+	padding: 0 7px;
+	border-radius: 999px;
+	border: 1px solid var(--border);
+	background: var(--panel);
+	font-size: 11.5px;
+	font-weight: 500;
+	color: var(--t2);
+	white-space: nowrap;
+	font-variant-numeric: tabular-nums;
+}
+.rc-chip.ok svg {
+	color: var(--green);
+}
+.rc-chip.warn {
+	border-color: #fde68a;
+	background: var(--amber-soft);
+	color: var(--amber-t);
+}
+.rc-chip.bad {
+	border-color: #fecaca;
+	background: var(--red-soft);
+	color: var(--red-t);
+}
+button.rc-chip:hover {
+	border-color: var(--border-2);
+}
+.rc-verdict {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	padding: 10px 12px;
+	border-radius: 8px;
+	font-size: 12.5px;
+	line-height: 1.5;
+}
+.rc-verdict b {
+	display: block;
+	font-weight: 600;
+}
+.rc-verdict .rc-vd {
+	margin-left: 8px;
+	font-weight: 400;
+	opacity: 0.8;
+}
+.rc-verdict.ok {
+	background: var(--green-soft);
+	color: var(--green-t);
+}
+.rc-verdict.warn {
+	background: var(--amber-soft);
+	color: var(--amber-t);
+}
+.rc-verdict.bad {
+	background: var(--red-soft);
+	color: var(--red-t);
+}
+.rc-list {
+	border: 1px solid var(--border);
+	border-radius: 10px;
+	overflow: hidden;
+}
+.rc-row {
+	border-bottom: 1px solid var(--border-soft);
+}
+.rc-row:last-child {
+	border-bottom: 0;
+}
+.rc-line {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 9px 12px;
+	font-size: 12.5px;
+}
+.rc-line b {
+	display: block;
+	font-weight: 550;
+	color: var(--t1);
+}
+.rc-line small {
+	display: block;
+	font-size: 12px;
+	color: var(--t3);
+	line-height: 1.45;
+}
+.rc-row.skip .rc-line b {
+	color: var(--t2);
+}
+.rc-dot {
+	width: 18px;
+	height: 18px;
+	border-radius: 50%;
+	display: grid;
+	place-items: center;
+	flex: none;
+	color: #fff;
+	background: var(--green);
+}
+.rc-dot.fail {
+	background: var(--red);
+}
+.rc-dot.skip {
+	background: var(--subtle);
+	color: var(--t3);
+	border: 1px dashed var(--border-2);
+}
+.rc-ct {
+	font-size: 12px;
+	color: var(--t3);
+	white-space: nowrap;
+	font-variant-numeric: tabular-nums;
+}
+.rc-more {
+	font-size: 12px;
+	font-weight: 500;
+	color: var(--red-t);
+	white-space: nowrap;
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
+.rc-fails {
+	display: grid;
+	gap: 10px;
+	padding: 4px 12px 12px 40px;
+	font-size: 12.5px;
+}
+.rc-fails b {
+	font-weight: 550;
+	color: var(--t1);
+}
+.rc-detail {
+	margin-top: 4px;
+	padding: 8px 10px;
+	border-radius: 6px;
+	border: 1px solid var(--border-soft);
+	background: var(--bg);
+	font-family: var(--mono);
+	font-size: 11px;
+	line-height: 1.55;
+	color: var(--t2);
+	white-space: pre-wrap;
+	word-break: break-word;
+	max-height: 180px;
+	overflow: auto;
+}
+.rc-frame {
+	display: block;
+	width: 100%;
+	height: calc(100vh - 110px);
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	background: #fff;
+}
+.rc-act {
+	border: 1px solid #fde68a;
+	border-radius: 10px;
+	background: var(--amber-soft);
+	overflow: hidden;
+}
+.rc-act-h {
+	display: flex;
+	align-items: baseline;
+	flex-wrap: wrap;
+	gap: 4px 8px;
+	padding: 10px 14px;
+	color: var(--amber-t);
+	font-size: 12.5px;
+	line-height: 1.5;
+}
+.rc-act-h svg {
+	align-self: center;
+}
+.rc-act-h b {
+	font-size: 13px;
+	font-weight: 600;
+}
+.rc-act-l {
+	display: grid;
+	gap: 1px;
+	background: #fde68a;
+	border-top: 1px solid #fde68a;
+	border-bottom: 1px solid #fde68a;
+}
+.rc-act-l > li {
+	background: var(--panel);
+	padding: 12px 14px;
+	font-size: 12.5px;
+	line-height: 1.5;
+	display: grid;
+	gap: 6px;
+}
+.rc-act-l > li > b {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--t1);
+}
+.rc-act-l p {
+	color: var(--t2);
+}
+.rc-cmd {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px 6px 6px 10px;
+	border-radius: 8px;
+	border: 1px solid var(--border);
+	background: var(--bg);
+}
+.rc-cmd code {
+	flex: 1;
+	min-width: 0;
+	font-size: 12px;
+	color: var(--t1);
+	white-space: pre-wrap;
+	word-break: break-all;
+}
+.rc-blocks {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 4px;
+	color: var(--t3);
+	font-size: 12px;
+}
+.rc-still {
+	display: flex;
+	align-items: flex-start;
+	gap: 6px;
+	padding: 6px 10px;
+	border-radius: 6px;
+	background: var(--red-soft);
+	color: var(--red-t);
+	font-size: 12px;
+}
+.rc-still svg {
+	margin-top: 3px;
+	flex: none;
+}
+.rc-act > .rc-still {
+	margin: 10px 14px 0;
+}
+.rc-act-f {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	padding: 10px 14px;
+}

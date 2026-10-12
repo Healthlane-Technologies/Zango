@@ -31,6 +31,10 @@ class RunStatus(models.TextChoices):
     RUNNING = "running", "Running"
     # Agent stream finished; the migration/sync pipeline is still running.
     SYNCING = "syncing", "Syncing"
+    # An App Studio build paused for something only the user can do (a hosts
+    # entry, installing Playwright). No worker holds it; ``continue`` picks
+    # it up from its checkpoint. Not terminal: it keeps the app's run slot.
+    WAITING = "waiting", "Waiting for you"
     SUCCESS = "success", "Success"
     # Agent succeeded but a post-run step failed — the most likely outcome
     # worth distinguishing in the UI.
@@ -51,7 +55,9 @@ TERMINAL_STATUSES = frozenset(
     }
 )
 
-# States that hold the single-active-run slot for an app.
+# States a worker should be making progress on (what the stuck-run sweep
+# reaps). WAITING is deliberately absent: it holds the app's run slot through
+# ``is_active`` but has no worker, for as long as the user takes.
 ACTIVE_STATUSES = frozenset({RunStatus.QUEUED, RunStatus.RUNNING, RunStatus.SYNCING})
 
 
@@ -528,6 +534,13 @@ class AgentRun(FullAuditMixin):
     # App Studio builds (studio_build.py): the test layers' outcome, the fix
     # rounds, and the skill's build report (summary + where the HTML is).
     studio_report = models.JSONField(null=True, blank=True)
+    # A WAITING build: what the user has to do ([{id, kind, title, detail,
+    # command, blocks}]) and where the build continues from afterwards.
+    pending_actions = models.JSONField(null=True, blank=True)
+    studio_checkpoint = models.JSONField(null=True, blank=True)
+    # When a paused build was picked up again; the stuck-run sweep measures
+    # from here rather than from ``started_at``.
+    resumed_at = models.DateTimeField(null=True, blank=True)
     requires_restart = models.BooleanField(default=False)
 
     class Meta:
@@ -551,6 +564,15 @@ class AgentRun(FullAuditMixin):
     def is_terminal(self) -> bool:
         return self.status in TERMINAL_STATUSES
 
+    def pause(self, actions: list, checkpoint: dict) -> None:
+        """Park the run until the user has done ``actions``; the slot stays held."""
+        self.status = RunStatus.WAITING
+        self.pending_actions = list(actions or [])
+        self.studio_checkpoint = checkpoint or {}
+        self.save(
+            update_fields=["status", "pending_actions", "studio_checkpoint", "modified_at"]
+        )
+
     def finalize(self, status: str, **fields) -> None:
         """Move the run to a terminal state.
 
@@ -567,11 +589,16 @@ class AgentRun(FullAuditMixin):
             delta = (self.ended_at - self.started_at).total_seconds()
             self.duration_ms = int(delta * 1000)
 
+        # Nothing is pending on a finished run.
+        self.pending_actions = None
+        self.studio_checkpoint = None
         update_fields = {
             "status",
             "is_active",
             "ended_at",
             "duration_ms",
+            "pending_actions",
+            "studio_checkpoint",
             "modified_at",
         }
         for key, value in fields.items():

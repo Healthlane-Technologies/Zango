@@ -17,7 +17,16 @@ import type { TemplateReference } from './templates';
 
 export type RequirementStatus = 'gathering' | 'ready' | 'approved' | 'abandoned';
 export type RunStatus =
-	'queued' | 'running' | 'syncing' | 'success' | 'partial' | 'failed' | 'timeout' | 'aborted';
+	| 'queued'
+	| 'running'
+	| 'syncing'
+	/** Paused for the user (e.g. a hosts entry to add); still the app's active run. */
+	| 'waiting'
+	| 'success'
+	| 'partial'
+	| 'failed'
+	| 'timeout'
+	| 'aborted';
 
 export const TERMINAL_RUN_STATUSES: RunStatus[] = [
 	'success',

@@ -36,7 +36,29 @@ class AgentRunListSerializer(serializers.ModelSerializer):
             "total_cost_usd",
             "num_turns",
             "requires_restart",
+            "checks",
+            "pending_actions",
         )
+
+    checks = serializers.SerializerMethodField()
+    pending_actions = serializers.SerializerMethodField()
+
+    def get_pending_actions(self, obj):
+        """What a WAITING build needs from the user (the history row shows it); [] otherwise."""
+        return list(obj.pending_actions or []) if obj.status == "waiting" else []
+
+    def get_checks(self, obj):
+        """App Studio builds: how many checks passed, failed, or were not verified."""
+        layers = ((obj.studio_report or {}).get("layers") or {}).values()
+        statuses = [layer.get("status") for layer in layers]
+        if not statuses:
+            return None
+        return {
+            "total": len(statuses),
+            "passed": statuses.count("pass"),
+            "failed": statuses.count("fail"),
+            "not_verified": statuses.count("skip"),
+        }
 
 
 class AgentRunDetailSerializer(serializers.ModelSerializer):
@@ -90,6 +112,7 @@ class AgentRunDetailSerializer(serializers.ModelSerializer):
             "post_steps",
             "test_users",
             "report",
+            "pending_actions",
             "requires_restart",
             "can_resume",
             "resumed_from",
@@ -97,21 +120,45 @@ class AgentRunDetailSerializer(serializers.ModelSerializer):
 
     can_resume = serializers.SerializerMethodField()
     report = serializers.SerializerMethodField()
+    pending_actions = serializers.SerializerMethodField()
+
+    def get_pending_actions(self, obj):
+        """What a WAITING build needs from the user; [] otherwise."""
+        return list(obj.pending_actions or []) if obj.status == "waiting" else []
 
     def get_report(self, obj):
-        """An App Studio build's report: summary Markdown, checks, and the HTML's path."""
+        """An App Studio build's checks and report (never the test users or their passwords).
+
+        ``html_url`` is filled in by the detail view, which knows the app.
+        """
         data = obj.studio_report or None
         if not data:
             return None
         report = data.get("report") or {}
+        layers = data.get("layers") or {}
+        skipped = data.get("skipped") or []
         return {
+            "ok": bool(data.get("ok")),
+            "bring_up_ok": bool(data.get("bring_up_ok")),
+            "frontend": bool(data.get("frontend", True)),
+            "frontend_reason": data.get("frontend_reason", ""),
+            "verdict": report.get("verdict", ""),
+            "not_verified": data.get("not_verified") or [s.get("layer") for s in skipped],
+            "rounds": data.get("rounds", 0),
+            "skipped": skipped,
+            "layers": layers,
+            "report": {
+                "summary_md": report.get("summary_md", ""),
+                "md_path": report.get("md_path", ""),
+                "html_path": report.get("html_path", ""),
+                "verdict": report.get("verdict", ""),
+            },
+            "html_url": None,
+            # Kept for older clients.
             "summary_md": report.get("summary_md", ""),
             "html_path": report.get("html_path", ""),
             "md_path": report.get("md_path", ""),
-            "checks": data.get("layers") or {},
-            "skipped": data.get("skipped") or [],
-            "rounds": data.get("rounds", 0),
-            "ok": bool(data.get("ok")),
+            "checks": layers,
         }
 
     def get_can_resume(self, obj):

@@ -30,6 +30,7 @@ const RUN_LABEL: Record<RunStatus, string> = {
 	queued: 'Build queued',
 	running: 'Building',
 	syncing: 'Applying changes',
+	waiting: 'Build waiting for you',
 	success: 'Built',
 	partial: 'Built with sync errors',
 	failed: 'Build failed',
@@ -57,11 +58,17 @@ export const STAGES: Array<[Stage, string]> = [
 ];
 
 /** Where a round has got to, from the requirement status and its latest run. */
-export function stageOf(r: Requirement | undefined): { stage: Stage; failed: boolean } {
+export function stageOf(r: Requirement | undefined): {
+	stage: Stage;
+	failed: boolean;
+	/** The build paused for something only the user can do. */
+	waiting?: boolean;
+} {
 	if (!r || r.status === 'gathering' || r.status === 'ready' || r.status === 'abandoned')
 		return { stage: 'requirements', failed: false };
 	const run = r.runs[0];
 	if (!run) return { stage: 'approved', failed: false };
+	if (run.status === 'waiting') return { stage: 'build', failed: false, waiting: true };
 	if (isRunActive(run.status)) return { stage: 'build', failed: false };
 	if (run.status === 'success' || run.status === 'partial')
 		return { stage: 'built', failed: false };

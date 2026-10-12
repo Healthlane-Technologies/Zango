@@ -417,7 +417,7 @@ class VerifyTests(StudioTestBase):
         with mock.patch.object(studio_build.subprocess, "run", fake), mock.patch.object(
             studio_build, "run_step", manage_stub([])
         ), mock.patch.object(StudioBuild, "app_reachable", return_value=(True, "")), mock.patch.object(
-            StudioBuild, "has_playwright", return_value=False
+            StudioBuild, "has_playwright", return_value=True
         ):
             outcome = build.finish(CREDS, resume_agent=resume, rounds=2)
 
@@ -431,7 +431,7 @@ class VerifyTests(StudioTestBase):
         self.assertNotIn("--only", api_runs[0])
         self.assertEqual(api_runs[1][-2:], ["--only", "transitions"])
         self.assertEqual([c[0] for c in fake.calls].count("zas_test.scenarios"), 1)  # not re-run
-        self.assertIn("ui", outcome.skipped)
+        self.assertFalse(outcome.waiting)
 
     def test_fix_rounds_stop_when_the_agent_cannot_continue(self):
         fake = FakeRun(self.ws, {
@@ -445,7 +445,7 @@ class VerifyTests(StudioTestBase):
         with mock.patch.object(studio_build.subprocess, "run", fake), mock.patch.object(
             studio_build, "run_step", manage_stub([])
         ), mock.patch.object(StudioBuild, "app_reachable", return_value=(True, "")), mock.patch.object(
-            StudioBuild, "has_playwright", return_value=False
+            StudioBuild, "has_playwright", return_value=True
         ):
             outcome = build.finish(CREDS, resume_agent=lambda d: calls.append(d) or False, rounds=2)
         self.assertFalse(outcome.ok)
@@ -715,3 +715,390 @@ class NoFrontendOutcomeTests(FinishStudioTests):
         self.assertEqual(extra["error_type"], "StudioNoFrontend")
         self.assertIn("/app is not served", extra["error_message"])
         self.assertEqual(run.studio_report["not_verified"], ["app_shell"])
+
+
+class WaitingTests(VerifyTests):
+    """A build pauses for what only the user can fix, and continues from its checkpoint."""
+
+    def fake(self):
+        return FakeRun(self.ws, {
+            "zas_test.api": results_writer(self.ws, "api", lambda a: [{"id": "access.order.Manager", "status": "pass"}]),
+            "zas_test.ui": results_writer(self.ws, "ui", lambda a: [{"id": "ui.menu.Manager", "status": "pass"}]),
+            "zas_test.design": results_writer(self.ws, "design", lambda a: [{"id": "design.lint", "status": "pass"}]),
+            "zas_test.scenarios": results_writer(self.ws, "scenarios", lambda a: []),
+        })
+
+    def run_finish(self, build, fake, *, reachable=True, playwright=True, **kw):
+        why = "the app's domain does not answer from the platform (http://demo.local:8000/: URLError)."
+        with mock.patch.object(studio_build.subprocess, "run", fake), mock.patch.object(
+            studio_build, "run_step", manage_stub([])
+        ), mock.patch.object(
+            StudioBuild, "app_reachable", return_value=(reachable, "" if reachable else why)
+        ), mock.patch.object(StudioBuild, "has_playwright", return_value=playwright):
+            return build.finish(CREDS, resume_agent=None, rounds=2, **kw)
+
+    def ready_build(self):
+        (self.ws / ".zas" / "menu_icons.json").write_text("{}")
+        (self.ws / "frontend").mkdir(exist_ok=True)  # an earlier build's frontend: the UI layer runs
+        return self.build(first_build=False, frontend_ready=False)
+
+    def test_an_unreachable_domain_pauses_after_everything_independent_ran(self):
+        fake = self.fake()
+        build = self.ready_build()
+        outcome = self.run_finish(build, fake, reachable=False)
+
+        self.assertTrue(outcome.waiting)
+        action = outcome.pending_actions[0]
+        self.assertEqual(action["kind"], "hosts_entry")
+        self.assertEqual(action["command"], 'echo "127.0.0.1 demo.local" | sudo tee -a /etc/hosts')
+        self.assertIn("demo.local", action["title"])
+        self.assertEqual(action["blocks"], ["platform:appbuilder", "api", "ui", "design", "scenarios"])
+        self.assertNotIn("reason", action)
+
+        ran = [c[0] for c in fake.calls]
+        self.assertIn("platform:check", ran)          # the bring-up before appbuilder ran
+        self.assertNotIn("platform:appbuilder", ran)  # held
+        self.assertIn("spec_check.py --audit-holes", ran)
+        self.assertEqual(ran.count("zas_test.design"), 1)  # the lint only
+        for name in ("zas_test.api", "zas_test.ui", "zas_test.scenarios", "zas_test.report"):
+            self.assertNotIn(name, ran)
+        self.assertEqual(set(outcome.layers), {"app_shell", "audit_holes", "design_lint"})
+        held = next(s for s in build.steps if s.step == "studio:platform:appbuilder")
+        self.assertIn("held until you complete", held.skipped_reason)
+
+        cp = outcome.checkpoint
+        self.assertEqual(cp["held_steps"], ["appbuilder"])
+        self.assertEqual(cp["held_layers"], ["api", "ui", "design", "scenarios"])
+        self.assertEqual(cp["build"]["workspace"], str(self.ws))
+        json.dumps(cp)  # it is stored on the run
+
+    def test_a_remote_platform_gets_a_dns_instruction_and_no_command(self):
+        build = self.build(first_build=False, platform_url="https://console.example.com")
+        with mock.patch.object(StudioBuild, "app_reachable", return_value=(False, "no")), mock.patch.object(
+            StudioBuild, "has_playwright", return_value=True
+        ):
+            (action,) = build.environment_actions()
+        self.assertEqual(action["command"], "")
+        self.assertIn("DNS record", action["detail"])
+
+    def test_missing_playwright_pauses_only_the_browser_checks(self):
+        fake = self.fake()
+        outcome = self.run_finish(self.ready_build(), fake, playwright=False)
+        self.assertTrue(outcome.waiting)
+        (action,) = outcome.pending_actions
+        self.assertEqual(action["kind"], "install_playwright")
+        self.assertIn("-m pip install playwright", action["command"])
+        self.assertEqual(action["blocks"], ["ui", "design"])
+        ran = [c[0] for c in fake.calls]
+        self.assertIn("platform:appbuilder", ran)
+        self.assertIn("zas_test.api", ran)
+        self.assertNotIn("zas_test.ui", ran)
+        self.assertEqual(outcome.checkpoint["held_layers"], ["ui", "design"])
+        self.assertEqual(outcome.checkpoint["held_steps"], [])
+
+    def test_continuing_runs_only_what_was_held_then_finishes(self):
+        first = self.run_finish(self.ready_build(), self.fake(), reachable=False)
+        checkpoint = json.loads(json.dumps(first.checkpoint))
+
+        fake = self.fake()
+        build = StudioBuild.from_checkpoint(checkpoint)
+        self.assertEqual(build.workspace, str(self.ws))
+        outcome = self.run_finish(build, fake, checkpoint=checkpoint)
+
+        self.assertFalse(outcome.waiting)
+        self.assertTrue(outcome.ok, {n: l.to_dict() for n, l in outcome.layers.items()})
+        ran = [c[0] for c in fake.calls]
+        self.assertEqual(
+            [r for r in ran if r != "probe"],
+            ["platform:appbuilder", "zas_test.api", "zas_test.ui", "zas_test.design", "zas_test.scenarios",
+             "zas_test.report"],
+        )
+        self.assertEqual(
+            set(outcome.layers),
+            {"app_shell", "audit_holes", "design_lint", "api", "ui", "design", "scenarios"},
+        )
+        self.assertEqual(outcome.layers["audit_holes"].status, "pass")  # carried over, not re-run
+
+    def test_skipping_finishes_with_those_checks_not_verified(self):
+        first = self.run_finish(self.ready_build(), self.fake(), reachable=False)
+        fake = self.fake()
+        build = StudioBuild.from_checkpoint(first.checkpoint)
+        outcome = self.run_finish(build, fake, reachable=False, checkpoint=first.checkpoint, skip=True)
+
+        self.assertFalse(outcome.waiting)
+        self.assertTrue(outcome.ok)
+        self.assertEqual([c[0] for c in fake.calls if c[0] != "probe"], ["zas_test.report"])
+        for name in ("api", "ui", "design", "scenarios"):
+            self.assertEqual(outcome.layers[name].status, "skip")
+            self.assertIn("skipped by the user: Point demo.local", outcome.layers[name].reason)
+        step = next(s for s in build.steps if s.step == "studio:platform:appbuilder")
+        self.assertIn("skipped by the user", step.skipped_reason)
+
+    def test_a_failed_bring_up_does_not_wait_for_the_user(self):
+        fake = self.fake()
+        build = self.ready_build()
+        with mock.patch.object(studio_build.subprocess, "run", fake), mock.patch.object(
+            studio_build, "run_step", manage_stub([], fail="studio:ws_migrate")
+        ), mock.patch.object(StudioBuild, "app_reachable", return_value=(False, "no answer")), mock.patch.object(
+            StudioBuild, "has_playwright", return_value=True
+        ):
+            outcome = build.finish(CREDS, resume_agent=None, rounds=2)
+        self.assertFalse(outcome.waiting)
+        self.assertFalse(outcome.bring_up_ok)
+        self.assertEqual(outcome.layers["api"].status, "skip")
+
+    def test_still_failing_names_what_is_not_done_yet(self):
+        pending = [{"id": "hosts_entry", "kind": "hosts_entry", "title": "Point demo.local at this server"}]
+        build = self.build()
+        with mock.patch.object(StudioBuild, "app_reachable", return_value=(False, "demo.local: URLError")), \
+                mock.patch.object(StudioBuild, "has_playwright", return_value=True):
+            (missing,) = build.still_failing(pending)
+        self.assertEqual(missing["still_failing_reason"], "demo.local: URLError")
+        with mock.patch.object(StudioBuild, "app_reachable", return_value=(True, "")), \
+                mock.patch.object(StudioBuild, "has_playwright", return_value=True):
+            self.assertEqual(self.build().still_failing(pending), [])
+
+
+class WaitingRunTests(StudioTestBase):
+    """How a paused build is recorded, continued, served and left alone by the sweep."""
+
+    def waiting_outcome(self):
+        from zango.apps.agent_mode.studio_build import LayerResult, StudioOutcome
+
+        action = {"id": "hosts_entry", "kind": "hosts_entry", "title": "Point demo.local at this server",
+                  "detail": "…", "command": "echo …", "blocks": ["platform:appbuilder", "api"]}
+        return StudioOutcome(
+            ok=False, bring_up_ok=True, rounds=0, report={},
+            layers={"audit_holes": LayerResult(name="audit_holes", counts={"pass": 1})},
+            pending_actions=[action],
+            checkpoint={"build": {}, "layers": {}, "rounds": 0, "held_steps": ["appbuilder"],
+                        "held_layers": ["api"], "actions": [action]},
+        )
+
+    def finish(self, outcome, **kw):
+        from zango.apps.agent_mode import tasks
+        from zango.apps.agent_mode.snapshot import workspace_manifest
+
+        run = SimpleNamespace(pk=1, save=lambda update_fields=None: None)
+        build = self.build(frontend_ready=True)
+        build.steps = [StepResult(step="studio:platform:appbuilder", returncode=0)]
+        build.finish = mock.Mock(return_value=outcome)
+        recorder = mock.Mock()
+
+        @contextlib.contextmanager
+        def account(tenant):
+            yield dict(CREDS)
+
+        with mock.patch.object(tasks, "_abort_requested", return_value=False):
+            status, extra = tasks._finish_studio(
+                run=run, tenant=None, studio=build, state={}, recorder=recorder,
+                emit=lambda *a, **k: None, drive=None, new_stream=lambda d: None,
+                baseline_manifest=kw.pop("baseline", workspace_manifest(str(self.ws))),
+                service_account=account, rounds=2, **kw,
+            )
+        return run, build, recorder, status, extra
+
+    def test_a_waiting_outcome_parks_the_run_with_its_checkpoint(self):
+        from zango.apps.agent_mode import tasks
+
+        run, build, recorder, status, extra = self.finish(self.waiting_outcome())
+        self.assertEqual(status, "waiting")
+        self.assertEqual(extra["pending_actions"][0]["kind"], "hosts_entry")
+        self.assertEqual(extra["studio_checkpoint"]["held_layers"], ["api"])
+        baseline = extra["studio_checkpoint"]["baseline"]
+        self.assertTrue(Path(baseline).is_file())
+        self.assertEqual(tasks._load_baseline(baseline), json.loads(Path(baseline).read_text()))
+        self.assertEqual(run.studio_report["layers"]["audit_holes"]["status"], "pass")
+        waiting = [c for c in recorder.emit.call_args_list if "Waiting for you" in str(c)]
+        self.assertEqual(len(waiting), 1)
+        self.assertNotIn("Secr3t", str(recorder.emit.call_args_list))
+
+        parked = mock.Mock()
+        tasks._conclude(parked, status, extra, mock.Mock(seq=3))
+        parked.pause.assert_called_once_with(extra["pending_actions"], extra["studio_checkpoint"])
+        parked.finalize.assert_not_called()
+
+    def test_a_continuation_passes_the_checkpoint_and_keeps_the_earlier_steps(self):
+        from zango.apps.agent_mode.studio_build import LayerResult, StudioOutcome
+
+        done = StudioOutcome(ok=True, bring_up_ok=True, rounds=0, report={"verdict": "Ready"},
+                             layers={"api": LayerResult(name="api", counts={"pass": 2})})
+        checkpoint = self.waiting_outcome().checkpoint
+        earlier = [{"step": "studio:ws_migrate", "returncode": 0}]
+        run, build, _, status, extra = self.finish(
+            done, checkpoint=checkpoint, skip=False, prior_steps=earlier, baseline=None
+        )
+        self.assertEqual((status, extra), ("success", {}))
+        self.assertEqual(build.finish.call_args.kwargs["checkpoint"], checkpoint)
+        self.assertFalse(build.finish.call_args.kwargs["skip"])
+        self.assertEqual([s["step"] for s in run.post_steps],
+                         ["studio:ws_migrate", "studio:platform:appbuilder"])
+
+    def test_the_continue_task_re_enters_from_the_checkpoint(self):
+        from zango.apps.agent_mode import tasks
+
+        checkpoint = {"build": self.build(frontend_ready=True).build_state(), "layers": {}, "rounds": 0,
+                      "held_steps": [], "held_layers": ["api"], "actions": []}
+        run = mock.MagicMock()
+        run.id, run.pk = 1, 1
+        run.studio_checkpoint, run.post_steps = checkpoint, [{"step": "studio:ws_migrate"}]
+        run.session_id, run.total_cost_usd, run.tool_use_counts = "sess-1", None, {}
+        run.requirement = None
+        ctx = SimpleNamespace(workspace_path=str(self.ws))
+        with mock.patch("zango.apps.agent_mode.recorder.EventRecorder") as recorder_cls, \
+                mock.patch("zango.apps.agent_mode.models.AgentRunEvent.objects") as events, \
+                mock.patch("zango.apps.agent_mode.settings_writer.write_run_settings", return_value="/s.json"), \
+                mock.patch("zango.apps.agent_mode.config.load_config", return_value=SimpleNamespace()), \
+                mock.patch.object(tasks, "_apply_state"), \
+                mock.patch.object(tasks, "_finish_studio", return_value=("success", {})) as finish:
+            events.filter.return_value.order_by.return_value.values_list.return_value.first.return_value = 41
+            recorder_cls.return_value.seq = 50
+            result = tasks._continue(run, SimpleNamespace(name="demo_app"), object(), "/ws",
+                                     lambda tenant: ctx, skip=True)
+        self.assertEqual(recorder_cls.call_args.kwargs["start_seq"], 41)  # events carry on
+        kwargs = finish.call_args.kwargs
+        self.assertEqual(kwargs["checkpoint"], checkpoint)
+        self.assertTrue(kwargs["skip"])
+        self.assertEqual(kwargs["prior_steps"], [{"step": "studio:ws_migrate"}])
+        self.assertEqual(kwargs["studio"].workspace, str(self.ws))
+        self.assertEqual(kwargs["state"]["session_id"], "sess-1")
+        run.finalize.assert_called_once_with("success")
+        self.assertEqual(result["events"], 50)
+
+    def test_waiting_holds_the_slot_and_the_sweep_leaves_it_alone(self):
+        from zango.apps.agent_mode.models import ACTIVE_STATUSES, TERMINAL_STATUSES, AgentRun, RunStatus
+
+        self.assertNotIn(RunStatus.WAITING, TERMINAL_STATUSES)
+        self.assertNotIn(RunStatus.WAITING, ACTIVE_STATUSES)  # what the sweep reaps
+        run = AgentRun(status=RunStatus.RUNNING, is_active=True)
+        saved = {}
+        run.save = lambda update_fields=None: saved.update(fields=update_fields)
+        run.pause([{"kind": "hosts_entry"}], {"rounds": 0})
+        self.assertEqual(run.status, "waiting")
+        self.assertFalse(run.is_terminal)
+        self.assertTrue(run.is_active)
+        self.assertIn("studio_checkpoint", saved["fields"])
+        run.finalize(RunStatus.SUCCESS)
+        self.assertIsNone(run.pending_actions)
+        self.assertIsNone(run.studio_checkpoint)
+
+    # -- API ---------------------------------------------------------------
+
+    def api_run(self, **kw):
+        defaults = dict(pk=1, object_uuid="11111111-1111-1111-1111-111111111111", status="waiting",
+                        workspace_path=str(self.ws), studio_report=None, is_terminal=False,
+                        studio_checkpoint={"build": self.build().build_state()},
+                        pending_actions=[{"id": "hosts_entry", "kind": "hosts_entry",
+                                          "title": "Point demo.local at this server"}])
+        defaults.update(kw)
+        return SimpleNamespace(**defaults)
+
+    def call_continue(self, run, body, *, missing=(), claimed=1):
+        from zango.api.platform.agent_mode.v1 import views
+
+        manager = mock.Mock()
+        manager.get.return_value = run
+        manager.filter.return_value.update.return_value = claimed
+        with mock.patch.object(views, "_bind_tenant", return_value=SimpleNamespace(name="demo_app")), \
+                mock.patch.object(views.AgentRun, "objects", manager), \
+                mock.patch.object(views.transaction, "on_commit", lambda fn: fn()), \
+                mock.patch.object(views, "_in_tenant", lambda tenant: contextlib.nullcontext()), \
+                mock.patch.object(StudioBuild, "still_failing", return_value=list(missing)), \
+                mock.patch("zango.apps.agent_mode.tasks.agent_run_continue.apply_async") as dispatch:
+            dispatch.return_value = SimpleNamespace(id="task-9")
+            response = views.AgentRunContinueView().post(
+                SimpleNamespace(data=body), "app-uuid", run.object_uuid
+            )
+        return response.status_code, json.loads(response.content)["response"], dispatch, manager
+
+    def test_continue_is_refused_while_the_fix_is_not_detected(self):
+        still = [{"id": "hosts_entry", "kind": "hosts_entry", "title": "Point demo.local at this server",
+                  "still_failing_reason": "demo.local: URLError"}]
+        code, body, dispatch, manager = self.call_continue(self.api_run(), {"skip": False}, missing=still)
+        self.assertEqual(code, 409)
+        self.assertEqual(body["pending_actions"][0]["still_failing_reason"], "demo.local: URLError")
+        dispatch.assert_not_called()
+        manager.filter.assert_not_called()  # the run stays waiting
+
+    def test_continue_dispatches_once_the_fix_is_in_and_skip_does_not_check(self):
+        code, body, dispatch, manager = self.call_continue(self.api_run(), {"skip": False})
+        self.assertEqual((code, body["status"]), (200, "syncing"))
+        self.assertEqual(dispatch.call_args.kwargs["kwargs"], {"skip": False})
+        self.assertEqual(manager.filter.return_value.update.call_args_list[0].kwargs["status"], "syncing")
+
+        with mock.patch.object(StudioBuild, "environment_actions") as checks:
+            code, body, dispatch, _ = self.call_continue(self.api_run(), {"skip": True})
+        self.assertEqual(code, 200)
+        self.assertEqual(dispatch.call_args.kwargs["kwargs"], {"skip": True})
+        checks.assert_not_called()
+
+    def test_continue_on_a_run_that_is_not_waiting_is_a_conflict(self):
+        for run in (self.api_run(status="success"), self.api_run(status="syncing")):
+            code, body, dispatch, _ = self.call_continue(run, {"skip": False})
+            self.assertEqual(code, 409)
+            dispatch.assert_not_called()
+        code, _, dispatch, _ = self.call_continue(self.api_run(), {"skip": False}, claimed=0)
+        self.assertEqual(code, 409)  # someone else just continued it
+        dispatch.assert_not_called()
+
+    def call_report(self, run):
+        from zango.api.platform.agent_mode.v1 import views
+
+        manager = mock.Mock()
+        manager.get.return_value = run
+        with mock.patch.object(views, "_bind_tenant"), mock.patch.object(views.AgentRun, "objects", manager):
+            return views.AgentRunReportView().get(SimpleNamespace(), "app-uuid", run.object_uuid)
+
+    def test_the_html_report_is_served_sandboxed_and_only_from_the_workspace(self):
+        zas = self.ws / ".zas"
+        zas.mkdir()
+        (zas / "build_report.html").write_text("<h1>Build report</h1>")
+        run = self.api_run(studio_report={"report": {"html_path": str(zas / "build_report.html")}})
+        response = self.call_report(run)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Build report", response.content)
+        self.assertEqual(response["Content-Security-Policy"], "sandbox allow-scripts")
+        self.assertEqual(response["X-Content-Type-Options"], "nosniff")
+        self.assertTrue(response["Content-Type"].startswith("text/html"))
+
+        outside = self.root / "elsewhere.html"
+        outside.write_text("<h1>secrets</h1>")
+        for path in (str(outside), str(zas / ".." / ".." / "elsewhere.html"), str(zas / "missing.html"), ""):
+            run = self.api_run(studio_report={"report": {"html_path": path}})
+            self.assertEqual(self.call_report(run).status_code, 404, path)
+        self.assertEqual(self.call_report(self.api_run(studio_report=None)).status_code, 404)
+
+    def test_the_run_payload_exposes_actions_checks_and_the_report(self):
+        from zango.api.platform.agent_mode.v1.serializers import (
+            AgentRunDetailSerializer,
+            AgentRunListSerializer,
+        )
+
+        report = {
+            "ok": False, "bring_up_ok": True, "frontend": True, "rounds": 1, "not_verified": ["ui"],
+            "layers": {"api": {"status": "pass"}, "ui": {"status": "skip", "reason": "x"},
+                       "scenarios": {"status": "fail", "failures": [{"id": "scenarios.H-01"}]}},
+            "skipped": [{"layer": "ui", "reason": "x"}],
+            "report": {"verdict": "Not ready", "summary_md": "# r", "html_path": "/w/.zas/build_report.html"},
+        }
+        detail = AgentRunDetailSerializer()
+        data = detail.get_report(SimpleNamespace(studio_report=report))
+        self.assertEqual(data["verdict"], "Not ready")
+        self.assertEqual(data["not_verified"], ["ui"])
+        self.assertEqual(data["layers"]["scenarios"]["failures"][0]["id"], "scenarios.H-01")
+        self.assertIsNone(data["html_url"])  # the detail view fills it in
+        self.assertNotIn("password", json.dumps(data))
+        waiting = SimpleNamespace(status="waiting", pending_actions=[{"kind": "hosts_entry"}])
+        self.assertEqual(detail.get_pending_actions(waiting), [{"kind": "hosts_entry"}])
+        self.assertEqual(detail.get_pending_actions(SimpleNamespace(status="success", pending_actions=None)), [])
+        self.assertEqual(
+            AgentRunListSerializer().get_checks(SimpleNamespace(studio_report=report)),
+            {"total": 3, "passed": 1, "failed": 1, "not_verified": 1},
+        )
+        self.assertIsNone(AgentRunListSerializer().get_checks(SimpleNamespace(studio_report=None)))
+        self.assertEqual(AgentRunListSerializer().get_pending_actions(waiting), [{"kind": "hosts_entry"}])
+        self.assertEqual(
+            AgentRunListSerializer().get_pending_actions(SimpleNamespace(status="failed", pending_actions=[{}])), []
+        )
+        self.assertIn("checks", AgentRunListSerializer.Meta.fields)
+        self.assertIn("pending_actions", AgentRunListSerializer.Meta.fields)

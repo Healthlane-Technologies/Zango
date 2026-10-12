@@ -72,7 +72,9 @@ function BuildMarker({ run, onOpen }: { run: RunRef; onOpen: () => void }) {
 	const bad = ['failed', 'timeout', 'aborted'].includes(run.status);
 	return (
 		<div className={cx('upd', bad && 'bad')}>
-			{active ? (
+			{run.status === 'waiting' ? (
+				<Icon name="alert" size={13} weight={2.4} style={{ color: 'var(--amber)' }} />
+			) : active ? (
 				<span className="spin text-amber" />
 			) : (
 				<Icon name={bad ? 'alert' : 'check'} size={13} weight={2.6} />
@@ -82,7 +84,7 @@ function BuildMarker({ run, onOpen }: { run: RunRef; onOpen: () => void }) {
 				{run.queued_at && ` · ${stamp(run.queued_at)}`}
 			</span>
 			<button type="button" onClick={onOpen}>
-				View build
+				{run.status === 'waiting' ? "See what's needed" : 'View build'}
 			</button>
 		</div>
 	);

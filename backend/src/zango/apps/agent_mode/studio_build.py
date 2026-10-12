@@ -74,6 +74,11 @@ LAYERS = (
     ("scenarios", "zas_test.scenarios", False, True),
 )
 DESIGN_BROWSER_GROUPS = ("gallery", "tokens", "tree", "layout")
+APP_LAYERS = tuple(name for name, _, _, needs_app in LAYERS if needs_app)
+BROWSER_LAYERS = tuple(name for name, _, browser, _ in LAYERS if browser)
+# The one bring-up step that needs the app reachable on its own domain.
+HELD_STEP = "appbuilder"
+LOCAL_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0", "::1"}
 # zas_test.api result ids start with a singular group name.
 API_GROUP = {
     "access": "access",
@@ -207,6 +212,20 @@ class LayerResult:
             "reason": self.reason,
         }
 
+    def to_checkpoint(self) -> dict:
+        return {**self.to_dict(), "groups": list(self.groups)}
+
+    @classmethod
+    def from_checkpoint(cls, data: dict):
+        return cls(
+            name=data.get("name", ""),
+            status=data.get("status", "pass"),
+            counts=dict(data.get("counts") or {}),
+            failures=list(data.get("failures") or []),
+            groups=list(data.get("groups") or []),
+            reason=data.get("reason", ""),
+        )
+
 
 @dataclass
 class StudioOutcome:
@@ -215,6 +234,13 @@ class StudioOutcome:
     layers: dict
     rounds: int
     report: dict
+    # A paused build: what the user has to do, and where to continue from.
+    pending_actions: list = field(default_factory=list)
+    checkpoint: dict | None = None
+
+    @property
+    def waiting(self) -> bool:
+        return bool(self.pending_actions)
 
     @property
     def failing(self) -> list:
@@ -267,6 +293,22 @@ class StudioBuild:
             first_build=first,
             update=(Path(workspace) / ".zas" / "spec.resolved.json").is_file(),
         )
+
+    # What a continuation needs to rebuild this object in another worker.
+    CHECKPOINT_FIELDS = (
+        "skill_dir", "workspace", "spec_path", "run_dir", "base_dir", "app_name",
+        "app_domain", "frontend_allowed", "platform_url", "first_build", "update",
+        "frontend_ready", "frontend_reason", "check_spec", "_pruned",
+    )
+
+    def build_state(self) -> dict:
+        return {name: getattr(self, name) for name in self.CHECKPOINT_FIELDS}
+
+    @classmethod
+    def from_checkpoint(cls, checkpoint: dict):
+        """The build as it was when it paused (in a fresh worker: nothing is cached)."""
+        state = dict((checkpoint or {}).get("build") or {})
+        return cls(**{k: v for k, v in state.items() if k in cls.CHECKPOINT_FIELDS})
 
     # -- paths ------------------------------------------------------------
 
@@ -434,6 +476,66 @@ class StudioBuild:
                         "(DNS or hosts file), or set AGENT_MODE_PLATFORM_URL.",
                     )
         return self._reachable
+
+    def environment_actions(self) -> list:
+        """What only the user can fix before the rest of the build can run.
+
+        Each is ``{id, kind, title, detail, command, blocks}``; ``blocks`` names
+        the bring-up steps and checks that wait for it. Checked before those
+        would be skipped: a skipped test proves nothing, a paused build can
+        still be finished properly.
+        """
+        from urllib.parse import urlparse
+
+        actions = []
+        reachable, reason = self.app_reachable()
+        if not reachable and self.app_domain:
+            local = (urlparse(self.platform_url).hostname or "") in LOCAL_HOSTS
+            actions.append(
+                {
+                    "id": "hosts_entry",
+                    "kind": "hosts_entry",
+                    "title": f"Point {self.app_domain} at this server",
+                    "detail": (
+                        f"The app does not answer on its own domain from the platform ({self.app_url()}/). "
+                        "The app's menus (AppBuilder routes) and the API, UI, design and scenario "
+                        "tests all sign in to the running app, so they wait for it. "
+                        + (
+                            "On this machine, add the domain to /etc/hosts."
+                            if local
+                            else "Add a DNS record for the domain that points at this server, "
+                            "or set AGENT_MODE_PLATFORM_URL to where the platform answers."
+                        )
+                    ),
+                    "command": (
+                        f'echo "127.0.0.1 {self.app_domain.split(":")[0]}" | sudo tee -a /etc/hosts'
+                        if local
+                        else ""
+                    ),
+                    "blocks": [f"platform:{HELD_STEP}", *APP_LAYERS],
+                    "reason": reason,
+                }
+            )
+        if not self.has_playwright():
+            actions.append(
+                {
+                    "id": "install_playwright",
+                    "kind": "install_playwright",
+                    "title": "Install Playwright in the platform environment",
+                    "detail": (
+                        "The UI tests (every role's menus, lists, forms and 360 pages) and the "
+                        "design comparison run in a headless browser, which needs Playwright "
+                        "and its Chromium in the platform's Python environment."
+                    ),
+                    "command": (
+                        f"{self.python} -m pip install playwright && "
+                        f"{self.python} -m playwright install chromium"
+                    ),
+                    "blocks": list(BROWSER_LAYERS),
+                    "reason": PLAYWRIGHT_REASON,
+                }
+            )
+        return actions
 
     # -- before the agent ------------------------------------------------
 
@@ -613,8 +715,12 @@ class StudioBuild:
 
     # -- after the agent -------------------------------------------------
 
-    def bring_up(self, creds: dict, emit=None) -> bool:
-        """Phase 5 and Phase 6 step 7, in the skill's order. Stops at the first failure."""
+    def bring_up(self, creds: dict, emit=None, hold=(), only=None) -> bool:
+        """Phase 5 and Phase 6 step 7, in the skill's order. Stops at the first failure.
+
+        ``hold`` names steps left for later (the user has something to do
+        first); ``only`` runs just the named steps (a continuation).
+        """
         app = self.app_name
         failed_at = None
 
@@ -638,6 +744,11 @@ class StudioBuild:
             ("platform:appbuilder", self._appbuilder(platform, emit)),
         ]
         for name, run in steps:
+            if only is not None and name not in only:
+                continue
+            if name in hold:
+                self.skip(name, "held until you complete the action this build is waiting for", emit)
+                continue
             if failed_at:
                 self.skip(name, f"{failed_at} failed earlier in this bring-up", emit)
                 continue
@@ -676,14 +787,19 @@ class StudioBuild:
 
         return run
 
-    def verify(self, emit=None, only: dict | None = None, bring_up_ok: bool = True) -> dict:
-        """Run the hole audit and the test layers; ``only`` = {layer: [groups]} re-runs just those."""
+    def verify(self, emit=None, only: dict | None = None, bring_up_ok: bool = True, hold=()) -> dict:
+        """Run the hole audit and the test layers; ``only`` = {layer: [groups]} re-runs just those.
+
+        Layers in ``hold`` are left out altogether: they wait for the user.
+        """
         layers = {}
         playwright = self.has_playwright()
         reachable, unreachable = self.app_reachable()
         users_ok = (self.zas_dir / "test_users.json").is_file()
         for name, runner, browser, needs_app in LAYERS:
             if only is not None and name not in only:
+                continue
+            if name in hold:
                 continue
             groups = (only or {}).get(name) or []
             reason = ""
@@ -879,15 +995,56 @@ class StudioBuild:
             lines.append("")
         return "\n".join(lines).strip() + "\n"
 
-    def finish(self, creds: dict, resume_agent=None, rounds: int = 2, emit=None) -> StudioOutcome:
-        """Bring-up, checks, fix rounds, report.
+    def finish(
+        self, creds: dict, resume_agent=None, rounds: int = 2, emit=None, checkpoint=None, skip=False
+    ) -> StudioOutcome:
+        """Bring-up, checks, fix rounds, report — pausing for the user when it has to.
 
         ``resume_agent(digest) -> bool`` resumes the agent's session with the
         digest; False (budget, error, abort) ends the fix rounds.
+
+        If something only the user can fix stands in the way (see
+        :meth:`environment_actions`), everything that does not depend on it
+        runs first and the outcome comes back *waiting*, with a checkpoint.
+        ``checkpoint`` continues such a build: only what was held runs.
+        ``skip`` continues without it: those checks are recorded as skipped by
+        the user, never as passed.
         """
-        bring_up_ok = self.bring_up(creds, emit)
-        layers = self.verify(emit, bring_up_ok=bring_up_ok)
-        done = 0
+        cp = checkpoint or {}
+        layers = {n: LayerResult.from_checkpoint(d) for n, d in (cp.get("layers") or {}).items()}
+        done = int(cp.get("rounds") or 0)
+        actions = [] if skip else self.environment_actions()
+        held_steps = {b.split(":", 1)[1] for a in actions for b in a["blocks"] if b.startswith("platform:")}
+        held_layers = {b for a in actions for b in a["blocks"] if not b.startswith("platform:")}
+
+        if checkpoint is None:
+            bring_up_ok = self.bring_up(creds, emit, hold={f"platform:{x}" for x in held_steps})
+            layers = self.verify(emit, bring_up_ok=bring_up_ok, hold=held_layers)
+        else:
+            bring_up_ok = True
+            was_steps = {f"platform:{x}" for x in cp.get("held_steps") or []}
+            was_layers = list(cp.get("held_layers") or [])
+            if skip:
+                why = {
+                    b: f"skipped by the user: {a.get('title', a.get('kind', ''))}"
+                    for a in cp.get("actions") or []
+                    for b in a.get("blocks") or []
+                }
+                for step in sorted(was_steps):
+                    self.skip(step, why.get(step, "skipped by the user"), emit)
+                for name in was_layers:
+                    reason = why.get(name, "skipped by the user")
+                    self.skip(f"test:{name}", reason, emit)
+                    layers[name] = LayerResult(name=name, status="skip", reason=reason)
+            else:
+                run_steps = was_steps - {f"platform:{x}" for x in held_steps}
+                if run_steps:
+                    bring_up_ok = self.bring_up(creds, emit, only=run_steps)
+                todo = {n: [] for n in was_layers if n not in held_layers}
+                if todo:
+                    layers.update(self.verify(emit, only=todo, bring_up_ok=bring_up_ok))
+
+        hold_steps = {f"platform:{x}" for x in held_steps}
         while done < rounds and resume_agent is not None and (
             not bring_up_ok or any(x.status == "fail" for x in layers.values())
         ):
@@ -899,16 +1056,49 @@ class StudioBuild:
                     emit("sys", "The agent could not continue; no more fix rounds.", level="warn")
                 break
             was_ok = bring_up_ok
-            bring_up_ok = self.bring_up(creds, emit)
+            bring_up_ok = self.bring_up(creds, emit, hold=hold_steps)
             if not was_ok:
-                fresh = self.verify(emit, bring_up_ok=bring_up_ok)
+                ran = {n: [] for n in layers} if checkpoint is not None else None
+                fresh = self.verify(emit, only=ran, bring_up_ok=bring_up_ok, hold=held_layers)
             else:
                 only = {n: x.groups for n, x in layers.items() if x.status == "fail"}
-                fresh = self.verify(emit, only=only, bring_up_ok=bring_up_ok)
+                fresh = self.verify(emit, only=only, bring_up_ok=bring_up_ok, hold=held_layers)
             layers.update(fresh)
+
+        if actions and bring_up_ok:
+            # Everything that could run has; the rest waits for the user.
+            return StudioOutcome(
+                ok=False,
+                bring_up_ok=True,
+                layers=layers,
+                rounds=done,
+                report={},
+                pending_actions=[{k: v for k, v in a.items() if k != "reason"} for a in actions],
+                checkpoint={
+                    "build": self.build_state(),
+                    "layers": {n: x.to_checkpoint() for n, x in layers.items()},
+                    "rounds": done,
+                    "held_steps": sorted(held_steps),
+                    "held_layers": [n for n, *_ in LAYERS if n in held_layers],
+                    "actions": [{k: v for k, v in a.items() if k != "reason"} for a in actions],
+                },
+            )
+        if actions:
+            # The bring-up itself failed: waiting for the user would not help.
+            layers.update(self.verify(emit, only={n: [] for n in held_layers}, bring_up_ok=False))
         report = self.report(emit)
         ok = bring_up_ok and not any(x.status == "fail" for x in layers.values())
         return StudioOutcome(ok=ok, bring_up_ok=bring_up_ok, layers=layers, rounds=done, report=report)
+
+    def still_failing(self, pending: list) -> list:
+        """The pending actions that are still not done, each with ``still_failing_reason``."""
+        now = {a["kind"]: a for a in self.environment_actions()}
+        out = []
+        for action in pending or []:
+            current = now.get(action.get("kind"))
+            if current is not None:
+                out.append({**action, "still_failing_reason": current.get("reason", "")})
+        return out
 
     def test_users(self) -> list:
         """The run's test users from .zas/test_users.json, in the run's own format."""

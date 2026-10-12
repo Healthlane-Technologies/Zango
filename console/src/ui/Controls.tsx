@@ -42,6 +42,8 @@ export interface TabItem<V extends string> {
 	label: ReactNode;
 	count?: number;
 	disabled?: boolean;
+	/** A small dot: something on this tab needs the user. */
+	attention?: boolean;
 }
 
 /** Tabs held in local state. */
@@ -70,6 +72,7 @@ export function Tabs<V extends string>({
 				>
 					{t.label}
 					{t.count != null && <span className="ct">{t.count}</span>}
+					{t.attention && <span className="tab-dot" title="Needs your attention" />}
 				</button>
 			))}
 		</div>

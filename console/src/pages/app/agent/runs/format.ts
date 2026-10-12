@@ -5,6 +5,7 @@ export const RUN_STATUS: Record<RunStatus, { label: string; tone: Tone }> = {
 	queued: { label: 'Queued', tone: 'gray' },
 	running: { label: 'Building', tone: 'accent' },
 	syncing: { label: 'Applying changes', tone: 'amber' },
+	waiting: { label: 'Waiting for you', tone: 'amber' },
 	success: { label: 'Built', tone: 'green' },
 	partial: { label: 'Built with sync errors', tone: 'amber' },
 	failed: { label: 'Failed', tone: 'red' },

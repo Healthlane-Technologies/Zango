@@ -4,10 +4,20 @@
 // deploy/share. Keep the props stable; add optional ones only.
 import { useCallback, useMemo, useState } from 'react';
 import { isRunActive, useRequirement, type RunRef, type RunStatus } from '@/api/agentMode';
-import { useInvalidateRuns, useResumeRun, useRunSummaries, useStartRun } from '@/api/agentRuns';
+import { useQueryClient } from '@tanstack/react-query';
+import { agentKeys } from '@/api/agentMode';
+import {
+	checksOf,
+	useInvalidateRuns,
+	useResumeRun,
+	useRunSummaries,
+	useStartRun,
+	type RunDetail,
+} from '@/api/agentRuns';
 import { formatDateTime, timeAgo } from '@/format/time';
 import { Badge, Button, Card, cx, EmptyState, ErrorState, Skeleton } from '@/ui';
 import { fmtCost, fmtDuration, runStatus } from './format';
+import { ChecksChip } from './RunChecks';
 import { RunView } from './RunView';
 import './runs.css';
 
@@ -33,6 +43,7 @@ export function RunsPanel({
 	const { data: requirement, isLoading, error, refetch } = useRequirement(appId, requirementId);
 	const { data: summaries } = useRunSummaries(appId);
 	const invalidate = useInvalidateRuns(appId, requirementId);
+	const qc = useQueryClient();
 	const [selected, setSelected] = useState<string | null>(null);
 	// Live statuses reported by the run being watched; fresher than the requirement's refs.
 	const [live, setLive] = useState<Record<string, RunStatus>>({});
@@ -43,6 +54,10 @@ export function RunsPanel({
 	const current = selected ?? refs[0]?.uuid ?? null;
 	const statusOf = (r: RunRef) => live[r.uuid] ?? byId.get(r.uuid)?.status ?? r.status;
 	const inFlight = refs.some((r) => isRunActive(statusOf(r)));
+	const paused = refs.some((r) => statusOf(r) === 'waiting');
+	// The list's own counts when it has them, else the report of a build already opened here.
+	const checksFor = (id: string) =>
+		checksOf(byId.get(id)?.checks ?? qc.getQueryData<RunDetail>(agentKeys.run(appId, id))?.report);
 
 	const changed = useCallback(() => {
 		invalidate();
@@ -60,7 +75,13 @@ export function RunsPanel({
 	);
 
 	const name = appName ?? requirement?.title ?? 'this app';
-	const buildLabel = inFlight ? 'Building…' : refs.length ? 'Build again' : 'Start build';
+	const buildLabel = paused
+		? 'Waiting for you'
+		: inFlight
+			? 'Building…'
+			: refs.length
+				? 'Build again'
+				: 'Start build';
 	const buildButton = (
 		<Button
 			size="sm"
@@ -71,9 +92,11 @@ export function RunsPanel({
 			title={
 				!canBuild
 					? "This requirement can't be built right now"
-					: inFlight
-						? 'A build is already running'
-						: undefined
+					: paused
+						? 'A build is paused and waiting for you'
+						: inFlight
+							? 'A build is already running'
+							: undefined
 			}
 			onClick={() => start.mutate()}
 		>
@@ -148,9 +171,14 @@ export function RunsPanel({
 									onClick={() => setSelected(r.uuid)}
 								>
 									<span className="w-[62px] shrink-0 text-t3">Build {refs.length - i}</span>
-									<Badge tone={st.tone} dot busy={isRunActive(statusOf(r))}>
+									<Badge
+										tone={st.tone}
+										dot
+										busy={isRunActive(statusOf(r)) && statusOf(r) !== 'waiting'}
+									>
 										{st.label}
 									</Badge>
+									{!isRunActive(statusOf(r)) && <ChecksChip checks={checksFor(r.uuid)} />}
 									{s?.trigger_kind === 'resume' && (
 										<span className="text-[12px] text-t3">resumed</span>
 									)}

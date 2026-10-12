@@ -597,6 +597,14 @@
 		color: var(--t4);
 		font-weight: 500;
 	}
+	.tabs .tab-dot {
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		background: var(--amber);
+		margin-left: 2px;
+		align-self: center;
+	}
 	.seg {
 		display: inline-flex;
 		padding: 2px;

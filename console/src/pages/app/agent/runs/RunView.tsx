@@ -2,14 +2,16 @@ import { useEffect, useState } from 'react';
 import { isRunActive, type RunStatus } from '@/api/agentMode';
 import { useAbortRun, useRunDetail, type RunDetail } from '@/api/agentRuns';
 import { Button, cx, ErrorState, Icon, Skeleton, Tabs } from '@/ui';
+import { checksOf } from '@/api/agentRuns';
 import { AppReady } from './AppReady';
 import { filesWritten, latestActivity, relativePath } from './events';
 import { clock, fmtCost, PHASES, runStatus, timeOfDay } from './format';
+import { ActionNeeded, ChecksChip, ChecksReport } from './RunChecks';
 import { RunLog } from './RunLog';
 import { RunUsage } from './RunUsage';
 import { useRunTail, type RunTail } from './useRunTail';
 
-type Tab = 'progress' | 'log' | 'usage';
+type Tab = 'progress' | 'checks' | 'log' | 'usage';
 
 /** Re-render every second while `on`, for the elapsed clock. */
 function useTicker(on: boolean) {
@@ -22,6 +24,13 @@ function useTicker(on: boolean) {
 }
 
 function StatusIcon({ status }: { status: RunStatus | undefined }) {
+	// Paused for the user: not working, not finished.
+	if (status === 'waiting')
+		return (
+			<span className="rp-okc wait">
+				<Icon name="alert" size={11} weight={2.4} />
+			</span>
+		);
 	if (!status || isRunActive(status)) return <span className="spin" />;
 	const cls =
 		status === 'success'
@@ -72,12 +81,17 @@ function Phases({
 									? 'active'
 									: 'done';
 				return (
-					<li key={p.id} className={state}>
+					<li
+						key={p.id}
+						className={cx(state, state === 'active' && status === 'waiting' && 'wait')}
+					>
 						<span className="n">
 							{state === 'done' ? (
 								<Icon name="check" size={11} weight={3} />
 							) : state === 'failed' ? (
 								<Icon name="x" size={11} weight={3} />
+							) : state === 'active' && status === 'waiting' ? (
+								<Icon name="alert" size={11} weight={2.4} />
 							) : state === 'active' ? (
 								<span className="spin" style={{ width: 10, height: 10 }} />
 							) : (
@@ -86,7 +100,9 @@ function Phases({
 						</span>
 						<div className="min-w-0 flex-1">
 							<b>{p.label}</b>
-							{state === 'active' && activity ? (
+							{state === 'active' && status === 'waiting' ? (
+								<small>Paused — waiting for you</small>
+							) : state === 'active' && activity ? (
 								<small title={activity.message}>{activity.message}</small>
 							) : state === 'failed' ? (
 								<small>Stopped here</small>
@@ -216,10 +232,18 @@ export function RunView({
 	});
 	const abort = useAbortRun(appId);
 	const [tab, setTab] = useState<Tab>('progress');
+	// Continue was accepted; the tail catches up with the new status on its next poll.
+	const [continuing, setContinuing] = useState(false);
 
 	const status = tail.status ?? detail.data?.status;
 	const live = isRunActive(status);
-	useTicker(live);
+	const waiting = status === 'waiting' && !continuing;
+	useEffect(() => {
+		if (continuing && status !== 'waiting') setContinuing(false);
+	}, [continuing, status]);
+	// Working right now: the clock runs and Stop makes sense. A paused build is neither.
+	const working = live && !waiting;
+	useTicker(working);
 
 	useEffect(() => {
 		if (status) onStatus?.(runId, status);
@@ -230,6 +254,13 @@ export function RunView({
 	useEffect(() => {
 		if (tail.isTerminal && d && !d.is_terminal) refetch();
 	}, [tail.isTerminal, d, refetch]);
+	// Pausing and continuing change what the detail holds (the actions needed, the report so far).
+	const tailStatus = tail.status;
+	const detailStatus = d?.status;
+	useEffect(() => {
+		if (!tailStatus || !detailStatus || tailStatus === detailStatus) return;
+		if (tailStatus === 'waiting' || detailStatus === 'waiting') refetch();
+	}, [tailStatus, detailStatus, refetch]);
 
 	if (detail.error) return <ErrorState error={detail.error} onRetry={() => detail.refetch()} />;
 	if (!d && !tail.ready)
@@ -248,6 +279,9 @@ export function RunView({
 		(status === 'success' || status === 'partial') &&
 		(d.app_access?.url || d.test_users?.length);
 	const summary = d?.result_text?.trim();
+	const report = d?.report ?? null;
+	const checks = checksOf(report);
+	const actions = waiting ? (d?.pending_actions ?? []) : [];
 
 	return (
 		<div className="grid gap-3">
@@ -255,24 +289,37 @@ export function RunView({
 				<StatusIcon status={status} />
 				<div className="min-w-0">
 					<b>
-						{live
-							? status === 'queued'
-								? 'Waiting to start'
-								: status === 'syncing'
-									? 'Applying changes'
-									: 'Building your app'
-							: meta.label}
+						{waiting
+							? 'Waiting for you'
+							: continuing
+								? 'Continuing the build'
+								: live
+									? status === 'queued'
+										? 'Waiting to start'
+										: status === 'syncing'
+											? 'Applying changes'
+											: 'Building your app'
+									: status === 'partial' && report && checks?.failed
+										? 'Built, with failing checks'
+										: status === 'partial' && report?.frontend === false
+											? 'Built without a frontend'
+											: meta.label}
 					</b>
 					<div className="text-[12px] text-t3">
 						{d?.trigger_kind === 'resume' ? 'Resumed' : 'Started'}{' '}
 						{timeOfDay(d?.started_at ?? d?.queued_at) || '—'}
-						{d?.abort_requested && live && ' · stopping after this step'}
+						{d?.abort_requested && working && ' · stopping after this step'}
+						{waiting && ' · paused until you act'}
 					</div>
 				</div>
 				<div className="r">
-					<span className="num">{clock(d?.started_at, live ? null : d?.ended_at)}</span>
+					{/* While a build is live or paused the report is partial: a count would mislead. */}
+					{checks && !live && <ChecksChip checks={checks} onClick={() => setTab('checks')} />}
+					{!waiting && (
+						<span className="num">{clock(d?.started_at, live ? null : d?.ended_at)}</span>
+					)}
 					{cost != null && <span className="num">{fmtCost(cost)}</span>}
-					{live && (
+					{working && (
 						<Button
 							size="xs"
 							variant="danger"
@@ -291,6 +338,28 @@ export function RunView({
 				</div>
 			</div>
 
+			{waiting && actions.length > 0 && (
+				<ActionNeeded
+					appId={appId}
+					runId={runId}
+					actions={actions}
+					onContinued={() => {
+						setContinuing(true);
+						detail.refetch();
+					}}
+				/>
+			)}
+			{continuing && (
+				<p className="rp-note warn" role="status">
+					Continuing… the build picks up from where it paused.
+				</p>
+			)}
+			{waiting && d && !actions.length && (
+				<p className="rp-note warn">
+					The build is paused and waiting for you, but it did not say what for. Check the build log.
+				</p>
+			)}
+
 			{ready && <AppReady appName={appName} run={d} />}
 
 			<div className="card">
@@ -299,6 +368,16 @@ export function RunView({
 					onChange={setTab}
 					items={[
 						{ value: 'progress', label: 'Progress' },
+						...(report
+							? [
+									{
+										value: 'checks' as const,
+										label: 'Checks',
+										count: checks?.total,
+										attention: !!checks?.failed,
+									},
+								]
+							: []),
 						{ value: 'log', label: 'Build log', count: tail.events.length || undefined },
 						{ value: 'usage', label: 'Usage', disabled: !d },
 					]}
@@ -319,7 +398,8 @@ export function RunView({
 							)}
 						</>
 					)}
-					{tab === 'log' && <RunLog events={tail.events} live={live} />}
+					{tab === 'checks' && report && <ChecksReport report={report} />}
+					{tab === 'log' && <RunLog events={tail.events} live={working} />}
 					{tab === 'usage' && d && <RunUsage run={d} />}
 				</div>
 			</div>
