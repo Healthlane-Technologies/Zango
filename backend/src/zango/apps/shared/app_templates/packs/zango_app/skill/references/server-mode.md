@@ -47,6 +47,11 @@ and `.zas/test_users.json` are yours from the previous build: keep them and rege
      `{"module": "app", "re_path": "^", "url": "urls"}` in `app_routes`;
    - `app.html` names the real build file (`zango-app.<timestamp>.min.js`, never `{{BUILD_FILE}}`),
      that file is in `static/js/`, and it was built after your last change to `frontend/src/`.
+   **Declared list views.** When `.zas/views.md` lists any, the spec declares views (a kanban
+   board, cards, a calendar, a timeline) on a list page that this runtime has no component for.
+   Write each as a custom view, exactly as `references/views.md` says, **before** the type-check
+   and build. The user approved those views in the preview: a build without them is not done, and
+   the platform checks each one (`views`).
 4. **Phase 7 step 1**: `.zas/test_fixtures.py` and `.zas/test_scenarios.py` from `.zas/test_plan.md`.
 5. Finish with a summary: modules written, holes and their status, anything you could not do and why.
 
@@ -58,7 +63,7 @@ In this order, each step recorded on the run:
    `ws_migrate`, `zango_platform.py sync`, `schedule`, `users`, `check`, `sync_static` + `collectstatic`,
    `zango_platform.py appbuilder`. It signs in with a short-lived service account that exists only
    for the run.
-2. The `app_shell` check above, `spec_check.py --audit-holes`, then the test layers: `design --only lint`, `api`, `ui`, `design`,
+2. The `app_shell` check above, the `views` check (every view in `.zas/views.md` is built), `spec_check.py --audit-holes`, then the test layers: `design --only lint`, `api`, `ui`, `design`,
    `scenarios`, and `report` (`.zas/build_report.html` / `.md`). Layers the platform cannot run in its
    environment (for example no Playwright) are reported as skipped, never as passed.
 

@@ -1102,3 +1102,156 @@ class WaitingRunTests(StudioTestBase):
         )
         self.assertIn("checks", AgentRunListSerializer.Meta.fields)
         self.assertIn("pending_actions", AgentRunListSerializer.Meta.fields)
+
+
+KANBAN = {"type": "kanban", "group_by": "status", "columns": ["todo", "done"], "card": {"title": "title"}}
+VIEW_SRC = """// zas:view tasks.kanban
+import React from "react";
+import { api, Badge, EmptyState, Panel, SPEC, Skeleton } from "../../zas";
+import type { ViewProps } from "./ViewsPage";
+
+export default function TasksKanban({ endpoint, entity, view, title, switcher }: ViewProps) {
+  const { rows, loading, refetch } = api.useTableRows(endpoint, { length: 500 });
+  const statuses = SPEC.entities[entity].statuses;
+  if (loading) return <Skeleton lines={6} />;
+  return (
+    <div>
+      <div className="zas-ph"><h1>{title}</h1>{switcher}</div>
+      {(view.columns as string[]).map((c) => (
+        <Panel key={c} title={statuses[c].label}>
+          {rows.filter((r) => r.status === c).map((r) => <Badge key={r.object_uuid} label={r.title} />)}
+          {!rows.length && <EmptyState title="Nothing here" />}
+        </Panel>
+      ))}
+      <button type="button" onClick={refetch}>Refresh</button>
+    </div>
+  );
+}
+"""
+
+
+class DeclaredViewsTests(StudioTestBase):
+    """A view the spec declares and the runtime does not ship is written for the app, and checked."""
+
+    def views(self, *, declared=(KANBAN, {"type": "table"}), native=(), frontend=True):
+        zas = self.ws / ".zas"
+        zas.mkdir(exist_ok=True)
+        page = {"code": "tasks", "type": "crud", "entity": "task", "route": "/app/tasks", "title": "Tasks"}
+        workflow = {"transitions": [
+            {"name": "finish", "label": "Finish", "from": ["todo"], "to": "done", "roles": [], "form": [],
+             "system": False, "engine": [{"name": "finish", "from": "todo"}]},
+            {"name": "expire", "from": ["todo"], "to": "done", "system": True, "engine": []},
+        ]}
+        (zas / "spec.resolved.json").write_text(json.dumps({
+            "pages": {"tasks": {**page, "views": list(declared)}, "home": {"code": "home", "type": "custom"}},
+            "entities": {"task": {"workflow": workflow}},
+        }))
+        ui = dict(page)
+        if native:
+            ui["views"] = [{"type": t} for t in native]
+        (zas / "spec.ui.json").write_text(json.dumps({"pages": {"tasks": ui}}))
+        helper = self.skill / "assets" / "templates" / "frontend" / "views"
+        helper.mkdir(parents=True, exist_ok=True)
+        (helper / "ViewsPage.tsx").write_text("export function makeViewsPage() {}\n")
+        (self.ws / "frontend" / "src" / "custom" / "pages").mkdir(parents=True, exist_ok=True)
+        return self.build(frontend_ready=frontend)
+
+    def write(self, *, view=VIEW_SRC, index='export const Page_tasks = makeViewsPage("tasks", { kanban: TasksKanban });\n'):
+        custom = self.ws / "frontend" / "src" / "custom"
+        (custom / "views").mkdir(parents=True, exist_ok=True)
+        if view is not None:
+            (custom / "views" / "tasks_kanban.tsx").write_text(view)
+        (custom / "pages" / "index.ts").write_text(index)
+
+    def ids(self, layer):
+        return [f["id"] for f in layer.failures]
+
+    def test_a_declared_view_the_runtime_does_not_ship_is_the_agents_to_write(self):
+        build = self.views()
+        self.assertEqual([(v["page"], v["type"]) for v in build.custom_views()], [("tasks", "kanban")])
+
+    def test_a_view_the_skill_resolved_itself_and_a_plain_table_need_nothing(self):
+        self.assertEqual(self.views(native=("kanban", "table")).custom_views(), [])
+        self.assertEqual(self.views(declared=({"type": "table"},)).custom_views(), [])
+        self.assertEqual(self.views(declared=()).custom_views(), [])
+
+    def test_prepare_hands_over_the_host_page_the_manifest_and_the_todo_list(self):
+        build = self.views()
+        build.prepare_views()
+        target = self.ws / "frontend" / "src" / "custom" / "views"
+        self.assertTrue((target / "ViewsPage.tsx").is_file())
+        manifest = json.loads((target / "views.json").read_text())
+        board, table = manifest["tasks"]
+        self.assertEqual((board["type"], board["label"], board["custom"]), ("kanban", "Board", True))
+        self.assertEqual((table["type"], table["custom"]), ("table", False))
+        self.assertEqual(board["move"], "transitions")
+        # System transitions are not something a person drags a card through.
+        self.assertEqual([t["name"] for t in board["transitions"]], ["finish"])
+        todo = (self.ws / ".zas" / "views.md").read_text()
+        self.assertIn("frontend/src/custom/views/tasks_kanban.tsx", todo)
+
+    def test_nothing_is_handed_over_when_there_is_nothing_to_write(self):
+        build = self.views(native=("kanban",))
+        (self.ws / ".zas" / "views.md").write_text("stale\n")
+        build.prepare_views()
+        self.assertFalse((self.ws / ".zas" / "views.md").exists())
+        self.assertFalse((self.ws / "frontend" / "src" / "custom" / "views" / "views.json").exists())
+
+    def test_a_built_and_wired_view_passes(self):
+        build = self.views()
+        self.write()
+        layer = build.check_views()
+        self.assertEqual(layer.status, "pass", layer.failures)
+        self.assertEqual(layer.counts["pass"], 1)
+
+    def test_what_is_missing_is_named_with_its_spec_path(self):
+        build = self.views()
+        self.write(view=None, index='export const Page_tasks = makeListPage("tasks");\n')
+        layer = build.check_views()
+        self.assertEqual(self.ids(layer), ["views.tasks.kanban.file"])
+        self.assertEqual(layer.failures[0]["spec_path"], "pages.tasks.views")
+
+        self.write(index='export const Page_tasks = makeListPage("tasks");\n')
+        self.assertEqual(self.ids(build.check_views()), ["views.tasks.kanban.page"])
+
+        self.write(index='// makeViewsPage("tasks", { kanban: X })\nexport const Page_tasks = makeViewsPage("tasks", {});\n')
+        self.assertEqual(self.ids(build.check_views()), ["views.tasks.kanban.wired"])
+
+    def test_a_placeholder_is_not_a_view(self):
+        build = self.views()
+        self.write(view="export default function V() { return <div>Board coming soon</div>; }\n")
+        ids = self.ids(build.check_views())
+        self.assertIn("views.tasks.kanban.stub", ids)
+        self.assertIn("views.tasks.kanban.data", ids)
+
+    def test_a_missing_view_fails_the_build_and_reaches_the_fix_round(self):
+        build = self.views()
+        self.write(view=None)
+        with mock.patch.object(studio_build.subprocess, "run", FakeRun(self.ws)), mock.patch.object(
+            StudioBuild, "app_reachable", return_value=(False, "no")
+        ), mock.patch.object(StudioBuild, "has_playwright", return_value=False):
+            layers = build.verify(only={"views": []})
+        self.assertEqual(layers["views"].status, "fail")
+        digest = build.digest(True, layers)
+        self.assertIn("views.tasks.kanban.file", digest)
+        self.assertIn("pages.tasks.views", digest)
+
+    def test_the_check_does_not_exist_for_an_app_with_no_declared_views(self):
+        build = self.views(declared=())
+        with mock.patch.object(studio_build.subprocess, "run", FakeRun(self.ws)), mock.patch.object(
+            StudioBuild, "app_reachable", return_value=(False, "no")
+        ), mock.patch.object(StudioBuild, "has_playwright", return_value=False):
+            layers = build.verify()
+        self.assertNotIn("views", layers)
+
+    def test_the_prompt_names_the_views_to_write(self):
+        build = self.views()
+        template_build = mock.Mock(skill="zango-tpl:zango-app-studio", skill_dir=str(self.skill), spec_path=str(self.spec))
+        template_build.template.name, template_build.template.version = "Custom Zango app", "1.1.7"
+        ctx = mock.Mock(app_name="demo_app", workspace_path=str(self.ws), primary_domain="demo.local")
+        from zango.apps.agent_mode.prompt import compose_studio_prompt
+
+        prompt = compose_studio_prompt(ctx, template_build, build)
+        self.assertIn("tasks (kanban)", prompt)
+        self.assertIn("references/views.md", prompt)
+

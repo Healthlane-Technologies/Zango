@@ -15,6 +15,7 @@ import { Badge, Button, ConfirmModal, cx, Drawer, Icon, toast, type Tone } from 
 /** The checks in the order the build runs them, with what each one proves. */
 const LAYERS: Array<[key: string, name: string, proves: string]> = [
 	['app_shell', 'App shell', '/app is served by the app module and a fresh frontend build'],
+	['views', 'Declared views', 'every board, calendar or card view in the spec was built'],
 	['audit_holes', 'Plain-language items', 'every item in the spec was implemented'],
 	['design_lint', 'Design lint', 'the frontend uses the design system'],
 	['api', 'API & access', 'each role can do exactly what the spec allows'],

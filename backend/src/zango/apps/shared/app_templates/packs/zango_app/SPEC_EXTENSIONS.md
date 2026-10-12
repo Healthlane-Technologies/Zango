@@ -131,6 +131,13 @@ the component, with its message; it never breaks the rest of the preview.
 
 ## What the build should do with them
 
+Until the skill's runtime ships a component for a view type, the platform has
+the build agent write that view as a custom view for the app
+(`skill/references/views.md`) and checks it is there (`views` in the build
+report). A view counts as shipped by the skill once `spec_check.py` carries it
+into `spec.ui.json` (`pages.<code>.views[].type`); the platform then leaves it
+to the skill.
+
 - `views`: build the declared views with the same access and row scoping as
   the table (the kanban's `move` maps onto the workflow transitions / field
   update it names).

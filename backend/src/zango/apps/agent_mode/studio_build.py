@@ -59,6 +59,16 @@ PLAYWRIGHT_REASON = (
 )
 CRUD_VERSION = "2.0.0"
 LUCIDE_VERSION = "1.31.0"
+# Declared list views (SPEC_EXTENSIONS.md): their switcher label and lucide icon.
+VIEW_LABELS = {
+    "table": ("Table", "table"),
+    "kanban": ("Board", "kanban"),
+    "cards": ("Cards", "layout-grid"),
+    "calendar": ("Calendar", "calendar"),
+    "timeline": ("Timeline", "gantt-chart"),
+}
+# A custom view shorter than this is a stub, whatever it says.
+VIEW_MIN_CHARS = 600
 BASE_PROXY_ROUTES = ["/api", "/zango", "/appbuilder", "/crud", "/workflow"]
 
 # Test layers in the order the skill runs them. ``browser`` layers need
@@ -66,6 +76,7 @@ BASE_PROXY_ROUTES = ["/api", "/zango", "/appbuilder", "/crud", "/workflow"]
 LAYERS = (
     # name, runner, needs browser, needs the app
     ("app_shell", "app_shell", False, False),
+    ("views", "views", False, False),
     ("audit_holes", "audit", False, False),
     ("design_lint", "zas_test.design", False, False),
     ("api", "zas_test.api", False, True),
@@ -557,6 +568,7 @@ class StudioBuild:
             raise StudioError("SpecCheckFailed", self._spec_errors(checked))
         self.install_runtime(emit)
         self.prepare_frontend(emit)
+        self.prepare_views(emit)
 
     def _write_check_spec(self) -> str:
         """The approved spec as plain YAML the skill's PyYAML reads exactly as the platform did.
@@ -696,6 +708,182 @@ class StudioBuild:
             return  # (failed() raises)
         self.frontend_ready = True
 
+    # -- declared list views ------------------------------------------------
+
+    def custom_views(self) -> list:
+        """Declared list views this runtime has no component for: the agent writes those.
+
+        A crud page may declare ``views`` (kanban, cards, calendar, timeline) and
+        the user approved them in the preview. A view counts as built by the
+        skill when its checker carried it into ``spec.ui.json``; every other
+        declared view, table aside, is written as a custom view for this app.
+        """
+        try:
+            resolved = json.loads((self.zas_dir / "spec.resolved.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return []
+        try:
+            ui_pages = json.loads((self.zas_dir / "spec.ui.json").read_text(encoding="utf-8")).get("pages") or {}
+        except (OSError, ValueError):
+            ui_pages = {}
+        pages = resolved.get("pages") or {}
+        if isinstance(pages, list):
+            pages = {p.get("code"): p for p in pages if isinstance(p, dict)}
+        out = []
+        for code, page in pages.items():
+            if not isinstance(page, dict) or page.get("type") != "crud":
+                continue
+            native = {
+                v.get("type") for v in (ui_pages.get(code) or {}).get("views") or [] if isinstance(v, dict)
+            }
+            for view in page.get("views") or []:
+                kind = view.get("type") if isinstance(view, dict) else None
+                if kind and kind != "table" and kind not in native:
+                    out.append({"page": code, "entity": page.get("entity"), "type": kind, "view": view})
+        return out
+
+    def _views_manifest(self) -> dict:
+        """{page: [declared views, in order]} for ViewsPage.tsx, with what a view needs resolved."""
+        resolved = json.loads((self.zas_dir / "spec.resolved.json").read_text(encoding="utf-8"))
+        entities = resolved.get("entities") or {}
+        custom = {(v["page"], v["type"]) for v in self.custom_views()}
+        pages = resolved.get("pages") or {}
+        manifest = {}
+        for code in sorted({page for page, _ in custom}):
+            page = pages.get(code) or {}
+            workflow = (entities.get(page.get("entity")) or {}).get("workflow") or {}
+            rows = []
+            for view in page.get("views") or []:
+                kind = view.get("type")
+                row = dict(view)
+                row["label"] = view.get("label") or VIEW_LABELS.get(kind, (kind or "").title())[0]
+                row["icon"] = VIEW_LABELS.get(kind, ("", "layout-grid"))[1]
+                row["custom"] = (code, kind) in custom
+                if kind == "kanban" and view.get("group_by") == "status":
+                    row.setdefault("move", "transitions")
+                    row["transitions"] = [
+                        {
+                            "name": t.get("name"),
+                            "label": t.get("label") or t.get("name"),
+                            "from": t.get("from") or [],
+                            "to": t.get("to"),
+                            "engine": t.get("engine") or [],
+                            "has_form": bool(t.get("form")),
+                            "roles": t.get("roles") or [],
+                        }
+                        for t in workflow.get("transitions") or []
+                        if not t.get("system")
+                    ]
+                rows.append(row)
+            manifest[code] = rows
+        return manifest
+
+    def prepare_views(self, emit=None) -> None:
+        """Hand the agent the declared views it has to write, and the page that hosts them."""
+        todo = self.zas_dir / "views.md"
+        needed = self.custom_views()
+        if not needed or not self.frontend_ready:
+            todo.unlink(missing_ok=True)
+            return
+        target = Path(self.workspace) / "frontend" / "src" / "custom" / "views"
+        target.mkdir(parents=True, exist_ok=True)
+        helper = Path(self.skill_dir) / "assets" / "templates" / "frontend" / "views" / "ViewsPage.tsx"
+        if not helper.is_file():
+            raise StudioError(
+                "ViewsHelperMissing",
+                "The spec declares list views this build skill has no component for, and the "
+                "skill does not ship the page that hosts custom views (assets/templates/"
+                "frontend/views/ViewsPage.tsx).",
+            )
+        shutil.copyfile(helper, target / "ViewsPage.tsx")
+        (target / "views.json").write_text(
+            json.dumps(self._views_manifest(), indent=2) + "\n", encoding="utf-8"
+        )
+        lines = [
+            "# Declared list views to write as custom views",
+            "",
+            "The approved spec declares these views and this runtime has no component for them.",
+            "Write each one as `references/views.md` says. The platform checks every row.",
+            "",
+            "| Page | View | File to write | Spec |",
+            "|---|---|---|---|",
+        ]
+        for v in needed:
+            lines.append(
+                f"| `{v['page']}` | `{v['type']}` | `frontend/src/custom/views/{v['page']}_{v['type']}.tsx` "
+                f"| `pages.{v['page']}.views` — `{json.dumps(v['view'], separators=(',', ':'))}` |"
+            )
+        todo.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        if emit:
+            emit(
+                "sys",
+                "Declared views the agent writes as custom views: "
+                + ", ".join(f"{v['page']} ({v['type']})" for v in needed),
+                level="sys",
+            )
+
+    def check_views(self, emit=None) -> LayerResult:
+        """Every declared view the runtime does not ship was written, and its page uses it."""
+        src = Path(self.workspace) / "frontend" / "src" / "custom"
+        try:
+            index = (src / "pages" / "index.ts").read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            index = ""
+        index_code = re.sub(r"//[^\n]*|/\*.*?\*/", "", index, flags=re.S)
+        needed = self.custom_views()
+        problems = []
+        for v in needed:
+            page, kind = v["page"], v["type"]
+            rel = f"frontend/src/custom/views/{page}_{kind}.tsx"
+            where = f"pages.{page}.views"
+
+            def problem(pid, title, detail="", _page=page, _kind=kind, _where=where):
+                problems.append(
+                    {"id": f"views.{_page}.{_kind}.{pid}", "title": title, "spec_path": _where, "detail": detail}
+                )
+
+            path = src / "views" / f"{page}_{kind}.tsx"
+            if not path.is_file():
+                problem(
+                    "file",
+                    f"the {kind} view of the {page} page is not built ({rel} is missing)",
+                    "The spec declares it and the user approved it in the preview. Write it as "
+                    "references/views.md says.",
+                )
+                continue
+            code = re.sub(r"//[^\n]*|/\*.*?\*/", "", path.read_text(encoding="utf-8", errors="replace"), flags=re.S)
+            if not re.search(r"export\s+default\b", code):
+                problem("export", f"{rel} has no default export")
+            if not re.search(r"useTableRows|api\.get\(|\bget\(", code):
+                problem("data", f"{rel} never loads the entity's records", "Use api.useTableRows(props.endpoint, …).")
+            if len(code.strip()) < VIEW_MIN_CHARS or re.search(r">[^<{]*(not built|coming soon|TODO|placeholder)", code, re.I):
+                problem("stub", f"{rel} is a placeholder, not the {kind} view")
+            wired = re.search(rf"makeViewsPage\(\s*[\"']{re.escape(page)}[\"']\s*,\s*\{{([^}}]*)\}}", index_code)
+            if wired is None:
+                problem(
+                    "page",
+                    f"src/custom/pages/index.ts does not export the {page} page with makeViewsPage",
+                    f'export const Page_{page} = makeViewsPage("{page}", {{ {kind}: <the view> }});',
+                )
+            elif not re.search(rf"\b{re.escape(kind)}\b", wired.group(1)):
+                problem("wired", f"makeViewsPage(\"{page}\", …) does not pass the {kind} view")
+        if emit:
+            emit(
+                "post_step",
+                "studio:test:views "
+                + (f"passed: {len(needed)} declared view(s) built" if not problems
+                   else f"failed: {len(problems)} problem(s) — " + "; ".join(p["title"] for p in problems[:4])),
+                level="err" if problems else "info",
+                is_error=bool(problems),
+            )
+        bad = {p["id"].rsplit(".", 1)[0] for p in problems}
+        return LayerResult(
+            name="views",
+            status="fail" if problems else "pass",
+            counts={"pass": len(needed) - len(bad), "fail": len(problems), "skip": 0},
+            failures=problems,
+        )
+
     def _write_proxy_routes(self, fe: Path) -> None:
         """frontend/.env VITE_PROXY_ROUTES: the package routes plus every module prefix, never /app."""
         try:
@@ -815,6 +1003,10 @@ class StudioBuild:
                 reason = "no frontend was built"
             elif name == "app_shell" and not self.frontend_ready:
                 reason = "the frontend phase was skipped — " + (self.frontend_reason or "no frontend")
+            elif name == "views" and not self.custom_views():
+                continue  # nothing declared beyond what the runtime ships: not a check at all
+            elif name == "views" and not self.frontend_ready:
+                reason = "the frontend phase was skipped — " + (self.frontend_reason or "no frontend")
             if reason:
                 self.skip(f"test:{name}", reason, emit)
                 layers[name] = LayerResult(name=name, status="skip", reason=reason)
@@ -825,6 +1017,8 @@ class StudioBuild:
     def _run_layer(self, name, runner, groups, emit) -> LayerResult:
         if runner == "app_shell":
             return self.check_app_shell(emit)
+        if runner == "views":
+            return self.check_views(emit)
         if runner == "audit":
             result = self.script("test:audit_holes", "spec_check.py", self.check_spec or self.spec_path,
                                  "--workspace", self.workspace, "--audit-holes", emit=emit)

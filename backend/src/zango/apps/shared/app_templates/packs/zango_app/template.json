@@ -1,7 +1,7 @@
 {
   "slug": "zango-app",
   "name": "Custom Zango app",
-  "version": "1.1.6",
+  "version": "1.1.7",
   "category": "General",
   "icon": "blocks",
   "is_beta": true,
@@ -112,7 +112,7 @@
     "app_name_prefill": "",
     "app_prompt_prefill": ""
   },
-  "changelog": "Preview: a custom screen's build text sits behind a collapsed 'Build notes' toggle under its sketch.",
+  "changelog": "Build: a list view the spec declares (board, cards, calendar, timeline) that the runtime has no component for is written as a custom view for the app, and the build checks it is there.",
   "builder": {
     "adapter": "builder/adapter.js",
     "html": "builder/app-studio.html"

@@ -369,6 +369,14 @@ def compose_studio_prompt(ctx, template_build, studio) -> str:
         if studio.update
         else ""
     )
+    views = studio.custom_views() if studio.frontend_ready else []
+    if views:
+        frontend_steps += (
+            ". The spec declares list views this runtime has no component for — "
+            + ", ".join(f"{v['page']} ({v['type']})" for v in views)
+            + " — write each as a custom view (`.zas/views.md`, `references/views.md`); "
+            "the build is not done without them"
+        )
     rules = _STUDIO_RULES.format(skill_dir=template_build.skill_dir, frontend=frontend, npm=npm)
     ask = _STUDIO_BUILD.format(
         update=update,
