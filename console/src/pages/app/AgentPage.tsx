@@ -33,7 +33,7 @@ import {
 import { NewChangeModal } from './agent/NewChangeModal';
 import { RequirementsPanel } from './agent/RequirementsPanel';
 import { humanPath } from './agent/builder/labels';
-import { isGeneratingPreview } from './agent/builder/generating';
+import { previewStage, starterIsPlaceholder } from './agent/builder/generating';
 import { Decisions } from './agent/builder/ReviewPanel';
 import type { Schema } from './agent/builder/schema';
 import { TemplateBuilderHost } from './agent/builder/TemplateBuilderHost';
@@ -192,15 +192,18 @@ export function AgentPage() {
 	const previewFlow = decisionsInChat;
 	const [confirmCommit, setConfirmCommit] = useState(false);
 	const [sheetSignal, setSheetSignal] = useState<{ sheet: 'checks'; nonce: number } | null>(null);
-	const generating =
-		!!active &&
-		isGeneratingPreview({
-			thinking: active.is_thinking,
-			text: activeSpec.data?.text ?? active.spec_markdown ?? '',
-			starter: activeBuilder.data?.starter_yaml,
-			draftRevision: activeSpec.data?.draft_revision ?? active.draft_revision ?? 0,
-			yamlBroken: (activeSpec.data?.issues ?? []).some((i) => i.code === 'yaml'),
-		});
+	const pvStage = active
+		? previewStage({
+				thinking: active.is_thinking,
+				text: activeSpec.data?.text ?? active.spec_markdown ?? '',
+				starter: activeBuilder.data?.starter_yaml,
+				draftRevision: activeSpec.data?.draft_revision ?? active.draft_revision ?? 0,
+				yamlBroken: (activeSpec.data?.issues ?? []).some((i) => i.code === 'yaml'),
+				placeholderStarter: starterIsPlaceholder(activeBuilder.data),
+			})
+		: 'ready';
+	const generating = pvStage === 'generating';
+	const awaitingAnswers = pvStage === 'awaiting';
 
 	const blocked = availability ? !availability.available : false;
 	const open = active?.status === 'gathering' || active?.status === 'ready';
@@ -241,13 +244,15 @@ export function AgentPage() {
 			? 'Build with AI isn’t ready for this app'
 			: generating
 				? 'The agent is still generating the preview'
-				: active.is_thinking
-					? 'The agent is updating the preview'
-					: openDecisions > 0
-						? `Answer the ${openDecisions} open decision${openDecisions > 1 ? 's' : ''} in the chat first`
-						: !(activeSpec.data?.text ?? active.spec_markdown ?? '').trim()
-							? 'The agent hasn’t generated a preview yet'
-							: null;
+				: awaitingAnswers
+					? 'Answer the agent’s questions first: there is no preview to commit yet'
+					: active.is_thinking
+						? 'The agent is updating the preview'
+						: openDecisions > 0
+							? `Answer the ${openDecisions} open decision${openDecisions > 1 ? 's' : ''} in the chat first`
+							: !(activeSpec.data?.text ?? active.spec_markdown ?? '').trim()
+								? 'The agent hasn’t generated a preview yet'
+								: null;
 	const showDecisionsCard = () => {
 		const el = document.getElementById('agent-decisions');
 		if (!el) return;
@@ -539,7 +544,9 @@ export function AgentPage() {
 							)
 						}
 						idlePlaceholder={
-							previewFlow && !generating ? 'Ask for changes to the preview…' : undefined
+							previewFlow && !generating && !awaitingAnswers
+								? 'Ask for changes to the preview…'
+								: undefined
 						}
 					/>
 				)}

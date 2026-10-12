@@ -27,11 +27,14 @@ const ROTATE_MS = 2400;
  */
 export function GeneratingPreview({
 	shown,
+	awaiting = false,
 	documents,
 	sections,
 	changedSections,
 }: {
 	shown: boolean;
+	/** The agent is waiting on the user's answers before it writes the first version. */
+	awaiting?: boolean;
 	documents: number;
 	sections: Array<{ id: string; title: string }>;
 	/** Section ids the agent has written so far this turn (may be empty). */
@@ -72,7 +75,7 @@ export function GeneratingPreview({
 	const line = lines[i % lines.length];
 
 	return (
-		<div className={cx('gp', !shown && 'out')} role="status" aria-live="polite">
+		<div className={cx('gp', !shown && 'out', awaiting && 'wait')} role="status" aria-live="polite">
 			<div className="gp-in">
 				<svg className="gp-art" viewBox="0 0 320 200" aria-hidden="true">
 					<defs>
@@ -154,13 +157,25 @@ export function GeneratingPreview({
 						/>
 					</g>
 				</svg>
-				<b className="gp-title">Generating your app preview</b>
-				<span key={line} className="gp-line">
-					{line}…
-				</span>
-				<span className="gp-note">
-					The preview appears here as soon as the first version is ready.
-				</span>
+				{awaiting ? (
+					<>
+						<b className="gp-title">Your preview starts with your answers</b>
+						<span className="gp-line">The agent has a few questions in the chat</span>
+						<span className="gp-note">
+							Answer them and the first version of your app appears here.
+						</span>
+					</>
+				) : (
+					<>
+						<b className="gp-title">Generating your app preview</b>
+						<span key={line} className="gp-line">
+							{line}…
+						</span>
+						<span className="gp-note">
+							The preview appears here as soon as the first version is ready.
+						</span>
+					</>
+				)}
 			</div>
 		</div>
 	);

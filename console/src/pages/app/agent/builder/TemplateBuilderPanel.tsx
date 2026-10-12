@@ -17,7 +17,7 @@ import {
 import { ChecksList, type CheckRow } from './ChecksList';
 import { EmbeddedBuilder } from './EmbeddedBuilder';
 import { GeneratingPreview, UpdatingPreview } from './GeneratingPreview';
-import { isGeneratingPreview } from './generating';
+import { previewStage, starterIsPlaceholder } from './generating';
 import { BuilderContext, type BuilderCtx } from './context';
 import { changedPointers } from './diff';
 import { humanPath } from './labels';
@@ -458,13 +458,17 @@ export function TemplateBuilderPanel({
 	if (previewMode) {
 		const warnings = issues.length - errors;
 		// The first version of the app is still being written: the preview has nothing to show.
-		const generating = isGeneratingPreview({
+		// …or the agent is asking its questions first, and the spec is still the placeholder.
+		const stage = previewStage({
 			thinking,
 			text: spec.text,
 			starter: builder.starter_yaml,
 			draftRevision: spec.draft_revision,
 			yamlBroken,
+			placeholderStarter: starterIsPlaceholder(builder),
 		});
+		const awaiting = stage === 'awaiting';
+		const generating = stage !== 'ready';
 		const writtenSections = [
 			...new Set(
 				(spec.changed_paths ?? []).map((p) => sectionFor(p)?.id).filter((id): id is string => !!id),
@@ -523,7 +527,7 @@ export function TemplateBuilderPanel({
 					<div className="bld-h pv-h">
 						{generating ? (
 							<Badge tone="accent" dot>
-								Generating
+								{awaiting ? 'Waiting for your answers' : 'Generating'}
 							</Badge>
 						) : (
 							<>
@@ -608,6 +612,7 @@ export function TemplateBuilderPanel({
 					<div className="bld-b">
 						<GeneratingPreview
 							shown={generating}
+							awaiting={awaiting}
 							documents={documents.length}
 							sections={sections}
 							changedSections={writtenSections}

@@ -1216,6 +1216,9 @@
 	font-size: 12px;
 	color: var(--t4);
 }
+/* Waiting on the user: the same window, drawn and still. */
+.gp.wait .gp-s { animation: none; opacity: 0.55; }
+.gp.wait .gp-sheen, .gp.wait .gp-pen { display: none; }
 @media (prefers-reduced-motion: reduce) {
 	.gp-s { animation: none; opacity: 1; }
 	.gp-sheen, .gp-pen, .gp-spark, .gp-line { animation: none; }
