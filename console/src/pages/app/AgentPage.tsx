@@ -33,7 +33,7 @@ import {
 import { NewChangeModal } from './agent/NewChangeModal';
 import { RequirementsPanel } from './agent/RequirementsPanel';
 import { humanPath } from './agent/builder/labels';
-import { previewStage, starterIsPlaceholder } from './agent/builder/generating';
+import { starterIsPlaceholder, usePreviewStage } from './agent/builder/generating';
 import { Decisions } from './agent/builder/ReviewPanel';
 import type { Schema } from './agent/builder/schema';
 import { TemplateBuilderHost } from './agent/builder/TemplateBuilderHost';
@@ -192,16 +192,15 @@ export function AgentPage() {
 	const previewFlow = decisionsInChat;
 	const [confirmCommit, setConfirmCommit] = useState(false);
 	const [sheetSignal, setSheetSignal] = useState<{ sheet: 'checks'; nonce: number } | null>(null);
-	const pvStage = active
-		? previewStage({
-				thinking: active.is_thinking,
-				text: activeSpec.data?.text ?? active.spec_markdown ?? '',
-				starter: activeBuilder.data?.starter_yaml,
-				draftRevision: activeSpec.data?.draft_revision ?? active.draft_revision ?? 0,
-				yamlBroken: (activeSpec.data?.issues ?? []).some((i) => i.code === 'yaml'),
-				placeholderStarter: starterIsPlaceholder(activeBuilder.data),
-			})
-		: 'ready';
+	const pvStage = usePreviewStage({
+		thinking: !!active?.is_thinking,
+		text: activeSpec.data?.text ?? active?.spec_markdown ?? '',
+		starter: activeBuilder.data?.starter_yaml,
+		draftRevision: activeSpec.data?.draft_revision ?? active?.draft_revision ?? 0,
+		yamlBroken: (activeSpec.data?.issues ?? []).some((i) => i.code === 'yaml'),
+		placeholderStarter: !!active && starterIsPlaceholder(activeBuilder.data),
+		isDraft: activeSpec.data?.is_draft ?? active?.spec_is_draft,
+	});
 	const generating = pvStage === 'generating';
 	const awaitingAnswers = pvStage === 'awaiting';
 

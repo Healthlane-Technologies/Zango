@@ -17,7 +17,7 @@ import {
 import { ChecksList, type CheckRow } from './ChecksList';
 import { EmbeddedBuilder } from './EmbeddedBuilder';
 import { GeneratingPreview, UpdatingPreview } from './GeneratingPreview';
-import { previewStage, starterIsPlaceholder } from './generating';
+import { starterIsPlaceholder, usePreviewStage } from './generating';
 import { BuilderContext, type BuilderCtx } from './context';
 import { changedPointers } from './diff';
 import { humanPath } from './labels';
@@ -182,6 +182,17 @@ export function TemplateBuilderPanel({
 	const [mode, setMode] = useState<Record<string, Mode>>({});
 	const [editingSections, setEditingSections] = useState<Set<string>>(() => new Set());
 	const yamlBroken = parsed.errors.length > 0;
+	// What the preview pane has to show: an app, the agent writing the first one, or nothing yet
+	// because the agent asked its questions first and the spec is still the placeholder.
+	const stage = usePreviewStage({
+		thinking,
+		text: spec.text,
+		starter: builder.starter_yaml,
+		draftRevision: spec.draft_revision,
+		yamlBroken,
+		placeholderStarter: starterIsPlaceholder(builder),
+		isDraft: spec.is_draft,
+	});
 	const editingHere = !locked && !yamlBroken && !!section && editingSections.has(section.id);
 	const [target, setTarget] = useState<{ pointer: string; nonce: number } | null>(null);
 	const [yamlJump, setYamlJump] = useState<{ line: number; nonce: number } | null>(null);
@@ -458,15 +469,6 @@ export function TemplateBuilderPanel({
 	if (previewMode) {
 		const warnings = issues.length - errors;
 		// The first version of the app is still being written: the preview has nothing to show.
-		// …or the agent is asking its questions first, and the spec is still the placeholder.
-		const stage = previewStage({
-			thinking,
-			text: spec.text,
-			starter: builder.starter_yaml,
-			draftRevision: spec.draft_revision,
-			yamlBroken,
-			placeholderStarter: starterIsPlaceholder(builder),
-		});
 		const awaiting = stage === 'awaiting';
 		const generating = stage !== 'ready';
 		const writtenSections = [
