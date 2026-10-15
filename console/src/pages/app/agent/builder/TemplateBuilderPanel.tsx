@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { documentUrl, type SpecIssue } from '@/api/agentMode';
+import { documentUrl, type PreviewFocus, type SpecIssue } from '@/api/agentMode';
 import {
 	Badge,
 	Button,
@@ -15,6 +15,7 @@ import {
 	type Tone,
 } from '@/ui';
 import { ChecksList, type CheckRow } from './ChecksList';
+import { customWork } from './customWork';
 import { EmbeddedBuilder } from './EmbeddedBuilder';
 import { GeneratingPreview, UpdatingPreview } from './GeneratingPreview';
 import { starterIsPlaceholder, usePreviewStage } from './generating';
@@ -76,6 +77,7 @@ export function TemplateBuilderPanel({
 	jump,
 	commit,
 	sheet: sheetSignal,
+	onPreviewFocus,
 }: BuilderProps) {
 	const root = builder.json_schema as Schema;
 	const sections = useMemo<BuilderSection[]>(
@@ -87,6 +89,20 @@ export function TemplateBuilderPanel({
 	// pane is just the live preview; the spec, workflows and checks open from its ⋯ menu.
 	const previewUrl = builder.preview_url ?? builder.builder_url ?? null;
 	const previewMode = !!previewUrl;
+	// Where the user is in the preview: it goes with their next message, and the full-page
+	// preview opens there.
+	const [place, setPlace] = useState<PreviewFocus | null>(null);
+	const onFocus = useCallback(
+		(focus: PreviewFocus) => {
+			const { pointed: _pointed, ...where } = focus;
+			setPlace(where);
+			onPreviewFocus?.(focus);
+		},
+		[onPreviewFocus],
+	);
+	const fullPreviewHref = `/console/apps/${appId}/agent/${requirement.uuid}/preview${
+		place ? `#${encodeURIComponent(JSON.stringify(place))}` : ''
+	}`;
 	// Without a preview page, a template's own builder replaces Details (older servers).
 	const embedUrl = previewMode ? null : builder.builder_url || null;
 	const [sheet, setSheet] = useState<Sheet | null>(null);
@@ -103,6 +119,8 @@ export function TemplateBuilderPanel({
 	const spec = draft.shown;
 	const parsed = draft.parsed;
 	const doc = parsed.value;
+	// How much of the app the build writes by hand (custom screens and requirements).
+	const custom = useMemo(() => customWork(doc), [doc]);
 	const thinking = requirement.is_thinking;
 	const locked = !editable || thinking || spec.status === 'approved' || draft.reviewing;
 	// Unsaved edits have no "changed by agent"; a conflict under review shows the agent's.
@@ -569,6 +587,21 @@ export function TemplateBuilderPanel({
 											{flags.length} flagged
 										</button>
 									)}
+									{custom && custom.screens + custom.requirements > 0 && (
+										<span
+											className="pv-pill custom"
+											title="Built by hand rather than from the declared spec: each needs a sketch or a trigger, and acceptance criteria. Fewer is faster and more reliable."
+										>
+											<Icon name="pen" size={12} />
+											{[
+												custom.screens && `${custom.screens} custom screen${custom.screens > 1 ? 's' : ''}`,
+												custom.requirements &&
+													`${custom.requirements} custom rule${custom.requirements > 1 ? 's' : ''}`,
+											]
+												.filter(Boolean)
+												.join(' · ')}
+										</span>
+									)}
 									{changed.length > 0 && !thinking && (
 										<button
 											type="button"
@@ -594,6 +627,18 @@ export function TemplateBuilderPanel({
 										</Button>
 									)}
 								</>
+							)}
+							{!generating && (
+								<a
+									className="ib"
+									href={fullPreviewHref}
+									target="_blank"
+									rel="noopener"
+									aria-label="Open the preview in a new tab"
+									title="Open the preview in a new tab"
+								>
+									<Icon name="ext" />
+								</a>
 							)}
 							<Menu
 								items={menu}
@@ -638,6 +683,7 @@ export function TemplateBuilderPanel({
 							onChange={draft.type}
 							preview={!inBuilder}
 							onReady={setCaps}
+							onFocus={onFocus}
 						/>
 					</div>
 					{!sheet && saveBar}

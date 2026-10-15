@@ -143,7 +143,8 @@ class AgentRunDetailSerializer(serializers.ModelSerializer):
             "frontend": bool(data.get("frontend", True)),
             "frontend_reason": data.get("frontend_reason", ""),
             "verdict": report.get("verdict", ""),
-            "not_verified": data.get("not_verified") or [s.get("layer") for s in skipped],
+            "not_verified": data.get("not_verified")
+            or [s.get("layer") for s in skipped],
             "rounds": data.get("rounds", 0),
             "skipped": skipped,
             "layers": layers,
@@ -191,7 +192,15 @@ class AgentRunCreateSerializer(serializers.Serializer):
 class AgentRequirementMessageSerializer(serializers.ModelSerializer):
     class Meta:
         model = AgentRequirementMessage
-        fields = ("seq", "role", "content", "ts", "is_question", "questions")
+        fields = (
+            "seq",
+            "role",
+            "content",
+            "ts",
+            "is_question",
+            "questions",
+            "preview_focus",
+        )
 
 
 def _template_payload(obj):

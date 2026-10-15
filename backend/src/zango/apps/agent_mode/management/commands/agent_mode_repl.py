@@ -125,7 +125,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         from zango.apps.agent_mode.options import SKILL_PLUGIN_DIR
-        from zango.apps.agent_mode.prompt import QUALIFIED_SKILL, compose_prompt
+        from zango.apps.agent_mode.prompt import STUDIO_SKILL, compose_prompt
 
         prompt = ""
         cwd = options["cwd"]
@@ -142,7 +142,9 @@ class Command(BaseCommand):
             # context reads packages, roles and theme.
             connection.set_tenant(tenant)
             ctx = build_app_context(tenant)
-            composed = compose_prompt(options["requirement"] or "(no requirement)", ctx)
+            composed = compose_prompt(
+                options["requirement"] or "(no requirement)", ctx, skill=STUDIO_SKILL
+            )
             # The skill-dispatch line (/plugin:skill) must stay the first line
             # of the message for slash-command dispatch to fire, so the note
             # is spliced in right after it rather than prepended.
@@ -214,10 +216,10 @@ class Command(BaseCommand):
         if prompt:
             argv.append(prompt)
         else:
-            argv.append(f"/{QUALIFIED_SKILL} ")
+            argv.append(f"/{STUDIO_SKILL} ")
 
         self.stdout.write(self.style.MIGRATE_HEADING("Agent Mode skill REPL"))
-        self.stdout.write(f"  skill:  {QUALIFIED_SKILL}")
+        self.stdout.write(f"  skill:  {STUDIO_SKILL}")
         self.stdout.write(f"  plugin: {SKILL_PLUGIN_DIR}")
         self.stdout.write(f"  cwd:    {cwd}")
         self.stdout.write(

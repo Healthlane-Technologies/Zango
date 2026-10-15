@@ -39,7 +39,8 @@ earlier ones, and the preview needs roles, pages and entities to agree:
 3. **The skeleton, so the preview comes alive early.** In one pass:
    - `/roles` — every role with its landing page and menu;
    - `/pages` — a `crud` page per listed entity, `detail` pages for 360s,
-     `custom` pages for dashboards;
+     `dashboard` pages (declared `blocks`) for dashboards, and `custom`
+     pages only for what the blocks cannot say;
    - `/modules` — every module and entity with its main fields, `access` for
      every role, and a basic `table` and `form`.
    After these three calls each role can sign in to a working menu and open
@@ -52,10 +53,17 @@ earlier ones, and the preview needs roles, pages and entities to agree:
    role.
 5. **Sketch every custom screen.** Each `custom` page, custom tab and custom
    sidebar section gets a `preview` (SCHEMA.md, "Custom screens with a
-   preview") that draws it from the demo data: a dashboard's real KPIs and
-   charts computed with `ctx.rows`, a board with real records. The user judges
-   the app by the preview — a placeholder where their dashboard goes reads as
-   missing. `spec_mark_ready` is refused while a custom screen has no sketch.
+   preview") that draws it from the demo data: real KPIs and charts computed
+   with `ctx.rows`, a board with real records. The user judges the app by the
+   preview — a placeholder where their screen goes reads as missing. Give it
+   its contract too (SCHEMA.md, "Contracts for custom work"): what it reads,
+   what the user does with it and `acceptance`. `spec_mark_ready` is refused
+   while a custom screen has no sketch or no acceptance. Dashboards the blocks
+   can say are `type: dashboard` and need neither.
+   Each edit to a custom screen reports what its sketch drew, for every role
+   that can open it (errors, empty parts, the records it read, the values it
+   shows): read that and fix it before moving on. Look at each new screen once
+   with `preview_look`.
 6. **360 pages** (`/detail_views`): one per hero, with header facts and
    actions, stats, related tabs (`via` paths that end at the hero) and an
    activity timeline. Add the matching `detail` page and `row_click`.
@@ -136,16 +144,30 @@ The user will click through the preview and ask for changes in plain words
 ("vendors should see their invoices", "add a rejection reason", "the task
 list should be a kanban").
 
-Custom UI requests: first look for a declarative way — a list shown as a
-board, cards, calendar or timeline is `views` on its crud page (SCHEMA.md);
-reorder views so the one they asked for comes first, and keep `table` as a
-second view unless they want it gone. Only when nothing declarative fits, use a
-`custom` page, tab or sidebar section with a precise `text` for the build and a
-`preview` function that sketches it from the demo data, so the user sees it
-right away. Check the preview renders: a broken `preview` shows an error panel
-in its place. Apply each
+Requests land on the lowest of these that can hold them — the higher, the
+more the build writes by hand:
+
+1. **The look** — `app.theme` and `app.ui` (radius, density).
+2. **Records and workflow** — fields, access, forms, tables, statuses,
+   transitions, 360 pages.
+3. **Declared presentation** — `views` on a crud page (board, cards,
+   calendar, timeline; reorder them so the one asked for comes first and keep
+   `table` unless they want it gone), `type: dashboard` with `blocks`, 360
+   layouts and stats.
+4. **A custom screen** — a `custom` page, tab or sidebar section with `text`,
+   a `preview` sketch and its contract (`data`, `interactions`, `states`,
+   `acceptance`).
+5. **Custom logic** — `custom_requirements` with `area`, `trigger` and
+   `acceptance`, or a transition's `on_done`.
+
+Only when nothing declarative fits, use a custom screen with a precise `text`
+for the build and a `preview` function that sketches it from the demo data, so
+the user sees it right away. The edit's result tells you what the sketch drew for each role;
+fix any error, blank or wrong number before you reply, and take a
+`preview_look` when the request was about how it looks. Apply each
 with the smallest spec tool that does it, keep every reference consistent so
 the preview keeps rendering, `spec_unflag` anything they have now confirmed,
 and call `spec_open_decisions` again with whatever is still open (an empty
 list when nothing is). Call `spec_mark_ready` only when there are no open
-decisions and no errors.
+decisions and no errors; run `preview_check` first when you changed custom
+screens or the data they read this turn.

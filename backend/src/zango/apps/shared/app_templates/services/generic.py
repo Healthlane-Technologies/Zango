@@ -59,31 +59,49 @@ def follow_current(version):
     """The version a requirement on ``version`` actually works with.
 
     An app pinned to an older version of the generic template itself follows
-    its current version — schema, rules, guidance, preview page and build
-    skill — because those are how a generic spec is written, previewed and
+    its current version — schema, rules, guidance and preview page —
+    because those are how a generic spec is written, previewed and
     built, and they only get better. Every other template keeps its pin (a
     template with an engine is built against exactly the version it chose).
     """
-    if version is None or version.template.slug != GENERIC_SLUG or version.spec_dialect != GENERIC_DIALECT:
+    if (
+        version is None
+        or version.template.slug != GENERIC_SLUG
+        or version.spec_dialect != GENERIC_DIALECT
+    ):
         return version
     current = generic_version()
-    return current if current is not None and current.spec_dialect == GENERIC_DIALECT else version
+    return (
+        current
+        if current is not None and current.spec_dialect == GENERIC_DIALECT
+        else version
+    )
 
 
-def build_skill_source(version):
-    """The generic version whose build skill ``version`` is built with, or None.
+# Every spec in the generic dialect is built with the App Studio skill. It
+# ships in Agent Mode's own skill plugin rather than in a template pack, so a
+# pack (the generic one included) never carries a copy that can drift.
+STUDIO_PLUGIN = "zango-agent-mode"
+STUDIO_SKILL = "zango-app-studio"
 
-    Any version on the generic spec without a build skill of its own is built
-    with the *current* generic template's skill — including older versions
-    of the generic template itself, which an app may be pinned to: the spec
-    they hold is the same language, and the skill is how it gets built.
+
+def studio_plugin_dir() -> str:
+    """Agent Mode's skill plugin, where the App Studio skill lives."""
+    from pathlib import Path
+
+    return str(Path(__file__).resolve().parents[3] / "agent_mode" / "skill_plugin")
+
+
+def builds_with_studio(version) -> bool:
+    """Whether ``version`` is built with the App Studio skill.
+
+    Any version on the generic spec without a build skill of its own is —
+    including older versions of the generic template itself, which an app
+    may be pinned to and which still name the skill they used to ship.
     """
-    if version.spec_dialect != GENERIC_DIALECT or version.build_skill_name:
-        return None
-    generic = generic_version()
-    if generic is None or generic.pk == version.pk or not generic.build_skill_name:
-        return None
-    return generic
+    if version.spec_dialect != GENERIC_DIALECT:
+        return False
+    return not version.build_skill_name or version.template.slug == GENERIC_SLUG
 
 
 def fallback_for(version):

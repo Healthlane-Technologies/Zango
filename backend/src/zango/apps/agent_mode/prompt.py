@@ -14,8 +14,13 @@ from __future__ import annotations
 
 
 PLUGIN_NAME = "zango-agent-mode"
-SKILL_NAME = "zango-app-developer-server"
-QUALIFIED_SKILL = f"{PLUGIN_NAME}:{SKILL_NAME}"
+# Builds every app written in the generic Zango app spec (app_spec.yaml).
+STUDIO_SKILL_NAME = "zango-app-studio"
+STUDIO_SKILL = f"{PLUGIN_NAME}:{STUDIO_SKILL_NAME}"
+# The general developer skill. Only loaded beside a template build skill of
+# its own (PSP's), which still hands migrations, sync and the frontend to it.
+DEVELOPER_SKILL_NAME = "zango-app-developer-server"
+DEVELOPER_SKILL = f"{PLUGIN_NAME}:{DEVELOPER_SKILL_NAME}"
 
 MAX_REQUIREMENT_CHARS = 20_000
 
@@ -75,36 +80,6 @@ _CONSTRAINTS = """\
 """
 
 
-_TEMPLATE_PREAMBLE = """\
-## This requirement is a {name} specification
-
-The user did not describe an app in prose; they answered an interview against
-Zelthy's **{name}** template, and what follows is that template's own
-configuration format ({spec_format}), not a document to read loosely. Every key
-in it is a decision the user made and signed off.
-
-Build what it specifies. Where it uses a term you do not recognise, treat it as
-a requirement to implement rather than a convention to ignore, and say in your
-summary what you could not honour and why. Do not "tidy" the specification by
-leaving out sections you consider optional — a user approved the whole of it.
-
-"""
-
-
-def template_preamble(template) -> str:
-    """What the build agent is told when the requirement came from a template.
-
-    Without it the agent is handed a YAML document with no explanation and
-    treats it as loose notes — dropping whole sections as decoration.
-    """
-    if template is None:
-        return ""
-    return _TEMPLATE_PREAMBLE.format(
-        name=template.name,
-        spec_format=template.spec_format,
-    )
-
-
 def _format_list(items: list, empty: str = "(none)") -> str:
     return ", ".join(str(i) for i in items) if items else empty
 
@@ -155,9 +130,7 @@ left off. **Do not start over.**
 """
 
 
-def compose_resume_prompt(
-    requirement_text: str, ctx, reason: str, skill: str = QUALIFIED_SKILL
-) -> str:
+def compose_resume_prompt(requirement_text: str, ctx, reason: str, skill: str) -> str:
     """Prompt for a run that continues an interrupted one."""
     return RESUME_PREAMBLE.format(
         reason=(reason or "the run was interrupted").strip()
@@ -201,16 +174,16 @@ def template_build_request(template, spec_path: str, engine_paths=()) -> str:
         version=template.version or "current",
         spec_format=template.spec_format,
         spec_path=spec_path,
-        skill=template.qualified_skill or QUALIFIED_SKILL,
+        skill=template.qualified_skill,
         engine=engine,
     )
 
 
-def compose_prompt(requirement: str, ctx, skill: str = QUALIFIED_SKILL) -> str:
+def compose_prompt(requirement: str, ctx, skill: str) -> str:
     """Build the full prompt: skill dispatch, run context, constraints, ask.
 
-    ``skill`` is the skill the prompt dispatches — a template's own build
-    skill for template builds, otherwise the general app developer.
+    ``skill`` is the skill the prompt dispatches: the template's own build
+    skill. (Builds on the generic spec use ``compose_studio_prompt``.)
     """
     requirement = (requirement or "").strip()
     if not requirement:
@@ -355,7 +328,9 @@ def compose_studio_prompt(ctx, template_build, studio) -> str:
             ", except, from `frontend/`: `npx --no tsc --noEmit`, `npm run build:zango`, "
             "`npm install`; and the deploy copy `cp -r frontend/zango-build/. static/js/`"
         )
-        frontend_steps = " (pages index, App.tsx, slots, type-check, build, deploy, app module)"
+        frontend_steps = (
+            " (pages index, App.tsx, slots, type-check, build, deploy, app module)"
+        )
     else:
         frontend = (
             f"SKIPPED ({studio.frontend_reason or 'not available'}). Do the backend "
@@ -377,7 +352,17 @@ def compose_studio_prompt(ctx, template_build, studio) -> str:
             + " — write each as a custom view (`.zas/views.md`, `references/views.md`); "
             "the build is not done without them"
         )
-    rules = _STUDIO_RULES.format(skill_dir=template_build.skill_dir, frontend=frontend, npm=npm)
+    bundle = studio.zas_dir / "bundle" / "index.md"
+    if studio.frontend_ready and bundle.is_file():
+        frontend_steps += (
+            ". The user approved how every custom page, tab and panel looks: `.zas/bundle/index.md` "
+            "lists each with its sketch, kit outline and screenshots. Port each sketch onto the zas "
+            'kit (`references/custom-code.md`, "Porting a sketch"); the platform checks the result '
+            "against that outline"
+        )
+    rules = _STUDIO_RULES.format(
+        skill_dir=template_build.skill_dir, frontend=frontend, npm=npm
+    )
     ask = _STUDIO_BUILD.format(
         update=update,
         spec_path=template_build.spec_path,

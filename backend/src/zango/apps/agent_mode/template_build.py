@@ -7,8 +7,9 @@ Before the build agent starts on an app built from a template:
 * the approved journey is written to a file in the run directory — specs of
   real programs run past the inline prompt limit, and a file is also what the
   build skill is written to read;
-* the build uses the template's own skill, loaded from its materialised
-  plugin, alongside the general app-developer skill.
+* the build uses the template's skill: App Studio from Agent Mode's plugin
+  for every template on the generic spec, or the template's own (PSP's),
+  which is loaded beside the general app-developer skill it relies on.
 """
 
 from __future__ import annotations
@@ -39,7 +40,7 @@ class TemplateBuild:
 
     @property
     def skill_plugin_dir(self) -> str:
-        """The plugin the build skill comes from (the generic template's when borrowed)."""
+        """The plugin the build skill comes from (Agent Mode's for App Studio)."""
         return self.template.build_plugin_dir
 
     @property

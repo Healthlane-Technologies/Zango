@@ -53,7 +53,7 @@ class CatalogueTests(unittest.TestCase):
 
     def test_every_template_build_skill_is_on_disk(self):
         # A template without its own build skill is built with the platform's
-        # generic one (prompt.QUALIFIED_SKILL).
+        # generic one: App Studio, from Agent Mode's plugin (generic.py).
         for slug, template in load_templates().items():
             if not template.build_skill_name:
                 continue

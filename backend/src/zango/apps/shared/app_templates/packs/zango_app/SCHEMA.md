@@ -93,7 +93,7 @@ condition:
 | column `format`    | money, percent, number, date, datetime, days (no `integer`/`decimal`: use `number`)    |
 | sidebar section `type` | fields, mini_table, custom, timeline, stats                                        |
 | banner `tone`      | info, warning, danger, success                                                         |
-| `page.type`        | crud, detail, custom                                                                   |
+| `page.type`        | crud, detail, dashboard, custom                                                        |
 | `tab.type`         | summary, related_table, timeline, fields, custom                                       |
 | colours            | gray, blue, green, amber, red, purple, teal, indigo, pink                              |
 | `custom_requirements[].area` | backend, frontend, integration, permission, notification, scheduled, report  |
@@ -114,8 +114,16 @@ detail_views: [...]     # optional
 
 `code` (snake_case), `name`, `description`, `timezone` (e.g. Asia/Kolkata),
 `locale` (en-IN), `currency` (ISO code, INR), `theme: {primary, secondary}`
-(hex colours; the preview uses `primary` as the brand colour), and
-`custom_requirements` for app-wide needs (SSO, audit export…).
+(hex colours; the preview uses `primary` as the brand colour),
+`ui: {radius, density}` for the look, and `custom_requirements` for app-wide
+needs (SSO, audit export…).
+
+`ui` is the whole of what the look can be, as choices the preview and the
+built app make the same way: `radius` sharp · rounded (default) · soft and
+`density` compact · comfortable (default). "It feels cramped" is
+`density: comfortable`; "make it look sharper" is `radius: sharp`. Anything
+more (fonts, layouts) is not offered: say so rather than writing it as a
+custom requirement.
 
 ## `choice_sets`
 
@@ -155,8 +163,12 @@ Global routes; menus refer to them by `code`.
 - `crud` — the list page of one `entity` (table, create form, row actions).
 - `detail` — a 360 page; `detail_view` names its spec in `detail_views`.
   `route` carries `:id`, e.g. `/app/vendors/:id`.
-- `custom` — any other screen (dashboards, wizards). Name a `component` and
-  describe it precisely in `text`; `roles` limits who sees it.
+- `dashboard` — KPI tiles, charts, lists, tables and boards over the app's
+  records, declared block by block in `blocks` (below). No code: the preview
+  draws it and the build makes exactly these blocks.
+- `custom` — any other screen (wizards, a dashboard the blocks cannot
+  express). Name a `component` and describe it precisely in `text`; `roles`
+  limits who sees it. It needs a `preview` sketch and a contract (below).
 
 Every page has a `route` starting with `/app/` and usually a `title`.
 
@@ -233,6 +245,84 @@ Hand-written markup (with the `pv-*` classes: `pv-cols`, `pv-col`, `pv-card`,
 `pv-grid`, `pv-muted`, `pv-badge`, `pv-bar`) is only for what the kit cannot
 draw; `data-go="<page>[:<id>]"` makes any element navigate.
 
+### Dashboards: `type: dashboard`
+
+Before writing a custom page with a sketch, check whether it is a dashboard
+the blocks can say: counts and sums with conditions, records grouped by a
+status or choice, lists, tables and boards of one entity. Then declare it —
+the build makes it without guessing, and you write no JavaScript.
+
+```yaml
+- code: finance_home
+  type: dashboard
+  route: /app/finance
+  title: Finance overview
+  roles: [Finance]
+  blocks:
+    - kpis:
+        - { label: Invoices to pay, value: { count: invoice, where: "status == approved" }, icon: receipt, tone: amber, go: invoices }
+        - { label: Amount to pay, value: { sum: invoice.amount, where: "status == approved" }, format: money }
+    - grid:
+        - bars: { title: Invoices by status, entity: invoice, group_by: status }
+        - list: { title: Due soonest, entity: invoice, where: "status in [submitted, approved]",
+                  sort: due_date, primary: invoice_no, secondary: purchase_order, meta: amount, badge: status, limit: 8 }
+```
+
+Each block is exactly one of:
+
+| block | keys |
+|---|---|
+| `kpis` | a list of tiles: `label`, `value` (`count: <entity>`, or `sum`/`avg`/`min`/`max: <entity>.<field>`, with optional `where`), `format` (number, money, percent, days), `icon`, `tone`, `hint`, `go` (a page) |
+| `bars` | `entity`, `group_by` (status, a choice or a link field), `value: {sum: field}` (default: count), `where`, `title`, `tone`, `format` |
+| `list` | `entity`, `primary` (required), `secondary`, `meta`, `badge` (status or a choice), `where`, `sort` (`-field` for newest first), `limit`, `go`, `empty` |
+| `table` | `entity`, `columns` (field paths), `where`, `sort`, `limit`, `go`, `empty` |
+| `board` | `entity`, `group_by`, `card: {title, subtitle}`, `where`, `limit`, `go` |
+| `grid` / `stack` | a list of blocks, side by side / one under another |
+| `panel` | `title`, `icon`, `blocks` |
+
+Every count, sum and list is scoped to the signed-in role's rows, as on list
+pages. Rows open `go` (a 360 page gets the row's id) or else the record's own
+360 page. What the blocks cannot say — "this month", trends by month, numbers
+from two entities combined — is a `custom` page.
+
+### Contracts for custom work
+
+A custom page, custom tab or custom sidebar panel, and every
+`custom_requirements` item, is written by hand in the build. Each carries a
+contract, so the build knows what "done" means and its tests check it:
+
+```yaml
+  data:                                   # what it reads (each role's rows)
+    - { entity: task, where: "status not_in [done]" }
+    - { entity: vendor_document, via: vendor }        # on a 360 tab or panel
+  interactions:                           # what the user does with it
+    - { event: card_click, go: task_360 }
+    - { event: drag_card, update: { entity: task, field: assignee }, roles: [Manager] }
+  states: { empty: No open tasks. Everyone is clear. }
+  acceptance:                             # required: testable, in the user's words
+    - A manager sees one column per active team member.
+    - Dragging a task to another column reassigns it.
+  refs: ["doc:2#p3"]                      # the document page it follows, if any
+```
+
+A custom requirement says when it happens (required for `notification` and
+`scheduled`) and how to tell it was done:
+
+```yaml
+custom_requirements:
+  - area: notification
+    title: Approval email
+    text: Email the vendor contact their portal invite when the vendor is approved.
+    trigger: { event: transition, transition: approve }   # create | update | delete | transition | tag | schedule (+ cron)
+    acceptance:
+      - Approving a vendor sends one email to the vendor contact, with the portal invite.
+    preview: { toast: "Approval email to {legal_name}'s contact" }   # shown in the preview when it happens
+```
+
+Write `event`, never `on` (YAML reads `on` as true). `spec_mark_ready` is
+refused while a custom part has no `acceptance` or a notification or
+scheduled requirement has no `trigger`.
+
 ## `modules` and entities
 
 A module is one backend folder: `code`, `name`, `description`, `entities`.
@@ -252,7 +342,7 @@ A module is one backend folder: `code`, `name`, `description`, `entities`.
 | `workflow` | `statuses`, `transitions`, `tags`                                                       |
 | `form`     | `create`, `edit`                                                                        |
 | `table`    | the list page                                                                           |
-| `custom_requirements` | anything the spec cannot express, as `{area, title, text}`                   |
+| `custom_requirements` | anything the spec cannot express, as `{area, title, text, trigger, acceptance}` |
 
 ### Fields
 

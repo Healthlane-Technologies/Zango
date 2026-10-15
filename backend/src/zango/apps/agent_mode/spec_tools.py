@@ -19,6 +19,7 @@ has to be complete.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import threading
 
@@ -41,6 +42,8 @@ class SpecWorkbench:
         flags=None,
         open_decisions=None,
         workflows=None,
+        probe=None,
+        sketch_looks=None,
     ):
         from zango.apps.shared.app_templates.services.spec import yamlio
 
@@ -54,6 +57,13 @@ class SpecWorkbench:
         self.open_decisions: list = [dict(d) for d in open_decisions or []]
         self.decisions_set = False
         self.workflows: dict = dict(workflows or {})
+        # The analyst's eyes on its custom screens (preview_probe.py): None when this
+        # template's preview has no probe or Playwright is missing.
+        self.probe = probe
+        # {custom screen path: hash of the screen when the analyst last looked at it}
+        self.sketch_looks: dict = dict(sketch_looks or {})
+        # Screenshots an edit took on its own, sent with that edit's result (make_handler).
+        self._pending_images: list = []
         self._lock = threading.Lock()
         try:
             self.doc = yamlio.load_rt(self.text) if self.text.strip() else {}
@@ -63,6 +73,7 @@ class SpecWorkbench:
             self.doc = None
         if self.doc is None and not self.text.strip():
             self.doc = {}
+        self._screens = self._screen_hashes(self.doc)
 
     # -- helpers -------------------------------------------------------------
 
@@ -123,7 +134,246 @@ class SpecWorkbench:
         )
         remaining = [i for i in after_issues if i["level"] == "error"]
         note = f" {len(remaining)} error(s) remain in the spec." if remaining else ""
-        return f"Done: changed {', '.join(changed) or '(root)'}.{note}"
+        return (
+            f"Done: changed {', '.join(changed) or '(root)'}.{note}"
+            + self._after_edit(changed)
+            + self._contract_nudge(changed)
+        )
+
+    def _contract_nudge(self, changed: list[str]) -> str:
+        """After an edit to pages, 360 views or custom requirements: the custom parts still
+        missing their contract, so the analyst finishes them in this turn. The user commits
+        from the preview without being asked, and a commit refuses unfinished custom work.
+        """
+        if not any(
+            c == ""
+            or c.split("/")[1:2] in (["pages"], ["detail_views"])
+            or "custom_requirements" in c
+            for c in changed
+        ):
+            return ""
+        from .custom_work import contract_gaps
+
+        gaps = contract_gaps(self._plain(self.doc))
+        if not gaps:
+            return ""
+        return (
+            "\n\nNOT DONE: these custom parts have no contract yet; add it now (SCHEMA.md, "
+            '"Contracts for custom work"), the build tests against it:\n'
+            + "\n".join(f"- {path}: {what}" for path, what in gaps)
+        )
+
+    # -- custom screens (preview_probe.py) -------------------------------------
+
+    def _screen_hashes(self, doc) -> dict:
+        from .preview_probe import screen_hashes
+
+        return screen_hashes(self._plain(doc)) if doc is not None else {}
+
+    def _after_edit(self, changed: list[str]) -> str:
+        """Run the custom screens this edit could have changed, and say what they drew.
+
+        A screen whose own node changed is reported in full; after a change to the data,
+        roles or choice lists every sketched screen is run again, and only failures are
+        reported. Nothing is run while the spec has no custom screens.
+        """
+        before, self._screens = self._screens, self._screen_hashes(self.doc)
+        if self.probe is None or not self._screens:
+            return ""
+        touched = [p for p, h in self._screens.items() if before.get(p) != h]
+        data = any(
+            c == ""
+            or c.split("/")[1:2] in (["modules"], ["roles"], ["choice_sets"], ["app"])
+            for c in changed
+        )
+        if not touched and not data:
+            return ""
+        from .preview_probe import (
+            ProbeError,
+            custom_screens,
+            format_check,
+            is_sketched,
+            problems,
+        )
+
+        nodes = custom_screens(self._plain(self.doc))
+        unsketched = [p for p in touched if not is_sketched(nodes.get(p))]
+        nudge = (
+            "\n\nNOT DONE: "
+            + ", ".join(unsketched)
+            + (" has" if len(unsketched) == 1 else " have")
+            + " no `preview` sketch, so the user sees a grey placeholder with your text, not the "
+            "screen. Changing `text` changes nothing they can see. Write its `preview` now (SCHEMA.md, "
+            '"Custom screens with a preview"): draw what it will actually show, from the demo data '
+            "(ctx.record, ctx.related, ctx.rows), then check what it drew."
+            if unsketched
+            else ""
+        )
+        try:
+            if touched:
+                res = self.probe.check(self.text, touched)
+                out = res.get("parse_error") or format_check(
+                    res.get("results") or [],
+                    header="Custom screens this edit changed, as the preview draws them:",
+                )
+                if touched != list(self._screens):
+                    rest = [p for p in self._screens if p not in touched]
+                    if data and rest:
+                        other = problems(
+                            self.probe.check(self.text, rest).get("results") or []
+                        )
+                        if other:
+                            out += "\n" + format_check(
+                                other, header="This edit broke other custom screens:"
+                            )
+                failed = {r.get("path") for r in problems(res.get("results") or [])}
+                return (
+                    "\n\n"
+                    + out
+                    + nudge
+                    + self._auto_look(
+                        [
+                            p
+                            for p in touched
+                            if p not in failed and is_sketched(nodes.get(p))
+                        ]
+                    )
+                )
+            bad = problems(self.probe.check(self.text).get("results") or [])
+            return (
+                "\n\n" + format_check(bad, header="This edit broke custom screens:")
+                if bad
+                else ""
+            )
+        except ProbeError as exc:
+            return f"\n\n(The custom screens could not be checked: {exc})" + nudge
+
+    def _screen_path(self, path: str) -> str:
+        """``path`` as probeSketches() names it (``/pages/@code``), from any form the tools accept."""
+        from zango.apps.shared.app_templates.services.spec import document
+
+        if path in self._screens:
+            return path
+        try:
+            want = document.to_pointer(document.resolve(self.doc, path))
+        except Exception:  # noqa: BLE001 - reported as unknown below
+            want = None
+        for known in self._screens:
+            try:
+                if document.to_pointer(document.resolve(self.doc, known)) == want:
+                    return known
+            except Exception:  # noqa: BLE001
+                continue
+        raise ToolRefused(
+            f"No custom page, 360 tab or panel at {path}. Custom screens: "
+            + (", ".join(self._screens) or "none")
+        )
+
+    def preview_check(self) -> str:
+        from .preview_probe import ProbeError, format_check
+
+        self._need_doc()
+        if self.probe is None:
+            return "Preview checks are not available here; ask the user to look at the preview."
+        try:
+            res = self.probe.check(self.text)
+        except ProbeError as exc:
+            raise ToolRefused(
+                f"The custom screens could not be checked: {exc}"
+            ) from exc
+        if res.get("parse_error"):
+            return f"The preview cannot read the spec: {res['parse_error']}"
+        return format_check(res.get("results") or [])
+
+    MAX_LOOKS = 8
+    # Screenshots one edit takes on its own (the rest wait for the next edit or preview_look).
+    AUTO_LOOKS = 2
+
+    def _look(self, screen: str, role=None, record=None, width=1280):
+        """(png or None, text) for one custom screen; marks it looked at."""
+        from .preview_probe import ProbeError, format_result
+
+        try:
+            res = self.probe.look(self.text, screen, role or None, record, width)
+        except ProbeError as exc:
+            raise ToolRefused(f"Could not take the screenshot: {exc}") from exc
+        if res.get("parse_error"):
+            raise ToolRefused(f"The preview cannot read the spec: {res['parse_error']}")
+        show = res.get("show") or {}
+        run = res.get("run") or {}
+        if not show.get("ok"):
+            raise ToolRefused(
+                show.get("error")
+                or run.get("error")
+                or "The screen is not on the preview."
+            )
+        self.sketch_looks[screen] = self._screens.get(screen, "")
+        self.emit({"sketch_looks": dict(self.sketch_looks)})
+        text = (
+            f"{screen} at {width}px as {show.get('role')}"
+            + (f" on {show['record']['label']}" if show.get("record") else "")
+            + ". What the sketch drew:\n"
+            + format_result(run)
+        )
+        return res.get("png"), text
+
+    def _auto_look(self, screens: list) -> str:
+        """Screenshot custom screens an edit changed, so the analyst sees them without asking.
+
+        Only screens that drew without error and changed since they were last looked at; the
+        images go out with the edit's result. A failed screenshot only costs the note.
+        """
+        due = [p for p in screens if self.sketch_looks.get(p) != self._screens.get(p)]
+        notes = []
+        for screen in due[: self.AUTO_LOOKS]:
+            if self.probe.looks >= self.MAX_LOOKS:
+                break
+            try:
+                png, _ = self._look(screen)
+            except ToolRefused:
+                continue
+            if png:
+                self._pending_images.append(png)
+                notes.append(screen)
+        if not notes:
+            return ""
+        return (
+            "\n\nScreenshot attached of "
+            + ", ".join(notes)
+            + " as the first role that opens it. "
+            "Check it does what the user asked (the right columns, real values, nothing empty that "
+            "should not be) and fix the sketch if not. The demo data is generated from the field "
+            "types; if a field the screen needs is empty there, say so to the user rather than "
+            "faking values in the sketch."
+        )
+
+    def take_images(self) -> list:
+        images, self._pending_images = self._pending_images, []
+        return images
+
+    def preview_look(self, path: str, role=None, record=None, width=1280):
+        self._need_doc()
+        if self.probe is None:
+            raise ToolRefused(
+                "Screenshots are not available here; ask the user how the screen looks."
+            )
+        if self.probe.looks >= self.MAX_LOOKS:
+            raise ToolRefused(
+                f"That is {self.MAX_LOOKS} screenshots this turn; rely on preview_check's text "
+                "summaries for the rest, or ask the user."
+            )
+        screen = self._screen_path(path)
+        width = 390 if int(width or 1280) <= 600 else 1280
+        png, text = self._look(screen, role, record, width)
+        content = []
+        if png:
+            content.append({"type": "image", "data": png, "mimeType": "image/png"})
+        content.append({"type": "text", "text": text})
+        return {"content": content}
+
+    def close(self) -> None:
+        if self.probe is not None:
+            self.probe.close()
 
     def _need_doc(self):
         if self.doc is None:
@@ -392,7 +642,9 @@ class SpecWorkbench:
                     )
                 kind = flow.get("kind") or "sequence"
                 if kind not in self.FLOW_KINDS:
-                    raise ToolRefused(f"{where}: flow {f_i} kind must be sequence or message.")
+                    raise ToolRefused(
+                        f"{where}: flow {f_i} kind must be sequence or message."
+                    )
                 entry = {"from": src, "to": dst, "kind": kind}
                 if str(flow.get("label") or "").strip():
                     entry["label"] = str(flow["label"]).strip()[:80]
@@ -438,8 +690,62 @@ class SpecWorkbench:
                 "Not ready — sketch these custom screens with a `preview` first, so the user "
                 "sees them in the preview:\n" + _format_issues(unsketched)
             )
+        # Custom screens and requirements are hand-built: each says how to tell it works.
+        from .custom_work import contract_gaps
+
+        gaps = contract_gaps(self._plain(self.doc))
+        if gaps:
+            raise ToolRefused(
+                'Not ready — these custom parts need their contract (SCHEMA.md, "Contracts for '
+                'custom work"):\n'
+                + "\n".join(f"- {path}: {what}" for path, what in gaps)
+            )
+        self._check_screens_ready()
         self.ready_summary = (summary or "").strip() or "The spec is complete."
         return "Marked ready. Tell the user the spec is ready for them to review and approve."
+
+    def _check_screens_ready(self) -> None:
+        """Custom screens gate ``spec_mark_ready``: each draws without error, and was looked at.
+
+        Skipped when there is no probe (no Playwright, or a preview without one) or it fails:
+        the user still reviews every screen in the preview before approving.
+        """
+        from .preview_probe import (
+            ProbeError,
+            custom_screens,
+            format_check,
+            is_sketched,
+            problems,
+        )
+
+        if self.probe is None or not self._screens:
+            return
+        try:
+            res = self.probe.check(self.text)
+        except ProbeError:
+            return
+        bad = [r for r in problems(res.get("results") or []) if not r.get("unsketched")]
+        if res.get("parse_error") or bad:
+            raise ToolRefused(
+                "Not ready — these custom screens show the user an error or a blank. Fix their "
+                "`preview` (or the data they read) first:\n"
+                + (
+                    res.get("parse_error")
+                    or format_check(bad, verbose=False, header="")
+                )
+            )
+        nodes = custom_screens(self._plain(self.doc))
+        unseen = [
+            p
+            for p, h in self._screens.items()
+            if is_sketched(nodes.get(p)) and self.sketch_looks.get(p) != h
+        ]
+        if unseen:
+            raise ToolRefused(
+                "Not ready — look at each custom screen once since it last changed, with "
+                "preview_look, and fix what looks wrong:\n"
+                + "\n".join(f"- {p}" for p in unseen)
+            )
 
 
 def _document_name(value) -> str:
@@ -494,6 +800,8 @@ TOOL_NAMES = (
     "spec_open_decisions",
     "spec_set_workflows",
     "spec_mark_ready",
+    "preview_check",
+    "preview_look",
 )
 ALLOWED_TOOL_NAMES = tuple(f"mcp__{SERVER_NAME}__{name}" for name in TOOL_NAMES)
 
@@ -511,11 +819,27 @@ def _schema(props: dict, required: list) -> dict:
 def make_handler(bench: SpecWorkbench, fn):
     """The async MCP handler for one operation: text on success, is_error on refusal."""
 
+    def locked(args):
+        with bench._lock:
+            try:
+                return fn(args or {}), bench.take_images()
+            except Exception:
+                bench.take_images()
+                raise
+
     async def handler(args):
         try:
-            with bench._lock:
-                text = fn(args or {})
-            return {"content": [{"type": "text", "text": text}]}
+            # Off the SDK pump's loop: a preview check takes a second or two (more when the
+            # browser starts), and the loop keeps streaming meanwhile.
+            result, images = await asyncio.to_thread(locked, args)
+            if isinstance(result, dict):
+                return result
+            # Screenshots an edit took on its own go first, then the edit's text.
+            content = [
+                {"type": "image", "data": png, "mimeType": "image/png"}
+                for png in images
+            ]
+            return {"content": content + [{"type": "text", "text": result}]}
         except Exception as exc:  # noqa: BLE001 - the model reads and corrects it
             message = (
                 str(exc)
@@ -740,6 +1064,53 @@ def tool_specs(bench: SpecWorkbench) -> list:
             "Declare the journey complete once the interview is done. Refused while it has errors.",
             _schema({"summary": {"type": "string"}}, ["summary"]),
             lambda a: bench.mark_ready(a.get("summary", "")),
+        ),
+    ] + (_preview_tools(bench) if bench.probe is not None else [])
+
+
+def _preview_tools(bench: SpecWorkbench) -> list:
+    screen = {
+        "type": "string",
+        "description": "The custom page, 360 tab or panel, e.g. /pages/@dashboard, "
+        "/detail_views/@vendor_360/tabs/@risk or /detail_views/@vendor_360/sidebar/2.",
+    }
+    return [
+        (
+            "preview_check",
+            "Run every custom screen's `preview` sketch for every role that can open it, in the "
+            "same preview the user sees, and say what each drew: errors, empty parts, the records it "
+            "read, its KPI values, lists and charts. Text only. Edits to a custom screen already "
+            "report this for that screen; call it after larger changes and before spec_mark_ready.",
+            _schema({}, []),
+            lambda a: bench.preview_check(),
+        ),
+        (
+            "preview_look",
+            "Screenshot one custom screen as a role sees it, with what it drew. Use it when the "
+            "question is visual: a new custom screen, the user says it looks wrong, or it must look "
+            "like their material. Never for lists, forms or 360 pages, which the template draws.",
+            _schema(
+                {
+                    "path": screen,
+                    "role": {
+                        "type": "string",
+                        "description": "A role name; default: the first that can open it.",
+                    },
+                    "record_id": {
+                        "type": "integer",
+                        "description": "For a 360 tab or panel: the demo record to show it on.",
+                    },
+                    "width": {
+                        "type": "integer",
+                        "enum": [1280, 390],
+                        "description": "Desktop (default) or phone.",
+                    },
+                },
+                ["path"],
+            ),
+            lambda a: bench.preview_look(
+                a["path"], a.get("role"), a.get("record_id"), a.get("width") or 1280
+            ),
         ),
     ]
 

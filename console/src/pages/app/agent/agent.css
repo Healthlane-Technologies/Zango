@@ -312,6 +312,42 @@
 }
 
 /* ---------- composer ---------- */
+.ws .composer .ptr {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin: 6px 6px 0;
+	padding: 4px 6px 4px 8px;
+	border-radius: 7px;
+	background: var(--accent-soft, var(--hover));
+	color: var(--t2);
+	font-size: 12px;
+}
+.ws .composer .ptr b {
+	color: var(--t1);
+	font-weight: 600;
+}
+.ws .composer .ptr button {
+	margin-left: auto;
+	display: grid;
+	place-items: center;
+	width: 20px;
+	height: 20px;
+	border-radius: 5px;
+	color: var(--t3);
+}
+.ws .composer .ptr button:hover {
+	background: var(--panel);
+	color: var(--t1);
+}
+.ws .msg .ptr-sent {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	margin-top: 4px;
+	color: var(--t4);
+	font-size: 11.5px;
+}
 .ws .composer {
 	padding: 10px 12px 12px;
 	border-top: 1px solid var(--border);

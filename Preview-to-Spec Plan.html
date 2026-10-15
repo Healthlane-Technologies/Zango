@@ -1,0 +1,473 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Preview-to-Spec Plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Schibsted+Grotesk:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column (~760px) with wide tables and code allowed to scroll inside their own boxes; a sticky contents rail on wide screens. */
+:root{
+  --bg:#F6F7F9; --card:#FFFFFF; --fg:#16181D; --sub:#4A5160; --muted:#6B7280; --line:#E3E6EC;
+  --accent:#3B3FB6; --accent-soft:#ECEDFB; --code-bg:#F0F2F6;
+  --ok:#1F7A4D; --ok-soft:#E5F4EC; --warn:#9A5B00; --warn-soft:#FFF3DC; --risk:#A3262E; --risk-soft:#FBE9EA;
+  --l0:#5B6472; --l1:#1F7A4D; --l2:#2563A8; --l3:#8A4FBF; --l4:#A3262E;
+  --display:"Schibsted Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --body:"Public Sans", -apple-system, "Segoe UI", sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#111318; --card:#181B22; --fg:#E7E9EE; --sub:#B3B9C6; --muted:#8B93A3; --line:#2A2F3A;
+  --accent:#9EA2FF; --accent-soft:#23264A; --code-bg:#1E222B;
+  --ok:#6FD3A0; --ok-soft:#17301F; --warn:#F2B85C; --warn-soft:#33270F; --risk:#F28B92; --risk-soft:#3A1C1F;
+  --l0:#A5ADBB; --l1:#6FD3A0; --l2:#7FB4F0; --l3:#C9A0F2; --l4:#F28B92; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#111318; --card:#181B22; --fg:#E7E9EE; --sub:#B3B9C6; --muted:#8B93A3; --line:#2A2F3A;
+  --accent:#9EA2FF; --accent-soft:#23264A; --code-bg:#1E222B;
+  --ok:#6FD3A0; --ok-soft:#17301F; --warn:#F2B85C; --warn-soft:#33270F; --risk:#F28B92; --risk-soft:#3A1C1F;
+  --l0:#A5ADBB; --l1:#6FD3A0; --l2:#7FB4F0; --l3:#C9A0F2; --l4:#F28B92; color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:15px/1.6 var(--body);margin:0}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:20px;padding-block:40px 80px;display:grid;grid-template-columns:200px minmax(0,1fr);gap:48px}
+@media (max-width:900px){.wrap{grid-template-columns:minmax(0,1fr);gap:0}.toc{display:none}}
+.toc{position:sticky;top:calc(env(safe-area-inset-top,0px) + 24px);align-self:start;font-size:13px}
+.toc b{font:600 11px/1 var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:10px}
+.toc a{display:block;color:var(--sub);text-decoration:none;padding:4px 0 4px 10px;border-left:2px solid var(--line)}
+.toc a:hover,.toc a:focus-visible{color:var(--accent);border-left-color:var(--accent);outline:none}
+main{min-width:0;max-width:800px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;line-height:1.2;margin:0}
+h1{font-size:34px;font-weight:700;letter-spacing:-.01em}
+h2{font-size:23px;font-weight:700;margin-top:56px;padding-top:20px;border-top:1px solid var(--line)}
+h3{font-size:17px;font-weight:600;margin-top:28px}
+p{margin:12px 0}
+.eyebrow{font:600 11.5px/1 var(--body);letter-spacing:.09em;text-transform:uppercase;color:var(--accent)}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.chip{font:500 12px/1 var(--body);padding:6px 10px;border-radius:999px;background:var(--card);border:1px solid var(--line);color:var(--sub)}
+.lede{font-size:17px;color:var(--sub);margin-top:16px}
+.summary{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px 22px;margin-top:24px}
+.summary ol{margin:8px 0 0;padding-left:20px}.summary li{margin:6px 0}
+code,pre{font-family:var(--mono);font-size:12.8px}
+:not(pre)>code{background:var(--code-bg);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+pre{background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:14px 16px;overflow-x:auto;line-height:1.55;margin:14px 0}
+pre .c{color:var(--muted)}
+.tbl{overflow-x:auto;margin:14px 0;border:1px solid var(--line);border-radius:8px;background:var(--card)}
+table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:620px}
+th,td{text-align:left;vertical-align:top;padding:9px 12px;border-bottom:1px solid var(--line)}
+th{font:600 11.5px/1.3 var(--body);letter-spacing:.05em;text-transform:uppercase;color:var(--muted);background:var(--bg)}
+tr:last-child td{border-bottom:0}
+.lv{display:inline-block;font:600 12px/1 var(--mono);padding:4px 7px;border-radius:5px;border:1px solid currentColor;white-space:nowrap}
+.lv0{color:var(--l0)}.lv1{color:var(--l1)}.lv2{color:var(--l2)}.lv3{color:var(--l3)}.lv4{color:var(--l4)}
+.note{border-radius:8px;padding:12px 16px;margin:16px 0;font-size:14px}
+.note.ok{background:var(--ok-soft);color:var(--fg)}.note.warn{background:var(--warn-soft)}.note.risk{background:var(--risk-soft)}
+.note b{font-weight:600}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin:16px 0}
+.box{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;min-width:0}
+.box h4{margin:0 0 6px;font:600 14.5px/1.3 var(--display)}
+.box p{margin:6px 0 0;font-size:13.5px;color:var(--sub)}
+.tag{font:600 10.5px/1 var(--body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+ul.tight{padding-left:20px}ul.tight li{margin:5px 0}
+.phase{display:grid;grid-template-columns:44px minmax(0,1fr);gap:14px;padding:14px 0;border-bottom:1px solid var(--line)}
+.phase:last-child{border-bottom:0}
+.phase .n{font:700 20px/1 var(--display);color:var(--accent);padding-top:3px}
+.phase h4{margin:0;font:600 16px/1.3 var(--display)}
+.phase p{margin:6px 0 0;font-size:14px;color:var(--sub)}
+.files{font:12px/1.6 var(--mono);color:var(--muted);margin-top:6px;overflow-wrap:anywhere}
+.mermaid{background:var(--card);text-align:center}
+a{color:var(--accent)}
+.q{counter-increment:q}
+ol.qs{padding-left:22px}ol.qs li{margin:10px 0}
+</style>
+
+<div class="wrap">
+<nav class="toc" aria-label="Contents">
+  <b>Contents</b>
+  <a href="#today">Where we are</a>
+  <a href="#principles">Principles</a>
+  <a href="#ladder">The ladder</a>
+  <a href="#eyes">Giving the analyst eyes</a>
+  <a href="#newtab">Preview in a new tab</a>
+  <a href="#yaml">How changes land in YAML</a>
+  <a href="#mapping">Request → YAML</a>
+  <a href="#gates">Gates before approval</a>
+  <a href="#part2">Hand-off to part 2</a>
+  <a href="#phases">Delivery phases</a>
+  <a href="#risks">Risks</a>
+  <a href="#questions">Open questions</a>
+</nav>
+
+<main>
+<div class="eyebrow">Agent Mode · Requirement phase · Part 1 of 2</div>
+<h1>Preview-to-Spec Plan</h1>
+<div class="meta">
+  <span class="chip">Part 1 built (A–D) · updated 15 Oct 2026</span>
+  <span class="chip">Branch feat/agent-mode-app-studio-skill</span>
+  <span class="chip">Template zango-app/1</span>
+</div>
+<p class="lede">How the requirements analyst should see the App Studio preview, and how every change a user asks for, on the frontend or the backend, should be recorded in <code>app_spec.yaml</code>. The goal is a spec the build can turn into a high-quality app, using as much of the CRUD and workflow runtime as possible.</p>
+
+<div class="summary">
+  <b>The plan in three moves</b>
+  <ol>
+    <li><b>Keep the YAML as the only thing that changes.</b> The preview stays a pure function of the spec. Every visible change is a YAML change; nobody edits HTML.</li>
+    <li><b>Make YAML say more, in order.</b> A five-level ladder from theme tokens to custom code. The analyst always uses the lowest level that expresses the request, and anything custom carries a structured contract instead of prose alone.</li>
+    <li><b>Give the analyst eyes, for custom screens only.</b> The declarative parts render the same way every time from the YAML, so validation is enough there. For custom screens, the analyst checks its own sketch in three steps, cheapest first: run it, read a text summary of what it drew, and take a screenshot of that one screen only when the question is visual. It also learns which element the user is pointing at.</li>
+  </ol>
+</div>
+
+<div class="note ok"><b>Progress, 15 Oct.</b> Phases A–D are built and tested (588 tests; the only failures are the 8 existing <code>test_skill_plugin</code> developer-server ones), and Point was tested live in Chrome. Template <code>zango-app</code> is at <b>1.1.15</b>. Phase E, the approval bundle, is next and opens part 2. See <a href="#testing">What testing changed</a> for the fixes made after the first real analyst turns.</div>
+
+<h2 id="today">Where we are today</h2>
+<p>These are the facts the plan builds on, checked in the code on this branch.</p>
+<div class="tbl"><table>
+<thead><tr><th>Area</th><th>Today</th><th>Where</th></tr></thead>
+<tbody>
+<tr><td>How the analyst edits</td><td>Only through spec tools (<code>spec_set</code>, <code>spec_add</code>, <code>spec_replace_section</code>, …). Each commit is validated, then the workbench emits <code>{yaml, changed_paths, issues}</code>.</td><td><code>agent_mode/spec_tools.py:88</code></td></tr>
+<tr><td>How the preview updates</td><td>The console posts <code>load</code> with the YAML into a sandboxed iframe; <code>adapter.js</code> calls <code>parse()</code>, which re-renders. The preview never sends changes back.</td><td><code>packs/zango_app/builder/adapter.js</code></td></tr>
+<tr><td>What the analyst sees</td><td><b>Nothing rendered.</b> It has no render tool and no screenshot. If a <code>preview</code> sketch throws, only the user sees the error panel, although DRAFTING.md tells the analyst to “check the preview renders”.</td><td><code>DRAFTING.md</code> “Later turns”</td></tr>
+<tr><td>Visual levers in YAML</td><td><code>app.theme.primary/secondary</code>, list <code>views</code> (kanban, cards, calendar, timeline), <code>detail_views[].layout</code>, tones, form sections, table columns and highlights, and JavaScript <code>preview</code> sketches for everything else.</td><td><code>SCHEMA.md</code>, <code>SPEC_EXTENSIONS.md</code></td></tr>
+<tr><td>Custom screens</td><td><code>component</code> + prose <code>text</code> + a JS <code>preview</code> drawn with <code>ctx.ui</code>. The build reads <code>text</code> only; the sketch is “never shipped code”.</td><td><code>SPEC_EXTENSIONS.md §2</code></td></tr>
+<tr><td>Custom backend</td><td>Prose in <code>on_done</code>, <code>condition: {text}</code>, <code>shows</code>, <code>custom_requirements</code>. The build turns each into a typed hole with a fixed signature.</td><td><code>zango-app-studio/references/custom-code.md</code></td></tr>
+<tr><td>Build design system</td><td>Fixed in the runtime (<code>tokens.css</code>, <code>zas</code> components). Brand tints derive from <code>theme.primary</code>. Pages are not designed per app.</td><td><code>references/design-system.md</code></td></tr>
+<tr><td>Preview parity check</td><td><b>Skipped.</b> It needs the Studio to render <code>data-zas</code> attributes and to support a deep link to a role, page and record.</td><td><code>references/contracts.md §11</code></td></tr>
+<tr><td>Demo data</td><td>Seeded (<code>rng(seed)</code>), so the same spec renders the same rows every time. Screenshots are reproducible.</td><td><code>app-studio.html:1509</code></td></tr>
+</tbody></table></div>
+<div class="note warn"><b>The gap.</b> The user judges the app by the preview, but the analyst writes it blind and the build ignores a large part of it. Custom screens are the worst case: a JS sketch that only the user has seen, plus a paragraph of prose.</div>
+
+<h2 id="principles">Principles</h2>
+<ul class="tight">
+  <li><b>One source of truth.</b> <code>app_spec.yaml</code> is the requirement. The preview is derived from it and is never edited. Anything the user approves must be reconstructible from the YAML and the seeded demo data.</li>
+  <li><b>Declarative first.</b> Each request is expressed at the lowest level of the ladder that can hold it. A declared element is something the runtime builds deterministically and tests by machine; a custom one is code the build agent writes and we hope is right.</li>
+  <li><b>Custom is a contract, not a paragraph.</b> When something has to be custom, the YAML records its data, interactions, states and acceptance criteria in structured keys, with the sketch as a visual reference.</li>
+  <li><b>The analyst checks its own work.</b> No turn ends with a preview the analyst hasn’t verified renders for every role it touched.</li>
+  <li><b>Same vocabulary on both sides.</b> Every new YAML key has a renderer in <code>app-studio.html</code> and a counterpart in the App Studio runtime, or it doesn’t ship. The preview must never promise what the build can’t make.</li>
+</ul>
+
+<h2 id="ladder">The ladder</h2>
+<p>Every change a user asks for lands on one of five levels. The analyst starts at the bottom and moves up only when the level below cannot express the request. The panel reports how much of the app sits at each level, so “mostly declarative” is visible and measurable.</p>
+<div class="tbl"><table>
+<thead><tr><th>Level</th><th>What it covers</th><th>YAML</th><th>Build</th></tr></thead>
+<tbody>
+<tr><td><span class="lv lv0">L0</span><br>Look</td><td>Brand colours, density, corner radius, navigation style, font choice.</td><td><code>app.theme</code>, new <code>app.ui</code> (fixed enums)</td><td>Token values in <code>tokens.css</code>; no code.</td></tr>
+<tr><td><span class="lv lv1">L1</span><br>CRUD + workflow</td><td>Records, fields, validation, access and row scoping, lists, forms, statuses, transitions, tags, 360 pages, row actions.</td><td>The existing <code>zango-app/1</code> keys</td><td>Generated by the runtime; covered by api and ui tests.</td></tr>
+<tr><td><span class="lv lv2">L2</span><br>Declared presentation</td><td>Other ways to show the same data: list views, dashboards, form layouts, 360 layouts, stat tiles, highlights.</td><td><code>views</code>, new <code>type: dashboard</code> with <code>blocks</code>, form <code>layout</code></td><td>Runtime components; a custom view only until the runtime ships one.</td></tr>
+<tr><td><span class="lv lv3">L3</span><br>Custom UI</td><td>A screen nothing above can describe: a seating plan, a gantt, a workload board with drag-to-reassign.</td><td><code>type: custom</code> + <code>data</code>, <code>interactions</code>, <code>states</code>, <code>acceptance</code>, <code>refs</code>, <code>preview</code></td><td>A slot the build agent writes with <code>zas</code> components, checked against the contract.</td></tr>
+<tr><td><span class="lv lv4">L4</span><br>Custom logic</td><td>Notifications, integrations, computed values, scheduled jobs, rules beyond expressions.</td><td>Typed <code>custom_requirements</code> with <code>area</code>, <code>trigger</code>, <code>acceptance</code></td><td>Hooks and tasks in the hole system, each with a fixed signature.</td></tr>
+</tbody></table></div>
+<div class="note ok"><b>The rule for moving up.</b> Before writing an L3 screen, the analyst checks for an L2 equivalent. A screen that reads one entity and shows it as a table, list, board or calendar is a <code>view</code>, not a custom page. A screen made only of KPIs, bar charts and record lists is a <code>dashboard</code>. A lint (<code>rules.json</code>) warns when a <code>preview</code> sketch only uses <code>ctx.ui</code> blocks that have a declarative form.</div>
+
+<h3>Why dashboards move to L2</h3>
+<p>Most custom pages in drafted specs are dashboards, and they are already composed from <code>ctx.ui.kpis</code>, <code>bars</code>, <code>list</code>, <code>table</code> and <code>board</code>. Those calls map one-to-one onto runtime components (<code>StatTile</code>, <code>Panel</code>, <code>ZasTable</code>). Expressing the same tree as YAML <code>blocks</code> lets the preview draw it without JavaScript and lets the build generate it instead of rewriting it from prose. The value grammar is the one 360 stats already use (<code>count</code>, <code>sum</code>, <code>where</code>).</p>
+
+<h2 id="eyes">Giving the analyst eyes</h2>
+<p><b>Only custom screens need it.</b> Everything at <span class="lv lv0">L0</span>–<span class="lv lv2">L2</span> is drawn by <code>app-studio.html</code> the same way every time from the YAML. If <code>spec_validate</code> passes, it renders, and a screenshot would cost tokens and catch nothing. The analyst writes the <code>preview</code> JavaScript of each <span class="lv lv3">L3</span> screen, and today it never sees what that code produces. That is what needs eyes.</p>
+
+<h3>How UI agents usually check their work</h3>
+<p>Agents that build UI with a browser check in layers, cheapest first: run the code and catch errors, then read the page as structured text (Microsoft’s Playwright MCP reads pages through the accessibility tree by default, not pixels), and take a screenshot only when the question is visual. The user, who is already looking at the preview, stays the final judge.</p>
+
+<h3>Three steps, cheapest first</h3>
+<div class="tbl"><table>
+<thead><tr><th>Step</th><th>When</th><th>What the analyst gets</th><th>Cost</th></tr></thead>
+<tbody>
+<tr><td><b>1. Run the sketch</b></td><td>Automatically, after every change that adds or edits a custom page, tab or panel, for every role that can see it</td><td>Errors with their message; empty output; entities read with <code>ctx.rows</code> that have no demo rows for that role; unknown field keys</td><td>Nearly free</td></tr>
+<tr><td><b>2. Text summary of what it drew</b></td><td>Same; appended to the tool result</td><td>An outline of the output: “4 KPI tiles: Open 12, Overdue 3, …; bars ‘Open by status’ with 5 bars; list ‘Due soonest’, 8 rows; one panel empty”</td><td>A few hundred tokens</td></tr>
+<tr><td><b>3. Screenshot of that screen</b></td><td>Only on request: a new custom screen, a visual complaint from the user, a mockup to match, and once per screen before ready</td><td>An image of that component only (element-level, not the whole page), at 1280 or 390 px</td><td>~1.5k tokens</td></tr>
+</tbody></table></div>
+<p>Steps 1 and 2 catch the common failures: a broken sketch, wrong field names, nothing showing for a role. Step 3 answers what only an image can: does it read as a board, is it cramped, does it look like their mockup?</p>
+
+<h3>And what the user points at</h3>
+<p>With each chat message, the console sends where the user is in the preview (role, page, record, tab) and, if they used “point at this”, the element’s <code>data-zas</code> key and its spec path. This works on every page, declarative or custom, and costs nothing: “make this bigger” and “this number is wrong” arrive already tied to a place in the YAML.</p>
+
+<h3>New spec tools</h3>
+<div class="tbl"><table>
+<thead><tr><th>Tool</th><th>Input</th><th>Returns</th></tr></thead>
+<tbody>
+<tr><td><i>(automatic)</i></td><td>Runs after any commit that touches a custom screen’s <code>preview</code>, <code>data</code> or the entities it reads</td><td>Steps 1 and 2 for each changed screen and role, appended to the edit tool’s result. No extra call.</td></tr>
+<tr><td><code>preview_look</code></td><td><code>screen</code> (spec path of a custom page, tab or panel), <code>role</code>, optional <code>id</code> (the record, for a tab or panel), <code>width</code></td><td>Step 3: a screenshot of that component, plus its step 2 summary.</td></tr>
+<tr><td><code>preview_check</code></td><td>none</td><td>Steps 1 and 2 for every custom screen and every role that can see it. Text only. Run before <code>spec_mark_ready</code>.</td></tr>
+<tr><td><code>preview_compare</code></td><td><code>ref</code> (an uploaded mockup or document page), <code>screen</code>, <code>role</code></td><td>The user’s reference next to the screenshot of the screen.</td></tr>
+</tbody></table></div>
+
+<h3>How a custom-screen change flows</h3>
+<pre class="mermaid">
+flowchart LR
+  U[User message<br/>+ preview focus] --> A[Analyst]
+  A -->|spec edit on a custom screen| W[Spec workbench<br/>validate + commit]
+  W -->|yaml| P[Console preview]
+  W -->|changed custom screens| H[Headless run<br/>same app-studio.html]
+  H -->|errors + text summary| A
+  A -.->|preview_look, when visual| H
+  H -.->|component screenshot| A
+  A -->|fix or reply| U
+</pre>
+
+<h3>How it is built</h3>
+<ul class="tight">
+  <li><b>One renderer.</b> The headless run loads the same <code>app-studio.html</code> and <code>adapter.js</code> as the console, in Playwright’s Chromium (already in <code>base.txt</code>). There is never a second preview implementation to drift.</li>
+  <li><b>Protocol <code>zango-builder/2</code>.</b> It adds a <code>run_sketch</code> message <code>{screen, role, id}</code> that returns the errors and the summary, a <code>goto</code> message for screenshots, and <code>data-zas</code> attributes with spec paths on rendered elements. Those attributes also serve the user’s “point at this” and the build’s preview parity check.</li>
+  <li><b>The summary comes from <code>ctx.ui</code>.</b> Each kit call (<code>kpis</code>, <code>bars</code>, <code>list</code>, …) records what it drew, so the outline is exact. Hand-written markup is summarised from its text and element counts.</li>
+  <li><b>Sealed.</b> All network requests are blocked and there is no storage. Sketch code from the analyst runs only against the seeded demo data, with a time limit per run.</li>
+  <li><b>Warm and lazy.</b> The browser starts on the first custom screen and is reused for the rest of the session. A spec with no custom screens never starts one. The MCP server is in-process and async, so it uses Playwright’s async API.</li>
+</ul>
+<h2 id="newtab">Preview in a new tab</h2>
+<p>The preview beside the chat is narrow. The user should be able to open it in its own browser tab, to click through the app at full width, look at it on a second screen, or share it with a colleague who can open the console.</p>
+<ul class="tight">
+  <li><b>An “Open in new tab” button</b> on the preview header in the console. The tab opens at the same role, page, record and tab the user was looking at, using the <code>goto</code> deep link from phase A.</li>
+  <li><b>Its own console page</b>, for example <code>/requirements/&lt;id&gt;/preview</code>. It loads the same <code>app-studio.html</code> and <code>adapter.js</code> in the same sandboxed iframe, fetches the current spec from the API with the user’s session, and checks the same permission as the requirement itself. There is no public link.</li>
+  <li><b>Live.</b> The tab subscribes to the same spec event stream as the chat, so every change the analyst makes redraws it, keeping the user’s place when the page still exists.</li>
+  <li><b>Read-only</b>, like the embedded preview, with the role switcher. A small bar says which requirement and spec version it shows, and when it is out of date because the stream dropped.</li>
+  <li><b>Pointing still works.</b> “Point at this” in the tab sends the focus to the chat of that requirement, so the user can comment from the full-size view.</li>
+  <li><b>After approval</b> the tab shows the approved version and says so, so nobody mistakes a later draft for what was signed off.</li>
+</ul>
+
+<h2 id="yaml">How changes land in YAML</h2>
+<p>All additions are optional keys on <code>zango-app/1</code>, so existing specs stay valid. Each goes into <code>SCHEMA.md</code>, <code>schema.json</code>, the preview renderer and the build’s <code>spec_check.py</code> together.</p>
+
+<h3><span class="lv lv0">L0</span> <code>app.ui</code>: the look, as choices</h3>
+<p>Fixed choices, each mapped to a set of token values in <code>tokens.css</code> and in the preview. No free CSS, no colour literals beyond the brand colours.</p>
+<pre><span class="c"># app</span>
+app:
+  theme: { primary: "#3B3FB6", secondary: "#0E7490" }
+  ui:
+    density: comfortable      <span class="c"># compact | comfortable</span>
+    radius: rounded           <span class="c"># sharp | rounded | soft</span>
+    nav: sidebar              <span class="c"># sidebar | topbar</span>
+    headings: sans            <span class="c"># sans | serif</span></pre>
+
+<h3><span class="lv lv2">L2</span> Dashboards as <code>blocks</code></h3>
+<pre>pages:
+  - code: ops_home
+    type: dashboard
+    title: Operations
+    route: /app/home
+    roles: [Manager]
+    blocks:
+      - kpis:
+          - { label: Open tasks, value: { count: task, where: "status not_in [done]" }, icon: list-checks, go: tasks }
+          - { label: Overdue, value: { count: task, where: "status not_in [done] and due_date &lt; today" }, tone: red }
+      - grid:
+          - bars: { title: Open by status, entity: task, group_by: status, where: "status not_in [done]" }
+          - list: { title: Due soonest, entity: task, where: "status not_in [done]", sort: due_date,
+                    primary: title, meta: due_date, limit: 8, go: task_360 }</pre>
+<p>Every block honours the role’s access and row scoping, exactly as a list page does. Block types: <code>kpis</code>, <code>bars</code>, <code>list</code>, <code>table</code>, <code>board</code>, <code>grid</code>, <code>stack</code>, <code>panel</code>. Anything else makes the page custom.</p>
+
+<h3><span class="lv lv2">L2</span> Form layout</h3>
+<pre>form:
+  create:
+    layout: steps             <span class="c"># single | two_column | steps   (sections already exist)</span>
+    sections:
+      - { title: Company, fields: [legal_name, gstin] }
+      - { title: Bank, fields: [bank_name, ifsc, account_no] }</pre>
+
+<h3><span class="lv lv3">L3</span> A custom screen with a contract</h3>
+<p>The prose <code>text</code> stays. Around it, structured keys say what the build must deliver and how the build can check it. The <code>preview</code> sketch is the visual reference the user approved.</p>
+<pre>  - code: workload
+    type: custom
+    title: Team workload
+    route: /app/workload
+    component: WorkloadBoard
+    roles: [Manager]
+    text: >-
+      One column per active team member with their open tasks, ordered by due date.
+      Overdue tasks are highlighted. Drag a task to another person to reassign it.
+    data:                                     <span class="c"># what it reads, always role-scoped</span>
+      - { entity: team_member, where: "is_active == true" }
+      - { entity: task, where: "status not_in [done]" }
+    interactions:                             <span class="c"># what it does, in runtime terms where possible</span>
+      - { on: card_click, go: task_360 }
+      - { on: drag_card, update: { entity: task, field: assignee }, roles: [Manager] }
+    states:
+      empty: No open tasks. Everyone is clear.
+    acceptance:                               <span class="c"># testable, in the user's words</span>
+      - A manager sees one column per active team member.
+      - A task past its due date shows its date in red.
+      - Dragging a task to another column reassigns it and the 360 timeline records the change.
+    refs: ["doc:2#p3"]                        <span class="c"># an uploaded mockup or document page, if any</span>
+    preview: |
+      const { ui } = ctx; …</pre>
+<p>A custom tab or sidebar panel on a 360 page takes the same keys, with <code>data</code> paths relative to the hero (<code>via</code>).</p>
+
+<h3><span class="lv lv4">L4</span> Typed custom logic</h3>
+<pre>modules:
+  - code: vendors
+    custom_requirements:
+      - code: notify_on_approval
+        area: notification          <span class="c"># notification | integration | computation | scheduled | rule | report</span>
+        trigger: { entity: vendor, on: transition, transition: approve }
+        text: Email the vendor's primary contact that they are approved, with their vendor reference.
+        acceptance:
+          - Approving a vendor sends one email to the primary contact.
+          - The email contains the vendor reference.
+        preview: { toast: "Email to the primary contact (simulated)" }</pre>
+<p><code>area</code> and <code>trigger</code> tell the build which hole kind and signature to use (custom-code.md), so it doesn’t have to guess from prose. The optional <code>preview.toast</code> lets the preview show the side effect when the user runs the transition, so they see the email happen.</p>
+
+<h3>What stays out of the spec</h3>
+<ul class="tight">
+  <li><b>Why something changed</b> (which message, which flag) goes in a sidecar decision log next to the existing flags, keyed by spec path. The YAML holds the requirement, not its history.</li>
+  <li><b>Screenshots</b> are never stored in the YAML. They are derived and can always be rendered again from it.</li>
+  <li><b>Free CSS or HTML</b> is never stored. Pure appearance is <code>app.ui</code>; anything structural is a key or an L3 contract.</li>
+</ul>
+
+<h2 id="mapping">Request → YAML</h2>
+<p>How typical requests land. The analyst skill gets this table as its decision guide.</p>
+<div class="tbl"><table>
+<thead><tr><th>The user says</th><th>Level</th><th>Lands at</th></tr></thead>
+<tbody>
+<tr><td>“Use our brand blue”</td><td><span class="lv lv0">L0</span></td><td><code>app.theme.primary</code></td></tr>
+<tr><td>“It feels cramped”</td><td><span class="lv lv0">L0</span></td><td><code>app.ui.density: comfortable</code></td></tr>
+<tr><td>“Overdue rows in red”</td><td><span class="lv lv1">L1</span></td><td><code>table.highlight</code></td></tr>
+<tr><td>“Managers should only see their team’s tasks”</td><td><span class="lv lv1">L1</span></td><td><code>access.&lt;role&gt;.rows</code></td></tr>
+<tr><td>“Show tasks as a board”</td><td><span class="lv lv2">L2</span></td><td><code>pages[tasks].views</code>, kanban first</td></tr>
+<tr><td>“A home page with counts and a chart”</td><td><span class="lv lv2">L2</span></td><td><code>type: dashboard</code> + <code>blocks</code></td></tr>
+<tr><td>“The vendor form is too long”</td><td><span class="lv lv2">L2</span></td><td><code>form.create.layout: steps</code></td></tr>
+<tr><td>“Put contacts on the right of the vendor page”</td><td><span class="lv lv2">L2</span></td><td><code>detail_views[].layout</code> + <code>sidebar</code></td></tr>
+<tr><td>“A seating plan for the hall”</td><td><span class="lv lv3">L3</span></td><td><code>type: custom</code> + contract + <code>preview</code></td></tr>
+<tr><td>“Email the vendor when approved”</td><td><span class="lv lv4">L4</span></td><td>typed <code>custom_requirements</code> or the transition’s <code>on_done</code></td></tr>
+<tr><td>“Pull GST details from the portal”</td><td><span class="lv lv4">L4</span></td><td><code>area: integration</code>; it is built blocked until there are credentials</td></tr>
+</tbody></table></div>
+
+<h2 id="gates">Gates before approval</h2>
+<p><code>spec_mark_ready</code> is refused until all of these pass. They run in this order, and each one reports what to fix.</p>
+<div class="tbl"><table>
+<thead><tr><th>Gate</th><th>Passes when</th><th>Today</th></tr></thead>
+<tbody>
+<tr><td>Structure and references</td><td>No schema or cross-reference errors.</td><td>Exists</td></tr>
+<tr><td>Build check</td><td><code>spec_check.py</code> accepts the spec, including every new key.</td><td>Done: <code>app.ui</code>, dashboards and contracts checked</td></tr>
+<tr><td>Sketches</td><td>Every L3 screen has a <code>preview</code>.</td><td>Done</td></tr>
+<tr><td>Contracts</td><td>Every L3 screen has <code>data</code> and at least one <code>acceptance</code>; every L4 item has <code>area</code>, <code>trigger</code> and <code>acceptance</code>.</td><td>Done (<code>custom_work.contract_gaps</code>)</td></tr>
+<tr><td>Custom screens render</td><td><code>preview_check</code> finds no errors or empty output in any custom screen, for any role that can see it.</td><td>Done</td></tr>
+<tr><td>Custom screens seen</td><td>Every custom screen has had one <code>preview_look</code> since its last change.</td><td>Done; the screenshot now comes automatically with the edit</td></tr>
+<tr><td>Declarative first</td><td>No L3 screen whose sketch has a declarative form (warning, not an error).</td><td>Partly: dashboards are linted; no general lint yet</td></tr>
+<tr><td>Approval on the server</td><td>Approving (Commit for build) refuses a custom screen with no sketch, or a custom part with no contract, and the console sends the list back to the agent to finish.</td><td>Done (added after testing)</td></tr>
+</tbody></table></div>
+<p>Why the last gate exists: in testing, Haiku 4.5 offered “Build the app?” without ever calling <code>spec_mark_ready</code>, so none of the gates above ran. They now hold whichever model runs the interview.</p>
+
+<h2 id="part2">Hand-off to part 2</h2>
+<p>Part 2 will design how all of this reaches the build agent. Part 1 sets it up so that, at approval, the platform can freeze an <b>approval bundle</b> next to the spec:</p>
+<ul class="tight">
+  <li>the approved YAML;</li>
+  <li>for each role × page (and the first record of each 360), the element tree, which is text and cheap;</li>
+  <li>for each L3 screen, its contract, its text summary and a screenshot per role;</li>
+  <li>the user’s reference uploads named in <code>refs</code>.</li>
+</ul>
+<p>The element trees switch on the build’s preview parity check, which is skipped today, for the declarative pages. The screenshots give the build agent the visual target for the custom screens, where it actually writes UI. The details are part 2.</p>
+
+<h2 id="phases">Delivery phases</h2>
+<p>A and B give the analyst eyes and deliver most of the value on their own. C and D can run in parallel after A.</p>
+<div class="box" style="padding:4px 18px">
+  <div class="phase"><div class="n">A</div><div><h4>Render hooks in the preview <span class="chip">done</span></h4><p>Add <code>data-zas</code> attributes with spec paths, the <code>goto</code> and <code>rendered</code> messages, error capture for sketches, and a render-done signal. Bump the pack version.</p><div class="files">packs/zango_app/builder/app-studio.html · builder/adapter.js · template.json</div></div></div>
+  <div class="phase"><div class="n">B</div><div><h4>Custom-screen checks and spec tools <span class="chip">done; <code>preview_compare</code> skipped</span></h4><p>A Playwright runner that is async, network-blocked, and started only when the spec has a custom screen. Add the automatic run-and-summarise after edits to custom screens, the <code>preview_look</code>, <code>preview_check</code> and <code>preview_compare</code> tools, the two custom-screen gates in <code>mark_ready</code>, and guidance in the skill and drafting docs.</p><div class="files">agent_mode/preview_render.py (new) · spec_tools.py · requirements.py · DRAFTING.md · INTERVIEW.md · skills/zango-requirements-analyst/SKILL.md</div></div></div>
+  <div class="phase"><div class="n">C</div><div><h4>The user can point, and open the preview in a tab <span class="chip">done, tested in Chrome</span></h4><p>The console sends the preview focus with each message and adds “point at this” in the preview. The requirement turn includes the focus in the analyst’s prompt. Add the “Open in new tab” button and the full-page preview route, fed by the same spec API and event stream.</p><div class="files">console preview host · console route for the full-page preview · adapter.js · api/platform/agent_mode views · requirements.py</div></div></div>
+  <div class="phase"><div class="n">D</div><div><h4>Widen the YAML <span class="chip">done; form <code>layout</code> and a runtime dashboard component deferred</span></h4><p>Add <code>app.ui</code>, dashboard <code>blocks</code>, form <code>layout</code>, L3 contract keys and typed L4 requirements, each with its preview renderer, build-side acceptance, and runtime support (tokens, a dashboard component).</p><div class="files">SCHEMA.md · schema.json · ui.json · rules.json · SPEC_EXTENSIONS.md · app-studio.html · zango-app-studio/scripts/spec_check.py · assets/frontend/zas/*</div></div></div>
+  <div class="phase"><div class="n">E</div><div><h4>Approval bundle <span class="chip">next</span></h4><p>Freeze the bundle at approval; this is the bridge to part 2.</p><div class="files">agent_mode/template_build.py · studio_build.py</div></div></div>
+</div>
+
+<h2 id="testing">What testing changed</h2>
+<p>We read the analyst’s own transcripts (the Agent SDK writes one per session under <code>.agent_mode/home/.claude/projects/</code>) for three test requests. Each showed something the plan had not covered.</p>
+<div class="tbl"><table>
+<thead><tr><th>What we saw</th><th>Cause</th><th>Fix</th></tr></thead>
+<tbody>
+<tr><td>Asked to show the Next Steps panel with real content, the analyst rewrote its build text instead.</td><td>Nothing told it the user was looking at a grey placeholder.</td><td>An edit to an unsketched screen returns “NOT DONE … write its <code>preview</code>”, and pointing at one says so in the focus note.</td></tr>
+<tr><td>Point did not work on tables, chips, banners or badges.</td><td>Those elements had no spec path.</td><td>Paths on every part of lists and 360 pages, with the page as the fallback.</td></tr>
+<tr><td>“Build the app?” was offered without <code>spec_mark_ready</code> (Haiku 4.5).</td><td>The gates only ran when the model chose to call them.</td><td>The approval gate on the server (above).</td></tr>
+<tr><td>Verifier Workload showed one “Unassigned” column. The check said ✓, and no screenshot was taken, even on Sonnet 5.5.</td><td>A user field such as <code>assigned_verifier</code> took any user, or none. A warning still read as a pass. Taking a screenshot was left to the model.</td><td>A user field named after a role gets that role’s demo users. The probe warns when a sketch reads a field that is empty in every demo row, and marks the run ⚠. An edit that changes a sketch now returns a screenshot of it (up to 2 per edit, 8 per turn), which also counts as the look.</td></tr>
+</tbody></table></div>
+<div class="note warn"><b>Still open:</b> demo data is generated from field types, so a new module or entity gets rows on its own (8–24, spread across its statuses). The spec has no way to steer the values, though. When a screen needs a value the generator rarely produces, the analyst can only tell the user. A small per-field <code>demo</code> hint would close this.</div>
+
+<h2 id="risks">Risks</h2>
+<div class="tbl"><table>
+<thead><tr><th>Risk</th><th>Mitigation</th></tr></thead>
+<tbody>
+<tr><td>The preview accepts a key the build doesn’t know, so the user approves something that can’t be built.</td><td>A key ships in the preview and in <code>spec_check.py</code> together. <code>spec_validate</code> already runs the build checker, so an unknown key fails before approval.</td></tr>
+<tr><td>Image tokens and latency make turns slow and expensive.</td><td>Screenshots are taken only for custom screens, only on request, and of the component, not the page. The automatic checks are text. No browser starts for a spec without custom screens.</td></tr>
+<tr><td>Sketch code from the analyst runs in a server-side browser.</td><td>All network blocked, no storage, seeded data only, a time limit per render, and the browser is closed with the session.</td></tr>
+<tr><td>Screenshots differ between macOS and Linux workers (fonts).</td><td>Screenshots are only the analyst’s eyes and the build’s visual target; pixel comparisons stay on the pinned goldens.</td></tr>
+<tr><td><code>app.ui</code> choices drift between the preview CSS and <code>tokens.css</code>.</td><td>Generate both from one token table in the pack, and test that they match.</td></tr>
+<tr><td>The analyst escalates to L3 too readily.</td><td>The declarative-first lint, the per-level count in the panel, and the request → YAML table in the skill.</td></tr>
+</tbody></table></div>
+
+<h2 id="questions">Questions (answered 15 Oct)</h2>
+<ol class="qs">
+  <li><b><code>app.ui</code> scope.</b> Are density, radius, navigation style and headings the right first set, or do you want fewer knobs (brand colours only) to keep apps consistent? <b>Answer:</b> <code>radius</code> and <code>density</code> only.</li>
+  <li><b>Dashboards.</b> A new <code>type: dashboard</code> page, or <code>blocks</code> allowed on <code>type: custom</code> with <code>component</code> left out? <b>Answer:</b> a new <code>type: dashboard</code>.</li>
+  <li><b>Reference uploads.</b> Should users be able to upload screenshots of an existing system during the requirement phase, for <code>refs</code> and <code>preview_compare</code>? <b>Answer:</b> skipped for now.</li>
+  <li><b>Show the user what the analyst saw?</b> For example, attach the analyst’s screenshot to its reply when it changed a screen. <b>Open.</b> The analyst now gets one automatically; showing it to the user is not built.</li>
+  <li><b>Custom budget.</b> Should the share of L3 and L4 items only be reported, or should a limit trigger a confirmation (“this adds 3 custom screens; the build takes longer”)? <b>Answer:</b> count only, shown as a pill in the preview header.</li>
+</ol>
+</main>
+</div>
+
+<!--claude-mermaid-runtime-begin:3477-->
+<style>.mermaid-diagram{margin-block:4px}.mermaid-diagram svg{display:block;margin:0 auto;max-width:100%;height:auto}</style>
+<script src="/_runtime/mermaid-11.16.1.min.js"></script>
+<script>(function(){
+var CFG={"palettes":{"light":{"surface":"#f4efe4","text":"#42392e","line":"#8a7f6d","border":"#7a6c52","bg":"#fffdf8"},"dark":{"surface":"#262b34","text":"#f2f3f5","line":"#a8adb8","border":"#9aa4b8","bg":"#1f232b"}}};
+if(typeof mermaid==='undefined')return;
+var pres=Array.prototype.slice.call(document.querySelectorAll('pre.mermaid')).filter(function(p){if(p.hasAttribute('data-claude-mermaid-claimed'))return false;p.setAttribute('data-claude-mermaid-claimed','1');return true;});
+if(!pres.length)return;
+var mq=window.matchMedia?window.matchMedia('(prefers-color-scheme: dark)'):null;
+var root=document.documentElement;
+var items=pres.map(function(pre){
+var mount=document.createElement('div');mount.className='mermaid-diagram';
+return {pre:pre,mount:mount,src:pre.textContent||''};
+});
+var seq=0;
+var renderGen=0;
+var lastKey='';
+function pageBg(fallback){
+var els=[document.body,document.documentElement];
+for(var i=0;i<els.length;i++){
+var c=els[i]&&getComputedStyle(els[i]).backgroundColor;
+if(c&&c!=='transparent'&&c!=='rgba(0, 0, 0, 0)')return c;
+}
+return fallback;
+}
+function render(){
+var theme=root.getAttribute('data-theme');
+var dark=theme==='dark'||(!!(mq&&mq.matches)&&theme!=='light');
+var pal=dark?CFG.palettes.dark:CFG.palettes.light;
+var bg=pageBg(pal.bg);
+var key=(dark?'d':'l')+'|'+bg;
+if(key===lastKey)return;
+lastKey=key;
+var gen=++renderGen;
+var font=getComputedStyle(document.body).fontFamily||'sans-serif';
+var nat={useMaxWidth:false};
+mermaid.initialize({
+startOnLoad:false,securityLevel:'strict',theme:'base',
+flowchart:nat,sequence:nat,er:nat,state:nat,class:nat,pie:nat,
+gantt:nat,journey:nat,timeline:nat,gitGraph:nat,mindmap:nat,xyChart:nat,
+quadrantChart:nat,sankey:nat,c4:nat,requirement:nat,block:nat,
+packet:nat,kanban:nat,architecture:nat,radar:nat,
+themeVariables:{background:bg,mainBkg:pal.surface,primaryColor:pal.surface,
+primaryTextColor:pal.text,lineColor:pal.line,primaryBorderColor:pal.border,
+nodeBorder:pal.border,clusterBorder:pal.border,edgeLabelBackground:bg,
+clusterBkg:'rgba(127,127,127,0.07)',titleColor:pal.text,
+darkMode:dark,rowOdd:bg,rowEven:'rgba(127,127,127,0.07)',
+attributeBackgroundColorOdd:bg,attributeBackgroundColorEven:'rgba(127,127,127,0.07)',
+fontSize:'16px',fontFamily:font},
+themeCSS:'.node rect, .node circle, .node polygon, .node path, .cluster rect { stroke-width: 2px; }'
+});
+items.forEach(function(it){
+var id='claude-mermaid-'+seq++;
+mermaid.render(id,it.src).then(function(r){
+if(gen!==renderGen)return;
+var prev=it.pre.previousElementSibling;
+if(prev&&prev.className==='mermaid-diagram'&&prev!==it.mount)return;
+it.mount.innerHTML=r.svg;
+if(!it.mount.parentNode)it.pre.parentNode.insertBefore(it.mount,it.pre);
+it.pre.style.display='none';
+},function(){
+var scratch=document.getElementById(id);
+if(scratch)scratch.parentNode.removeChild(scratch);
+scratch=document.getElementById('d'+id);
+if(scratch)scratch.parentNode.removeChild(scratch);
+if(gen!==renderGen)return;
+if(it.mount.parentNode)it.mount.parentNode.removeChild(it.mount);
+it.pre.style.display='';
+});
+});
+}
+render();
+if(mq&&mq.addEventListener)mq.addEventListener('change',render);
+if(typeof MutationObserver!=='undefined')new MutationObserver(render).observe(root,{attributes:true,attributeFilter:['data-theme']});
+})();</script>
+<!--claude-mermaid-runtime-end-->
+
+</body></html>

@@ -115,7 +115,10 @@ class ResumeTests(unittest.TestCase):
             appbuilder_reason = ""
 
         text = compose_resume_prompt(
-            "## Spec", Ctx(), "AgentError: Credit balance is too low"
+            "## Spec",
+            Ctx(),
+            "AgentError: Credit balance is too low",
+            skill="zango-tpl-psp:zango-psp-builder",
         )
         self.assertIn("RESUMING", text)
         self.assertIn("Do not start over", text)

@@ -219,7 +219,9 @@ class AgentRequirement(FullAuditMixin):
     # One-pass drafting (template requirements): the analyst drafts the whole
     # journey from the user's documents, flags every value it did not take
     # straight from them, and leaves only real gaps as open decisions.
-    mode = models.CharField(max_length=16, blank=True, default="")  # draft | interview | adopted (see tasks._start_template_draft)
+    mode = models.CharField(
+        max_length=16, blank=True, default=""
+    )  # draft | interview | adopted (see tasks._start_template_draft)
     reference_id = models.CharField(max_length=64, blank=True, default="")
     # [{path, kind: inferred|reference|default|missing, note, source?}]
     spec_flags = models.JSONField(default=list, blank=True)
@@ -229,6 +231,10 @@ class AgentRequirement(FullAuditMixin):
     # lifecycles the panel derives from the spec itself:
     # {processes: [{id, title, group?, lanes, nodes, flows}]}
     workflows = models.JSONField(default=dict, blank=True)
+    # The analyst's screenshot of each custom screen (preview_probe.py):
+    # {spec path: hash of the screen when it last looked}. spec_mark_ready
+    # wants a look at every sketched screen since it last changed.
+    sketch_looks = models.JSONField(default=dict, blank=True)
 
     # SDK session, so each conversational turn resumes rather than restarts.
     session_id = models.CharField(max_length=128, blank=True, default="")
@@ -354,6 +360,9 @@ class AgentRequirementMessage(models.Model):
     # instead of writing prose. Empty for a reply that offered none; the chat
     # box is always still there, so this is an affordance, not a gate.
     questions = models.JSONField(default=list, blank=True)
+    # Where the user was in the preview when they wrote this, and what they
+    # pointed at (preview_focus.py). Empty for agent turns and plain messages.
+    preview_focus = models.JSONField(default=dict, blank=True)
 
     class Meta:
         db_table = "agent_mode_requirement_message"
@@ -570,7 +579,12 @@ class AgentRun(FullAuditMixin):
         self.pending_actions = list(actions or [])
         self.studio_checkpoint = checkpoint or {}
         self.save(
-            update_fields=["status", "pending_actions", "studio_checkpoint", "modified_at"]
+            update_fields=[
+                "status",
+                "pending_actions",
+                "studio_checkpoint",
+                "modified_at",
+            ]
         )
 
     def finalize(self, status: str, **fields) -> None:

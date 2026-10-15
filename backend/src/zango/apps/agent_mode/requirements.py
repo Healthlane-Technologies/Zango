@@ -179,7 +179,10 @@ def _normalise_question(item, index: int):
     # analyst's reading can send without touching anything.
     selected = [
         label
-        for label in (str(value).strip()[:MAX_OPTION_CHARS] for value in item.get("selected") or [])
+        for label in (
+            str(value).strip()[:MAX_OPTION_CHARS]
+            for value in item.get("selected") or []
+        )
         if label in seen
     ]
     if kind == "single":
@@ -376,10 +379,16 @@ decisions on the Review tab.
 
 
 def _template_draft_block(requirement, template, docs_dir: str) -> str:
-    refs = "\n".join(
-        f"- `{r['id']}` — {r['title']}: {r['summary']}  ({r['path']})" for r in template.references
-    ) or "- (none; start from the starter journey)"
-    chosen = next((r for r in template.references if r["id"] == requirement.reference_id), None)
+    refs = (
+        "\n".join(
+            f"- `{r['id']}` — {r['title']}: {r['summary']}  ({r['path']})"
+            for r in template.references
+        )
+        or "- (none; start from the starter journey)"
+    )
+    chosen = next(
+        (r for r in template.references if r["id"] == requirement.reference_id), None
+    )
     base = (
         f"The user chose `{chosen['id']}` as the base: start from it.\n"
         if chosen
@@ -415,7 +424,9 @@ def _template_mode_block(requirement, template) -> str:
     draft = (
         _TEMPLATE_CHANGE_DRAFT.format(spec=spec)
         if is_change
-        else _TEMPLATE_FIRST_DRAFT.format(starter=template.file_path("starter") or "starter.yaml")
+        else _TEMPLATE_FIRST_DRAFT.format(
+            starter=template.file_path("starter") or "starter.yaml"
+        )
     )
     return _TEMPLATE_MODE.format(
         name=template.name,
@@ -428,12 +439,16 @@ def _template_mode_block(requirement, template) -> str:
     )
 
 
-def compose_analyst_prompt(requirement, ctx, user_message: str, docs_dir: str = "") -> str:
+def compose_analyst_prompt(
+    requirement, ctx, user_message: str, docs_dir: str = ""
+) -> str:
     """First turn dispatches the skill and supplies context; later turns are
     just the user's reply, since the session is resumed."""
     if requirement.session_id:
         adopted = getattr(requirement, "mode", "") == "adopted"
-        template = requirement.template if adopted and requirement.template_slug else None
+        template = (
+            requirement.template if adopted and requirement.template_slug else None
+        )
         if template is not None and template.is_yaml:
             return (
                 _template_mode_block(requirement, template)
@@ -498,23 +513,49 @@ _SPEC_TOOLS_APPEND = (
     "user watches it change beside the chat. Do not paste the journey into your "
     "reply and do not use zango-spec or zango-spec-draft fences, even where the "
     "template's interview says to; the tools replace them. A refused change "
-    "tells you why: fix the value, don't retry it unchanged."
+    "tells you why: fix the value, don't retry it unchanged. A message may end "
+    "with a [Preview: …] note: where the user was in the preview and, if they "
+    'pointed at something, its path in the spec. Words like "this" and '
+    '"here" mean that part; read it with spec_get before you change it. Never '
+    "ask the user whether the spec is finished, whether to mark it ready or whether to "
+    "build: they look at the preview and press Commit for build themselves when it is "
+    "right. So finish every change in the turn you make it: a custom page, tab or panel "
+    "gets its `preview` sketch and its contract (`data`, `acceptance`), and a custom "
+    "requirement its `acceptance` (and `trigger` when it runs on its own). An edit's "
+    "result says NOT DONE when something is missing; fix it before you reply."
 )
 
 
-def build_analyst_options(*, ctx, creds, requirement, spec_server=None, docs_dir=""):
+_PREVIEW_TOOLS_APPEND = (
+    "\n\nYou can check your custom screens — custom pages, 360 tabs and panels drawn by "
+    "a `preview` sketch — in the same preview the user sees. An edit to one reports what "
+    "its sketch drew for each role (errors, empty parts, records read, values shown): read "
+    "it and fix what is wrong before you reply; a ⚠ line is not a pass. When the edit changed "
+    "a sketch, a screenshot of the screen comes with it: look at it and check it shows what the "
+    "user asked for, with real values (if a field it needs is empty in the demo data, the "
+    "screen only shows its empty case). preview_check runs them all; preview_look screenshots "
+    "one as another role, record or width. Lists, forms, 360 pages and views need no check: the "
+    "template draws them from the spec. spec_mark_ready wants every custom screen to draw "
+    "cleanly and to have been looked at once since it last changed."
+)
+
+
+def build_analyst_options(
+    *, ctx, creds, requirement, spec_server=None, docs_dir="", preview=False
+):
     """Read-only ClaudeAgentOptions for a gathering turn.
 
     ``spec_server`` (template requirements) exposes the spec tools; with it the
     analyst edits the draft through tools rather than fences, and gets more
-    turns, since every tool call is one.
+    turns, since every tool call is one. ``preview``: the server also has the
+    custom-screen checks (preview_check, preview_look).
     """
     from claude_agent_sdk import ClaudeAgentOptions
 
     from django.conf import settings as dj
 
-    from .config import load_config
     from .app_templates import templates_dir
+    from .config import load_config
     from .options import SKILL_PLUGIN_DIR, agent_home, build_env
 
     cfg = load_config()
@@ -585,7 +626,9 @@ def build_analyst_options(*, ctx, creds, requirement, spec_server=None, docs_dir
             )
         kwargs["system_prompt"] = {
             **kwargs["system_prompt"],
-            "append": kwargs["system_prompt"]["append"] + _SPEC_TOOLS_APPEND,
+            "append": kwargs["system_prompt"]["append"]
+            + _SPEC_TOOLS_APPEND
+            + (_PREVIEW_TOOLS_APPEND if preview else ""),
         }
     if cfg.analyst_model:
         kwargs["model"] = cfg.analyst_model

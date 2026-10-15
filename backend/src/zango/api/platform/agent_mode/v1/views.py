@@ -11,16 +11,17 @@ from __future__ import annotations
 
 import logging
 
-from django.db import IntegrityError, connection, transaction
-from django.utils.decorators import method_decorator
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 
+from django.db import IntegrityError, connection, transaction
+from django.utils.decorators import method_decorator
+
 from zango.apps.agent_mode.models import (
-    AgentRequirementDocument,
-    RUN_PHASE_ORDER,
     ACTIVE_STATUSES,
+    RUN_PHASE_ORDER,
     TERMINAL_STATUSES,
     AgentRequirement,
+    AgentRequirementDocument,
     AgentRun,
     AgentRunEvent,
     RunStatus,
@@ -177,49 +178,53 @@ class AgentRunListCreateView(
                     409,
                 )
 
-            # A run is normally built from an approved requirement; a raw
-            # prompt is still accepted for one-off work.
-            requirement = None
+            # A run is built from an approved requirement: its app spec is
+            # what the build skill works from.
             requirement_uuid = request.data.get("requirement_uuid")
-            if requirement_uuid:
-                requirement = AgentRequirement.objects.filter(
-                    object_uuid=requirement_uuid
-                ).first()
-                if requirement is None:
-                    return get_api_response(
-                        False, {"message": "requirement not found"}, 404
-                    )
-                if not requirement.can_build:
-                    return get_api_response(
-                        False,
-                        {
-                            "message": (
-                                "This requirement must be approved before it "
-                                "can be built."
-                            ),
-                            "status": requirement.status,
-                        },
-                        409,
-                    )
-                from zango.apps.agent_mode.prompt import template_preamble
-
-                data = dict(request.data)
-                template = requirement.template if requirement.template_slug else None
-                if template is not None and template.is_yaml:
-                    # The executor writes the approved journey to a file and
-                    # builds the ask around it (template_build.py); a real
-                    # program's journey runs past the inline prompt limit.
-                    data["prompt"] = f"Build the approved {template.name} journey."
-                else:
-                    # A template spec is configuration, not prose. Handing it
-                    # over unannounced leaves the build agent guessing at what
-                    # it is reading, so the template says so in one paragraph.
-                    data["prompt"] = (
-                        template_preamble(template) + requirement.spec_markdown
-                    )
-                serializer = AgentRunCreateSerializer(data=data)
-            else:
-                serializer = AgentRunCreateSerializer(data=request.data)
+            if not requirement_uuid:
+                return get_api_response(
+                    False,
+                    {"message": "A build starts from an approved requirement."},
+                    400,
+                )
+            requirement = AgentRequirement.objects.filter(
+                object_uuid=requirement_uuid
+            ).first()
+            if requirement is None:
+                return get_api_response(
+                    False, {"message": "requirement not found"}, 404
+                )
+            if not requirement.can_build:
+                return get_api_response(
+                    False,
+                    {
+                        "message": (
+                            "This requirement must be approved before it "
+                            "can be built."
+                        ),
+                        "status": requirement.status,
+                    },
+                    409,
+                )
+            data = dict(request.data)
+            template = requirement.template if requirement.template_slug else None
+            if template is None or not template.is_yaml:
+                return get_api_response(
+                    False,
+                    {
+                        "message": (
+                            "This requirement has no app spec to build from. "
+                            "Start a new requirement: it is written as an app "
+                            "spec and built from it."
+                        ),
+                    },
+                    409,
+                )
+            # The executor writes the approved journey to a file and
+            # builds the ask around it (template_build.py); a real
+            # program's journey runs past the inline prompt limit.
+            data["prompt"] = f"Build the approved {template.name} journey."
+            serializer = AgentRunCreateSerializer(data=data)
 
             if not serializer.is_valid():
                 return get_api_response(False, {"errors": serializer.errors}, 400)
@@ -484,7 +489,9 @@ class AgentRunAbortView(ZangoGenericPlatformAPIView, TenantMixin):
                     error_type="AbortedWhileWaiting",
                     error_message=f"Aborted by {_user_label(request)} while the build was waiting.",
                 )
-                return get_api_response(True, {"status": run.status, "abort_requested": True}, 200)
+                return get_api_response(
+                    True, {"status": run.status, "abort_requested": True}, 200
+                )
 
             if run.abort_requested:
                 # Asked again: the first stop may have gone to a worker that
@@ -575,7 +582,9 @@ class AgentRunReportView(ZangoGenericPlatformAPIView, TenantMixin):
                 return get_api_response(False, {"message": "run not found"}, 404)
             target = _report_file(run)
             if target is None:
-                return get_api_response(False, {"message": "This run has no build report."}, 404)
+                return get_api_response(
+                    False, {"message": "This run has no build report."}, 404
+                )
             response = HttpResponse(
                 target.read_text(encoding="utf-8", errors="replace"),
                 content_type="text/html; charset=utf-8",
@@ -622,9 +631,9 @@ class AgentRunContinueView(ZangoGenericPlatformAPIView, TenantMixin):
 
             skip = str(request.data.get("skip", "")).lower() in ("true", "1")
             if not skip:
-                missing = StudioBuild.from_checkpoint(run.studio_checkpoint).still_failing(
-                    run.pending_actions or []
-                )
+                missing = StudioBuild.from_checkpoint(
+                    run.studio_checkpoint
+                ).still_failing(run.pending_actions or [])
                 if missing:
                     return get_api_response(
                         False,
@@ -638,9 +647,9 @@ class AgentRunContinueView(ZangoGenericPlatformAPIView, TenantMixin):
                     )
 
             # Claim the run before dispatching, so a double click cannot start two workers.
-            claimed = AgentRun.objects.filter(pk=run.pk, status=RunStatus.WAITING).update(
-                status=RunStatus.SYNCING, resumed_at=timezone.now()
-            )
+            claimed = AgentRun.objects.filter(
+                pk=run.pk, status=RunStatus.WAITING
+            ).update(status=RunStatus.SYNCING, resumed_at=timezone.now())
             if not claimed:
                 return get_api_response(
                     False, {"message": "This build is already continuing."}, 409
@@ -829,7 +838,7 @@ def _dispatch_turn(requirement, tenant):
     transaction.on_commit(_go)
 
 
-def _append_user_message(requirement, content: str):
+def _append_user_message(requirement, content: str, focus=None):
     from zango.apps.agent_mode.models import AgentRequirementMessage, MessageRole
 
     next_seq = (
@@ -840,6 +849,7 @@ def _append_user_message(requirement, content: str):
         seq=next_seq,
         role=MessageRole.USER,
         content=content,
+        preview_focus=focus or {},
     )
 
 
@@ -917,24 +927,35 @@ class AgentRequirementListCreateView(
                     is_thinking=True,
                 )
                 # An app built on a template stays on it: the change request
-                # starts from the journey it was last approved on.
+                # starts from the journey it was last approved on. An app
+                # with no template is written in the generic app spec.
                 bound = seed_from_binding(requirement, tenant)
                 if documents and not bound:
                     return get_api_response(
-                        False, {"message": "Documents can be used on template apps only."}, 400
+                        False,
+                        {"message": "Documents can be used on template apps only."},
+                        400,
                     )
                 if bound:
                     reference = (request.data.get("reference") or "").strip()[:64]
                     known = {r["id"] for r in requirement.template.references}
                     if reference and reference not in known:
                         return get_api_response(
-                            False, {"message": "That reference journey is not part of the template."}, 400
+                            False,
+                            {
+                                "message": "That reference journey is not part of the template."
+                            },
+                            400,
                         )
                     requirement.reference_id = reference
-                    requirement.mode = "draft" if wants_draft(prompt, len(documents)) else "interview"
+                    requirement.mode = (
+                        "draft" if wants_draft(prompt, len(documents)) else "interview"
+                    )
                 requirement.save()
                 for doc in documents:
-                    AgentRequirementDocument.objects.create(requirement=requirement, **doc.model_fields())
+                    AgentRequirementDocument.objects.create(
+                        requirement=requirement, **doc.model_fields()
+                    )
                 _append_user_message(requirement, prompt)
 
             _dispatch_turn(requirement, tenant)
@@ -1005,14 +1026,20 @@ class AgentRequirementMessageView(ZangoGenericPlatformAPIView, TenantMixin):
             if len(content) > MAX_MESSAGE_CHARS:
                 return get_api_response(False, {"message": "Message too long."}, 400)
 
+            from zango.apps.agent_mode.preview_focus import clean_focus
+
             with transaction.atomic():
-                _append_user_message(requirement, content)
+                _append_user_message(
+                    requirement, content, clean_focus(request.data.get("focus"))
+                )
                 requirement.is_thinking = True
                 requirement.error_message = ""
                 update = ["is_thinking", "error_message", "modified_at"]
                 if answered:
                     requirement.open_decisions = [
-                        d for d in requirement.open_decisions or [] if d.get("id") not in answered
+                        d
+                        for d in requirement.open_decisions or []
+                        if d.get("id") not in answered
                     ]
                     update.append("open_decisions")
                 requirement.save(update_fields=update)
@@ -1072,7 +1099,9 @@ class AgentRequirementSpecView(ZangoGenericPlatformAPIView, TenantMixin):
         return self._manual(
             app_uuid,
             requirement_uuid,
-            lambda r: save_manual(r, request.data.get("yaml"), request.data.get("base_revision")),
+            lambda r: save_manual(
+                r, request.data.get("yaml"), request.data.get("base_revision")
+            ),
         )
 
     def patch(self, request, app_uuid, requirement_uuid, *args, **kwargs):
@@ -1082,7 +1111,9 @@ class AgentRequirementSpecView(ZangoGenericPlatformAPIView, TenantMixin):
         return self._manual(
             app_uuid,
             requirement_uuid,
-            lambda r: patch_manual(r, request.data.get("ops"), request.data.get("base_revision")),
+            lambda r: patch_manual(
+                r, request.data.get("ops"), request.data.get("base_revision")
+            ),
         )
 
     def post(self, request, app_uuid, requirement_uuid, *args, **kwargs):
@@ -1104,7 +1135,9 @@ class AgentRequirementSpecView(ZangoGenericPlatformAPIView, TenantMixin):
             if requirement.is_thinking:
                 return get_api_response(
                     False,
-                    {"message": "The agent is still working on this spec. Try again in a moment."},
+                    {
+                        "message": "The agent is still working on this spec. Try again in a moment."
+                    },
                     409,
                 )
 
@@ -1124,7 +1157,10 @@ class AgentRequirementSpecView(ZangoGenericPlatformAPIView, TenantMixin):
                 if broken:
                     return get_api_response(
                         False,
-                        {"message": "The spec does not fit the template.", "issues": broken},
+                        {
+                            "message": "The spec does not fit the template.",
+                            "issues": broken,
+                        },
                         400,
                     )
 
@@ -1211,7 +1247,9 @@ class AgentRequirementDocumentsView(ZangoGenericPlatformAPIView, TenantMixin):
 
         try:
             _bind_tenant(self, app_uuid)
-            requirement = AgentRequirement.objects.filter(object_uuid=requirement_uuid).first()
+            requirement = AgentRequirement.objects.filter(
+                object_uuid=requirement_uuid
+            ).first()
             if requirement is None:
                 return get_api_response(False, {"message": "not found"}, 404)
             rows = requirement.documents.all().defer("data", "extracted_text")
@@ -1230,11 +1268,9 @@ class AgentRequirementDocumentFileView(ZangoGenericPlatformAPIView, TenantMixin)
 
         try:
             _bind_tenant(self, app_uuid)
-            doc = (
-                AgentRequirementDocument.objects.filter(
-                    requirement__object_uuid=requirement_uuid, pk=doc_id
-                ).first()
-            )
+            doc = AgentRequirementDocument.objects.filter(
+                requirement__object_uuid=requirement_uuid, pk=doc_id
+            ).first()
             if doc is None:
                 return get_api_response(False, {"message": "not found"}, 404)
             response = HttpResponse(bytes(doc.data), content_type=doc.content_type)
@@ -1258,11 +1294,15 @@ class AgentRequirementFlagsConfirmView(ZangoGenericPlatformAPIView, TenantMixin)
 
         try:
             _bind_tenant(self, app_uuid)
-            requirement = AgentRequirement.objects.filter(object_uuid=requirement_uuid).first()
+            requirement = AgentRequirement.objects.filter(
+                object_uuid=requirement_uuid
+            ).first()
             if requirement is None:
                 return get_api_response(False, {"message": "not found"}, 404)
             if requirement.is_thinking:
-                return get_api_response(False, {"message": "The agent is still working on this spec."}, 409)
+                return get_api_response(
+                    False, {"message": "The agent is still working on this spec."}, 409
+                )
             code, payload = confirm_flags(requirement, request.data.get("paths"))
             return get_api_response(code == 200, payload, code)
         except Exception as exc:  # noqa: BLE001

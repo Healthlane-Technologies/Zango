@@ -67,9 +67,12 @@ class TemplateView:
     build_skill_name: str = ""
     plugin_dir: str = ""  # materialised plugin root (for the build agent)
     references: tuple = ()  # ({id, title, summary, tags, path}, ...)
-    borrowed_from: str = ""  # "zango-app@1.0.0" when pieces come from the generic template
-    # Where the build skill lives when it is the generic template's (see generic.py).
-    skill_plugin_slug: str = ""
+    borrowed_from: str = (
+        ""  # "zango-app@1.0.0" when pieces come from the generic template
+    )
+    # Where the build skill lives when it is not the template's own: App Studio,
+    # from Agent Mode's skill plugin (see generic.py).
+    skill_plugin_name: str = ""
     skill_plugin_dir: str = ""
 
     @property
@@ -86,11 +89,11 @@ class TemplateView:
         """The build skill as Claude Code names it: ``<plugin>:<skill>``."""
         if not self.build_skill_name:
             return ""
-        return f"zango-tpl-{self.skill_plugin_slug or self.slug}:{self.build_skill_name}"
+        return f"{self.skill_plugin_name or 'zango-tpl-' + self.slug}:{self.build_skill_name}"
 
     @property
     def build_plugin_dir(self) -> str:
-        """The plugin the build skill is loaded from: this template's, or the generic one's."""
+        """The plugin the build skill is loaded from: this template's, or Agent Mode's."""
         return self.skill_plugin_dir or self.plugin_dir
 
 
@@ -127,12 +130,14 @@ def build_view(version: AppTemplateVersion) -> TemplateView:
             if (generic_dir / name).is_file():
                 files[key] = str(generic_dir / name)
                 borrowed[attr] = getattr(generic, attr)
-    from .generic import build_skill_source
+    from .generic import (
+        STUDIO_PLUGIN,
+        STUDIO_SKILL,
+        builds_with_studio,
+        studio_plugin_dir,
+    )
 
-    skill_source = build_skill_source(version)
-    skill_borrowed = skill_source is not None
-    if skill_borrowed:
-        borrowed["build_skill_name"] = skill_source.build_skill_name
+    studio = builds_with_studio(version)
     return TemplateView(
         slug=template.slug,
         name=template.name,
@@ -165,9 +170,9 @@ def build_view(version: AppTemplateVersion) -> TemplateView:
         rules=tuple(version.rules or borrowed.get("rules") or ()),
         starter_yaml=version.starter_yaml,
         example_yaml=version.example_yaml,
-        build_skill_name=version.build_skill_name or borrowed.get("build_skill_name", ""),
-        skill_plugin_slug=skill_source.template.slug if skill_borrowed else "",
-        skill_plugin_dir=str(materialise(skill_source)) if skill_borrowed else "",
+        build_skill_name=STUDIO_SKILL if studio else version.build_skill_name,
+        skill_plugin_name=STUDIO_PLUGIN if studio else "",
+        skill_plugin_dir=studio_plugin_dir() if studio else "",
         plugin_dir=str(plugin_dir),
         references=tuple(
             {
@@ -180,9 +185,7 @@ def build_view(version: AppTemplateVersion) -> TemplateView:
             for r in version.references or []
         ),
         borrowed_from=(
-            f"{(generic or skill_source).template.slug}@{(generic or skill_source).version}"
-            if borrowed
-            else ""
+            f"{generic.template.slug}@{generic.version}" if borrowed else ""
         ),
     )
 

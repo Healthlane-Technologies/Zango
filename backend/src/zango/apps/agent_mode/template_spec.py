@@ -114,7 +114,47 @@ def approval_problem(requirement):
             "message": "Fix the problems in the spec before approving it.",
             "issues": [i for i in issues if i["level"] == "error"],
         }
+    unfinished = unfinished_custom_work(requirement.spec_markdown)
+    if unfinished:
+        return 409, {
+            "message": "Some custom parts are not finished. Ask the agent to finish them before building.",
+            "issues": unfinished,
+        }
     return None
+
+
+def unfinished_custom_work(spec_text) -> list:
+    """What spec_mark_ready would refuse in the custom work, as issues: a screen with no sketch
+    (the user approved a placeholder) or a custom part with no contract (the build cannot test it).
+
+    The approval checks it too, so a build never starts from a spec the analyst should not have
+    called ready, whichever model ran the interview.
+    """
+    import yaml
+
+    from .custom_work import contract_gaps
+    from .preview_probe import custom_screens, is_sketched
+
+    try:
+        doc = yaml.safe_load(spec_text or "")
+    except yaml.YAMLError:
+        return []
+    if not isinstance(doc, dict):
+        return []
+    out = [
+        {
+            "level": "error",
+            "path": path,
+            "message": "Custom screen with no preview sketch: the user has only seen a placeholder.",
+        }
+        for path, node in custom_screens(doc).items()
+        if not is_sketched(node)
+    ]
+    out += [
+        {"level": "error", "path": path, "message": f"Missing {what}"}
+        for path, what in contract_gaps(doc)
+    ]
+    return out
 
 
 # ---------------------------------------------------------------------------

@@ -253,7 +253,7 @@ class SeedOrderTests(AppTemplatesTestBase):
 
 
 class StudioSkillTests(AppTemplatesTestBase):
-    """The generic template's build skill, binary files included, and who borrows it."""
+    """App Studio, from Agent Mode's plugin, builds every template on the generic spec."""
 
     def setUp(self):
         super().setUp()
@@ -262,26 +262,21 @@ class StudioSkillTests(AppTemplatesTestBase):
         self.generic, _ = import_pack(PACKS_DIR / "zango_app", publish_now=True)
         catalogue.clear_caches()
 
-    def test_binary_skill_files_round_trip_to_disk(self):
-        rows = {r.path: r for r in self.generic.files.all()}
-        self.assertIn("SKILL.md", rows)
-        golden = rows["assets/goldens/badges.png"]
-        self.assertTrue(golden.is_binary)
-        self.assertTrue(golden.raw.startswith(b"\x89PNG"))
-        self.assertFalse(any("__pycache__" in p or p.endswith(".pyc") for p in rows))
+    def test_the_generic_template_is_built_with_the_plugin_skill(self):
+        from zango.apps.agent_mode.options import SKILL_PLUGIN_DIR
+
+        # The pack carries no copy of the skill any more.
+        self.assertFalse(self.generic.files.exists())
         self.assertEqual([i for i in lint(self.generic) if i["level"] == "error"], [])
+        self.assertFalse(any("build skill" in i["message"] for i in lint(self.generic)))
 
         view = catalogue.get_template(GENERIC_SLUG)
-        self.assertEqual(view.qualified_skill, "zango-tpl-zango-app:zango-app-studio")
-        skill = Path(view.plugin_dir) / "skills" / "zango-app-studio"
-        on_disk = (skill / "assets" / "goldens" / "badges.png").read_bytes()
-        self.assertEqual(on_disk, golden.raw)
-        self.assertTrue((skill / "scripts" / "spec_check.py").stat().st_mode & 0o100)
-
-        from zango.apps.shared.app_templates.services.packs import export_pack, read_pack
-
-        again = read_pack(export_pack(self.generic))
-        self.assertEqual(again.skill_files["assets/goldens/badges.png"], golden.raw)
+        self.assertEqual(view.build_skill_name, "zango-app-studio")
+        self.assertEqual(view.qualified_skill, "zango-agent-mode:zango-app-studio")
+        self.assertEqual(Path(view.build_plugin_dir).resolve(), Path(SKILL_PLUGIN_DIR).resolve())
+        skill = Path(view.build_plugin_dir) / "skills" / "zango-app-studio"
+        self.assertTrue((skill / "SKILL.md").is_file())
+        self.assertTrue((skill / "assets" / "goldens" / "badges.png").read_bytes().startswith(b"\x89PNG"))
 
     def test_a_lean_template_is_built_with_the_generic_skill(self):
         from zango.apps.shared.app_templates.seed import PACKS_DIR
@@ -289,14 +284,15 @@ class StudioSkillTests(AppTemplatesTestBase):
         import_pack(PACKS_DIR / "ordering_portal", publish_now=True)
         view = catalogue.get_template("ordering-portal")
         self.assertEqual(view.build_skill_name, "zango-app-studio")
-        self.assertEqual(view.qualified_skill, "zango-tpl-zango-app:zango-app-studio")
-        self.assertIn(f"/{GENERIC_SLUG}/", view.build_plugin_dir)
+        self.assertEqual(view.qualified_skill, "zango-agent-mode:zango-app-studio")
         self.assertNotEqual(view.build_plugin_dir, view.plugin_dir)
 
+        from zango.apps.agent_mode.studio_build import is_studio
         from zango.apps.agent_mode.template_build import TemplateBuild
 
         build = TemplateBuild(template=view, spec_path="/tmp/spec/app_spec.yaml")
         self.assertTrue(Path(build.skill_dir, "SKILL.md").is_file())
+        self.assertTrue(is_studio(build))
         self.assertEqual(build.plugin_dir, view.plugin_dir)
 
 
@@ -304,7 +300,7 @@ class PinnedGenericTests(StudioSkillTests):
     def test_an_app_pinned_to_an_old_generic_version_builds_with_the_current_skill(self):
         from zango.apps.shared.app_templates.models import AppTemplateVersion
 
-        # An older generic version, from before the template had a build skill.
+        # An older generic version, from when the pack shipped its own copy.
         old = AppTemplateVersion.objects.create(
             template=self.generic.template,
             version="0.9.0",
@@ -313,18 +309,20 @@ class PinnedGenericTests(StudioSkillTests):
             spec_dialect=GENERIC_DIALECT,
             json_schema=self.generic.json_schema,
             starter_yaml=self.generic.starter_yaml,
+            build_skill_name="zango-app-studio",
         )
         catalogue.clear_caches()
         view = catalogue.get_template(GENERIC_SLUG, version_uuid=str(old.object_uuid))
-        # It follows the current generic version: guidance, rules, preview and skill.
+        # It follows the current generic version: guidance, rules and preview.
         self.assertEqual(view.version, self.generic.version)
         self.assertEqual(view.version_uuid, str(self.generic.object_uuid))
         self.assertTrue(any(r.get("id") == "custom_page_preview" for r in view.rules))
-        self.assertEqual(view.qualified_skill, "zango-tpl-zango-app:zango-app-studio")
-        self.assertTrue((Path(view.build_plugin_dir) / "skills" / "zango-app-studio" / "SKILL.md").is_file())
+        self.assertEqual(view.qualified_skill, "zango-agent-mode:zango-app-studio")
 
-        current = catalogue.get_template(GENERIC_SLUG)
-        self.assertEqual(current.build_plugin_dir, current.plugin_dir)  # its own
+        # Even read directly, the old version builds with the plugin's skill.
+        direct = catalogue.build_view(old)
+        self.assertEqual(direct.qualified_skill, "zango-agent-mode:zango-app-studio")
+        self.assertTrue((Path(direct.build_plugin_dir) / "skills" / "zango-app-studio" / "SKILL.md").is_file())
 
 
 class BuildCheckTests(StudioSkillTests):

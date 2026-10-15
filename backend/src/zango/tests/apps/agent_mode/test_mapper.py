@@ -79,7 +79,7 @@ class MapperTests(unittest.TestCase):
                 {
                     "session_id": "sess-1",
                     "model": "claude-x",
-                    "skills": ["zango-agent-mode:zango-app-developer-server"],
+                    "skills": ["zango-agent-mode:zango-app-studio"],
                 },
             ),
             self.rec,

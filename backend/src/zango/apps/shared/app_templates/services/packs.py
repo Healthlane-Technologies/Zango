@@ -10,7 +10,8 @@ A pack is a directory (or a zip of one)::
     SCHEMA.md          the prose vocabulary the analyst reads
     starter.yaml       the draft a new requirement starts from
     example.yaml       a fully answered example
-    skill/...          the build skill (SKILL.md + references)
+    skill/...          the build skill (SKILL.md + references); packs on the
+                       generic spec have none (see generic.py)
 
 File names other than the manifest are whatever template.json says, so older
 packs keep importing. Importing is idempotent: a pack whose content matches an
@@ -45,7 +46,7 @@ from ..models import (
     VersionStatus,
 )
 from .catalogue import bump_revision
-from .paths import content_sha, normalise_pack_path, sha256_file, sha256_text
+from .paths import content_sha, normalise_pack_path, sha256_file
 
 
 MANIFEST = "template.json"
@@ -172,14 +173,18 @@ def read_pack(source) -> Pack:
         name = str(manifest.get(key) or "").strip()
         if name:
             if name not in files:
-                raise PackError(f"{MANIFEST} names {key} = {name!r}, which is not in the pack.")
+                raise PackError(
+                    f"{MANIFEST} names {key} = {name!r}, which is not in the pack."
+                )
             documents[key] = files[name]
 
     references = []
     index_name = str(manifest.get("references") or "").strip()
     if index_name:
         if index_name not in files:
-            raise PackError(f"{MANIFEST} names references = {index_name!r}, which is not in the pack.")
+            raise PackError(
+                f"{MANIFEST} names references = {index_name!r}, which is not in the pack."
+            )
         try:
             entries = json.loads(files[index_name])
         except ValueError as exc:
@@ -187,9 +192,15 @@ def read_pack(source) -> Pack:
         base = posixpath.dirname(index_name)
         for entry in entries if isinstance(entries, list) else []:
             rid = str((entry or {}).get("id") or "").strip()
-            rel = posixpath.join(base, str(entry.get("file") or f"{rid}.yaml")) if base else str(entry.get("file") or f"{rid}.yaml")
+            rel = (
+                posixpath.join(base, str(entry.get("file") or f"{rid}.yaml"))
+                if base
+                else str(entry.get("file") or f"{rid}.yaml")
+            )
             if not re.match(r"^[a-z][a-z0-9_-]{1,63}$", rid) or rel not in files:
-                raise PackError(f"Reference {rid!r} in {index_name} is missing or misnamed.")
+                raise PackError(
+                    f"Reference {rid!r} in {index_name} is missing or misnamed."
+                )
             references.append(
                 {
                     "id": rid,
@@ -224,7 +235,12 @@ def read_pack(source) -> Pack:
     )
     if total > MAX_VERSION_BYTES:
         raise PackError(f"The pack is larger than {MAX_VERSION_BYTES} bytes.")
-    return Pack(manifest=manifest, documents=documents, skill_files=skill_files, references=references)
+    return Pack(
+        manifest=manifest,
+        documents=documents,
+        skill_files=skill_files,
+        references=references,
+    )
 
 
 class _TextOnly(dict):
@@ -378,7 +394,7 @@ def lint(version: AppTemplateVersion, files=None) -> list:
             _issue("error", MANIFEST, f"{version.version!r} is not a semver version.")
         )
 
-    from .generic import GENERIC_SLUG, borrows, effective, fallback_for
+    from .generic import GENERIC_DIALECT, GENERIC_SLUG, borrows, effective, fallback_for
 
     generic = fallback_for(version)
     if borrows(version) and generic is None:
@@ -553,8 +569,8 @@ def lint(version: AppTemplateVersion, files=None) -> list:
                 "Skill files are present but build_skill_name is not set.",
             )
         )
-    elif not (generic is not None and generic.build_skill_name):
-        # (A template on the generic spec is built with the generic template's skill.)
+    elif version.spec_dialect != GENERIC_DIALECT:
+        # (A template on the generic spec is built with Agent Mode's App Studio skill.)
         issues.append(_issue("warning", MANIFEST, "The template has no build skill."))
     return issues
 

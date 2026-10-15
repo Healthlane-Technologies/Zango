@@ -7,10 +7,12 @@
 // becomes an ordinary draft edit (SaveBar, conflicts, validation all as for the YAML tab).
 // The same page shows the app's live preview: `preview` switches it into its simulated app.
 // A preview-only page (App Studio) ignores `preview` and never reports a `change`; `ready`
-// says which the page is through `capabilities` ('edit', 'preview').
+// says which the page is through `capabilities` ('edit', 'preview', 'focus', 'goto').
+// App Studio also reports `focus` — where the user is, and what they clicked after "Point" —
+// and takes `goto` to open a place (the full-page preview opens where the user was).
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useBuilderHtml } from '@/api/agentMode';
+import { useBuilderHtml, type PreviewFocus } from '@/api/agentMode';
 import { ErrorState, Icon, Skeleton } from '@/ui';
 
 const SANDBOX = 'allow-scripts allow-downloads allow-popups allow-modals';
@@ -18,7 +20,8 @@ const SANDBOX = 'allow-scripts allow-downloads allow-popups allow-modals';
 type FromBuilder =
 	| { source: 'zango-builder'; type: 'ready'; protocol?: string; capabilities?: string[] }
 	| { source: 'zango-builder'; type: 'change'; yaml: string }
-	| { source: 'zango-builder'; type: 'error'; message: string };
+	| { source: 'zango-builder'; type: 'error'; message: string }
+	| { source: 'zango-builder'; type: 'focus'; focus: PreviewFocus };
 
 // The server stores specs without trailing whitespace; that difference is not an edit.
 const norm = (s: string | null | undefined) => (s ?? '').replace(/\s+$/, '');
@@ -31,6 +34,9 @@ export function EmbeddedBuilder({
 	hidden,
 	preview = false,
 	onReady,
+	onFocus,
+	goto,
+	className,
 }: {
 	url: string;
 	/** The draft on screen. Loaded into the builder whenever it changes from outside it. */
@@ -43,6 +49,11 @@ export function EmbeddedBuilder({
 	preview?: boolean;
 	/** The page's declared capabilities, once it is ready (undefined: it didn't say). */
 	onReady?: (capabilities: string[] | undefined) => void;
+	/** Where the user is in the preview (and what they pointed at), as the page reports it. */
+	onFocus?: (focus: PreviewFocus) => void;
+	/** Open this place once the page has the spec. */
+	goto?: PreviewFocus | null;
+	className?: string;
 }) {
 	const page = useBuilderHtml(url);
 	const frame = useRef<HTMLIFrameElement>(null);
@@ -51,8 +62,9 @@ export function EmbeddedBuilder({
 	const known = useRef<string | null>(null);
 	const [error, setError] = useState<string | null>(null);
 
-	const latest = useRef({ text, readOnly, onChange, preview, onReady });
-	latest.current = { text, readOnly, onChange, preview, onReady };
+	const latest = useRef({ text, readOnly, onChange, preview, onReady, onFocus, goto });
+	latest.current = { text, readOnly, onChange, preview, onReady, onFocus, goto };
+	const wentTo = useRef(false);
 
 	const post = useCallback((message: Record<string, unknown>) => {
 		frame.current?.contentWindow?.postMessage({ source: 'zango-host', ...message }, '*');
@@ -64,6 +76,10 @@ export function EmbeddedBuilder({
 		post({ type: 'load', yaml: t, readOnly: ro });
 		// A reload re-renders the editor; the preview is rebuilt from the new journey.
 		if (latest.current.preview) post({ type: 'preview', on: true });
+		if (latest.current.goto && !wentTo.current) {
+			wentTo.current = true;
+			post({ type: 'goto', location: latest.current.goto });
+		}
 	}, [post]);
 
 	useEffect(() => {
@@ -82,6 +98,8 @@ export function EmbeddedBuilder({
 				known.current = norm(msg.yaml);
 				setError(null);
 				latest.current.onChange(msg.yaml);
+			} else if (msg.type === 'focus' && msg.focus && typeof msg.focus === 'object') {
+				latest.current.onFocus?.(msg.focus);
 			} else if (msg.type === 'error') {
 				setError(String(msg.message || 'The builder reported an error.'));
 			}
@@ -119,7 +137,7 @@ export function EmbeddedBuilder({
 		);
 	}
 	return (
-		<div className="emb" hidden={hidden}>
+		<div className={className ? `emb ${className}` : 'emb'} hidden={hidden}>
 			{error && (
 				<div className="bld-note err" role="alert">
 					<Icon name="alert" size={13} />

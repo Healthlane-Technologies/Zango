@@ -89,15 +89,30 @@ def seed_template_requirement(requirement, template, base_spec: str = "") -> Non
 
 
 def seed_from_binding(requirement, tenant) -> bool:
-    """For a requirement on a bound app: pin the binding's version and seed it.
+    """Make a new requirement a template one: the app's template, or the generic one.
 
-    Runs inside the tenant schema. Returns whether the app is bound.
+    A bound app pins its binding's version. An app with no binding (one not
+    created from the console) is written in the generic Zango app spec, like
+    an app started from scratch, so every requirement is built with a
+    template's skill. Runs inside the tenant schema. Returns whether the
+    requirement is a template one.
     """
+    from zango.apps.shared.app_templates.services.generic import GENERIC_SLUG
+
     from .app_templates import get_template
 
     binding = binding_for(tenant)
     if binding is None:
-        return False
+        template = get_template(GENERIC_SLUG)
+        if template is None:
+            logger.warning(
+                "agent_mode: the generic template %r is not published", GENERIC_SLUG
+            )
+            return False
+        seed_template_requirement(
+            requirement, template, last_approved_spec(template.slug)
+        )
+        return True
     template = get_template(
         binding.template.slug, version_uuid=binding.version.object_uuid
     )

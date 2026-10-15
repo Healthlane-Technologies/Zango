@@ -10,6 +10,7 @@ import {
 import {
 	isRunActive,
 	type AnalystQuestion,
+	type PreviewFocus,
 	type Requirement,
 	type RequirementMessage,
 	type RunRef,
@@ -36,7 +37,7 @@ function Message({
 	fresh,
 	you,
 }: {
-	message: Pick<RequirementMessage, 'role' | 'content' | 'ts'>;
+	message: Pick<RequirementMessage, 'role' | 'content' | 'ts' | 'preview_focus'>;
 	fresh?: boolean;
 	you: string;
 }) {
@@ -51,6 +52,13 @@ function Message({
 				</div>
 				{/* The user typed plain text; the agent replies in markdown. */}
 				<div className="mt">{user ? message.content : <Markdown text={message.content} />}</div>
+				{user && message.preview_focus && 'pointed' in message.preview_focus && message.preview_focus.pointed && (
+					<div className="ptr-sent" title={message.preview_focus.pointed.path}>
+						<Icon name="eye" size={11} />
+						Pointed at {message.preview_focus.pointed.label || 'part of the preview'}
+						{message.preview_focus.title && ` · ${message.preview_focus.title}`}
+					</div>
+				)}
 			</div>
 		</div>
 	);
@@ -201,6 +209,9 @@ interface ThreadProps {
 	agentCard?: ReactNode;
 	/** The composer's prompt once the agent has replied (e.g. "Ask for changes to the preview…"). */
 	idlePlaceholder?: string;
+	/** What the user pointed at in the preview; it goes with the next reply. */
+	pointer?: PreviewFocus | null;
+	onClearPointer?: () => void;
 }
 
 export function Thread({
@@ -214,6 +225,8 @@ export function Thread({
 	focusSignal,
 	agentCard,
 	idlePlaceholder,
+	pointer,
+	onClearPointer,
 }: ThreadProps) {
 	const { data: me } = useMe();
 	const you = me?.name || me?.email || 'You';
@@ -290,6 +303,11 @@ export function Thread({
 	}, [draft]);
 
 	const disabled = !enabled || sending || (mode === 'reply' && thinking);
+	const pointed = mode === 'reply' ? pointer?.pointed : undefined;
+	// Pointing is the start of a message: put the cursor in the box.
+	useEffect(() => {
+		if (pointer?.pointed) inputRef.current?.focus();
+	}, [pointer]);
 
 	/** Send `content` (the box, or composed answers). The box clears only once the send succeeds. */
 	const send = async (content = draft) => {
@@ -318,9 +336,11 @@ export function Thread({
 				? 'Describe the next change…'
 				: thinking
 					? 'The agent is replying…'
-					: openQuestions
-						? 'Anything to add? (optional)'
-						: (idlePlaceholder ?? 'Reply, or ask for changes…');
+					: pointed
+						? 'What should change about it?'
+						: openQuestions
+							? 'Anything to add? (optional)'
+							: (idlePlaceholder ?? 'Reply, or ask for changes…');
 	const hint =
 		mode === 'next'
 			? 'Starts a new change — nothing is built until you approve it.'
@@ -401,6 +421,19 @@ export function Thread({
 			</div>
 			<div className="composer">
 				<form onSubmit={onSubmit}>
+					{pointed && (
+						<div className="ptr" role="status">
+							<Icon name="eye" size={12} />
+							<span className="min-w-0 truncate">
+								Pointing at <b>{pointed.label || 'this'}</b>
+								{pointer?.title && <> · {pointer.title}</>}
+								{pointer?.role && <> · as {pointer.role}</>}
+							</span>
+							<button type="button" onClick={onClearPointer} aria-label="Stop pointing" title="Stop pointing">
+								<Icon name="x" size={12} />
+							</button>
+						</div>
+					)}
 					<textarea
 						ref={inputRef}
 						rows={1}

@@ -70,4 +70,5 @@ it. Eight to ten turns is a complete app.
 
 When the app is complete and `spec_validate` reports no errors, describe how
 each role gets its main work done with `spec_set_workflows` (see `DRAFTING.md`
-§5), then call `spec_mark_ready` with a one-line summary.
+§5), then call `spec_mark_ready` with a one-line summary. Do not ask the user
+whether the spec is finished or should be built: they commit it from the preview.

@@ -29,6 +29,7 @@ export function TemplateBuilderHost({
 	jump,
 	commit,
 	sheet,
+	onPreviewFocus,
 }: {
 	appId: string;
 	requirement: Requirement;
@@ -38,6 +39,7 @@ export function TemplateBuilderHost({
 	jump?: BuilderProps['jump'];
 	commit?: BuilderProps['commit'];
 	sheet?: BuilderProps['sheet'];
+	onPreviewFocus?: BuilderProps['onPreviewFocus'];
 }) {
 	const template = requirement.template!;
 	const builder = useTemplateBuilder(template.slug, template.version_uuid);
@@ -73,6 +75,7 @@ export function TemplateBuilderHost({
 		jump,
 		commit,
 		sheet,
+		onPreviewFocus,
 	};
 	if (Override) {
 		return (

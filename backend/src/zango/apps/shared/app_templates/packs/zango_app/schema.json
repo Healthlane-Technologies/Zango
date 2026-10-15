@@ -63,6 +63,28 @@
         },
         "custom_requirements": {
           "$ref": "#/$defs/customRequirements"
+        },
+        "ui": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "The look, as choices: tokens in the preview and the built app (SCHEMA.md, app).",
+          "properties": {
+            "radius": {
+              "type": "string",
+              "enum": [
+                "sharp",
+                "rounded",
+                "soft"
+              ]
+            },
+            "density": {
+              "type": "string",
+              "enum": [
+                "compact",
+                "comfortable"
+              ]
+            }
+          }
         }
       }
     },
@@ -383,6 +405,53 @@
         },
         "text": {
           "type": "string"
+        },
+        "code": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "trigger": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "When it happens: on a record event, a transition or tag, or a schedule.",
+          "properties": {
+            "entity": {
+              "type": "string"
+            },
+            "event": {
+              "type": "string",
+              "enum": [
+                "create",
+                "update",
+                "delete",
+                "transition",
+                "tag",
+                "schedule"
+              ]
+            },
+            "transition": {
+              "type": "string"
+            },
+            "tag": {
+              "type": "string"
+            },
+            "cron": {
+              "type": "string"
+            }
+          }
+        },
+        "acceptance": {
+          "$ref": "#/$defs/acceptance"
+        },
+        "preview": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "How the preview shows it (a simulated side effect).",
+          "properties": {
+            "toast": {
+              "type": "string"
+            }
+          }
         }
       }
     },
@@ -1207,7 +1276,8 @@
           "enum": [
             "crud",
             "detail",
-            "custom"
+            "custom",
+            "dashboard"
           ]
         },
         "entity": {
@@ -1246,6 +1316,29 @@
           "type": "string",
           "minLength": 1,
           "description": "Preview-only sketch: the body of a JS function(ctx) returning HTML (SPEC_EXTENSIONS.md). Never built."
+        },
+        "blocks": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/dashBlock"
+          },
+          "description": "A dashboard's blocks (type: dashboard)."
+        },
+        "data": {
+          "$ref": "#/$defs/contractData"
+        },
+        "interactions": {
+          "$ref": "#/$defs/contractInteractions"
+        },
+        "states": {
+          "$ref": "#/$defs/contractStates"
+        },
+        "acceptance": {
+          "$ref": "#/$defs/acceptance"
+        },
+        "refs": {
+          "$ref": "#/$defs/refs"
         }
       },
       "allOf": [
@@ -1283,6 +1376,30 @@
             "not": {
               "required": [
                 "preview"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "dashboard"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "required": [
+              "blocks"
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "blocks"
               ]
             }
           }
@@ -1330,6 +1447,21 @@
           "type": "string",
           "minLength": 1,
           "description": "Preview-only sketch: the body of a JS function(ctx) returning HTML (SPEC_EXTENSIONS.md). Never built."
+        },
+        "data": {
+          "$ref": "#/$defs/contractData"
+        },
+        "interactions": {
+          "$ref": "#/$defs/contractInteractions"
+        },
+        "states": {
+          "$ref": "#/$defs/contractStates"
+        },
+        "acceptance": {
+          "$ref": "#/$defs/acceptance"
+        },
+        "refs": {
+          "$ref": "#/$defs/refs"
         }
       }
     },
@@ -1421,6 +1553,21 @@
                 "type": "string",
                 "minLength": 1,
                 "description": "Preview-only sketch: the body of a JS function(ctx) returning HTML (SPEC_EXTENSIONS.md). Never built."
+              },
+              "data": {
+                "$ref": "#/$defs/contractData"
+              },
+              "interactions": {
+                "$ref": "#/$defs/contractInteractions"
+              },
+              "states": {
+                "$ref": "#/$defs/contractStates"
+              },
+              "acceptance": {
+                "$ref": "#/$defs/acceptance"
+              },
+              "refs": {
+                "$ref": "#/$defs/refs"
               }
             }
           }
@@ -1770,6 +1917,432 @@
           }
         }
       ]
+    },
+    "dashValue": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "description": "count: <entity>, or sum/avg/min/max: <entity>.<field>; optional where.",
+      "properties": {
+        "count": {
+          "type": "string"
+        },
+        "sum": {
+          "type": "string"
+        },
+        "avg": {
+          "type": "string"
+        },
+        "min": {
+          "type": "string"
+        },
+        "max": {
+          "type": "string"
+        },
+        "where": {
+          "$ref": "#/$defs/expr"
+        }
+      }
+    },
+    "dashKpi": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "label",
+        "value"
+      ],
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "value": {
+          "$ref": "#/$defs/dashValue"
+        },
+        "icon": {
+          "type": "string"
+        },
+        "tone": {
+          "$ref": "#/$defs/color"
+        },
+        "format": {
+          "type": "string",
+          "enum": [
+            "number",
+            "money",
+            "percent",
+            "days"
+          ]
+        },
+        "hint": {
+          "type": "string"
+        },
+        "go": {
+          "type": "string"
+        }
+      }
+    },
+    "dashBars": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "entity",
+        "group_by"
+      ],
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "icon": {
+          "type": "string"
+        },
+        "entity": {
+          "type": "string"
+        },
+        "where": {
+          "$ref": "#/$defs/expr"
+        },
+        "sort": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "go": {
+          "type": "string"
+        },
+        "empty": {
+          "type": "string"
+        },
+        "group_by": {
+          "type": "string"
+        },
+        "value": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "sum": {
+              "type": "string"
+            }
+          }
+        },
+        "tone": {
+          "$ref": "#/$defs/color"
+        },
+        "format": {
+          "type": "string",
+          "enum": [
+            "number",
+            "money",
+            "percent",
+            "days"
+          ]
+        }
+      }
+    },
+    "dashList": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "entity",
+        "primary"
+      ],
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "icon": {
+          "type": "string"
+        },
+        "entity": {
+          "type": "string"
+        },
+        "where": {
+          "$ref": "#/$defs/expr"
+        },
+        "sort": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "go": {
+          "type": "string"
+        },
+        "empty": {
+          "type": "string"
+        },
+        "primary": {
+          "type": "string"
+        },
+        "secondary": {
+          "type": "string"
+        },
+        "meta": {
+          "type": "string"
+        },
+        "badge": {
+          "type": "string"
+        }
+      }
+    },
+    "dashTable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "entity",
+        "columns"
+      ],
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "icon": {
+          "type": "string"
+        },
+        "entity": {
+          "type": "string"
+        },
+        "where": {
+          "$ref": "#/$defs/expr"
+        },
+        "sort": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "go": {
+          "type": "string"
+        },
+        "empty": {
+          "type": "string"
+        },
+        "columns": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "dashBoard": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "entity",
+        "group_by"
+      ],
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "icon": {
+          "type": "string"
+        },
+        "entity": {
+          "type": "string"
+        },
+        "where": {
+          "$ref": "#/$defs/expr"
+        },
+        "sort": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "go": {
+          "type": "string"
+        },
+        "empty": {
+          "type": "string"
+        },
+        "group_by": {
+          "type": "string"
+        },
+        "card": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "type": "string"
+            },
+            "subtitle": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "dashBlock": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 1,
+      "additionalProperties": false,
+      "description": "Exactly one of kpis, bars, list, table, board, grid, stack, panel (SCHEMA.md, dashboards).",
+      "properties": {
+        "kpis": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/dashKpi"
+          }
+        },
+        "bars": {
+          "$ref": "#/$defs/dashBars"
+        },
+        "list": {
+          "$ref": "#/$defs/dashList"
+        },
+        "table": {
+          "$ref": "#/$defs/dashTable"
+        },
+        "board": {
+          "$ref": "#/$defs/dashBoard"
+        },
+        "grid": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/dashBlock"
+          }
+        },
+        "stack": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/dashBlock"
+          }
+        },
+        "panel": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "blocks"
+          ],
+          "properties": {
+            "title": {
+              "type": "string"
+            },
+            "icon": {
+              "type": "string"
+            },
+            "blocks": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/dashBlock"
+              }
+            }
+          }
+        }
+      }
+    },
+    "contractData": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "entity"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string"
+          },
+          "via": {
+            "type": "string"
+          },
+          "where": {
+            "$ref": "#/$defs/expr"
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "contractInteractions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "event"
+        ],
+        "properties": {
+          "event": {
+            "type": "string",
+            "description": "What the user does: card_click, drag_card, button \"…\", …"
+          },
+          "go": {
+            "type": "string"
+          },
+          "update": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "entity",
+              "field"
+            ],
+            "properties": {
+              "entity": {
+                "type": "string"
+              },
+              "field": {
+                "type": "string"
+              }
+            }
+          },
+          "transition": {
+            "type": "string"
+          },
+          "row_action": {
+            "type": "string"
+          },
+          "does": {
+            "type": "string"
+          },
+          "roles": {
+            "$ref": "#/$defs/roles"
+          }
+        }
+      }
+    },
+    "contractStates": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "empty": {
+          "type": "string"
+        },
+        "error": {
+          "type": "string"
+        },
+        "no_access": {
+          "type": "string"
+        }
+      }
+    },
+    "acceptance": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      },
+      "description": "Testable outcomes, in the user's words."
+    },
+    "refs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Uploaded documents or pages the screen follows (\"doc:2#p3\")."
     }
   }
 }

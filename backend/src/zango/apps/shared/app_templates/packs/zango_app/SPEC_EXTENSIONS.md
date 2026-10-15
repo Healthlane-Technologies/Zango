@@ -133,7 +133,7 @@ the component, with its message; it never breaks the rest of the preview.
 
 Until the skill's runtime ships a component for a view type, the platform has
 the build agent write that view as a custom view for the app
-(`skill/references/views.md`) and checks it is there (`views` in the build
+(`references/views.md` in the `zango-app-studio` skill) and checks it is there (`views` in the build
 report). A view counts as shipped by the skill once `spec_check.py` carries it
 into `spec.ui.json` (`pages.<code>.views[].type`); the platform then leaves it
 to the skill.
@@ -143,3 +143,33 @@ to the skill.
   update it names).
 - `preview`: treat it as a visual reference for the custom component named in
   `component`; `text` remains the requirement. The code itself is not built.
+
+## 3. `type: dashboard` pages
+
+A page of declared blocks (`kpis`, `bars`, `list`, `table`, `board`, `grid`, `stack`, `panel`;
+SCHEMA.md, "Dashboards"). The preview draws it from the demo data with the role's row scoping;
+`spec_check.py` checks every entity, field, page and expression in it.
+
+Until the runtime ships a dashboard component, `spec_check` resolves a dashboard to a `custom`
+page (component `Dashboard<PascalCode>`) whose hole text lists the blocks exactly; the blocks
+themselves are in `spec.resolved.json` `pages.<code>.blocks`. The build agent writes it as a
+custom page (slot plus data hook) and must build every block as declared: same counts and sums,
+same conditions, same order, each scoped to the signed-in role — nothing added.
+
+## 4. Contracts for custom work
+
+Custom pages, tabs and panels may carry `data`, `interactions` (`event`, `go`, `update`,
+`transition`, `row_action`, `does`, `roles`), `states` (`empty`, `error`, `no_access`),
+`acceptance` and `refs`; custom requirements may carry `code`, `trigger` (`event`: create,
+update, delete, transition, tag, schedule; with `transition`, `tag` or `cron`), `acceptance` and
+`preview.toast`. `spec_check` appends them to the hole text ("Reads…", "Interactions…",
+"Trigger…", "Acceptance (test each): (1)…"): each acceptance line is a test the build writes, and
+a scheduled requirement's `cron` is its `# zas:schedule` line. The platform refuses to mark a spec
+ready while a custom part has no `acceptance`.
+
+## 5. `app.ui`
+
+`radius` (sharp, rounded, soft) and `density` (compact, comfortable). `spec_check` validates them
+and writes them to `spec.ui.json` `app.ui`; the runtime sets `data-zas-radius` and
+`data-zas-density` on `<html>` and `tokens.css` redefines its radius and density tokens. The
+preview applies the same choices.

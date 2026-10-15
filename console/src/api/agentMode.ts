@@ -56,6 +56,23 @@ export interface RequirementMessage {
 	ts: string;
 	is_question: boolean;
 	questions: AnalystQuestion[];
+	/** Where the user was in the preview when they wrote it (user messages only). */
+	preview_focus?: PreviewFocus | Record<string, never>;
+}
+
+/**
+ * Where the user is in the App Studio preview, as the preview reports it ("focus" message).
+ * Paths are pointers into the spec YAML. `pointed` is set after they used "Point".
+ */
+export interface PreviewFocus {
+	role?: string;
+	page?: string | null;
+	title?: string;
+	path?: string;
+	view?: string;
+	record?: { entity: string; id: string | number; label: string };
+	tab?: { code?: string; label: string; path: string };
+	pointed?: { path: string; label: string; text?: string };
 }
 
 export interface RunRef {
@@ -354,10 +371,14 @@ export function useCreateRequirement(appId: string, onCreated: (uuid: string) =>
 
 export function useSendMessage(appId: string, reqId: string) {
 	return useApiMutation({
-		fn: (content: string) =>
-			api<{ status: RequirementStatus }>(`${base(appId)}/requirements/${reqId}/messages/`, 'POST', {
-				content,
-			}),
+		fn: (message: string | { content: string; focus?: PreviewFocus | null }) =>
+			api<{ status: RequirementStatus }>(
+				`${base(appId)}/requirements/${reqId}/messages/`,
+				'POST',
+				typeof message === 'string'
+					? { content: message }
+					: { content: message.content, ...(message.focus ? { focus: message.focus } : {}) },
+			),
 		invalidate: [agentKeys.requirement(appId, reqId)],
 	});
 }

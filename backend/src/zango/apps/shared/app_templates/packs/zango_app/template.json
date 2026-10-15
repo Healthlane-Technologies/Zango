@@ -1,7 +1,7 @@
 {
   "slug": "zango-app",
   "name": "Custom Zango app",
-  "version": "1.1.7",
+  "version": "1.1.18",
   "category": "General",
   "icon": "blocks",
   "is_beta": true,
@@ -112,11 +112,9 @@
     "app_name_prefill": "",
     "app_prompt_prefill": ""
   },
-  "changelog": "Build: a list view the spec declares (board, cards, calendar, timeline) that the runtime has no component for is written as a custom view for the app, and the build checks it is there.",
+  "changelog": "Example: detail routes quoted so every YAML parser reads them. Preview: the sketch kit draws data-zas-kit markers, the same ones as the build's design system, so the build can check a custom screen against its sketch. Interview: the analyst no longer asks whether to finish or build; the user commits from the preview. Preview: a user field named after a role (assigned_verifier) holds that role's demo users; the agent is told when a custom screen reads a field the demo data never fills. Spec: `type: dashboard` pages declared block by block (KPIs, charts, lists, tables, boards), `app.ui` (radius, density), contracts on custom work (data, interactions, acceptance) and typed custom requirements (trigger, acceptance). Preview: Point at any part of the app to tell the agent what you mean (every drawn part carries its spec path); the preview reports where you are and opens at a given place. Custom pages, 360 tabs and panels can be checked headlessly (ZAS_PROBE): the analyst runs each sketch per role, reads what it drew and screenshots it. Build: the zango-app-studio build skill now ships with Agent Mode's skill plugin instead of inside this pack.",
   "builder": {
     "adapter": "builder/adapter.js",
     "html": "builder/app-studio.html"
-  },
-  "skill_dir": "skill",
-  "build_skill_name": "zango-app-studio"
+  }
 }

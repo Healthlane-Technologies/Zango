@@ -15,6 +15,7 @@ import {
 	useSendMessage,
 	useTemplateBuilder,
 	type NewRoundInput,
+	type PreviewFocus,
 } from '@/api/agentMode';
 import { useAppId } from '@/api/hooks';
 import { ApiError } from '@/api/client';
@@ -37,6 +38,7 @@ import { starterIsPlaceholder, usePreviewStage } from './agent/builder/generatin
 import { Decisions } from './agent/builder/ReviewPanel';
 import type { Schema } from './agent/builder/schema';
 import { TemplateBuilderHost } from './agent/builder/TemplateBuilderHost';
+import { PREVIEW_CHANNEL } from './agent/previewChannel';
 import type { SpecDraftController } from './agent/builder/useSpecDraft';
 import { RunsPanel } from './agent/runs/RunsPanel';
 import { Thread } from './agent/Thread';
@@ -185,6 +187,32 @@ export function AgentPage() {
 	// "Show me" on a decision: the pane opens the spec at that place.
 	const [specJump, setSpecJump] = useState<{ pointer: string; nonce: number } | null>(null);
 	const sendMessage = useSendMessage(appId, activeId);
+	// Where the user is in the preview goes with each message; after "Point", what they clicked
+	// (shown above the composer until it is sent or dismissed). The full-page preview, in another
+	// tab, points through a BroadcastChannel.
+	const place = useRef<PreviewFocus | null>(null);
+	const [pointer, setPointer] = useState<PreviewFocus | null>(null);
+	useEffect(() => {
+		place.current = null;
+		setPointer(null);
+	}, [activeId]);
+	const onPreviewFocus = useCallback((focus: PreviewFocus) => {
+		if (focus.pointed) setPointer(focus);
+		else place.current = focus;
+	}, []);
+	useEffect(() => {
+		if (!activeId || typeof BroadcastChannel === 'undefined') return;
+		const channel = new BroadcastChannel(PREVIEW_CHANNEL);
+		channel.onmessage = (e: MessageEvent<{ reqId?: string; focus?: PreviewFocus }>) => {
+			if (e.data?.reqId === activeId && e.data.focus?.pointed) setPointer(e.data.focus);
+		};
+		return () => channel.close();
+	}, [activeId]);
+	const sendReply = async (content: string) => {
+		const ok = await attempt(sendMessage.mutateAsync({ content, focus: pointer ?? place.current }));
+		if (ok) setPointer(null);
+		return ok;
+	};
 	const saveSpec = useSaveSpec(appId, activeId);
 	const approve = useApproveRequirement(appId, activeId);
 	const commit = useCommitRequirement(appId, activeId);
@@ -261,6 +289,14 @@ export function AgentPage() {
 		el.classList.add('bv-flash');
 		window.setTimeout(() => el.classList.remove('bv-flash'), 1600);
 	};
+	// Commit for build is one click. When the server finds unfinished custom work, the agent
+	// finishes it and the commit runs again by itself once the agent's turn ends (once).
+	const commitAfterTurn = useRef<'off' | 'waiting' | 'running'>('off');
+	const autoCommitted = useRef(false);
+	useEffect(() => {
+		commitAfterTurn.current = 'off';
+		autoCommitted.current = false;
+	}, [activeId]);
 	const onCommit = async () => {
 		if (!(await flushTemplate())) return;
 		// Saving edits moves the revision on; commit against what the server now holds.
@@ -278,6 +314,19 @@ export function AgentPage() {
 				open_decisions?: unknown[];
 				issues?: unknown[];
 			};
+			const unfinished = status === 409 && !detail.open_decisions?.length && !!detail.issues?.length;
+			if (unfinished && !autoCommitted.current) {
+				// Unfinished custom work (no sketch, no contract): the agent finishes it, not the user.
+				const items = (detail.issues as { path?: string; message?: string }[])
+					.map((i) => `- ${i.path}: ${i.message}`)
+					.join('\n');
+				autoCommitted.current = true;
+				if (await sendReply(`Before building, finish these custom parts:\n${items}`)) {
+					commitAfterTurn.current = 'waiting';
+					toast.success('The agent is finishing a few custom parts. The commit will go through when it is done.');
+				}
+				return;
+			}
 			toast.error((err as Error).message);
 			if (status === 400 && detail.issues?.length) {
 				setView({ round: null, tab: 'requirements' });
@@ -287,6 +336,15 @@ export function AgentPage() {
 			}
 		}
 	};
+	const thinking = !!active?.is_thinking;
+	useEffect(() => {
+		if (commitAfterTurn.current === 'waiting' && thinking) commitAfterTurn.current = 'running';
+		else if (commitAfterTurn.current === 'running' && !thinking) {
+			commitAfterTurn.current = 'off';
+			void onCommit();
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [thinking]);
 	const commitAction = previewFlow
 		? {
 				onClick: () => setConfirmCommit(true),
@@ -530,11 +588,13 @@ export function AgentPage() {
 						enabled={!blocked}
 						sending={sendMessage.isPending || create.isPending}
 						onSend={async (c) =>
-							(!active?.template || (await flushTemplate())) && attempt(sendMessage.mutateAsync(c))
+							(!active?.template || (await flushTemplate())) && sendReply(c)
 						}
 						onNewRound={(p) => attempt(create.mutateAsync(p))}
 						onOpenBuild={(uuid) => setView({ round: uuid, tab: 'builds' })}
 						focusSignal={focusSignal}
+						pointer={pointer}
+						onClearPointer={() => setPointer(null)}
 						agentCard={
 							decisionsCard && (
 								<div id="agent-decisions" className="rounded-[12px]">
@@ -650,6 +710,7 @@ export function AgentPage() {
 											jump={viewingActive ? specJump : null}
 											commit={viewingActive && open ? commitAction : undefined}
 											sheet={viewingActive ? sheetSignal : null}
+											onPreviewFocus={viewingActive && open ? onPreviewFocus : undefined}
 										/>
 									) : (
 										markdown()

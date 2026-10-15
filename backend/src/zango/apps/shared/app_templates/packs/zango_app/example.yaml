@@ -71,8 +71,9 @@ roles:
 
   - name: Finance
     description: Verifies and pays invoices.
-    landing: invoices
+    landing: finance_home
     menu:
+      - { page: finance_home,     icon: layout-dashboard }
       - { page: invoices,         icon: receipt }
       - { page: purchase_orders,  icon: shopping-cart }
 
@@ -91,10 +92,10 @@ roles:
 #  custom  – any other custom React page; describe it in `text`
 pages:
   - { code: vendors,         type: crud,   entity: vendor,         route: /app/vendors,          title: Vendors }
-  - { code: vendor_360,      type: detail, detail_view: vendor_360, route: /app/vendors/:id }
+  - { code: vendor_360,      type: detail, detail_view: vendor_360, route: "/app/vendors/:id" }
   - { code: contracts,       type: crud,   entity: contract,       route: /app/contracts,        title: Contracts }
   - { code: purchase_orders, type: crud,   entity: purchase_order, route: /app/purchase-orders,  title: Purchase Orders }
-  - { code: po_360,          type: detail, detail_view: po_360,    route: /app/purchase-orders/:id }
+  - { code: po_360,          type: detail, detail_view: po_360,    route: "/app/purchase-orders/:id" }
   - { code: invoices,        type: crud,   entity: invoice,        route: /app/invoices,         title: Invoices }
   - { code: cities,          type: crud,   entity: city,           route: /app/masters/cities,   title: Cities }
   - { code: categories,      type: crud,   entity: category,       route: /app/masters/categories, title: Categories }
@@ -107,6 +108,21 @@ pages:
     text: >
       KPI row: vendors pending approval, open POs, PO value this month, invoices overdue.
       Below: PO value by month (bar, last 6 months) and a table of the 10 oldest POs awaiting approval.
+    # Custom, not `type: dashboard`: "this month" and "by month" need date buckets the blocks
+    # cannot express. The contract says what the build must deliver and how it is tested.
+    data:
+      - { entity: vendor, where: "status == pending_approval" }
+      - { entity: purchase_order }
+      - { entity: invoice, where: "status not_in [paid, rejected]" }
+    interactions:
+      - { event: kpi_click, does: opens the matching list page }
+      - { event: row_click, go: po_360 }
+    states:
+      empty: Nothing is waiting for approval.
+    acceptance:
+      - Each KPI counts only the records the signed-in role can see.
+      - PO value by month shows the last 6 calendar months, including months with no POs as zero.
+      - The oldest-first list holds at most 10 POs, all pending approval, and opens the PO's 360 page.
     preview: |
       const { ui } = ctx;
       const vendors = ctx.rows('vendor'), pos = ctx.rows('purchase_order'), invoices = ctx.rows('invoice');
@@ -135,6 +151,30 @@ pages:
           }),
         ),
       );
+
+  - code: finance_home                  # a declared dashboard: no code, the build makes these blocks
+    type: dashboard
+    route: /app/finance
+    title: Finance overview
+    roles: [Finance]
+    blocks:
+      - kpis:
+          - { label: Invoices to pay, value: { count: invoice, where: "status == approved" }, icon: receipt, tone: amber, go: invoices }
+          - { label: Amount to pay, value: { sum: invoice.amount, where: "status == approved" }, format: money, icon: indian-rupee, tone: teal }
+          - { label: Overdue, value: { count: invoice, where: "status in [submitted, approved] and due_date < today" }, icon: clock, tone: red }
+      - grid:
+          - bars: { title: Invoices by status, entity: invoice, group_by: status }
+          - list:
+              title: Due soonest
+              entity: invoice
+              where: "status in [submitted, approved]"
+              sort: due_date
+              primary: invoice_no
+              secondary: purchase_order
+              meta: amount
+              badge: status
+              limit: 8
+              empty: Nothing is due.
 
 # -----------------------------------------------------------------------------
 #  MODULES  →  one backend/<code>/ folder each, holding its entities
@@ -464,12 +504,23 @@ modules:
           - area: integration
             title: GSTIN lookup
             text: On create, call the GST portal with the GSTIN and prefill legal_name and address; show a warning if the portal name differs.
+            trigger: { event: create }
+            acceptance:
+              - Creating a vendor with a valid GSTIN fills legal name and address from the GST portal.
+              - A portal name that differs from the typed one shows a warning, and the vendor is still saved.
           - area: notification
             title: Approval email
             text: When a vendor is approved, email the vendor contact their portal invite and the approval summary.
+            trigger: { event: transition, transition: approve }      # typed: when it happens
+            acceptance:
+              - Approving a vendor sends one email to the vendor contact, with the portal invite.
+            preview: { toast: "Approval email to {legal_name}'s contact" }
           - area: scheduled
             title: KYC expiry sweep
             text: Daily at 07:00, apply or clear the kyc_expiring tag based on vendor_document.expiry_date.
+            trigger: { event: schedule, cron: "0 7 * * *" }
+            acceptance:
+              - A vendor with a document expiring within 30 days gets the kyc_expiring tag; renewing it clears the tag.
 
       # -----------------------------------------------------------------------
       - code: vendor_contact
@@ -878,6 +929,11 @@ detail_views:
         text: >
           Checklist of the 4 document types with a tick when a verified vendor_document of that
           type exists, plus "GSTIN verified" from the GST lookup. Shows "3 of 5 done".
+        data:
+          - { entity: vendor_document, via: vendor }
+        acceptance:
+          - A document type is ticked only when a verified document of that type exists for this vendor.
+          - The count reads "N of 5 done" and matches the ticks.
         preview: |
           const docs = ctx.related('vendor_document', 'vendor');
           const field = (ctx.entity('vendor_document').fields || []).find(f => f.key === 'doc_type') || {};
@@ -981,6 +1037,8 @@ detail_views:
       - area: frontend
         title: Sticky header
         text: Header collapses to a single line (avatar, name, status, primary action) on scroll.
+        acceptance:
+          - Scrolling a vendor's 360 page keeps one line with the avatar, name, status and primary action in view.
 
   # ---------------------------------------------------------------------------
   - code: po_360

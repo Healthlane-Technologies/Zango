@@ -1,0 +1,341 @@
+<title>Spec-to-Build Plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Schibsted+Grotesk:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column (~760px) with wide tables and code allowed to scroll inside their own boxes; a sticky contents rail on wide screens. */
+:root{
+  --bg:#F6F7F9; --card:#FFFFFF; --fg:#16181D; --sub:#4A5160; --muted:#6B7280; --line:#E3E6EC;
+  --accent:#3B3FB6; --accent-soft:#ECEDFB; --code-bg:#F0F2F6;
+  --ok:#1F7A4D; --ok-soft:#E5F4EC; --warn:#9A5B00; --warn-soft:#FFF3DC; --risk:#A3262E; --risk-soft:#FBE9EA;
+  --l0:#5B6472; --l1:#1F7A4D; --l2:#2563A8; --l3:#8A4FBF; --l4:#A3262E;
+  --display:"Schibsted Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --body:"Public Sans", -apple-system, "Segoe UI", sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#111318; --card:#181B22; --fg:#E7E9EE; --sub:#B3B9C6; --muted:#8B93A3; --line:#2A2F3A;
+  --accent:#9EA2FF; --accent-soft:#23264A; --code-bg:#1E222B;
+  --ok:#6FD3A0; --ok-soft:#17301F; --warn:#F2B85C; --warn-soft:#33270F; --risk:#F28B92; --risk-soft:#3A1C1F;
+  --l0:#A5ADBB; --l1:#6FD3A0; --l2:#7FB4F0; --l3:#C9A0F2; --l4:#F28B92; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#111318; --card:#181B22; --fg:#E7E9EE; --sub:#B3B9C6; --muted:#8B93A3; --line:#2A2F3A;
+  --accent:#9EA2FF; --accent-soft:#23264A; --code-bg:#1E222B;
+  --ok:#6FD3A0; --ok-soft:#17301F; --warn:#F2B85C; --warn-soft:#33270F; --risk:#F28B92; --risk-soft:#3A1C1F;
+  --l0:#A5ADBB; --l1:#6FD3A0; --l2:#7FB4F0; --l3:#C9A0F2; --l4:#F28B92; color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:15px/1.6 var(--body);margin:0}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:20px;padding-block:40px 80px;display:grid;grid-template-columns:200px minmax(0,1fr);gap:48px}
+@media (max-width:900px){.wrap{grid-template-columns:minmax(0,1fr);gap:0}.toc{display:none}}
+.toc{position:sticky;top:calc(env(safe-area-inset-top,0px) + 24px);align-self:start;font-size:13px}
+.toc b{font:600 11px/1 var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:10px}
+.toc a{display:block;color:var(--sub);text-decoration:none;padding:4px 0 4px 10px;border-left:2px solid var(--line)}
+.toc a:hover,.toc a:focus-visible{color:var(--accent);border-left-color:var(--accent);outline:none}
+main{min-width:0;max-width:800px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;line-height:1.2;margin:0}
+h1{font-size:34px;font-weight:700;letter-spacing:-.01em}
+h2{font-size:23px;font-weight:700;margin-top:56px;padding-top:20px;border-top:1px solid var(--line)}
+h3{font-size:17px;font-weight:600;margin-top:28px}
+p{margin:12px 0}
+.eyebrow{font:600 11.5px/1 var(--body);letter-spacing:.09em;text-transform:uppercase;color:var(--accent)}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.chip{font:500 12px/1 var(--body);padding:6px 10px;border-radius:999px;background:var(--card);border:1px solid var(--line);color:var(--sub)}
+.lede{font-size:17px;color:var(--sub);margin-top:16px}
+.summary{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px 22px;margin-top:24px}
+.summary ol{margin:8px 0 0;padding-left:20px}.summary li{margin:6px 0}
+code,pre{font-family:var(--mono);font-size:12.8px}
+:not(pre)>code{background:var(--code-bg);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+pre{background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:14px 16px;overflow-x:auto;line-height:1.55;margin:14px 0}
+pre .c{color:var(--muted)}
+.tbl{overflow-x:auto;margin:14px 0;border:1px solid var(--line);border-radius:8px;background:var(--card)}
+table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:620px}
+th,td{text-align:left;vertical-align:top;padding:9px 12px;border-bottom:1px solid var(--line)}
+th{font:600 11.5px/1.3 var(--body);letter-spacing:.05em;text-transform:uppercase;color:var(--muted);background:var(--bg)}
+tr:last-child td{border-bottom:0}
+.lv{display:inline-block;font:600 12px/1 var(--mono);padding:4px 7px;border-radius:5px;border:1px solid currentColor;white-space:nowrap}
+.lv0{color:var(--l0)}.lv1{color:var(--l1)}.lv2{color:var(--l2)}.lv3{color:var(--l3)}.lv4{color:var(--l4)}
+.note{border-radius:8px;padding:12px 16px;margin:16px 0;font-size:14px}
+.note.ok{background:var(--ok-soft);color:var(--fg)}.note.warn{background:var(--warn-soft)}.note.risk{background:var(--risk-soft)}
+.note b{font-weight:600}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin:16px 0}
+.box{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;min-width:0}
+.box h4{margin:0 0 6px;font:600 14.5px/1.3 var(--display)}
+.box p{margin:6px 0 0;font-size:13.5px;color:var(--sub)}
+.tag{font:600 10.5px/1 var(--body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+ul.tight{padding-left:20px}ul.tight li{margin:5px 0}
+.phase{display:grid;grid-template-columns:44px minmax(0,1fr);gap:14px;padding:14px 0;border-bottom:1px solid var(--line)}
+.phase:last-child{border-bottom:0}
+.phase .n{font:700 20px/1 var(--display);color:var(--accent);padding-top:3px}
+.phase h4{margin:0;font:600 16px/1.3 var(--display)}
+.phase p{margin:6px 0 0;font-size:14px;color:var(--sub)}
+.files{font:12px/1.6 var(--mono);color:var(--muted);margin-top:6px;overflow-wrap:anywhere}
+.mermaid{background:var(--card);text-align:center}
+a{color:var(--accent)}
+.q{counter-increment:q}
+ol.qs{padding-left:22px}ol.qs li{margin:10px 0}
+</style>
+<style>
+/* Additions for part 2: the pipeline, the three channels, and the cost bars. */
+.flow{list-style:none;margin:18px 0;padding:0;display:grid;gap:0}
+.flow li{display:grid;grid-template-columns:34px minmax(0,1fr);gap:12px;position:relative;padding:0 0 18px}
+.flow li::before{content:counter(step);counter-increment:step;width:28px;height:28px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font:700 13px/28px var(--display);text-align:center}
+.flow li:not(:last-child)::after{content:"";position:absolute;left:13px;top:30px;bottom:2px;width:2px;background:var(--line)}
+.flow{counter-reset:step}
+.flow b{font-family:var(--display);font-weight:600}
+.flow .who{font:600 10.5px/1 var(--body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-left:6px}
+.flow p{margin:2px 0 0;font-size:14px;color:var(--sub)}
+.ch{border-top:3px solid var(--accent)}
+.ch.look{border-top-color:var(--l3)}.ch.check{border-top-color:var(--ok)}
+.cost td.n{font-variant-numeric:tabular-nums;white-space:nowrap}
+.bar{height:8px;border-radius:4px;background:var(--accent);min-width:2px}
+.bar.bad{background:var(--risk)}.bar.mid{background:var(--warn)}.bar.good{background:var(--ok)}
+.yes{color:var(--ok);font-weight:600}.no{color:var(--risk);font-weight:600}.part{color:var(--warn);font-weight:600}
+</style>
+
+<div class="wrap">
+<nav class="toc" aria-label="Contents">
+  <b>Contents</b>
+  <a href="#today">Where we are</a>
+  <a href="#others">How others do it</a>
+  <a href="#options">Options and cost</a>
+  <a href="#approach">The approach</a>
+  <a href="#kit">Extend the design system</a>
+  <a href="#port">Porting a sketch</a>
+  <a href="#shots">What gets a screenshot</a>
+  <a href="#bundle">The approval bundle</a>
+  <a href="#build">Build-side changes</a>
+  <a href="#parity">Checking the result</a>
+  <a href="#budget">Token budget</a>
+  <a href="#phases">Delivery phases</a>
+  <a href="#risks">Risks</a>
+  <a href="#decisions">Decisions</a>
+</nav>
+
+<main>
+<div class="eyebrow">Agent Mode · Build phase · Part 2 of 2</div>
+<h1>Spec-to-Build Plan</h1>
+<div class="meta">
+  <span class="chip">F1–F4 built · 15 Oct 2026</span>
+  <span class="chip">Branch feat/agent-mode-app-studio-skill</span>
+  <span class="chip">Template zango-app 1.1.16</span>
+  <span class="chip">Follows: Preview-to-Spec Plan (part 1)</span>
+</div>
+<p class="lede">How an approved spec reaches the build agent so the built app looks like the preview the user approved, custom screens included, at a small fraction of the cost of sending the preview itself.</p>
+
+<div class="summary">
+  <b>The plan in three moves</b>
+  <ol>
+    <li><b>Structure: port the sketch onto the build's own design system.</b> A custom screen's <code>preview</code> sketch already calls a fixed kit (<code>ui.kpis</code>, <code>ui.bars</code>, <code>ui.board</code>…). Add the missing pieces of that kit to <code>zas/ui.tsx</code>, with the same arguments, so the sketch ports to React nearly line by line. The layout then matches by construction instead of by imitation.</li>
+    <li><b>Look: a screenshot of every customised screen.</b> Each custom page, 360 tab and 360 panel gets a screenshot, plus one per role or record that draws a different structure. They are files in the workspace that the agent opens when it needs them; they never sit in the prompt.</li>
+    <li><b>Check: compare in text first, then look once.</b> The built screen records the same component tree the preview recorded. A script compares the two as text. Then the agent looks at its own screenshot next to the preview's, once per screen.</li>
+  </ol>
+</div>
+
+<h2 id="today">Where we are today</h2>
+<p>What the build agent receives from an approved spec, from the code as it is on this branch:</p>
+<div class="tbl"><table>
+<thead><tr><th>Part of the app</th><th>What the build gets</th><th>Result</th></tr></thead>
+<tbody>
+<tr><td>Lists, forms, workflows, 360 pages, views, dashboards</td><td><code>.zas/spec.ui.json</code>; the runtime draws them from it</td><td class="yes">Matches the preview by design</td></tr>
+<tr><td>Custom pages, 360 tabs and panels</td><td>A row in <code>.zas/holes.md</code>: the prose <code>text</code> plus the contract as sentences (<code>spec_check.py</code> <code>contract_text</code>)</td><td class="no">The sketch is not passed. It survives only as an unused key in <code>spec.resolved.json</code>, and nothing tells the agent to read it.</td></tr>
+<tr><td>Design system</td><td><code>zas/ui.tsx</code>: Panel, StatTile, FieldGrid, Badge, Chip, Tabs, Timeline, EmptyState…</td><td class="part">No KPI row, bars, list, board, progress, grid or stack: half of what sketches use.</td></tr>
+<tr><td>Styles</td><td><code>tokens.css</code> (<code>.zas-panel</code>, <code>.zas-stat</code>)</td><td class="part">The same tokens as the preview, but the CSS is written twice (the preview uses <code>.d-panel</code>, <code>.ui-bar</code>, <code>.pv-*</code>).</td></tr>
+<tr><td>Visual checks</td><td>Gallery goldens; screenshots judged against a rubric</td><td class="no">“Preview parity” is documented as skipped (testing.md, design-system.md, contracts.md). No image from the preview reaches the build.</td></tr>
+</tbody></table></div>
+<div class="note warn"><b>The gap in one line:</b> the user approves a page they can see, with bars, a board and exact labels. The build agent gets a paragraph and draws its own version of it.</div>
+
+<h2 id="others">How others do it</h2>
+<p>Agents that turn a design into code generally use three kinds of input, and the ones that hold up in real products combine them:</p>
+<div class="tbl"><table>
+<thead><tr><th>Approach</th><th>Examples</th><th>Fidelity</th></tr></thead>
+<tbody>
+<tr><td><b>Screenshot only.</b> The model reads a picture and writes code.</td><td>screenshot-to-code tools; pasting an image into v0 or a chat model</td><td>Good for a one-off mockup. Structure, exact labels, spacing and data rules are guessed from pixels, and they drift.</td></tr>
+<tr><td><b>Structured design data mapped to real components.</b></td><td>Figma Dev Mode MCP server (layout, variables, component names as data); Figma Code Connect (a design component ↔ a code component); Builder.io Visual Copilot</td><td>What teams rely on for fidelity. The agent reuses the components the codebase already has, so the result matches by construction.</td></tr>
+<tr><td><b>A visual target and a check loop.</b></td><td>Anthropic’s Claude Code guidance: give the target screenshot, let it screenshot its own result, compare, iterate</td><td>Catches what the structured data misses (overall look, spacing). Costs a few images per screen.</td></tr>
+</tbody></table></div>
+<p>We are in a better position than most: our design data already is code. A sketch calls a fixed component kit, which is the mapping Code Connect tries to recreate for Figma. So we take the hybrid: the sketch for structure, a screenshot for the look, and a text-then-visual check.</p>
+
+<h2 id="options">Options and what they cost</h2>
+<p>Measured on the Stockist Onboarding spec (3 custom screens), at about 4 characters per token. Image tokens are about width × height ÷ 750.</p>
+<div class="tbl"><table class="cost">
+<thead><tr><th>Pass the build…</th><th>Tokens per screen</th><th style="width:22%">Relative</th><th>Gives</th><th>Problem</th></tr></thead>
+<tbody>
+<tr><td>The whole preview page</td><td class="n">~165,000 (654k chars)</td><td><div class="bar bad" style="width:100%"></div></td><td>Everything</td><td>Not viable; mostly the preview engine, not the screen.</td></tr>
+<tr><td>Rendered HTML of the screen + its CSS</td><td class="n">200–1,600 + ~11,000 CSS</td><td><div class="bar mid" style="width:8%"></div></td><td>Exact markup</td><td>Preview class names the runtime does not have; the agent translates CSS by hand.</td></tr>
+<tr><td>Screenshot only</td><td class="n">40–850</td><td><div class="bar good" style="width:1%"></div></td><td>The look</td><td>Structure, labels and data rules guessed from pixels.</td></tr>
+<tr><td><b>Sketch source</b></td><td class="n">~320–440 (1.3–1.8k chars)</td><td><div class="bar good" style="width:1%"></div></td><td>Exact structure, labels, order, tones, data logic</td><td>Needs the kit in React (this plan).</td></tr>
+<tr><td><b>Draw tree</b> (what the sketch drew, per role)</td><td class="n">~100–300</td><td><div class="bar good" style="width:1%"></div></td><td>A checkable outline with real values</td><td>Not enough on its own to build from.</td></tr>
+</tbody></table></div>
+<div class="note ok"><b>Chosen:</b> sketch + draw tree + screenshots, about 1–1.5k tokens per custom screen, under 1% of sending the preview. The screenshots are read on demand, so a screen the agent ports cleanly may cost only the text.</div>
+
+<h2 id="approach">The approach</h2>
+<div class="grid2">
+  <div class="box ch"><div class="tag">Structure</div><h4>Sketch → design system</h4><p>The sketch is ported onto <code>zas/ui.tsx</code> components with the same arguments. Titles, labels, order, icons and tones carry over exactly; demo reads become real data hooks.</p></div>
+  <div class="box ch look"><div class="tag">Look</div><h4>Screenshots as the target</h4><p>Every customised screen, as the role that opens it, on a representative record. Extra shots only where another role or record draws a different structure.</p></div>
+  <div class="box ch check"><div class="tag">Check</div><h4>Text parity, then one look</h4><p>The built screen records its component tree; a script diffs it against the preview’s draw tree. Then one side-by-side look per screen.</p></div>
+</div>
+<h3>From Commit to a checked screen</h3>
+<ol class="flow">
+  <li><div><b>The user clicks Commit for build</b><span class="who">console</span><p>The approval gates from part 1 hold: every custom screen has a sketch and a contract.</p></div></li>
+  <li><div><b>The platform freezes the approval bundle</b><span class="who">Celery task</span><p>The preview probe runs each custom screen per role, records its draw tree and takes the screenshots, beside the approved YAML.</p></div></li>
+  <li><div><b><code>spec_check.py</code> points each hole at its bundle files</b><span class="who">build prepare</span><p><code>holes.md</code> says: port <code>bundle/screens/&lt;id&gt;/sketch.js</code>, target <code>shot.*.png</code>, check against <code>draws.*.json</code>.</p></div></li>
+  <li><div><b>The build agent ports the sketch</b><span class="who">build agent</span><p>Same components, same arguments; a data hook in place of <code>ctx.rows</code>; a server hook when the numbers need the whole table.</p></div></li>
+  <li><div><b>Parity check, in text</b><span class="who">zas_test parity</span><p>The built screen, signed in as each role, emits its component tree; the diff against the draw tree is a few lines of text.</p></div></li>
+  <li><div><b>One look</b><span class="who">build agent</span><p>Its own screenshot next to the preview’s. Fix, and move on to the contract’s acceptance tests.</p></div></li>
+</ol>
+
+<h2 id="kit">Extend the design system the build already has</h2>
+<p>The build agent composes only from <code>src/zas</code> (SKILL.md rule: “Compose from <code>src/zas</code> only. No hex colours”). So the kit goes there, next to the components it already uses, not into a separate library.</p>
+<div class="tbl"><table>
+<thead><tr><th>Preview call (<code>ctx.ui</code>)</th><th>In <code>zas/ui.tsx</code> today</th><th>Add</th></tr></thead>
+<tbody>
+<tr><td><code>panel(title, body, {icon, note})</code></td><td>Panel</td><td>Accept <code>note</code> and <code>icon</code> the same way</td></tr>
+<tr><td><code>empty(text)</code></td><td>EmptyState</td><td>—</td></tr>
+<tr><td><code>badge(text, color)</code></td><td>Badge</td><td>—</td></tr>
+<tr><td><code>kpis([{label, value, icon, tone, hint, go}])</code></td><td>StatTile (one tile)</td><td><code>&lt;Kpis items&gt;</code>: the row, using StatTile</td></tr>
+<tr><td><code>bars(title, items, o)</code></td><td>—</td><td><code>&lt;Bars&gt;</code></td></tr>
+<tr><td><code>list(title, rows, {primary, secondary, meta, badge, go, limit})</code></td><td>—</td><td><code>&lt;List&gt;</code></td></tr>
+<tr><td><code>table(title, rows, cols, {go, limit})</code></td><td>ZasTable (full list page)</td><td><code>&lt;MiniTable&gt;</code>: the panel table</td></tr>
+<tr><td><code>board(title, columns)</code></td><td>—</td><td><code>&lt;Board&gt;</code></td></tr>
+<tr><td><code>progress(done, total, label)</code></td><td>—</td><td><code>&lt;Progress&gt;</code></td></tr>
+<tr><td><code>stack(...)</code>, <code>grid(...)</code></td><td>—</td><td><code>&lt;Stack&gt;</code>, <code>&lt;Grid&gt;</code></td></tr>
+</tbody></table></div>
+<p>Two rules keep the preview and the app from drifting:</p>
+<ul class="tight">
+  <li><b>One stylesheet.</b> Move the kit’s styles into the runtime’s <code>tokens.css</code> (classes such as <code>.zas-bars</code>, <code>.zas-board</code>), and have the preview’s <code>compose()</code> inline that same file instead of its own <code>.ui-*</code> / <code>.d-*</code> copy. Today the two are written separately.</li>
+  <li><b>Each kit component marks itself.</b> It renders <code>data-zas-kit="bars"</code> and its title on its root, the same way the preview’s recording kit names each call. That is what the parity check reads.</li>
+</ul>
+
+<h2 id="port">Porting a sketch</h2>
+<p>The Rejection Analysis sketch, shortened, and its port. The calls map one to one; only the data source changes.</p>
+<pre><span class="c">// preview sketch (in the spec)</span>
+const rows = ctx.rows('stockist_application').filter(r => r.rejection_count > 0);
+return ctx.ui.stack(
+  ctx.ui.kpis([{ label: 'Applications rejected at least once', value: rows.length, icon: 'circle-x', tone: 'red' }]),
+  ctx.ui.bars('Top 5 rejection reasons', topReasons(rows)),
+);</pre>
+<pre><span class="c">// built slot (frontend/src/custom/slots/RejectionAnalysis.tsx)</span>
+export function RejectionAnalysis() {
+  const { data, state } = useSlotData('rejection_analysis');   <span class="c">// new hook; the server returns what the sketch computed</span>
+  return (
+    &lt;Stack state={state}&gt;
+      &lt;Kpis items={[{ label: 'Applications rejected at least once', value: data.rejected, icon: 'circle-x', tone: 'red' }]} /&gt;
+      &lt;Bars title="Top 5 rejection reasons" items={data.top_reasons} /&gt;
+    &lt;/Stack&gt;
+  );
+}</pre>
+<div class="tbl"><table>
+<thead><tr><th>In the sketch</th><th>In the built slot</th></tr></thead>
+<tbody>
+<tr><td><code>ctx.rows(entity)</code>, <code>ctx.related(entity, via)</code></td><td>The role-scoped list API for small lists; a <code>&lt;page&gt;__data</code> hook (already in custom-code.md) when the screen aggregates over the whole table</td></tr>
+<tr><td>Counting, grouping, sorting on demo rows</td><td>The same logic in that server hook, returning the shape the sketch passed to the kit</td></tr>
+<tr><td><code>ctx.record</code></td><td>The record prop a 360 slot already receives</td></tr>
+<tr><td><code>ctx.fmt(row, field)</code>, <code>go: 'page:id'</code>, <code>ctx.today</code></td><td>The runtime’s renderers, the kit’s <code>go</code> prop with the same string, the server date</td></tr>
+<tr><td>Nothing (sketches draw the happy path)</td><td>Loading, empty and error states, through <code>state</code> on <code>&lt;Stack&gt;</code> and the contract’s <code>states</code></td></tr>
+</tbody></table></div>
+<p>What carries over exactly: blocks and their order, titles, labels, icons, tones, column lists, limits and links. What the agent still decides: where the data comes from, the server query, the four states, and the interactions in the contract.</p>
+
+<h2 id="shots">What gets a screenshot</h2>
+<p>One screenshot per customised screen, as a baseline, and more where the screen genuinely differs:</p>
+<div class="tbl"><table>
+<thead><tr><th>Screen</th><th>Screenshots</th></tr></thead>
+<tbody>
+<tr><td>Custom page</td><td>The page, as the first role that opens it, cropped to the content</td></tr>
+<tr><td>Custom 360 tab</td><td>The tab on a representative record</td></tr>
+<tr><td>Custom 360 panel</td><td>The panel itself, plus the whole 360 page once so its place in the layout is visible</td></tr>
+<tr><td>Another role or record with a <b>different structure</b></td><td>One more per variant: the bundle task compares the draw trees and shoots only the ones that differ in blocks, titles or columns, not just in numbers</td></tr>
+<tr><td>Phone width</td><td>Only when the contract or the user asks for mobile</td></tr>
+<tr><td>Declarative screens (lists, kanban and other views, banners, badges, <code>app.ui</code>)</td><td>None. The runtime draws them from the same spec. They are checked by an element-tree text diff, with a screenshot only when that fails.</td></tr>
+</tbody></table></div>
+<p>For the Stockist app that is 5–7 images, roughly 300–900 tokens each, and only the ones the agent opens are paid for.</p>
+
+<h2 id="bundle">The approval bundle</h2>
+<p>Frozen at Commit for build (phase E of part 1), by a Celery task that reuses the analyst’s preview probe. It needs no web request to run Playwright, and the build waits for it.</p>
+<pre>.zas/bundle/
+  manifest.json            <span class="c"># spec hash, template version; per screen: path, kind, export, roles, files</span>
+  app_spec.yaml            <span class="c"># the approved YAML, as approved</span>
+  screens/
+    pages.rejection_analysis/
+      sketch.js            <span class="c"># the preview code, as text (never executed in the app)</span>
+      contract.json        <span class="c"># data, interactions, states, acceptance, refs</span>
+      draws.onboarding_manager.json
+      shot.onboarding_manager.png
+    detail_views.stockist_360.sidebar.1/
+      sketch.js · contract.json
+      draws.stockist.json · draws.onboarding_manager.json   <span class="c"># structures differ, so…</span>
+      shot.stockist.png · shot.onboarding_manager.png         <span class="c"># …both are shot</span>
+      in_page.stockist.png                                    <span class="c"># the panel in its 360 page</span></pre>
+<p>A draw tree is the probe’s existing text summary, kept as data:</p>
+<pre>{ "screen": "/pages/@rejection_analysis", "role": "Onboarding Manager",
+  "blocks": [
+    { "kit": "kpis",  "labels": ["Applications rejected at least once", "Resubmitted since"] },
+    { "kit": "bars",  "title": "Top 5 rejection reasons", "count": 5 },
+    { "kit": "bars",  "title": "Rejections by city", "count": 7 },
+    { "kit": "table", "title": "Rejected and reapplied",
+      "columns": ["Business", "City", "Times rejected", "Last reason", "Status"] } ] }</pre>
+
+<h2 id="build">Build-side changes</h2>
+<div class="tbl"><table>
+<thead><tr><th>Where</th><th>Change</th></tr></thead>
+<tbody>
+<tr><td><code>studio_build.prepare</code></td><td>Copy the bundle into <code>&lt;ws&gt;/.zas/bundle/</code> before <code>spec_check.py</code> runs.</td></tr>
+<tr><td><code>scripts/spec_check.py</code></td><td>A custom hole’s text names its bundle folder: “Port <code>sketch.js</code> with zas components; look target <code>shot.*.png</code>; parity <code>draws.*.json</code>.” A hole with no sketch says so, and the build works from text as it does today.</td></tr>
+<tr><td><code>references/custom-code.md</code></td><td>A “Porting a sketch” section: the mapping table above, what must carry over exactly, and when to compute on the server.</td></tr>
+<tr><td><code>SKILL.md</code> phases 4 and 6</td><td>Read the bundle before writing a slot. Open a screenshot when the sketch has hand-written markup, or when parity fails.</td></tr>
+<tr><td><code>assets/frontend/zas/ui.tsx</code>, <code>tokens.css</code>, <code>Gallery.tsx</code></td><td>The new kit components, their styles, and gallery entries (with goldens).</td></tr>
+<tr><td>Preview <code>app-studio.html</code> / <code>compose()</code></td><td>Draw the kit with the runtime’s classes from the shared stylesheet.</td></tr>
+<tr><td><code>agent_mode/prompt.py</code></td><td>One line in the build rules: the bundle is the approved look of every custom screen.</td></tr>
+</tbody></table></div>
+
+<h2 id="parity">Checking the result</h2>
+<ul class="tight">
+  <li><b>Text parity (new <code>zas_test</code> group <code>parity</code>).</b> For each custom screen and each role in the bundle, Playwright opens the built screen, reads every <code>data-zas-kit</code> element in order, and compares kinds, titles, labels, columns and links with the draw tree. Numbers are not compared: the app has its own data. The output is a short diff such as <code>bars "Rejections by city": missing</code>. Like any failing test in the build loop, the agent fixes the slot and runs it again. After 2 fix attempts on a screen, what still differs goes into the build report as a <b>warning</b> naming the screen and the difference; it does not fail the build. This replaces the “preview parity: skipped” lines in testing.md, design-system.md and contracts.md.</li>
+  <li><b>Hand-written parts.</b> Parts of a sketch drawn with raw markup instead of kit calls have no one-to-one mapping. Parity checks the kit blocks around them, and the agent builds them from the screenshot and the text, with design-system components only.</li>
+  <li><b>One look per screen.</b> After parity passes, the agent takes one screenshot of its built screen and opens it beside the bundle’s, to judge spacing, density and emphasis. That is two images, about 1.5k tokens.</li>
+  <li><b>Acceptance tests.</b> As today: the contract’s acceptance lines become tests, now with the same block names to select on.</li>
+</ul>
+
+<h2 id="budget">Token budget</h2>
+<p>For an app with five customised screens, three of them with a second variant:</p>
+<div class="tbl"><table class="cost">
+<thead><tr><th>Item</th><th>Tokens</th></tr></thead>
+<tbody>
+<tr><td>Sketch + contract + draw trees, read by the agent</td><td class="n">5 × ~900 ≈ 4,500</td></tr>
+<tr><td>Bundle screenshots, opened when needed (up to 8)</td><td class="n">≤ 8 × ~700 ≈ 5,600</td></tr>
+<tr><td>Parity output</td><td class="n">≈ 500</td></tr>
+<tr><td>One look per screen (own shot + target)</td><td class="n">5 × ~1,500 ≈ 7,500</td></tr>
+<tr><td><b>Total</b></td><td class="n"><b>≈ 18,000</b>, against ~165,000 for the preview page per screen</td></tr>
+</tbody></table></div>
+
+<h2 id="phases">Delivery phases</h2>
+<p>F1 and F2 can run in parallel. F3 needs both, and F4 needs F1.</p>
+<div class="box" style="padding:4px 18px">
+  <div class="phase"><div class="n">F1</div><div><h4>Kit in the design system <span class="chip">done</span></h4><p>Kpis, Bars, List, MiniTable, Board, Progress, Stack, Grid in <code>zas/ui.tsx</code> with <code>data-zas-kit</code> markers; their styles in <code>tokens.css</code>; the preview draws the kit with the same stylesheet; gallery entries and goldens.</p><div class="files">assets/frontend/zas/ui.tsx · tokens.css · Gallery.tsx · packs/zango_app/builder/app-studio.html · services/builder.py</div></div></div>
+  <div class="phase"><div class="n">F2</div><div><h4>Approval bundle <span class="chip">done</span></h4><p>A Celery task at Commit for build runs the probe per screen and role, writes draw trees and screenshots (variants only where structure differs) and the manifest. The build waits for it, and a bundle without Playwright still carries the sketches and contracts.</p><div class="files">agent_mode/approval_bundle.py (new) · preview_probe_worker.py (op “bundle”) · template_spec.py · studio_build.py · tasks.py</div></div></div>
+  <div class="phase"><div class="n">F3</div><div><h4>Build guidance and hole text <span class="chip">done</span></h4><p>Hole text points at the bundle; “Porting a sketch” in custom-code.md; SKILL.md phases 4 and 6; the build prompt line; the <code>useSlotData</code> hook.</p><div class="files">scripts/spec_check.py · references/custom-code.md · SKILL.md · prompt.py · assets/frontend/zas/api.ts</div></div></div>
+  <div class="phase"><div class="n">F4</div><div><h4>Parity check and the look <span class="chip">done</span></h4><p>The <code>parity</code> test group, its report in the build report, and the one-look step.</p><div class="files">scripts/zas_test/parity.py (new) · zas_test/design.py · references/testing.md · design-system.md · contracts.md</div></div></div>
+</div>
+
+<h2 id="risks">Risks</h2>
+<div class="tbl"><table>
+<thead><tr><th>Risk</th><th>Mitigation</th></tr></thead>
+<tbody>
+<tr><td>A sketch writes raw HTML instead of kit calls, so there is nothing to map.</td><td>Allowed, not refused: some screens need what the kit cannot express. The probe warns the analyst to use kit calls where they fit; the build uses the screenshot and text for those parts, and parity checks the kit blocks around them.</td></tr>
+<tr><td>Preview and app styles drift.</td><td>One stylesheet for both, and kit goldens rendered from both in the same Chromium.</td></tr>
+<tr><td>Sketch math over all demo rows does not scale to real data.</td><td>The porting rule: aggregates move to a server hook that returns the same shape.</td></tr>
+<tr><td>Screenshots multiply with roles and records.</td><td>Shoot variants only where the draw tree’s structure differs; screenshots are opened on demand.</td></tr>
+<tr><td>No Playwright on the worker.</td><td>The bundle still carries the sketches and contracts. Parity and screenshots are skipped, and the build report says so.</td></tr>
+<tr><td>Values differ from the preview, which used demo data.</td><td>Expected: the built app is a real app with real data, and no demo rows are loaded. Parity compares structure only, and the look judges layout, not numbers.</td></tr>
+<tr><td>The agent copies the demo-data logic literally.</td><td>The sketch is a reference for structure; the contract’s <code>data</code> and <code>acceptance</code> define the real behaviour, and tests check them.</td></tr>
+</tbody></table></div>
+
+<h2 id="decisions">Decisions (15 Oct)</h2>
+<div class="tbl"><table>
+<thead><tr><th>Question</th><th>Decision</th></tr></thead>
+<tbody>
+<tr><td>Load the preview’s demo data into the built app?</td><td><b>No.</b> It is a real app; no sample records. Parity compares structure, never values.</td></tr>
+<tr><td>Hand-written markup in sketches</td><td><b>Allowed, with a warning to the analyst.</b> The build uses the screenshot and text for those parts.</td></tr>
+<tr><td>A parity failure</td><td><b>The agent fixes it in the test loop</b> (up to 2 attempts per screen). Anything left is a warning in the build report, not a failure.</td></tr>
+<tr><td>Show the preview and built screenshots to the user</td><td><b>No.</b> They are for the agent only.</td></tr>
+</tbody></table></div>
+</main>
+</div>

@@ -1,6 +1,6 @@
 {
   "name": "zango-agent-mode",
-  "description": "Server-mode Zango app development skill used by Agent Mode. Builds backend modules, models, CRUD views, workflows, policies and AppBuilder routes inside a single app's workspace.",
+  "description": "Agent Mode's skills: the requirements analyst, zango-app-studio (builds an app from its approved Zango app spec) and the server-mode Zango developer skill that template build skills of their own (PSP) still rely on.",
   "author": {
     "name": "Zango"
   }

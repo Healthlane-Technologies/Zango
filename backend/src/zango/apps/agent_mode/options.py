@@ -22,7 +22,7 @@ import os
 
 from pathlib import Path
 
-from .prompt import QUALIFIED_SKILL
+from .prompt import DEVELOPER_SKILL
 
 
 SKILL_PLUGIN_DIR = str(Path(__file__).resolve().parent / "skill_plugin")
@@ -109,9 +109,11 @@ def build_agent_options(
 ):
     """Construct ClaudeAgentOptions for a run. Imports the SDK lazily.
 
-    ``template_build`` (a template_build.TemplateBuild) adds the template's
-    plugin and build skill, and lets the agent read the plugin and the
-    approved journey written for this run.
+    ``template_build`` (a template_build.TemplateBuild) names the build skill
+    and lets the agent read the template's plugin and the approved spec
+    written for this run. App Studio (the generic spec's skill) ships in this
+    plugin; a template with a skill of its own (PSP) brings its plugin, and
+    gets the general developer skill beside it, which that skill relies on.
     """
     from claude_agent_sdk import ClaudeAgentOptions, HookMatcher
 
@@ -135,7 +137,11 @@ def build_agent_options(
         read_roots=[
             SKILL_PLUGIN_DIR,
             *(
-                [template_build.plugin_dir, template_build.skill_plugin_dir, template_build.spec_dir]
+                [
+                    template_build.plugin_dir,
+                    template_build.skill_plugin_dir,
+                    template_build.spec_dir,
+                ]
                 if template_build
                 else []
             ),
@@ -152,7 +158,7 @@ def build_agent_options(
         setting_sources=["user"],
         settings=settings_path,
         plugins=[{"type": "local", "path": SKILL_PLUGIN_DIR}],
-        skills=[QUALIFIED_SKILL],
+        skills=[],
         allowed_tools=list(ALLOWED_TOOLS),
         disallowed_tools=list(DISALLOWED_TOOLS),
         permission_mode=run.permission_mode
@@ -177,11 +183,18 @@ def build_agent_options(
     )
 
     if template_build is not None and template_build.skill:
-        kwargs["plugins"] = [
-            *kwargs["plugins"],
-            {"type": "local", "path": template_build.skill_plugin_dir},
-        ]
-        kwargs["skills"] = [*kwargs["skills"], template_build.skill]
+        from .studio_build import is_studio
+
+        if os.path.realpath(template_build.skill_plugin_dir) != os.path.realpath(
+            SKILL_PLUGIN_DIR
+        ):
+            kwargs["plugins"] = [
+                *kwargs["plugins"],
+                {"type": "local", "path": template_build.skill_plugin_dir},
+            ]
+        kwargs["skills"] = [template_build.skill]
+        if not is_studio(template_build):
+            kwargs["skills"].append(DEVELOPER_SKILL)
         kwargs["add_dirs"] = [template_build.spec_dir]
 
     # Per-run override wins; otherwise the platform setting.

@@ -153,7 +153,7 @@ class PrepareTests(StudioTestBase):
         build = self.build()
         events = []
         with mock.patch.object(studio_build.subprocess, "run", fake), mock.patch.dict(
-            os.environ, {"ANTHROPIC_API_KEY": "sk-secret", "PLATFORM_USER_PASSWORD": "leak"}
+            os.environ, {"ANTHROPIC_API_KEY": "sk-secret", "PLATFORM_USER_PASSWORD": "leak"}  # pragma: allowlist secret
         ):
             build.prepare(emit=lambda kind, msg, **k: events.append((kind, msg)))
 
@@ -254,7 +254,7 @@ def manage_stub(order, makes_initial=False, fail=None):
     return run_step
 
 
-CREDS = {"PLATFORM_USERNAME": "agent-build-x@agent-mode.invalid", "PLATFORM_USER_PASSWORD": "Secr3t!pass"}
+CREDS = {"PLATFORM_USERNAME": "agent-build-x@agent-mode.invalid", "PLATFORM_USER_PASSWORD": "Secr3t!pass"}  # pragma: allowlist secret
 
 
 class BringUpTests(StudioTestBase):
@@ -346,7 +346,7 @@ class VerifyTests(StudioTestBase):
         zas = self.ws / ".zas"
         zas.mkdir()
         (zas / "test_users.json").write_text(json.dumps({"users": [
-            {"email": "test.manager@demo-app.test", "password": "Pw1!xxxx", "roles": ["Manager"]}
+            {"email": "test.manager@demo-app.test", "password": "Pw1!xxxx", "roles": ["Manager"]}  # pragma: allowlist secret
         ]}))
 
     def patches(self, fake, playwright=False):
@@ -455,7 +455,7 @@ class VerifyTests(StudioTestBase):
     def test_test_users_are_read_into_the_runs_format(self):
         users = self.build().test_users()
         self.assertEqual(users, [{"email": "test.manager@demo-app.test", "role": "Manager",
-                                  "status": "created", "password": "Pw1!xxxx"}])
+                                  "status": "created", "password": "Pw1!xxxx"}])  # pragma: allowlist secret
 
 
 class GuardTests(unittest.TestCase):
@@ -474,7 +474,7 @@ class PromptTests(StudioTestBase):
         from zango.apps.agent_mode.prompt import compose_studio_prompt
 
         tb = SimpleNamespace(
-            skill="zango-tpl-zango-app:zango-app-studio",
+            skill="zango-agent-mode:zango-app-studio",
             skill_dir=str(self.skill),
             spec_path=str(self.spec),
             template=SimpleNamespace(name="Ordering Portal", version="1.0.0"),
@@ -482,7 +482,7 @@ class PromptTests(StudioTestBase):
         ctx = SimpleNamespace(app_name="demo_app", workspace_path=str(self.ws), primary_domain="demo.local")
         skipped = self.build(frontend_reason="node is not installed")
         text = compose_studio_prompt(ctx, tb, skipped)
-        self.assertTrue(text.startswith("/zango-tpl-zango-app:zango-app-studio"))
+        self.assertTrue(text.startswith("/zango-agent-mode:zango-app-studio"))
         self.assertIn(f"{self.skill}/references/server-mode.md", text)
         self.assertIn("SKIPPED (node is not installed)", text)
         self.assertNotIn("npx --no tsc", text)
@@ -490,6 +490,10 @@ class PromptTests(StudioTestBase):
         text = compose_studio_prompt(ctx, tb, ready)
         self.assertIn("npx --no tsc --noEmit", text)
         self.assertIn("UPDATE build", text)
+        self.assertNotIn(".zas/bundle/index.md", text)
+        (ready.zas_dir / "bundle").mkdir(parents=True, exist_ok=True)
+        (ready.zas_dir / "bundle" / "index.md").write_text("# Approval bundle\n")
+        self.assertIn("Port each sketch onto the zas kit", compose_studio_prompt(ctx, tb, ready))
 
 
 class ReportSerializerTests(unittest.TestCase):
@@ -1254,4 +1258,3 @@ class DeclaredViewsTests(StudioTestBase):
         prompt = compose_studio_prompt(ctx, template_build, build)
         self.assertIn("tasks (kanban)", prompt)
         self.assertIn("references/views.md", prompt)
-

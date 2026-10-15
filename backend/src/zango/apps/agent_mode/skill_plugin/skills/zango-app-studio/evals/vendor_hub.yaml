@@ -1,0 +1,1059 @@
+# =============================================================================
+#  ZANGO APP SPEC  ·  spec_version 1
+# =============================================================================
+#  A generic, framework-native description of a Zango app. One file = one app.
+#  Written from user requirements; consumed by the "zango app generator" skill.
+#
+#  Everything here maps to plain Zango primitives (no template codebase):
+#    roles / pages / menu   → UserRoleModel, AppBuilder AppRoutesModel + AppMenuModel, policies
+#    modules                → backend/<module>/ folders (models, forms, tables, workflow, views, urls)
+#    entity.fields          → DynamicModelBase model
+#    entity.form            → BaseForm (create / edit), clean() for validation + duplicates
+#    entity.table           → ModelTable (ModelCol / StringCol / StatusCol / TagsCol, row_actions)
+#    entity.workflow        → WorkflowBase (Meta.statuses, status_transitions, tags, tag_transitions,
+#                             <transition>_condition / <transition>_done methods)
+#    entity.access          → view policies + get_queryset() row scoping
+#    detail_views           → custom React 360 page (design system) + one aggregate API endpoint
+#
+#  The example domain below (vendor onboarding + procurement) exists only to show
+#  every construct filled in. Replace it wholesale for a real app.
+#
+#  ---------------------------------------------------------------------------
+#  CONVENTIONS
+#  ---------------------------------------------------------------------------
+#  · code / key values      snake_case, unique in their scope. Entity codes are singular.
+#  · Roles                  referenced everywhere by their exact `name`.
+#  · Field paths            dot notation across link fields: purchase_order.vendor.city
+#  · Built-in fields        every entity gets: id, created_at, created_by, modified_at, modified_by.
+#                           Entities with a workflow also expose `status` and `tags` (virtual).
+#  · Expressions            used in condition / where / show_when. Small grammar:
+#                             <path> == | != | > | >= | < | <= <value>
+#                             <path> in [a, b]      <path> not_in [a, b]
+#                             <path> is_set | is_empty | is_true | is_false
+#                             status == <code>      has_tag <code>     current_user.role == "<Role>"
+#                           Combine with  all: [...]  /  any: [...]. Anything the grammar cannot
+#                           express goes in a `text:` sibling as plain language.
+#  · Plain-language keys    on_done, on_create, text, shows, custom_requirements[].text.
+#                           The skill hand-writes code for these; be specific and testable.
+#
+#  ---------------------------------------------------------------------------
+#  ENUMS
+#  ---------------------------------------------------------------------------
+#  field.type        text | long_text | integer | decimal | money | percent | boolean
+#                    date | datetime | time | email | phone | url
+#                    choice | multi_choice | link | multi_link | file | image | json
+#  entity.kind       hero          – the centre of a 360 page; many entities link to it
+#                    transactional – has its own lifecycle (usually a workflow) and its own CRUD page
+#                    child         – only exists under a parent; usually managed from the parent's 360 tab
+#                    master        – reference data (lookup lists) maintained by admins
+#  access actions    view | add | edit | delete | export | detail
+#  row_action.type   edit | form | confirm | navigate | download
+#  page.type         crud | detail | custom
+#  tab.type          summary | related_table | timeline | fields | custom
+#  colors (status / tag / badge tones)
+#                    gray | blue | green | amber | red | purple | teal | indigo | pink
+# =============================================================================
+
+spec_version: 1
+
+# -----------------------------------------------------------------------------
+#  APP
+# -----------------------------------------------------------------------------
+app:
+  code: vendor_hub
+  name: Vendor Hub
+  description: Onboard vendors, manage contracts, and track purchase orders through to paid invoices.
+  timezone: Asia/Kolkata
+  locale: en-IN
+  currency: INR
+  theme:                       # optional, AppBuilder CSS variables
+    primary: "#4F46E5"
+    secondary: "#64748B"
+  custom_requirements: []      # app-wide items (SSO, audit export, ...), same shape as below
+
+# -----------------------------------------------------------------------------
+#  SHARED CHOICE SETS  (referenced by `choices: <set_code>`; inline lists also allowed)
+# -----------------------------------------------------------------------------
+choice_sets:
+  vendor_type:
+    - { id: manufacturer, label: Manufacturer }
+    - { id: distributor,  label: Distributor }
+    - { id: service,      label: Service Provider }
+  payment_terms:
+    - { id: advance, label: Advance }
+    - { id: net_30,  label: Net 30 }
+    - { id: net_60,  label: Net 60 }
+  risk_rating:
+    - { id: low,    label: Low,    color: green }
+    - { id: medium, label: Medium, color: amber }
+    - { id: high,   label: High,   color: red }
+
+# -----------------------------------------------------------------------------
+#  ROLES  →  Zango user roles + AppBuilder menu per role
+# -----------------------------------------------------------------------------
+#  menu items point at `pages[].code`. `group` makes a collapsible menu section.
+#  icon: lucide icon name (the skill resolves it), never inline SVG.
+roles:
+  - name: Procurement Executive
+    description: Onboards vendors and raises purchase orders.
+    landing: vendors
+    menu:
+      - { page: dashboard,        icon: layout-dashboard }
+      - { page: vendors,          icon: building-2 }
+      - { page: purchase_orders,  icon: shopping-cart }
+      - { page: invoices,         icon: receipt }
+      - group: Master Data
+        icon: database
+        items:
+          - { page: cities }
+          - { page: categories }
+
+  - name: Procurement Manager
+    description: Approves vendors and purchase orders above threshold.
+    landing: purchase_orders
+    menu:
+      - { page: dashboard,        icon: layout-dashboard }
+      - { page: vendors,          icon: building-2 }
+      - { page: contracts,        icon: file-signature }
+      - { page: purchase_orders,  icon: shopping-cart }
+      - { page: invoices,         icon: receipt }
+      - group: Master Data
+        icon: database
+        items:
+          - { page: cities }
+          - { page: categories }
+
+  - name: Finance
+    description: Verifies and pays invoices.
+    landing: invoices
+    menu:
+      - { page: invoices,         icon: receipt }
+      - { page: purchase_orders,  icon: shopping-cart }
+
+  - name: Vendor User                 # external login, sees only its own vendor's data
+    description: Vendor-side user who acknowledges POs and submits invoices.
+    landing: purchase_orders
+    menu:
+      - { page: purchase_orders,  label: My Purchase Orders, icon: shopping-cart }
+      - { page: invoices,         label: My Invoices,        icon: receipt }
+
+# -----------------------------------------------------------------------------
+#  PAGES  →  AppBuilder routes (global). Menus above reference these codes.
+# -----------------------------------------------------------------------------
+#  crud    – BaseCrudView list page for one entity (table + create form + row actions)
+#  detail  – custom React 360 page, spec lives in `detail_views`
+#  custom  – any other custom React page; describe it in `text`
+pages:
+  - { code: vendors,         type: crud,   entity: vendor,         route: /app/vendors,          title: Vendors }
+  - { code: vendor_360,      type: detail, detail_view: vendor_360, route: "/app/vendors/:id" }
+  - { code: contracts,       type: crud,   entity: contract,       route: /app/contracts,        title: Contracts }
+  - { code: purchase_orders, type: crud,   entity: purchase_order, route: /app/purchase-orders,  title: Purchase Orders }
+  - { code: po_360,          type: detail, detail_view: po_360,    route: "/app/purchase-orders/:id" }
+  - { code: invoices,        type: crud,   entity: invoice,        route: /app/invoices,         title: Invoices }
+  - { code: cities,          type: crud,   entity: city,           route: /app/masters/cities,   title: Cities }
+  - { code: categories,      type: crud,   entity: category,       route: /app/masters/categories, title: Categories }
+  - code: dashboard
+    type: custom
+    route: /app/dashboard
+    title: Dashboard
+    component: ProcurementDashboard
+    roles: [Procurement Executive, Procurement Manager]
+    text: >
+      KPI row: vendors pending approval, open POs, PO value this month, invoices overdue.
+      Below: PO value by month (bar, last 6 months) and a table of the 10 oldest POs awaiting approval.
+
+# -----------------------------------------------------------------------------
+#  MODULES  →  one backend/<code>/ folder each, holding its entities
+# -----------------------------------------------------------------------------
+modules:
+
+  # ===========================================================================
+  - code: masters
+    name: Master Data
+    description: Reference lists used across the app.
+    entities:
+
+      - code: city
+        name: City
+        plural: Cities
+        kind: master
+        display: name                       # __str__ and FK dropdown label
+        fields:
+          - name:  { type: text, required: true, max_length: 100, unique: true }
+          - state: { type: text, required: true, max_length: 100 }
+        access:
+          Procurement Executive: { actions: [view] }
+          Procurement Manager:   { actions: [view, add, edit, export] }
+        table:
+          columns:
+            - name:  { label: City,  searchable: true, sortable: true }
+            - state: { label: State, searchable: true, sortable: true, filterable: true }
+          default_sort: name
+        form:
+          create: { fields: [name, state] }
+          edit:   { same_as: create }
+
+      - code: category
+        name: Category
+        plural: Categories
+        kind: master
+        display: name
+        fields:
+          - name:      { type: text, required: true, unique: true }
+          - parent:    { type: link, to: category, help: Leave empty for a top-level category. }
+          - is_active: { type: boolean, default: true }
+        access:
+          Procurement Executive: { actions: [view] }
+          Procurement Manager:   { actions: [view, add, edit, export] }
+        table:
+          columns:
+            - name:      { label: Category, searchable: true, sortable: true }
+            - parent:    { label: Parent, display: name, filterable: true }
+            - is_active: { label: Active, filterable: true }
+          default_sort: name
+          quick_filters:
+            - { label: Active only, where: is_active is_true, default: true }
+        form:
+          create: { fields: [name, parent, is_active] }
+          edit:   { same_as: create }
+
+  # ===========================================================================
+  - code: vendors
+    name: Vendors
+    description: Vendor master, contacts and onboarding documents.
+    entities:
+
+      # -----------------------------------------------------------------------
+      #  HERO ENTITY: full reference of every entity key
+      # -----------------------------------------------------------------------
+      - code: vendor
+        name: Vendor
+        plural: Vendors
+        kind: hero
+        display: legal_name
+        description: A company we buy from. Centre of the Vendor 360 page.
+
+        # Records of this entity can own a login. When set, the skill creates or links
+        # a Zango AppUser on create (role + contact fields) and exposes `current_user.vendor`
+        # for row scoping elsewhere.
+        app_user:
+          role: Vendor User
+          name: legal_name
+          email: email
+          mobile: phone
+          create_on: status == approved      # when the login is provisioned (expression or `create`)
+
+        fields:
+          # every key is optional except type
+          - vendor_ref:
+              type: text
+              label: Vendor ID
+              readonly: true                  # system-set; never on a form
+              unique: true
+              auto: { sequence: "VEN-{00000}" }   # auto-generated on create
+          - legal_name:
+              type: text
+              required: true
+              max_length: 200
+              help: Exactly as on the GST certificate.          # inline help under the input
+              tooltip: Used on POs and payment advice.          # (i) tooltip
+          - vendor_type:   { type: choice, required: true, choices: vendor_type }
+          - category:      { type: link, to: category, required: true, display: name, limit_choices: is_active is_true }
+          - gstin:
+              type: text
+              max_length: 15
+              unique: true
+              pattern: "^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$"
+              pattern_msg: Enter a valid 15-character GSTIN.
+          - pan:           { type: text, max_length: 10, pattern: "^[A-Z]{5}[0-9]{4}[A-Z]$", pattern_msg: Enter a valid PAN. }
+          - email:         { type: email, required: true }
+          - phone:         { type: phone, required: true, pattern: "^[6-9][0-9]{9}$", pattern_msg: 10-digit mobile without +91. }
+          - city:          { type: link, to: city, display: name }
+          - address:       { type: long_text }
+          - payment_terms: { type: choice, choices: payment_terms, default: net_30 }
+          - credit_limit:  { type: money, min: 0 }
+          - risk_rating:   { type: choice, choices: risk_rating, readonly: true }
+          - approved_on:   { type: date, readonly: true }
+          - approved_by:   { type: link, to: app_user, readonly: true }
+          - logo:          { type: image }
+
+        # -- validation & duplicates -------------------------------------------
+        validation:
+          rules:                                # cross-field rules → form clean()
+            - when: vendor_type == manufacturer
+              require: [gstin]
+              message: GSTIN is mandatory for manufacturers.
+            - text: If PAN is given, it must match characters 3–12 of the GSTIN.
+              message: PAN does not match the GSTIN.
+          duplicate_check:
+            scope: { where: "status not_in [rejected]" }   # which existing records to compare against
+            rules:
+              - match: [gstin]
+                compare: exact                  # exact | normalised (case/space/punct-insensitive) | fuzzy
+                on_match: block                 # block = form error; warn = confirm-and-continue
+                message: A vendor with this GSTIN already exists.
+              - match: [legal_name, city]
+                compare: fuzzy
+                threshold: 0.85                 # fuzzy only
+                on_match: warn
+                message: A vendor with a similar name exists in this city. Check before continuing.
+
+        # -- access & row-level scoping ------------------------------------------
+        #  actions: what the role can do on this entity's CRUD page + 360
+        #  rows:    which records the role sees
+        #     all                        – everything (default)
+        #     created_by_me              – created_by == current user
+        #     { own: <path> }            – path resolves to the app_user-linked record of the
+        #                                  current user (e.g. own: id on vendor → only my vendor)
+        #     { where: <expression> }    – fixed filter
+        #     { text: "..." }            – anything else, hand-written get_queryset()
+        #  no_access: true               – entity hidden completely
+        access:
+          Procurement Executive: { actions: [view, add, edit, export, detail] }
+          Procurement Manager:   { actions: [view, edit, export, detail] }
+          Finance:               { actions: [view, detail], rows: { where: "status == approved" } }
+          Vendor User:           { actions: [view, detail], rows: { own: id } }
+
+        # -- workflow ------------------------------------------------------------
+        workflow:
+          statuses:
+            - { code: draft,            label: Draft,            color: gray,  initial: true }
+            - { code: pending_approval, label: Pending Approval, color: amber }
+            - { code: approved,         label: Approved,         color: green }
+            - { code: on_hold,          label: On Hold,          color: purple }
+            - { code: rejected,         label: Rejected,         color: red,   final: true }
+          transitions:
+            - name: submit                       # → submit_condition / submit_done
+              label: Submit for Approval
+              from: draft
+              to: pending_approval
+              roles: [Procurement Executive]
+              confirm: Submit this vendor for approval?
+              condition:
+                all:
+                  - gstin is_set
+                  - text: At least one vendor_document of type gst_certificate is verified.
+              condition_msg: Add GSTIN and get the GST certificate verified before submitting.
+              on_done: Record the submitter and timestamp on the vendor activity log.
+
+            - name: approve
+              label: Approve
+              from: pending_approval
+              to: approved
+              roles: [Procurement Manager]
+              primary: true                      # shown as the main button on the 360 header
+              form:                              # fields collected in the transition modal
+                - risk_rating: { type: choice, choices: risk_rating, required: true }
+                - approval_note: { type: long_text }
+              condition:
+                text: The approver must not be the user who created the vendor (maker-checker).
+              condition_msg: You created this vendor, so another manager must approve it.
+              on_done: >
+                Copy risk_rating from the form onto the vendor, set approved_on = today and
+                approved_by = current user, then provision the Vendor User login (see app_user).
+
+            - name: reject
+              label: Reject
+              from: pending_approval
+              to: rejected
+              roles: [Procurement Manager]
+              tone: danger                       # red button / destructive styling
+              form:
+                - reject_reason: { type: long_text, required: true }
+
+            - name: send_back
+              label: Send Back
+              from: pending_approval
+              to: draft
+              roles: [Procurement Manager]
+              form:
+                - send_back_reason: { type: long_text, required: true }
+
+            - name: hold
+              label: Put on Hold
+              from: approved
+              to: on_hold
+              roles: [Procurement Manager]
+              form:
+                - hold_reason: { type: long_text, required: true }
+              on_done: Disable the Vendor User login and block new POs for this vendor.
+
+            - name: release
+              label: Release Hold
+              from: on_hold
+              to: approved
+              roles: [Procurement Manager]
+              on_done: Re-enable the Vendor User login.
+
+            - name: auto_expire                  # system transition, no button
+              label: Expire Draft
+              from: draft
+              to: rejected
+              trigger: system                    # system = run by code, never shown to users
+              text: Run nightly; a draft untouched for 90 days moves to rejected.
+
+          tags:
+            - code: msme
+              label: MSME
+              color: teal
+              enable:  { roles: [Procurement Executive, Procurement Manager], confirm: "Mark as MSME?",
+                         form: [ { msme_reg_no: { type: text, required: true } } ] }
+              disable: { roles: [Procurement Manager] }
+            - code: preferred
+              label: Preferred
+              color: indigo
+              enable:  { roles: [Procurement Manager], condition: status == approved,
+                         condition_msg: Only approved vendors can be preferred. }
+              disable: { roles: [Procurement Manager] }
+            - code: kyc_expiring
+              label: KYC Expiring
+              color: amber
+              system: true                       # set/cleared by code only
+              text: Set when any verified vendor_document expires within 30 days; cleared on renewal.
+
+        # -- forms ---------------------------------------------------------------
+        form:
+          create:
+            roles: [Procurement Executive]
+            title: Add Vendor
+            sections:                            # optional grouping; plain `fields: [...]` also allowed
+              - title: Company
+                fields: [legal_name, vendor_type, category, gstin, pan, logo]
+              - title: Contact
+                fields: [email, phone, city, address]
+              - title: Commercials
+                fields:
+                  - payment_terms
+                  - credit_limit: { show_when: vendor_type != service }   # per-form overrides
+            on_create: Write "Vendor created" to the activity log.
+          edit:
+            roles: [Procurement Executive, Procurement Manager]
+            same_as: create
+            readonly_when:                       # lock fields by status
+              - when: status in [approved, on_hold]
+                fields: [legal_name, gstin, pan]
+            editable_in: [draft, pending_approval, approved, on_hold]   # edit hidden in other statuses
+
+        # -- list table ----------------------------------------------------------
+        table:
+          columns:
+            #  source (pick one, default = field of the same name):
+            #    field   – model field (ModelCol). `display` picks the attribute of a link.
+            #    status  – workflow status badge (StatusCol)
+            #    tags    – workflow tags (TagsCol)
+            #    computed – StringCol; describe the value in `shows`
+            - vendor_ref:    { label: Vendor ID, searchable: true, sortable: true }
+            - legal_name:    { label: Name, searchable: true, sortable: true, link_to: vendor_360 }
+            - vendor_type:   { label: Type, filterable: true }
+            - category:      { label: Category, display: name, filterable: true }
+            - city:          { label: City, display: name, filterable: true, sortable: true }
+            - status:        { source: status, label: Status, filterable: true }
+            - tags:          { source: tags, label: Tags }
+            - open_po_value: { source: computed, label: Open PO value, format: money,
+                               shows: "Sum of total_amount over this vendor's purchase orders not in [closed, cancelled]." }
+            - risk_rating:   { label: Risk, filterable: true, roles: [Procurement Manager] }
+            - created_at:    { label: Created, sortable: true, exportable: true }
+          default_sort: -created_at
+          page_size: 25
+          quick_filters:                         # chips / saved views above the table
+            - { label: Pending my approval, where: status == pending_approval, roles: [Procurement Manager] }
+            - { label: Preferred,           where: has_tag preferred }
+          row_click: vendor_360                  # detail_view code | none
+          add_button: Add Vendor                 # label; hidden for roles without `add`
+          row_actions:
+            #  edit     – built-in edit form
+            #  form     – custom modal form (fields + on_done)
+            #  confirm  – yes/no then on_done
+            #  navigate – open a page/detail view/URL
+            #  download – generate & download a file
+            #  Workflow transitions and tag toggles are added to the row menu automatically.
+            - { key: edit, label: Edit, type: edit, roles: [Procurement Executive, Procurement Manager] }
+            - { key: open_360, label: Open 360, type: navigate, to: vendor_360 }
+            - key: resend_invite
+              label: Resend Portal Invite
+              type: confirm
+              confirm: Send a fresh login invite to this vendor's email?
+              roles: [Procurement Executive]
+              show_when: status == approved
+              on_done: Email the Vendor User a new invite link; old links stop working.
+            - key: update_bank
+              label: Update Bank Details
+              type: form
+              roles: [Finance]
+              form:
+                - account_no: { type: text, required: true }
+                - ifsc:       { type: text, required: true, pattern: "^[A-Z]{4}0[A-Z0-9]{6}$" }
+              on_done: Save to the vendor's bank fields and log the change with old and new values.
+
+        custom_requirements:
+          #  area: backend | frontend | integration | permission | notification | scheduled | report
+          - area: integration
+            title: GSTIN lookup
+            text: On create, call the GST portal with the GSTIN and prefill legal_name and address; show a warning if the portal name differs.
+          - area: notification
+            title: Approval email
+            text: When a vendor is approved, email the vendor contact their portal invite and the approval summary.
+          - area: scheduled
+            title: KYC expiry sweep
+            text: Daily at 07:00, apply or clear the kyc_expiring tag based on vendor_document.expiry_date.
+
+      # -----------------------------------------------------------------------
+      - code: vendor_contact
+        name: Contact
+        plural: Contacts
+        kind: child
+        parent: { entity: vendor, field: vendor }   # child → parent FK (managed from the parent 360)
+        display: name
+        fields:
+          - vendor:      { type: link, to: vendor, required: true, on_delete: cascade }
+          - name:        { type: text, required: true }
+          - designation: { type: text }
+          - email:       { type: email }
+          - phone:       { type: phone }
+          - is_primary:  { type: boolean, default: false }
+        validation:
+          rules:
+            - text: Only one contact per vendor can be primary; setting a new primary clears the old one.
+              message: ""
+        access:
+          Procurement Executive: { actions: [view, add, edit, delete] }
+          Procurement Manager:   { actions: [view] }
+          Vendor User:           { actions: [view, add, edit], rows: { own: vendor } }
+        table:
+          columns:
+            - name:        { label: Name, searchable: true }
+            - designation: { label: Designation }
+            - email:       { label: Email }
+            - phone:       { label: Phone }
+            - is_primary:  { label: Primary }
+          default_sort: -is_primary
+          row_actions:
+            - { key: edit, label: Edit, type: edit }
+        form:
+          create: { fields: [name, designation, email, phone, is_primary] }   # `vendor` is prefilled by the 360 tab
+          edit:   { same_as: create }
+
+      # -----------------------------------------------------------------------
+      - code: vendor_document
+        name: Document
+        plural: Documents
+        kind: child
+        parent: { entity: vendor, field: vendor }
+        display: doc_type
+        fields:
+          - vendor:      { type: link, to: vendor, required: true, on_delete: cascade }
+          - doc_type:    { type: choice, required: true, choices: [ {id: gst_certificate, label: GST Certificate}, {id: pan_card, label: PAN Card}, {id: cancelled_cheque, label: Cancelled Cheque}, {id: msme_certificate, label: MSME Certificate} ] }
+          - file:        { type: file, required: true, accept: [pdf, jpg, png], max_size_mb: 10 }
+          - expiry_date: { type: date }
+        access:
+          Procurement Executive: { actions: [view, add] }
+          Procurement Manager:   { actions: [view] }
+          Vendor User:           { actions: [view, add], rows: { own: vendor } }
+        workflow:
+          statuses:
+            - { code: uploaded, label: Uploaded, color: blue, initial: true }
+            - { code: verified, label: Verified, color: green }
+            - { code: rejected, label: Rejected, color: red }
+          transitions:
+            - { name: verify, label: Verify, from: uploaded, to: verified, roles: [Procurement Executive] }
+            - name: reject
+              label: Reject
+              from: uploaded
+              to: rejected
+              roles: [Procurement Executive]
+              form: [ { reject_reason: { type: text, required: true } } ]
+              on_done: Email the vendor contact the reason and a link to re-upload.
+        table:
+          columns:
+            - doc_type:    { label: Document, filterable: true }
+            - file:        { label: File }
+            - expiry_date: { label: Expires, sortable: true }
+            - status:      { source: status, label: Status }
+            - created_at:  { label: Uploaded, sortable: true }
+          default_sort: -created_at
+          row_actions:
+            - { key: preview, label: Preview, type: navigate, to: { field: file } }
+        form:
+          create: { fields: [doc_type, file, expiry_date] }
+
+  # ===========================================================================
+  - code: procurement
+    name: Procurement
+    description: Contracts, purchase orders and invoices.
+    entities:
+
+      - code: contract
+        name: Contract
+        plural: Contracts
+        kind: transactional
+        display: contract_ref
+        fields:
+          - contract_ref: { type: text, readonly: true, unique: true, auto: { sequence: "CON-{0000}" } }
+          - vendor:       { type: link, to: vendor, required: true, display: legal_name, limit_choices: status == approved }
+          - title:        { type: text, required: true }
+          - start_date:   { type: date, required: true }
+          - end_date:     { type: date, required: true }
+          - value:        { type: money, required: true, min: 0 }
+          - document:     { type: file }
+        validation:
+          rules:
+            - when: end_date is_set
+              require_expr: end_date > start_date
+              message: End date must be after the start date.
+        access:
+          Procurement Executive: { actions: [view, add, edit] }
+          Procurement Manager:   { actions: [view, add, edit, export] }
+          Vendor User:           { actions: [view], rows: { own: vendor } }
+        workflow:
+          statuses:
+            - { code: draft,   label: Draft,   color: gray, initial: true }
+            - { code: active,  label: Active,  color: green }
+            - { code: expired, label: Expired, color: amber, final: true }
+            - { code: terminated, label: Terminated, color: red, final: true }
+          transitions:
+            - { name: activate, label: Activate, from: draft, to: active, roles: [Procurement Manager],
+                condition: document is_set, condition_msg: Upload the signed contract first. }
+            - { name: terminate, label: Terminate, from: active, to: terminated, roles: [Procurement Manager], tone: danger,
+                form: [ { termination_reason: { type: long_text, required: true } } ] }
+            - { name: expire, label: Expire, from: active, to: expired, trigger: system, text: Nightly when end_date < today. }
+        table:
+          columns:
+            - contract_ref: { label: Contract, searchable: true, sortable: true }
+            - vendor:       { label: Vendor, display: legal_name, searchable: true, link_to: vendor_360 }
+            - title:        { label: Title, searchable: true }
+            - start_date:   { label: Start, sortable: true }
+            - end_date:     { label: End, sortable: true }
+            - value:        { label: Value, sortable: true, format: money }
+            - status:       { source: status, label: Status, filterable: true }
+          default_sort: -start_date
+          row_actions:
+            - { key: edit, label: Edit, type: edit, show_when: status == draft }
+        form:
+          create: { roles: [Procurement Executive, Procurement Manager], fields: [vendor, title, start_date, end_date, value, document] }
+          edit:   { same_as: create, editable_in: [draft] }
+
+      # -----------------------------------------------------------------------
+      #  SECOND HERO: a PO also has its own 360 (lines, invoices, timeline)
+      # -----------------------------------------------------------------------
+      - code: purchase_order
+        name: Purchase Order
+        plural: Purchase Orders
+        kind: hero
+        display: po_ref
+        fields:
+          - po_ref:        { type: text, label: PO Number, readonly: true, unique: true, auto: { sequence: "PO-{YY}-{00000}" } }
+          - vendor:        { type: link, to: vendor, required: true, display: legal_name, limit_choices: "status == approved" }
+          - contract:      { type: link, to: contract, display: contract_ref, limit_choices: "vendor == form.vendor and status == active" }
+          - order_date:    { type: date, required: true, default: today }
+          - expected_by:   { type: date, label: Expected By }
+          - delivery_city: { type: link, to: city, display: name }
+          - total_amount:  { type: money, readonly: true, computed: "Sum of po_line.amount, recalculated on every line save/delete." }
+          - notes:         { type: long_text }
+        validation:
+          rules:
+            - text: total_amount must not push the vendor's open PO value above vendor.credit_limit.
+              message: This PO exceeds the vendor's credit limit.
+              on_fail: warn                      # block (default) | warn
+        access:
+          Procurement Executive: { actions: [view, add, edit, export, detail] }
+          Procurement Manager:   { actions: [view, edit, export, detail] }
+          Finance:               { actions: [view, detail], rows: { where: "status in [acknowledged, partially_invoiced, closed]" } }
+          Vendor User:           { actions: [view, detail], rows: { own: vendor } }
+        workflow:
+          statuses:
+            - { code: draft,              label: Draft,              color: gray, initial: true }
+            - { code: pending_approval,   label: Pending Approval,   color: amber }
+            - { code: approved,           label: Approved,           color: blue }
+            - { code: acknowledged,       label: Acknowledged,       color: indigo }
+            - { code: partially_invoiced, label: Partially Invoiced, color: purple }
+            - { code: closed,             label: Closed,             color: green, final: true }
+            - { code: cancelled,          label: Cancelled,          color: red,   final: true }
+          transitions:
+            - name: submit
+              label: Submit
+              from: draft
+              to: pending_approval
+              roles: [Procurement Executive]
+              condition: { text: The PO has at least one line. }
+              condition_msg: Add at least one line item.
+            - name: approve
+              label: Approve
+              from: pending_approval
+              to: approved
+              roles: [Procurement Manager]
+              primary: true
+              on_done: Email the PO PDF to the vendor's primary contact.
+            - { name: reject, label: Send Back, from: pending_approval, to: draft, roles: [Procurement Manager],
+                form: [ { send_back_reason: { type: long_text, required: true } } ] }
+            - { name: acknowledge, label: Acknowledge, from: approved, to: acknowledged, roles: [Vendor User], primary: true,
+                form: [ { committed_date: { type: date, required: true } } ],
+                on_done: Save committed_date as expected_by. }
+            - { name: mark_partial, label: Partially Invoiced, from: acknowledged, to: partially_invoiced, trigger: system,
+                text: When the first invoice on this PO is approved and invoiced total < total_amount. }
+            - { name: close, label: Close, from: [acknowledged, partially_invoiced], to: closed, trigger: system,
+                text: When approved invoices total >= total_amount. }
+            - { name: cancel, label: Cancel PO, from: [draft, pending_approval, approved], to: cancelled,
+                roles: [Procurement Manager], tone: danger, confirm: "Cancel this PO? The vendor will be notified.",
+                form: [ { cancel_reason: { type: long_text, required: true } } ] }
+          tags:
+            - { code: urgent, label: Urgent, color: red, enable: { roles: [Procurement Executive, Procurement Manager] }, disable: { roles: [Procurement Executive, Procurement Manager] } }
+            - { code: overdue, label: Overdue, color: amber, system: true, text: Set when expected_by < today and status not final. }
+        table:
+          columns:
+            - po_ref:       { label: PO Number, searchable: true, sortable: true, link_to: po_360 }
+            - vendor:       { label: Vendor, display: legal_name, searchable: true, filterable: true }
+            - order_date:   { label: Ordered, sortable: true }
+            - expected_by:  { label: Expected, sortable: true }
+            - total_amount: { label: Amount, sortable: true, format: money }
+            - invoiced_pct: { source: computed, label: Invoiced, format: percent, shows: Approved invoice total / total_amount. }
+            - status:       { source: status, label: Status, filterable: true }
+            - tags:         { source: tags, label: Flags }
+          default_sort: -order_date
+          quick_filters:
+            - { label: Needs my approval, where: status == pending_approval, roles: [Procurement Manager] }
+            - { label: To acknowledge,    where: status == approved, roles: [Vendor User], default: true }
+            - { label: Overdue,           where: has_tag overdue }
+          row_click: po_360
+          add_button: New Purchase Order
+          row_actions:
+            - { key: edit, label: Edit, type: edit, show_when: status == draft }
+            - { key: download_pdf, label: Download PDF, type: download, text: "Generate the PO PDF with header, lines and terms." }
+        form:
+          create:
+            roles: [Procurement Executive]
+            fields: [vendor, contract, order_date, expected_by, delivery_city, notes]
+            after_create: po_360                 # where to land after save (detail_view | list)
+          edit: { same_as: create, editable_in: [draft] }
+
+      - code: po_line
+        name: Line Item
+        plural: Line Items
+        kind: child
+        parent: { entity: purchase_order, field: purchase_order }
+        display: item
+        fields:
+          - purchase_order: { type: link, to: purchase_order, required: true, on_delete: cascade }
+          - item:           { type: text, required: true }
+          - quantity:       { type: decimal, required: true, min: 0.01 }
+          - unit_price:     { type: money, required: true, min: 0 }
+          - amount:         { type: money, readonly: true, computed: quantity * unit_price }
+        access:
+          Procurement Executive: { actions: [view, add, edit, delete] }
+          Procurement Manager:   { actions: [view] }
+          Finance:               { actions: [view] }
+          Vendor User:           { actions: [view], rows: { own: purchase_order.vendor } }
+        table:
+          columns:
+            - item:       { label: Item }
+            - quantity:   { label: Qty }
+            - unit_price: { label: Unit price, format: money }
+            - amount:     { label: Amount, format: money }
+          footer_totals: [amount]
+          row_actions:
+            - { key: edit, label: Edit, type: edit, show_when: purchase_order.status == draft }
+        form:
+          create: { fields: [item, quantity, unit_price] }
+          edit:   { same_as: create }
+
+      - code: invoice
+        name: Invoice
+        plural: Invoices
+        kind: transactional
+        display: invoice_no
+        fields:
+          - purchase_order: { type: link, to: purchase_order, required: true, display: po_ref, limit_choices: "status in [acknowledged, partially_invoiced]" }
+          - invoice_no:     { type: text, required: true }
+          - invoice_date:   { type: date, required: true }
+          - amount:         { type: money, required: true, min: 0 }
+          - file:           { type: file, required: true, accept: [pdf] }
+          - due_date:       { type: date, readonly: true, computed: invoice_date + vendor payment terms }
+          - paid_on:        { type: date, readonly: true }
+          - utr:            { type: text, label: Payment UTR, readonly: true }
+        validation:
+          duplicate_check:
+            rules:
+              - { match: [purchase_order.vendor, invoice_no], compare: normalised, on_match: block,
+                  message: This vendor has already submitted an invoice with this number. }
+          rules:
+            - text: amount plus approved invoices on the PO must not exceed purchase_order.total_amount.
+              message: Invoice amount exceeds the PO balance.
+        access:
+          Procurement Executive: { actions: [view] }
+          Procurement Manager:   { actions: [view, export] }
+          Finance:               { actions: [view, export] }
+          Vendor User:           { actions: [view, add], rows: { own: purchase_order.vendor } }
+        workflow:
+          statuses:
+            - { code: submitted, label: Submitted, color: blue, initial: true }
+            - { code: approved,  label: Approved,  color: indigo }
+            - { code: paid,      label: Paid,      color: green, final: true }
+            - { code: rejected,  label: Rejected,  color: red,   final: true }
+          transitions:
+            - { name: approve, label: Approve, from: submitted, to: approved, roles: [Finance], primary: true,
+                on_done: Re-evaluate the parent PO for mark_partial / close system transitions. }
+            - { name: reject, label: Reject, from: submitted, to: rejected, roles: [Finance], tone: danger,
+                form: [ { reject_reason: { type: long_text, required: true } } ] }
+            - name: mark_paid
+              label: Mark Paid
+              from: approved
+              to: paid
+              roles: [Finance]
+              form:
+                - paid_on: { type: date, required: true, default: today }
+                - utr:     { type: text, required: true }
+              on_done: Copy paid_on and utr onto the invoice and email a payment advice to the vendor.
+        table:
+          columns:
+            - invoice_no:     { label: Invoice, searchable: true }
+            - purchase_order: { label: PO, display: po_ref, searchable: true, link_to: po_360 }
+            - vendor:         { source: computed, label: Vendor, path: purchase_order.vendor.legal_name, searchable: true }
+            - invoice_date:   { label: Date, sortable: true }
+            - amount:         { label: Amount, sortable: true, format: money }
+            - due_date:       { label: Due, sortable: true, highlight: { when: "due_date < today and status != paid", tone: red } }
+            - status:         { source: status, label: Status, filterable: true }
+          default_sort: -invoice_date
+          quick_filters:
+            - { label: To approve, where: status == submitted, roles: [Finance], default: true }
+            - { label: Overdue,    where: "due_date < today and status == approved", roles: [Finance] }
+          add_button: Submit Invoice
+        form:
+          create: { roles: [Vendor User], fields: [purchase_order, invoice_no, invoice_date, amount, file] }
+
+# -----------------------------------------------------------------------------
+#  DETAIL VIEWS (360)  →  custom React page per hero, built with the design system
+# -----------------------------------------------------------------------------
+#  The skill generates:
+#    · GET  /<module>/<entity>/<id>/360/   – one aggregate payload: hero record, header facts,
+#      stats, summary sections, allowed transitions/tags for the current user, per-tab counts
+#    · per-tab data comes from the related entity's own CRUD API filtered by `via`,
+#      so tab tables reuse that entity's columns, row actions, workflow and access rules
+#    · a React page registered under the `pages[]` route
+#  Every block accepts `roles` (who sees it) and `show_when` (expression on the hero).
+detail_views:
+
+  - code: vendor_360
+    hero: vendor
+    title: "{legal_name}"                     # browser/page title template
+    back_to: vendors                          # breadcrumb / back link page
+    layout: header_tabs_sidebar               # header_tabs | header_tabs_sidebar | header_sidebar_tabs_left
+    roles: [Procurement Executive, Procurement Manager, Finance, Vendor User]
+
+    header:
+      avatar: { image: logo, fallback_initials: legal_name }
+      title: legal_name
+      subtitle: ["{vendor_ref}", "{vendor_type}", "{city.name}"]      # joined with " · "
+      badges:
+        - { source: status }
+        - { source: tags }
+        - { field: risk_rating, prefix: "Risk: ", roles: [Procurement Manager] }   # tone from choice color
+      facts:                                    # compact label/value row under the title
+        - { label: GSTIN,         field: gstin, copyable: true }
+        - { label: Payment terms, field: payment_terms }
+        - { label: Primary contact, path: "vendor_contact[is_primary].name", fallback: "—" }
+        - { label: Approved,      value: "{approved_on} by {approved_by.name}", show_when: status == approved }
+      actions:
+        transitions: true                       # buttons for transitions allowed now; `primary` one emphasised, rest in menu
+        tags: true                              # tag toggles in an overflow menu
+        buttons:
+          - key: new_po
+            label: New PO
+            icon: plus
+            type: create_related                # open another entity's create form with prefill
+            entity: purchase_order
+            prefill: { vendor: hero }
+            roles: [Procurement Executive]
+            show_when: status == approved
+          - { key: edit, label: Edit, type: edit, roles: [Procurement Executive, Procurement Manager] }
+          - { key: resend_invite, row_action: resend_invite }    # reuse a table row action by key
+      banners:                                  # contextual alert strip under the header
+        - { show_when: status == on_hold, tone: warning, text: "On hold: {hold_reason}. New POs are blocked." }
+        - { show_when: has_tag kyc_expiring, tone: warning, text: A KYC document expires within 30 days. }
+        - { show_when: status == rejected, tone: danger, text: "Rejected: {reject_reason}" }
+
+    stats:                                      # KPI cards row
+      - label: Open POs
+        value: { count: purchase_order, via: vendor, where: "status not_in [closed, cancelled]" }
+        icon: shopping-cart
+        tone: blue
+        link_to_tab: purchase_orders
+      - label: Open PO value
+        value: { sum: purchase_order.total_amount, via: vendor, where: "status not_in [closed, cancelled]" }
+        format: money
+        tone: indigo
+      - label: Unpaid invoices
+        value: { sum: invoice.amount, via: purchase_order.vendor, where: "status == approved" }
+        format: money
+        tone: amber
+        link_to_tab: invoices
+      - label: Credit used
+        value: { text: Open PO value / credit_limit }
+        format: percent
+        tone: { when: "> 0.9", is: red, else: green }
+        roles: [Procurement Manager, Finance]
+
+    sidebar:                                    # only for *_sidebar layouts
+      - type: fields
+        title: Company
+        fields: [legal_name, vendor_type, category, gstin, pan]
+      - type: fields
+        title: Contact
+        fields: [email, phone, city, address]
+        editable_inline: { roles: [Procurement Executive], show_when: "status in [draft, pending_approval]" }
+      - type: custom
+        title: Onboarding checklist
+        text: >
+          Checklist of the 4 document types with a tick when a verified vendor_document of that
+          type exists, plus "GSTIN verified" from the GST lookup. Shows "3 of 5 done".
+
+    tabs:
+      - code: overview
+        label: Overview
+        type: summary
+        sections:
+          - { title: Commercials, columns: 2, fields: [payment_terms, credit_limit, risk_rating, approved_on] }
+          - title: Recent purchase orders
+            type: mini_table                    # compact read-only list, links to the full tab
+            entity: purchase_order
+            via: vendor
+            columns: [po_ref, order_date, total_amount, status]
+            limit: 5
+            sort: -order_date
+            see_all_tab: purchase_orders
+
+      - code: contacts
+        label: Contacts
+        type: related_table
+        entity: vendor_contact
+        via: vendor                             # FK path from the related entity to the hero
+        count_badge: true
+        columns: inherit                        # inherit = entity.table.columns; or list a subset/override
+        add: { label: Add Contact, prefill: { vendor: hero } }   # roles come from entity.access `add`
+        row_actions: inherit
+        empty_state: { title: No contacts yet, text: Add the people you deal with at this vendor., cta: add }
+
+      - code: documents
+        label: Documents
+        type: related_table
+        entity: vendor_document
+        via: vendor
+        count_badge: { where: status == uploaded, tone: amber }  # badge shows pending count
+        columns: [doc_type, file, expiry_date, status, created_at]
+        group_by: doc_type                      # optional visual grouping
+        add: { label: Upload Document, prefill: { vendor: hero } }
+        row_actions: inherit                    # verify/reject transitions come along automatically
+        row_click: preview                      # row action key | detail_view code | drawer | none
+        empty_state: { title: No documents, text: "Upload GST certificate, PAN and a cancelled cheque to submit for approval.", cta: add }
+
+      - code: contracts
+        label: Contracts
+        type: related_table
+        entity: contract
+        via: vendor
+        count_badge: true
+        columns: [contract_ref, title, start_date, end_date, value, status]
+        default_sort: -start_date
+        add: { label: New Contract, prefill: { vendor: hero }, show_when: status == approved }
+        row_click: drawer                       # open the record in a side drawer (fields + transitions)
+
+      - code: purchase_orders
+        label: Purchase Orders
+        type: related_table
+        entity: purchase_order
+        via: vendor
+        count_badge: true
+        columns: [po_ref, order_date, expected_by, total_amount, invoiced_pct, status, tags]
+        quick_filters: inherit
+        add: { label: New PO, prefill: { vendor: hero }, show_when: status == approved }
+        row_click: po_360                       # jump to the other hero's 360
+
+      - code: invoices
+        label: Invoices
+        type: related_table
+        entity: invoice
+        via: purchase_order.vendor              # two hops: invoice → PO → vendor
+        count_badge: true
+        columns: [invoice_no, purchase_order, invoice_date, amount, due_date, status]
+        add: false
+        roles: [Procurement Manager, Finance, Vendor User]
+
+      - code: activity
+        label: Activity
+        type: timeline
+        sources:                                # merged, newest first
+          - { entity: vendor, events: [created, updated, transition, tag] }
+          - { entity: vendor_document, via: vendor, events: [created, transition] }
+          - { entity: purchase_order, via: vendor, events: [created, transition] }
+        show_field_changes: true                # include old → new for audited fields
+        filters: [entity, event, user]
+
+    states:
+      loading: skeleton                         # skeleton | spinner
+      not_found: { title: Vendor not found, text: It may have been removed or you may not have access., back_to: vendors }
+      no_access: { text: You don't have access to this vendor. }
+
+    custom_requirements:
+      - area: frontend
+        title: Sticky header
+        text: Header collapses to a single line (avatar, name, status, primary action) on scroll.
+
+  # ---------------------------------------------------------------------------
+  - code: po_360
+    hero: purchase_order
+    title: "{po_ref}"
+    back_to: purchase_orders
+    layout: header_tabs
+    roles: [Procurement Executive, Procurement Manager, Finance, Vendor User]
+    header:
+      title: po_ref
+      subtitle: ["{vendor.legal_name}", "Ordered {order_date}"]
+      badges: [ { source: status }, { source: tags } ]
+      facts:
+        - { label: Vendor,   field: vendor, link_to: vendor_360, roles: [Procurement Executive, Procurement Manager, Finance] }
+        - { label: Contract, field: contract }
+        - { label: Expected, field: expected_by }
+        - { label: Total,    field: total_amount, format: money, emphasis: true }
+      actions:
+        transitions: true
+        tags: true
+        buttons:
+          - { key: download_pdf, row_action: download_pdf }
+      banners:
+        - { show_when: has_tag overdue, tone: warning, text: "Expected by {expected_by}; not yet closed." }
+    stats:
+      - { label: PO value,  value: { field: total_amount }, format: money }
+      - { label: Invoiced,  value: { sum: invoice.amount, via: purchase_order, where: "status in [approved, paid]" }, format: money }
+      - { label: Paid,      value: { sum: invoice.amount, via: purchase_order, where: "status == paid" }, format: money, tone: green }
+      - { label: Balance,   value: { text: total_amount minus approved+paid invoices }, format: money, tone: amber }
+    tabs:
+      - code: lines
+        label: Line Items
+        type: related_table
+        entity: po_line
+        via: purchase_order
+        columns: inherit
+        add: { label: Add Line, prefill: { purchase_order: hero }, show_when: status == draft }
+        footer_totals: [amount]
+        empty_state: { title: No line items, text: Add at least one line to submit this PO., cta: add }
+      - code: invoices
+        label: Invoices
+        type: related_table
+        entity: invoice
+        via: purchase_order
+        count_badge: true
+        columns: [invoice_no, invoice_date, amount, due_date, status]
+        add: { label: Submit Invoice, prefill: { purchase_order: hero }, roles: [Vendor User], show_when: "status in [acknowledged, partially_invoiced]" }
+        row_click: drawer
+      - code: details
+        label: Details
+        type: fields
+        sections:
+          - { title: Order, columns: 2, fields: [vendor, contract, order_date, expected_by, delivery_city] }
+          - { title: Notes, fields: [notes] }
+      - code: activity
+        label: Activity
+        type: timeline
+        sources:
+          - { entity: purchase_order, events: [created, updated, transition, tag] }
+          - { entity: invoice, via: purchase_order, events: [created, transition] }
+    states:
+      not_found: { title: Purchase order not found, back_to: purchase_orders }

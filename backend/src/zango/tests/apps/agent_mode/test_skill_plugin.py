@@ -12,11 +12,19 @@ import unittest
 from pathlib import Path
 
 from zango.apps.agent_mode.options import SKILL_PLUGIN_DIR
-from zango.apps.agent_mode.prompt import PLUGIN_NAME, QUALIFIED_SKILL, SKILL_NAME
+from zango.apps.agent_mode.prompt import (
+    DEVELOPER_SKILL,
+    DEVELOPER_SKILL_NAME,
+    PLUGIN_NAME,
+    STUDIO_SKILL,
+    STUDIO_SKILL_NAME,
+)
 
 
 PLUGIN = Path(SKILL_PLUGIN_DIR)
-SKILL_DIR = PLUGIN / "skills" / SKILL_NAME
+# The developer skill: only loaded beside PSP's build skill now.
+SKILL_DIR = PLUGIN / "skills" / DEVELOPER_SKILL_NAME
+STUDIO_DIR = PLUGIN / "skills" / STUDIO_SKILL_NAME
 
 
 def _frontmatter(path: Path) -> dict:
@@ -48,13 +56,14 @@ class SkillPluginTests(unittest.TestCase):
         skill_md = SKILL_DIR / "SKILL.md"
         self.assertTrue(skill_md.is_file(), f"missing SKILL.md: {skill_md}")
         fm = _frontmatter(skill_md)
-        self.assertEqual(fm.get("name"), SKILL_NAME)
+        self.assertEqual(fm.get("name"), DEVELOPER_SKILL_NAME)
         self.assertTrue(fm.get("description"))
 
     def test_qualified_name_is_plugin_colon_skill(self):
         # How plugin-provided skills are addressed, and what the prompt
         # dispatches with.
-        self.assertEqual(QUALIFIED_SKILL, f"{PLUGIN_NAME}:{SKILL_NAME}")
+        self.assertEqual(DEVELOPER_SKILL, f"{PLUGIN_NAME}:{DEVELOPER_SKILL_NAME}")
+        self.assertEqual(STUDIO_SKILL, f"{PLUGIN_NAME}:{STUDIO_SKILL_NAME}")
 
     def test_references_are_present(self):
         refs = list((SKILL_DIR / "references").rglob("*.md"))
@@ -96,6 +105,41 @@ class SkillPluginTests(unittest.TestCase):
             self.assertIn(phrase, text, f"missing reachability guidance: {phrase}")
 
 
+class StudioSkillPluginTests(unittest.TestCase):
+    """App Studio ships in this plugin and builds every app on the generic spec."""
+
+    def test_skill_md_exists_with_matching_name(self):
+        fm = _frontmatter(STUDIO_DIR / "SKILL.md")
+        self.assertEqual(fm.get("name"), STUDIO_SKILL_NAME)
+        self.assertTrue(fm.get("description"))
+
+    def test_it_is_a_studio_skill_with_its_server_mode(self):
+        # studio_build.is_studio() keys on spec_check.py; server-mode.md is
+        # what the studio prompt points the agent at.
+        from zango.apps.agent_mode.studio_build import STUDIO_MARKER
+
+        self.assertTrue((STUDIO_DIR / STUDIO_MARKER).is_file())
+        self.assertTrue((STUDIO_DIR / "references" / "server-mode.md").is_file())
+        self.assertTrue((STUDIO_DIR / "assets" / "backend" / "zas_core").is_dir())
+
+    def test_the_catalogue_names_the_same_skill(self):
+        from zango.apps.shared.app_templates.services.generic import (
+            STUDIO_PLUGIN,
+            STUDIO_SKILL as CATALOGUE_SKILL,
+            studio_plugin_dir,
+        )
+
+        self.assertEqual(f"{STUDIO_PLUGIN}:{CATALOGUE_SKILL}", STUDIO_SKILL)
+        self.assertEqual(Path(studio_plugin_dir()).resolve(), PLUGIN.resolve())
+
+    def test_the_generic_pack_no_longer_carries_a_copy(self):
+        from zango.apps.shared.app_templates.seed import PACKS_DIR
+
+        self.assertFalse((PACKS_DIR / "zango_app" / "skill").exists())
+        manifest = json.loads((PACKS_DIR / "zango_app" / "template.json").read_text())
+        self.assertNotIn("build_skill_name", manifest)
+
+
 if __name__ == "__main__":
     unittest.main()
 
@@ -133,7 +177,7 @@ class PackageMandateTests(unittest.TestCase):
             modules = []
             roles = ["Admin"]
 
-        text = compose_prompt("Add a vendor module", Ctx())
+        text = compose_prompt("Add a vendor module", Ctx(), skill=DEVELOPER_SKILL)
         self.assertIn("ALREADY INSTALLED", text)
         self.assertIn("BaseCrudView", text)
         self.assertIn("crud 1.0.17", text)

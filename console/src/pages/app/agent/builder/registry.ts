@@ -2,7 +2,7 @@
 // PSP) without the generic panel changing. Keyed by template slug; empty for now.
 
 import type { ComponentType, LazyExoticComponent } from 'react';
-import type { Requirement, RequirementSpec, TemplateBuilderDef } from '@/api/agentMode';
+import type { PreviewFocus, Requirement, RequirementSpec, TemplateBuilderDef } from '@/api/agentMode';
 import type { SpecDraftController } from './useSpecDraft';
 
 export interface BuilderProps {
@@ -22,6 +22,8 @@ export interface BuilderProps {
 	commit?: CommitAction;
 	/** Open one of the preview pane's sheets from outside (e.g. Checks after a refused commit). */
 	sheet?: { sheet: 'checks' | 'flags' | 'spec'; nonce: number } | null;
+	/** Where the user is in the preview, and what they pointed at; goes with their next message. */
+	onPreviewFocus?: (focus: PreviewFocus) => void;
 }
 
 export interface CommitAction {

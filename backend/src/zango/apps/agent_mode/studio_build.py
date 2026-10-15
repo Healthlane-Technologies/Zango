@@ -84,7 +84,9 @@ LAYERS = (
     ("design", "zas_test.design", True, True),
     ("scenarios", "zas_test.scenarios", False, True),
 )
-DESIGN_BROWSER_GROUPS = ("gallery", "tokens", "tree", "layout")
+DESIGN_BROWSER_GROUPS = ("gallery", "tokens", "tree", "layout", "parity")
+# Preview parity failures go to the fix rounds, then stay in the report as gaps, never failing the build.
+NON_FAILING = ("design.parity",)
 APP_LAYERS = tuple(name for name, _, _, needs_app in LAYERS if needs_app)
 BROWSER_LAYERS = tuple(name for name, _, browser, _ in LAYERS if browser)
 # The one bring-up step that needs the app reachable on its own domain.
@@ -122,6 +124,15 @@ def platform_url() -> str:
     return (
         getattr(settings, "AGENT_MODE_PLATFORM_URL", "") or DEFAULT_PLATFORM_URL
     ).rstrip("/")
+
+
+def blocking(layers: dict) -> bool:
+    """Whether a failing check fails the build: any failure except preview parity (NON_FAILING)."""
+    return any(
+        any(not str(f.get("id", "")).startswith(NON_FAILING) for f in x.failures)
+        or (x.status == "fail" and not x.failures)
+        for x in layers.values()
+    )
 
 
 def fix_rounds() -> int:
@@ -195,9 +206,13 @@ def service_account(tenant):
                     user.save()
                     user.apps.clear()
                     if user.user_id:
-                        type(user.user).objects.filter(pk=user.user_id).update(is_active=False)
+                        type(user.user).objects.filter(pk=user.user_id).update(
+                            is_active=False
+                        )
             except Exception:  # noqa: BLE001 - never mask the build's own outcome
-                logger.exception("agent_mode: could not disable the build service account")
+                logger.exception(
+                    "agent_mode: could not disable the build service account"
+                )
 
 
 # ---------------------------------------------------------------------------
@@ -210,7 +225,9 @@ class LayerResult:
     name: str
     status: str = "pass"  # pass | fail | skip
     counts: dict = field(default_factory=dict)
-    failures: list = field(default_factory=list)  # [{id, title, role, spec_path, detail}]
+    failures: list = field(
+        default_factory=list
+    )  # [{id, title, role, spec_path, detail}]
     groups: list = field(default_factory=list)  # --only groups to re-run
     reason: str = ""
 
@@ -307,9 +324,21 @@ class StudioBuild:
 
     # What a continuation needs to rebuild this object in another worker.
     CHECKPOINT_FIELDS = (
-        "skill_dir", "workspace", "spec_path", "run_dir", "base_dir", "app_name",
-        "app_domain", "frontend_allowed", "platform_url", "first_build", "update",
-        "frontend_ready", "frontend_reason", "check_spec", "_pruned",
+        "skill_dir",
+        "workspace",
+        "spec_path",
+        "run_dir",
+        "base_dir",
+        "app_name",
+        "app_domain",
+        "frontend_allowed",
+        "platform_url",
+        "first_build",
+        "update",
+        "frontend_ready",
+        "frontend_reason",
+        "check_spec",
+        "_pruned",
     )
 
     def build_state(self) -> dict:
@@ -362,8 +391,12 @@ class StudioBuild:
         if emit is None:
             return result
         if result.skipped_reason:
-            emit("post_step", f"{result.step} skipped: {result.skipped_reason}",
-                 level="warn", data=result.to_dict())
+            emit(
+                "post_step",
+                f"{result.step} skipped: {result.skipped_reason}",
+                level="warn",
+                data=result.to_dict(),
+            )
             return result
         for line in (result.stdout_tail or "").splitlines()[-30:]:
             if line.strip():
@@ -380,9 +413,15 @@ class StudioBuild:
         )
         return result
 
-    def _run(self, step, argv, *, cwd=None, timeout=SCRIPT_TIMEOUT, extra_env=None, emit=None):
+    def _run(
+        self, step, argv, *, cwd=None, timeout=SCRIPT_TIMEOUT, extra_env=None, emit=None
+    ):
         if emit is not None:
-            emit("post_step", f"Running {STEP_PREFIX}{step} …", data={"step": STEP_PREFIX + step})
+            emit(
+                "post_step",
+                f"Running {STEP_PREFIX}{step} …",
+                data={"step": STEP_PREFIX + step},
+            )
         started = time.monotonic()
         result = StepResult(step=STEP_PREFIX + step, command=list(argv))
         try:
@@ -409,19 +448,27 @@ class StudioBuild:
         return self._record(result, emit)
 
     def script(self, step, name, *args, **kw):
-        return self._run(step, [self.python, str(Path(self.scripts_dir) / name), *args], **kw)
+        return self._run(
+            step, [self.python, str(Path(self.scripts_dir) / name), *args], **kw
+        )
 
     def module(self, step, name, *args, **kw):
         return self._run(step, [self.python, "-m", name, *args], **kw)
 
     def manage(self, step, args, emit=None, timeout=SCRIPT_TIMEOUT):
         if emit is not None:
-            emit("post_step", f"Running {STEP_PREFIX}{step} …", data={"step": STEP_PREFIX + step})
+            emit(
+                "post_step",
+                f"Running {STEP_PREFIX}{step} …",
+                data={"step": STEP_PREFIX + step},
+            )
         result = run_step(STEP_PREFIX + step, args, self.base_dir, timeout=timeout)
         return self._record(result, emit)
 
     def skip(self, step, reason, emit=None):
-        return self._record(StepResult(step=STEP_PREFIX + step, skipped_reason=reason), emit)
+        return self._record(
+            StepResult(step=STEP_PREFIX + step, skipped_reason=reason), emit
+        )
 
     # -- environment --------------------------------------------------------
 
@@ -429,7 +476,11 @@ class StudioBuild:
         """zango_env.py's config, beside the run (it finds it through $ZAS_CONFIG)."""
         # The interpreter's own environment (never resolve the symlink: a venv's
         # bin/python points at the base Python, which lacks Django).
-        venv = sys.prefix if self.python == sys.executable else str(Path(self.python).parent.parent)
+        venv = (
+            sys.prefix
+            if self.python == sys.executable
+            else str(Path(self.python).parent.parent)
+        )
         Path(self.run_dir).mkdir(parents=True, exist_ok=True)
         Path(self.config_path).write_text(
             json.dumps(
@@ -459,8 +510,10 @@ class StudioBuild:
         from urllib.parse import urlparse
 
         parsed = urlparse(self.platform_url)
-        host = self.app_domain if ":" in self.app_domain or not parsed.port else (
-            f"{self.app_domain}:{parsed.port}"
+        host = (
+            self.app_domain
+            if ":" in self.app_domain or not parsed.port
+            else (f"{self.app_domain}:{parsed.port}")
         )
         return f"{parsed.scheme or 'http'}://{host}"
 
@@ -550,8 +603,12 @@ class StudioBuild:
 
     # -- before the agent ------------------------------------------------
 
-    def prepare(self, emit=None) -> None:
-        """Phases 0-2 and the frontend prep of Phase 6. Raises StudioError."""
+    def prepare(self, emit=None, template=None) -> None:
+        """Phases 0-2 and the frontend prep of Phase 6. Raises StudioError.
+
+        ``template``: the requirement's App Studio template; with it the approval bundle (what the
+        user approved for each custom screen) is written to .zas/bundle/ for the agent.
+        """
         if emit:
             emit(
                 "sys",
@@ -560,15 +617,78 @@ class StudioBuild:
             )
         self.write_config()
         self.check_spec = self._write_check_spec()
+        if template is not None:
+            # Before spec_check: it points each custom screen's hole at its bundle folder.
+            self.write_bundle(template, emit)
         checked = self.script(
-            "spec_check", "spec_check.py", self.check_spec, "--workspace", self.workspace,
-            "--quiet", emit=emit,
+            "spec_check",
+            "spec_check.py",
+            self.check_spec,
+            "--workspace",
+            self.workspace,
+            "--quiet",
+            emit=emit,
         )
         if checked.returncode != 0:
             raise StudioError("SpecCheckFailed", self._spec_errors(checked))
         self.install_runtime(emit)
         self.prepare_frontend(emit)
         self.prepare_views(emit)
+
+    def write_bundle(self, template, emit=None) -> dict | None:
+        """.zas/bundle/ (approval_bundle.py): each custom screen's sketch, contract, kit trees and
+        screenshots, from the approved spec in the same preview the user saw. Never fails the build:
+        without it the agent builds from the hole text, as before."""
+        import shutil
+        import time
+
+        from .approval_bundle import write_bundle
+        from .preview_probe import probe_for
+
+        out = self.zas_dir / "bundle"
+        started = time.monotonic()
+        probe = None
+        try:
+            shutil.rmtree(out, ignore_errors=True)
+            self.zas_dir.mkdir(parents=True, exist_ok=True)
+            probe = probe_for(template)
+            manifest = write_bundle(
+                Path(self.spec_path).read_text(encoding="utf-8"),
+                out,
+                probe=probe,
+                template_version=getattr(template, "version", "") or "",
+            )
+        except Exception as exc:  # noqa: BLE001 - the bundle is an aid, not a gate
+            logger.warning("agent_mode: approval bundle failed: %s", exc)
+            self.steps.append(
+                StepResult(
+                    step=STEP_PREFIX + "bundle",
+                    duration_ms=int((time.monotonic() - started) * 1000),
+                    stderr_tail=str(exc)[-2000:],
+                    skipped_reason=f"approval bundle failed: {exc}"[:300],
+                )
+            )
+            return None
+        finally:
+            if probe is not None:
+                probe.close()
+        shots = sum(
+            1 for s in manifest["screens"] for v in s["variants"] if v.get("shot")
+        )
+        self.steps.append(
+            StepResult(
+                step=STEP_PREFIX + "bundle",
+                duration_ms=int((time.monotonic() - started) * 1000),
+                stdout_tail=f"{len(manifest['screens'])} screens, {shots} screenshots; probe: {manifest['probe']}",
+            )
+        )
+        if emit:
+            emit(
+                "sys",
+                f"Approval bundle: {len(manifest['screens'])} custom screen(s), {shots} screenshot(s).",
+                level="sys",
+            )
+        return manifest
 
     def _write_check_spec(self) -> str:
         """The approved spec as plain YAML the skill's PyYAML reads exactly as the platform did.
@@ -585,7 +705,9 @@ class StudioBuild:
         try:
             doc = yamlio.load(source.read_text(encoding="utf-8"))
         except Exception as exc:  # noqa: BLE001
-            raise StudioError("SpecCheckFailed", f"The approved spec could not be read: {exc}")
+            raise StudioError(
+                "SpecCheckFailed", f"The approved spec could not be read: {exc}"
+            )
         target = source.with_name(source.stem + ".build.yaml")
         target.write_text(
             yaml.safe_dump(doc, sort_keys=False, allow_unicode=True, width=10_000),
@@ -600,7 +722,11 @@ class StudioBuild:
         lines = (self.zas_dir / "issues.md").read_text(encoding="utf-8").splitlines()
         errors = [line.strip() for line in lines if "**error**" in line]
         body = "\n".join(errors[:30]) or (result.stdout_tail or "").strip()
-        more = f"\n… and {len(errors) - 30} more (.zas/issues.md)" if len(errors) > 30 else ""
+        more = (
+            f"\n… and {len(errors) - 30} more (.zas/issues.md)"
+            if len(errors) > 30
+            else ""
+        )
         return (
             f"The approved spec has {len(errors) or 'some'} error(s) the build cannot work "
             "around. Fix them in the spec (or ask the agent to) and commit again.\n"
@@ -614,11 +740,15 @@ class StudioBuild:
         try:
             if dst.exists():
                 shutil.rmtree(dst)
-            shutil.copytree(src, dst, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+            shutil.copytree(
+                src, dst, ignore=shutil.ignore_patterns("__pycache__", "*.pyc")
+            )
             shutil.copyfile(self.zas_dir / "spec.resolved.json", dst / "spec.json")
             registered = register_module(self.workspace, "zas_core", "backend.zas_core")
         except Exception as exc:  # noqa: BLE001
-            raise StudioError("RuntimeInstallFailed", f"Could not copy the zas_core runtime: {exc}")
+            raise StudioError(
+                "RuntimeInstallFailed", f"Could not copy the zas_core runtime: {exc}"
+            )
         self._record(
             StepResult(
                 step=STEP_PREFIX + "runtime",
@@ -626,12 +756,18 @@ class StudioBuild:
                 duration_ms=int((time.monotonic() - started) * 1000),
                 stdout_tail=(
                     "zas_core copied; spec.json is the resolved spec; "
-                    + ("registered in settings.json" if registered else "already registered")
+                    + (
+                        "registered in settings.json"
+                        if registered
+                        else "already registered"
+                    )
                 ),
             ),
             emit,
         )
-        selftest = self.script("selftest", "selftest_runtime.py", "--workspace", self.workspace, emit=emit)
+        selftest = self.script(
+            "selftest", "selftest_runtime.py", "--workspace", self.workspace, emit=emit
+        )
         if selftest.returncode != 0:
             raise StudioError(
                 "RuntimeSelfTestFailed",
@@ -682,29 +818,71 @@ class StudioBuild:
                         level="warn",
                     )
         self._write_proxy_routes(fe)
-        if failed(self._run("frontend:pin", ["npm", "install", "--save-exact", "--legacy-peer-deps",
-                                             f"@zango-core/crud@{CRUD_VERSION}", f"lucide-react@{LUCIDE_VERSION}"],
-                            cwd=str(fe), timeout=NPM_TIMEOUT, emit=emit)):
+        if failed(
+            self._run(
+                "frontend:pin",
+                [
+                    "npm",
+                    "install",
+                    "--save-exact",
+                    "--legacy-peer-deps",
+                    f"@zango-core/crud@{CRUD_VERSION}",
+                    f"lucide-react@{LUCIDE_VERSION}",
+                ],
+                cwd=str(fe),
+                timeout=NPM_TIMEOUT,
+                emit=emit,
+            )
+        ):
             return  # (failed() raises)
         (fe / "patches").mkdir(exist_ok=True)
         for patch in (skill / "assets" / "frontend" / "patches").glob("*.patch"):
             shutil.copyfile(patch, fe / "patches" / patch.name)
-        if failed(self._run("frontend:patch-package", ["npm", "install", "--save-dev", "--legacy-peer-deps",
-                                                       "patch-package"],
-                            cwd=str(fe), timeout=NPM_TIMEOUT, emit=emit)):
+        if failed(
+            self._run(
+                "frontend:patch-package",
+                ["npm", "install", "--save-dev", "--legacy-peer-deps", "patch-package"],
+                cwd=str(fe),
+                timeout=NPM_TIMEOUT,
+                emit=emit,
+            )
+        ):
             return  # (failed() raises)
         _set_postinstall(fe / "package.json")
-        if failed(self._run("frontend:patch", ["npx", "--no", "patch-package"], cwd=str(fe),
-                            timeout=NPM_TIMEOUT, emit=emit)):
+        if failed(
+            self._run(
+                "frontend:patch",
+                ["npx", "--no", "patch-package"],
+                cwd=str(fe),
+                timeout=NPM_TIMEOUT,
+                emit=emit,
+            )
+        ):
             return  # (failed() raises)
         if (fe / "src" / "zas").exists():
             shutil.rmtree(fe / "src" / "zas")
-        shutil.copytree(skill / "assets" / "frontend" / "zas", fe / "src" / "zas",
-                        ignore=shutil.ignore_patterns("__pycache__"))
+        shutil.copytree(
+            skill / "assets" / "frontend" / "zas",
+            fe / "src" / "zas",
+            ignore=shutil.ignore_patterns("__pycache__"),
+        )
         (fe / "src" / "custom").mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(self.zas_dir / "spec.ui.json", fe / "src" / "custom" / "spec.ui.json")
-        shutil.copyfile(skill / "assets" / "templates" / "frontend" / "index.css", fe / "src" / "index.css")
-        if failed(self.script("frontend:icons", "lucide_icons.py", "--workspace", self.workspace, emit=emit)):
+        shutil.copyfile(
+            self.zas_dir / "spec.ui.json", fe / "src" / "custom" / "spec.ui.json"
+        )
+        shutil.copyfile(
+            skill / "assets" / "templates" / "frontend" / "index.css",
+            fe / "src" / "index.css",
+        )
+        if failed(
+            self.script(
+                "frontend:icons",
+                "lucide_icons.py",
+                "--workspace",
+                self.workspace,
+                emit=emit,
+            )
+        ):
             return  # (failed() raises)
         self.frontend_ready = True
 
@@ -719,11 +897,18 @@ class StudioBuild:
         declared view, table aside, is written as a custom view for this app.
         """
         try:
-            resolved = json.loads((self.zas_dir / "spec.resolved.json").read_text(encoding="utf-8"))
+            resolved = json.loads(
+                (self.zas_dir / "spec.resolved.json").read_text(encoding="utf-8")
+            )
         except (OSError, ValueError):
             return []
         try:
-            ui_pages = json.loads((self.zas_dir / "spec.ui.json").read_text(encoding="utf-8")).get("pages") or {}
+            ui_pages = (
+                json.loads(
+                    (self.zas_dir / "spec.ui.json").read_text(encoding="utf-8")
+                ).get("pages")
+                or {}
+            )
         except (OSError, ValueError):
             ui_pages = {}
         pages = resolved.get("pages") or {}
@@ -734,17 +919,28 @@ class StudioBuild:
             if not isinstance(page, dict) or page.get("type") != "crud":
                 continue
             native = {
-                v.get("type") for v in (ui_pages.get(code) or {}).get("views") or [] if isinstance(v, dict)
+                v.get("type")
+                for v in (ui_pages.get(code) or {}).get("views") or []
+                if isinstance(v, dict)
             }
             for view in page.get("views") or []:
                 kind = view.get("type") if isinstance(view, dict) else None
                 if kind and kind != "table" and kind not in native:
-                    out.append({"page": code, "entity": page.get("entity"), "type": kind, "view": view})
+                    out.append(
+                        {
+                            "page": code,
+                            "entity": page.get("entity"),
+                            "type": kind,
+                            "view": view,
+                        }
+                    )
         return out
 
     def _views_manifest(self) -> dict:
         """{page: [declared views, in order]} for ViewsPage.tsx, with what a view needs resolved."""
-        resolved = json.loads((self.zas_dir / "spec.resolved.json").read_text(encoding="utf-8"))
+        resolved = json.loads(
+            (self.zas_dir / "spec.resolved.json").read_text(encoding="utf-8")
+        )
         entities = resolved.get("entities") or {}
         custom = {(v["page"], v["type"]) for v in self.custom_views()}
         pages = resolved.get("pages") or {}
@@ -756,7 +952,9 @@ class StudioBuild:
             for view in page.get("views") or []:
                 kind = view.get("type")
                 row = dict(view)
-                row["label"] = view.get("label") or VIEW_LABELS.get(kind, (kind or "").title())[0]
+                row["label"] = (
+                    view.get("label") or VIEW_LABELS.get(kind, (kind or "").title())[0]
+                )
                 row["icon"] = VIEW_LABELS.get(kind, ("", "layout-grid"))[1]
                 row["custom"] = (code, kind) in custom
                 if kind == "kanban" and view.get("group_by") == "status":
@@ -787,7 +985,14 @@ class StudioBuild:
             return
         target = Path(self.workspace) / "frontend" / "src" / "custom" / "views"
         target.mkdir(parents=True, exist_ok=True)
-        helper = Path(self.skill_dir) / "assets" / "templates" / "frontend" / "views" / "ViewsPage.tsx"
+        helper = (
+            Path(self.skill_dir)
+            / "assets"
+            / "templates"
+            / "frontend"
+            / "views"
+            / "ViewsPage.tsx"
+        )
         if not helper.is_file():
             raise StudioError(
                 "ViewsHelperMissing",
@@ -826,7 +1031,9 @@ class StudioBuild:
         """Every declared view the runtime does not ship was written, and its page uses it."""
         src = Path(self.workspace) / "frontend" / "src" / "custom"
         try:
-            index = (src / "pages" / "index.ts").read_text(encoding="utf-8", errors="replace")
+            index = (src / "pages" / "index.ts").read_text(
+                encoding="utf-8", errors="replace"
+            )
         except OSError:
             index = ""
         index_code = re.sub(r"//[^\n]*|/\*.*?\*/", "", index, flags=re.S)
@@ -839,7 +1046,12 @@ class StudioBuild:
 
             def problem(pid, title, detail="", _page=page, _kind=kind, _where=where):
                 problems.append(
-                    {"id": f"views.{_page}.{_kind}.{pid}", "title": title, "spec_path": _where, "detail": detail}
+                    {
+                        "id": f"views.{_page}.{_kind}.{pid}",
+                        "title": title,
+                        "spec_path": _where,
+                        "detail": detail,
+                    }
                 )
 
             path = src / "views" / f"{page}_{kind}.tsx"
@@ -851,14 +1063,28 @@ class StudioBuild:
                     "references/views.md says.",
                 )
                 continue
-            code = re.sub(r"//[^\n]*|/\*.*?\*/", "", path.read_text(encoding="utf-8", errors="replace"), flags=re.S)
+            code = re.sub(
+                r"//[^\n]*|/\*.*?\*/",
+                "",
+                path.read_text(encoding="utf-8", errors="replace"),
+                flags=re.S,
+            )
             if not re.search(r"export\s+default\b", code):
                 problem("export", f"{rel} has no default export")
             if not re.search(r"useTableRows|api\.get\(|\bget\(", code):
-                problem("data", f"{rel} never loads the entity's records", "Use api.useTableRows(props.endpoint, …).")
-            if len(code.strip()) < VIEW_MIN_CHARS or re.search(r">[^<{]*(not built|coming soon|TODO|placeholder)", code, re.I):
+                problem(
+                    "data",
+                    f"{rel} never loads the entity's records",
+                    "Use api.useTableRows(props.endpoint, …).",
+                )
+            if len(code.strip()) < VIEW_MIN_CHARS or re.search(
+                r">[^<{]*(not built|coming soon|TODO|placeholder)", code, re.I
+            ):
                 problem("stub", f"{rel} is a placeholder, not the {kind} view")
-            wired = re.search(rf"makeViewsPage\(\s*[\"']{re.escape(page)}[\"']\s*,\s*\{{([^}}]*)\}}", index_code)
+            wired = re.search(
+                rf"makeViewsPage\(\s*[\"']{re.escape(page)}[\"']\s*,\s*\{{([^}}]*)\}}",
+                index_code,
+            )
             if wired is None:
                 problem(
                     "page",
@@ -866,13 +1092,19 @@ class StudioBuild:
                     f'export const Page_{page} = makeViewsPage("{page}", {{ {kind}: <the view> }});',
                 )
             elif not re.search(rf"\b{re.escape(kind)}\b", wired.group(1)):
-                problem("wired", f"makeViewsPage(\"{page}\", …) does not pass the {kind} view")
+                problem(
+                    "wired", f'makeViewsPage("{page}", …) does not pass the {kind} view'
+                )
         if emit:
             emit(
                 "post_step",
                 "studio:test:views "
-                + (f"passed: {len(needed)} declared view(s) built" if not problems
-                   else f"failed: {len(problems)} problem(s) — " + "; ".join(p["title"] for p in problems[:4])),
+                + (
+                    f"passed: {len(needed)} declared view(s) built"
+                    if not problems
+                    else f"failed: {len(problems)} problem(s) — "
+                    + "; ".join(p["title"] for p in problems[:4])
+                ),
                 level="err" if problems else "info",
                 is_error=bool(problems),
             )
@@ -887,7 +1119,9 @@ class StudioBuild:
     def _write_proxy_routes(self, fe: Path) -> None:
         """frontend/.env VITE_PROXY_ROUTES: the package routes plus every module prefix, never /app."""
         try:
-            resolved = json.loads((self.zas_dir / "spec.resolved.json").read_text(encoding="utf-8"))
+            resolved = json.loads(
+                (self.zas_dir / "spec.resolved.json").read_text(encoding="utf-8")
+            )
         except (OSError, ValueError):
             resolved = {}
         routes = list(BASE_PROXY_ROUTES)
@@ -897,7 +1131,11 @@ class StudioBuild:
                 routes.append(url)
         line = "VITE_PROXY_ROUTES=" + ",".join(routes) + ","
         env_path = fe / ".env"
-        lines = env_path.read_text(encoding="utf-8").splitlines() if env_path.is_file() else []
+        lines = (
+            env_path.read_text(encoding="utf-8").splitlines()
+            if env_path.is_file()
+            else []
+        )
         lines = [x for x in lines if not x.startswith("VITE_PROXY_ROUTES=")] + [line]
         env_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
@@ -914,28 +1152,57 @@ class StudioBuild:
 
         def platform(cmd):
             return self.script(
-                f"platform:{cmd}", "zango_platform.py", cmd, "--workspace", self.workspace,
-                "--platform", self.platform_url, extra_env=creds, emit=emit,
+                f"platform:{cmd}",
+                "zango_platform.py",
+                cmd,
+                "--workspace",
+                self.workspace,
+                "--platform",
+                self.platform_url,
+                extra_env=creds,
+                emit=emit,
             )
 
         steps = [
             ("platform:roles", lambda: platform("roles")),
-            ("ws_makemigration", lambda: self.manage("ws_makemigration", ["ws_makemigration", app, "--noinput"], emit)),
+            (
+                "ws_makemigration",
+                lambda: self.manage(
+                    "ws_makemigration", ["ws_makemigration", app, "--noinput"], emit
+                ),
+            ),
             ("prune_first_migration", self._prune),
-            ("ws_migrate", lambda: self.manage("ws_migrate", ["ws_migrate", app, "--noinput"], emit)),
+            (
+                "ws_migrate",
+                lambda: self.manage(
+                    "ws_migrate", ["ws_migrate", app, "--noinput"], emit
+                ),
+            ),
             ("platform:sync", lambda: platform("sync")),
             ("platform:schedule", lambda: platform("schedule")),
             ("platform:users", lambda: platform("users")),
             ("platform:check", lambda: platform("check")),
-            ("sync_static", lambda: self.manage("sync_static", ["sync_static", app], emit)),
-            ("collectstatic", lambda: self.manage("collectstatic", ["collectstatic", "--noinput"], emit)),
+            (
+                "sync_static",
+                lambda: self.manage("sync_static", ["sync_static", app], emit),
+            ),
+            (
+                "collectstatic",
+                lambda: self.manage(
+                    "collectstatic", ["collectstatic", "--noinput"], emit
+                ),
+            ),
             ("platform:appbuilder", self._appbuilder(platform, emit)),
         ]
         for name, run in steps:
             if only is not None and name not in only:
                 continue
             if name in hold:
-                self.skip(name, "held until you complete the action this build is waiting for", emit)
+                self.skip(
+                    name,
+                    "held until you complete the action this build is waiting for",
+                    emit,
+                )
                 continue
             if failed_at:
                 self.skip(name, f"{failed_at} failed earlier in this bring-up", emit)
@@ -953,11 +1220,15 @@ class StudioBuild:
         if not self.first_build or self._pruned or not initial.is_file():
             return self.skip(
                 "prune_first_migration",
-                "not the app's first build" if not self.first_build else "nothing to prune",
+                "not the app's first build"
+                if not self.first_build
+                else "nothing to prune",
                 emit,
             )
         self._pruned = True
-        return self.script("prune_first_migration", "prune_first_migration.py", str(initial), emit=emit)
+        return self.script(
+            "prune_first_migration", "prune_first_migration.py", str(initial), emit=emit
+        )
 
     def _appbuilder(self, platform, emit):
         def run():
@@ -975,7 +1246,9 @@ class StudioBuild:
 
         return run
 
-    def verify(self, emit=None, only: dict | None = None, bring_up_ok: bool = True, hold=()) -> dict:
+    def verify(
+        self, emit=None, only: dict | None = None, bring_up_ok: bool = True, hold=()
+    ) -> dict:
         """Run the hole audit and the test layers; ``only`` = {layer: [groups]} re-runs just those.
 
         Layers in ``hold`` are left out altogether: they wait for the user.
@@ -999,14 +1272,22 @@ class StudioBuild:
                 reason = unreachable
             elif needs_app and not users_ok:
                 reason = "no test users (.zas/test_users.json)"
-            elif name == "ui" and not self.frontend_ready and not (Path(self.workspace) / "frontend").is_dir():
+            elif (
+                name == "ui"
+                and not self.frontend_ready
+                and not (Path(self.workspace) / "frontend").is_dir()
+            ):
                 reason = "no frontend was built"
             elif name == "app_shell" and not self.frontend_ready:
-                reason = "the frontend phase was skipped — " + (self.frontend_reason or "no frontend")
+                reason = "the frontend phase was skipped — " + (
+                    self.frontend_reason or "no frontend"
+                )
             elif name == "views" and not self.custom_views():
                 continue  # nothing declared beyond what the runtime ships: not a check at all
             elif name == "views" and not self.frontend_ready:
-                reason = "the frontend phase was skipped — " + (self.frontend_reason or "no frontend")
+                reason = "the frontend phase was skipped — " + (
+                    self.frontend_reason or "no frontend"
+                )
             if reason:
                 self.skip(f"test:{name}", reason, emit)
                 layers[name] = LayerResult(name=name, status="skip", reason=reason)
@@ -1020,16 +1301,30 @@ class StudioBuild:
         if runner == "views":
             return self.check_views(emit)
         if runner == "audit":
-            result = self.script("test:audit_holes", "spec_check.py", self.check_spec or self.spec_path,
-                                 "--workspace", self.workspace, "--audit-holes", emit=emit)
+            result = self.script(
+                "test:audit_holes",
+                "spec_check.py",
+                self.check_spec or self.spec_path,
+                "--workspace",
+                self.workspace,
+                "--audit-holes",
+                emit=emit,
+            )
             if result.returncode == 0:
                 return LayerResult(name=name, counts={"pass": 1, "fail": 0, "skip": 0})
             return LayerResult(
                 name=name,
                 status="fail",
                 counts={"pass": 0, "fail": 1, "skip": 0},
-                failures=[{"id": "audit_holes", "title": "every hole implemented with its marker and status",
-                           "detail": (result.stdout_tail or result.stderr_tail).strip()[-1500:]}],
+                failures=[
+                    {
+                        "id": "audit_holes",
+                        "title": "every hole implemented with its marker and status",
+                        "detail": (result.stdout_tail or result.stderr_tail).strip()[
+                            -1500:
+                        ],
+                    }
+                ],
             )
         args = ["--workspace", self.workspace]
         if name == "design_lint":
@@ -1038,13 +1333,21 @@ class StudioBuild:
             args += ["--only", ",".join(groups or DESIGN_BROWSER_GROUPS)]
         elif groups:
             args += ["--only", ",".join(groups)]
-        result = self.module(f"test:{name}", runner, *args, timeout=TEST_TIMEOUT, emit=emit)
+        result = self.module(
+            f"test:{name}", runner, *args, timeout=TEST_TIMEOUT, emit=emit
+        )
         layer_key = "design" if name in ("design", "design_lint") else name
-        records = [r for r in _load_results(self.workspace) if r.get("layer") == layer_key]
+        records = [
+            r for r in _load_results(self.workspace) if r.get("layer") == layer_key
+        ]
         if name == "design_lint":
-            records = [r for r in records if str(r.get("id", "")).startswith("design.lint")]
+            records = [
+                r for r in records if str(r.get("id", "")).startswith("design.lint")
+            ]
         elif name == "design":
-            records = [r for r in records if not str(r.get("id", "")).startswith("design.lint")]
+            records = [
+                r for r in records if not str(r.get("id", "")).startswith("design.lint")
+            ]
         counts = {"pass": 0, "fail": 0, "skip": 0}
         for r in records:
             counts[r.get("status", "fail")] = counts.get(r.get("status", "fail"), 0) + 1
@@ -1057,15 +1360,24 @@ class StudioBuild:
             # browser.require() exits 2 when Playwright is missing.
             return LayerResult(name=name, status="skip", reason=PLAYWRIGHT_REASON)
         if result.returncode not in (0, 1) and not failures:
-            failures = [{"id": f"{name}.crashed", "title": f"the {name} layer did not run",
-                         "detail": (result.stderr_tail or result.stdout_tail).strip()[-1500:]}]
+            failures = [
+                {
+                    "id": f"{name}.crashed",
+                    "title": f"the {name} layer did not run",
+                    "detail": (result.stderr_tail or result.stdout_tail).strip()[
+                        -1500:
+                    ],
+                }
+            ]
         status = "fail" if failures else "pass"
         return LayerResult(
             name=name,
             status=status,
             counts=counts,
             failures=failures,
-            groups=sorted({g for g in (_group_of(name, f["id"]) for f in failures) if g}),
+            groups=sorted(
+                {g for g in (_group_of(name, f["id"]) for f in failures) if g}
+            ),
         )
 
     def check_app_shell(self, emit=None) -> LayerResult:
@@ -1078,7 +1390,9 @@ class StudioBuild:
         problems = []
 
         def problem(pid, title, detail=""):
-            problems.append({"id": f"app_shell.{pid}", "title": title, "detail": detail})
+            problems.append(
+                {"id": f"app_shell.{pid}", "title": title, "detail": detail}
+            )
 
         try:
             settings = json.loads((ws / "settings.json").read_text(encoding="utf-8"))
@@ -1086,19 +1400,28 @@ class StudioBuild:
             settings = {}
             problem("settings", "settings.json could not be read", str(exc))
         routes = settings.get("app_routes") or []
-        if not any(r.get("module") == "app" and r.get("re_path") == "^" for r in routes):
+        if not any(
+            r.get("module") == "app" and r.get("re_path") == "^" for r in routes
+        ):
             problem(
                 "route",
                 'settings.json app_routes has no {"module": "app", "re_path": "^", "url": "urls"}',
                 f"app_routes is {json.dumps(routes)[:300]}",
             )
-        module = next((m for m in settings.get("modules") or [] if m.get("name") == "app"), None)
-        app_dir = ws / (module.get("path", "backend.app") if module else "backend.app").replace(".", "/")
+        module = next(
+            (m for m in settings.get("modules") or [] if m.get("name") == "app"), None
+        )
+        app_dir = ws / (
+            module.get("path", "backend.app") if module else "backend.app"
+        ).replace(".", "/")
         if module is None:
             problem("module", 'settings.json modules has no "app" module', "")
         for rel in ("urls.py", "views.py", "templates/app.html"):
             if not (app_dir / rel).is_file():
-                problem(f"file:{rel}", f"the app module is missing {app_dir.relative_to(ws)}/{rel}")
+                problem(
+                    f"file:{rel}",
+                    f"the app module is missing {app_dir.relative_to(ws)}/{rel}",
+                )
 
         html_path = app_dir / "templates" / "app.html"
         build = None
@@ -1106,7 +1429,10 @@ class StudioBuild:
             html = html_path.read_text(encoding="utf-8", errors="replace")
             match = re.search(r"zango-app\.[\w.-]+?\.min\.js", html)
             if "{{BUILD_FILE}}" in html or match is None:
-                problem("build_ref", "app.html does not name the frontend build (zango-app.<ts>.min.js)")
+                problem(
+                    "build_ref",
+                    "app.html does not name the frontend build (zango-app.<ts>.min.js)",
+                )
             else:
                 build = ws / "static" / "js" / match.group(0)
                 if not build.is_file():
@@ -1118,10 +1444,14 @@ class StudioBuild:
                     )
         if build is not None and build.is_file():
             src = ws / "frontend" / "src"
-            newest = max(
-                (p.stat().st_mtime for p in src.rglob("*") if p.is_file()),
-                default=0,
-            ) if src.is_dir() else 0
+            newest = (
+                max(
+                    (p.stat().st_mtime for p in src.rglob("*") if p.is_file()),
+                    default=0,
+                )
+                if src.is_dir()
+                else 0
+            )
             if newest > build.stat().st_mtime + 1:
                 problem(
                     "stale",
@@ -1133,8 +1463,12 @@ class StudioBuild:
             emit(
                 "post_step",
                 "studio:test:app_shell "
-                + ("passed: /app is served by the app module" if not problems
-                   else f"failed: {len(problems)} problem(s) — " + "; ".join(p["title"] for p in problems[:4])),
+                + (
+                    "passed: /app is served by the app module"
+                    if not problems
+                    else f"failed: {len(problems)} problem(s) — "
+                    + "; ".join(p["title"] for p in problems[:4])
+                ),
                 level="err" if problems else "info",
                 is_error=bool(problems),
             )
@@ -1146,9 +1480,15 @@ class StudioBuild:
         )
 
     def report(self, emit=None) -> dict:
-        result = self.module("report", "zas_test.report", "--workspace", self.workspace, emit=emit)
+        result = self.module(
+            "report", "zas_test.report", "--workspace", self.workspace, emit=emit
+        )
         md, html = self.zas_dir / "build_report.md", self.zas_dir / "build_report.html"
-        summary = md.read_text(encoding="utf-8")[:REPORT_SUMMARY_CHARS] if md.is_file() else ""
+        summary = (
+            md.read_text(encoding="utf-8")[:REPORT_SUMMARY_CHARS]
+            if md.is_file()
+            else ""
+        )
         verdict = re.search(r"\*\*Verdict:\s*([^*]+)\*\*", summary)
         return {
             "verdict": verdict.group(1).strip() if verdict else "",
@@ -1185,12 +1525,20 @@ class StudioBuild:
             for f in layer.failures[:DIGEST_MAX_ITEMS]:
                 who = f" [{f['role']}]" if f.get("role") else ""
                 where = f" ({f['spec_path']})" if f.get("spec_path") else ""
-                lines.append(f"- `{f.get('id')}`{who} {f.get('title', '')}{where}: {str(f.get('detail', ''))[:400]}")
+                lines.append(
+                    f"- `{f.get('id')}`{who} {f.get('title', '')}{where}: {str(f.get('detail', ''))[:400]}"
+                )
             lines.append("")
         return "\n".join(lines).strip() + "\n"
 
     def finish(
-        self, creds: dict, resume_agent=None, rounds: int = 2, emit=None, checkpoint=None, skip=False
+        self,
+        creds: dict,
+        resume_agent=None,
+        rounds: int = 2,
+        emit=None,
+        checkpoint=None,
+        skip=False,
     ) -> StudioOutcome:
         """Bring-up, checks, fix rounds, report — pausing for the user when it has to.
 
@@ -1205,14 +1553,26 @@ class StudioBuild:
         the user, never as passed.
         """
         cp = checkpoint or {}
-        layers = {n: LayerResult.from_checkpoint(d) for n, d in (cp.get("layers") or {}).items()}
+        layers = {
+            n: LayerResult.from_checkpoint(d)
+            for n, d in (cp.get("layers") or {}).items()
+        }
         done = int(cp.get("rounds") or 0)
         actions = [] if skip else self.environment_actions()
-        held_steps = {b.split(":", 1)[1] for a in actions for b in a["blocks"] if b.startswith("platform:")}
-        held_layers = {b for a in actions for b in a["blocks"] if not b.startswith("platform:")}
+        held_steps = {
+            b.split(":", 1)[1]
+            for a in actions
+            for b in a["blocks"]
+            if b.startswith("platform:")
+        }
+        held_layers = {
+            b for a in actions for b in a["blocks"] if not b.startswith("platform:")
+        }
 
         if checkpoint is None:
-            bring_up_ok = self.bring_up(creds, emit, hold={f"platform:{x}" for x in held_steps})
+            bring_up_ok = self.bring_up(
+                creds, emit, hold={f"platform:{x}" for x in held_steps}
+            )
             layers = self.verify(emit, bring_up_ok=bring_up_ok, hold=held_layers)
         else:
             bring_up_ok = True
@@ -1239,24 +1599,38 @@ class StudioBuild:
                     layers.update(self.verify(emit, only=todo, bring_up_ok=bring_up_ok))
 
         hold_steps = {f"platform:{x}" for x in held_steps}
-        while done < rounds and resume_agent is not None and (
-            not bring_up_ok or any(x.status == "fail" for x in layers.values())
+        while (
+            done < rounds
+            and resume_agent is not None
+            and (not bring_up_ok or any(x.status == "fail" for x in layers.values()))
         ):
             done += 1
             if emit:
-                emit("sys", f"Fix round {done} of {rounds}: sending the failures back to the agent.", level="sys")
+                emit(
+                    "sys",
+                    f"Fix round {done} of {rounds}: sending the failures back to the agent.",
+                    level="sys",
+                )
             if not resume_agent(self.digest(bring_up_ok, layers)):
                 if emit:
-                    emit("sys", "The agent could not continue; no more fix rounds.", level="warn")
+                    emit(
+                        "sys",
+                        "The agent could not continue; no more fix rounds.",
+                        level="warn",
+                    )
                 break
             was_ok = bring_up_ok
             bring_up_ok = self.bring_up(creds, emit, hold=hold_steps)
             if not was_ok:
                 ran = {n: [] for n in layers} if checkpoint is not None else None
-                fresh = self.verify(emit, only=ran, bring_up_ok=bring_up_ok, hold=held_layers)
+                fresh = self.verify(
+                    emit, only=ran, bring_up_ok=bring_up_ok, hold=held_layers
+                )
             else:
                 only = {n: x.groups for n, x in layers.items() if x.status == "fail"}
-                fresh = self.verify(emit, only=only, bring_up_ok=bring_up_ok, hold=held_layers)
+                fresh = self.verify(
+                    emit, only=only, bring_up_ok=bring_up_ok, hold=held_layers
+                )
             layers.update(fresh)
 
         if actions and bring_up_ok:
@@ -1267,22 +1641,87 @@ class StudioBuild:
                 layers=layers,
                 rounds=done,
                 report={},
-                pending_actions=[{k: v for k, v in a.items() if k != "reason"} for a in actions],
+                pending_actions=[
+                    {k: v for k, v in a.items() if k != "reason"} for a in actions
+                ],
                 checkpoint={
                     "build": self.build_state(),
                     "layers": {n: x.to_checkpoint() for n, x in layers.items()},
                     "rounds": done,
                     "held_steps": sorted(held_steps),
                     "held_layers": [n for n, *_ in LAYERS if n in held_layers],
-                    "actions": [{k: v for k, v in a.items() if k != "reason"} for a in actions],
+                    "actions": [
+                        {k: v for k, v in a.items() if k != "reason"} for a in actions
+                    ],
                 },
             )
         if actions:
             # The bring-up itself failed: waiting for the user would not help.
-            layers.update(self.verify(emit, only={n: [] for n in held_layers}, bring_up_ok=False))
+            layers.update(
+                self.verify(emit, only={n: [] for n in held_layers}, bring_up_ok=False)
+            )
+        elif resume_agent is not None and bring_up_ok:
+            # One look: the agent sees each custom screen it built next to the one the user approved.
+            look = self.look_digest()
+            if look:
+                if emit:
+                    emit(
+                        "sys",
+                        "One look: the agent compares each custom screen with the approved preview.",
+                        level="sys",
+                    )
+                if resume_agent(look):
+                    bring_up_ok = self.bring_up(creds, emit, hold=hold_steps)
+                    design = layers.get("design")
+                    groups = sorted(set(design.groups if design else []) | {"parity"})
+                    layers.update(
+                        self.verify(
+                            emit,
+                            only={"design": groups},
+                            bring_up_ok=bring_up_ok,
+                            hold=held_layers,
+                        )
+                    )
         report = self.report(emit)
-        ok = bring_up_ok and not any(x.status == "fail" for x in layers.values())
-        return StudioOutcome(ok=ok, bring_up_ok=bring_up_ok, layers=layers, rounds=done, report=report)
+        ok = bring_up_ok and not blocking(layers)
+        return StudioOutcome(
+            ok=ok, bring_up_ok=bring_up_ok, layers=layers, rounds=done, report=report
+        )
+
+    def look_digest(self) -> str:
+        """The one-look message: each custom screen as built next to the approved one, or "".
+
+        zas_test.design parity writes the pairs (.zas/parity_looks.json). Only screens with an
+        approved screenshot are listed; the agent opens them with Read.
+        """
+        try:
+            looks = json.loads(
+                (self.zas_dir / "parity_looks.json").read_text(encoding="utf-8")
+            )
+        except (OSError, ValueError):
+            return ""
+        pairs = [x for x in looks if x.get("approved") and x.get("built")]
+        if not pairs:
+            return ""
+        lines = [
+            "## One look: your custom screens next to what the user approved",
+            "",
+            "Open each pair with Read: the approved screenshot (from the preview), then the screen "
+            "you built. The numbers differ (the preview used demo data); compare the layout: the "
+            "blocks and their order, titles and labels, emphasis, density and empty states. Fix a "
+            "slot that does not match the approved one; when they all match, say so and stop.",
+            "",
+        ]
+        for x in pairs:
+            note = (
+                " (hand-written in the preview: match it by eye)"
+                if x.get("hand_written")
+                else ""
+            )
+            lines.append(
+                f"- `{x['screen']}` as {x['role']}{note}: approved `{x['approved']}`, built `{x['built']}`"
+            )
+        return "\n".join(lines) + "\n"
 
     def still_failing(self, pending: list) -> list:
         """The pending actions that are still not done, each with ``still_failing_reason``."""
@@ -1291,13 +1730,17 @@ class StudioBuild:
         for action in pending or []:
             current = now.get(action.get("kind"))
             if current is not None:
-                out.append({**action, "still_failing_reason": current.get("reason", "")})
+                out.append(
+                    {**action, "still_failing_reason": current.get("reason", "")}
+                )
         return out
 
     def test_users(self) -> list:
         """The run's test users from .zas/test_users.json, in the run's own format."""
         try:
-            data = json.loads((self.zas_dir / "test_users.json").read_text(encoding="utf-8"))
+            data = json.loads(
+                (self.zas_dir / "test_users.json").read_text(encoding="utf-8")
+            )
         except (OSError, ValueError):
             return []
         out = []
@@ -1305,7 +1748,11 @@ class StudioBuild:
             if not user.get("email"):
                 continue
             roles = user.get("roles") or []
-            entry = {"email": user["email"], "role": roles[0] if roles else "", "status": "created"}
+            entry = {
+                "email": user["email"],
+                "role": roles[0] if roles else "",
+                "status": "created",
+            }
             if user.get("password"):
                 entry["password"] = user["password"]
             out.append(entry)
@@ -1354,7 +1801,9 @@ def _set_postinstall(package_json: Path) -> None:
 
 def _load_results(workspace: str) -> list:
     try:
-        data = json.loads((Path(workspace) / ".zas" / "test_results.json").read_text(encoding="utf-8"))
+        data = json.loads(
+            (Path(workspace) / ".zas" / "test_results.json").read_text(encoding="utf-8")
+        )
     except (OSError, ValueError):
         return []
     return data.get("results") or []

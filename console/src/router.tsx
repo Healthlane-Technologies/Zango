@@ -135,6 +135,11 @@ export const router = createBrowserRouter(
 				{ path: '*', element: <Navigate to="apps" replace /> },
 			],
 		},
+		// The app's preview on its own tab, without the console around it.
+		{
+			path: 'apps/:appId/agent/:reqId/preview',
+			...page(() => import('./pages/app/agent/PreviewTabPage'), 'PreviewTabPage'),
+		},
 	],
 	{ basename: '/console' },
 );

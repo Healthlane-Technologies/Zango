@@ -171,8 +171,7 @@ def _apply_state(run, state: dict) -> None:
     usage = state.get("model_usage")
     if not usage and state.get("models_seen"):
         usage = {
-            name: {"messages": count}
-            for name, count in state["models_seen"].items()
+            name: {"messages": count} for name, count in state["models_seen"].items()
         }
     if usage:
         run.model_usage = usage
@@ -259,23 +258,40 @@ def _build_ask(run, template_build) -> str:
     version = AppTemplateVersion.objects.filter(
         object_uuid=template_build.template.version_uuid
     ).first()
-    engine_paths = list(version.workspace_engine_paths or []) if version and version.has_workspace else []
-    return template_build_request(template_build.template, template_build.spec_path, engine_paths)
+    engine_paths = (
+        list(version.workspace_engine_paths or [])
+        if version and version.has_workspace
+        else []
+    )
+    return template_build_request(
+        template_build.template, template_build.spec_path, engine_paths
+    )
 
 
 def _execute(run, tenant, creds, ws_root, build_app_context) -> dict:
-    from .mapper import record_message
-    from .models import RUN_PHASE_ORDER, EventKind, EventLevel, RunPhase, RunStatus  # noqa: F401
+    from django.conf import settings as dj
+
+    from .models import (  # noqa: F401
+        RUN_PHASE_ORDER,
+        EventKind,
+        EventLevel,
+        RunPhase,
+        RunStatus,
+    )
     from .options import build_agent_options
-    from .prompt import QUALIFIED_SKILL, compose_prompt, compose_resume_prompt
     from .postrun import requires_restart, run_step
+    from .prompt import compose_prompt, compose_resume_prompt
     from .recorder import EventRecorder
     from .settings_writer import write_run_settings
     from .snapshot import create_snapshot, diff_manifest, workspace_manifest
     from .stream import AgentStream
-    from .studio_build import StudioBuild, StudioError, fix_rounds, is_studio, service_account
-
-    from django.conf import settings as dj
+    from .studio_build import (
+        StudioBuild,
+        StudioError,
+        fix_rounds,
+        is_studio,
+        service_account,
+    )
 
     recorder = EventRecorder(run)
     template_build = None
@@ -317,7 +333,15 @@ def _execute(run, tenant, creds, ws_root, build_app_context) -> dict:
         from .template_build import prepare as prepare_template_build
 
         template_build = prepare_template_build(run, ctx.workspace_path, run_dir)
-        skill = template_build.skill if template_build and template_build.skill else QUALIFIED_SKILL
+        if template_build is None or not template_build.skill:
+            # Every app is written in a template's YAML spec (from scratch: the
+            # generic Zango app spec) and built with that template's skill.
+            raise StudioError(
+                "NoAppSpec",
+                "This requirement has no app spec to build from. Start a new "
+                "requirement: it is written as an app spec and built from it.",
+            )
+        skill = template_build.skill
         run.workspace_path = ctx.workspace_path[:1024]
         run.skill_name = skill[:128]
         update = ["workspace_path", "skill_name", "modified_at"]
@@ -426,7 +450,7 @@ def _execute(run, tenant, creds, ws_root, build_app_context) -> dict:
             recorder.set_phase(RunPhase.PREPARING)
             studio = StudioBuild.for_run(template_build, ctx, run_dir)
             try:
-                studio.prepare(emit=_studio_emit)
+                studio.prepare(emit=_studio_emit, template=template_build.template)
             finally:
                 run.post_steps = [r.to_dict() for r in studio.steps]
                 run.save(update_fields=["post_steps", "modified_at"])
@@ -578,8 +602,15 @@ def _execute(run, tenant, creds, ws_root, build_app_context) -> dict:
                     emit=_studio_emit,
                     drive=_drive,
                     new_stream=lambda digest: _resume_stream(
-                        digest, run, ctx, creds, settings_path, template_build, state,
-                        agent_cfg, recorder,
+                        digest,
+                        run,
+                        ctx,
+                        creds,
+                        settings_path,
+                        template_build,
+                        state,
+                        agent_cfg,
+                        recorder,
                     ),
                     baseline_manifest=baseline_manifest,
                     service_account=service_account,
@@ -644,7 +675,9 @@ def _conclude(run, status, extra, recorder) -> dict:
     from .models import RunStatus
 
     if status == RunStatus.WAITING:
-        run.pause(extra.get("pending_actions") or [], extra.get("studio_checkpoint") or {})
+        run.pause(
+            extra.get("pending_actions") or [], extra.get("studio_checkpoint") or {}
+        )
     else:
         run.finalize(status, **extra)
     return {"status": run.status, "events": recorder.seq}
@@ -822,7 +855,9 @@ def _merge_state(state: dict, more: dict) -> None:
         state["session_id"] = more["session_id"]
 
 
-def _resume_stream(digest, run, ctx, creds, settings_path, template_build, state, agent_cfg, recorder):
+def _resume_stream(
+    digest, run, ctx, creds, settings_path, template_build, state, agent_cfg, recorder
+):
     """An agent stream resuming the build's session with a fix-round digest, or None.
 
     None when there is no session to resume or the run's budget is spent: the
@@ -834,7 +869,11 @@ def _resume_stream(digest, run, ctx, creds, settings_path, template_build, state
 
     session_id = state.get("session_id") or ""
     if not session_id:
-        recorder.emit(EventKind.SYS, "No agent session to resume for a fix round.", level=EventLevel.WARN)
+        recorder.emit(
+            EventKind.SYS,
+            "No agent session to resume for a fix round.",
+            level=EventLevel.WARN,
+        )
         return None
     budget = float(run.max_budget_usd or getattr(agent_cfg, "max_budget_usd", 0) or 0)
     spent = float(state.get("total_cost_usd") or 0)
@@ -913,7 +952,11 @@ def _finish_studio(
     try:
         with service_account(tenant) as platform_creds:
             outcome = studio.finish(
-                platform_creds, resume_agent=resume_agent, rounds=rounds, emit=emit, **more
+                platform_creds,
+                resume_agent=resume_agent,
+                rounds=rounds,
+                emit=emit,
+                **more,
             )
     finally:
         run.post_steps = [*prior_steps, *(r.to_dict() for r in studio.steps)]
@@ -973,12 +1016,14 @@ def _finish_studio(
         return f"{c.get('pass', 0)} passed, {c.get('fail', 0)} failed, {c.get('skip', 0)} skipped"
 
     lines = [
-        f"{name}: " + (f"skipped — {layer.reason}" if layer.status == "skip" else counts(layer))
+        f"{name}: "
+        + (f"skipped — {layer.reason}" if layer.status == "skip" else counts(layer))
         for name, layer in outcome.layers.items()
     ]
     recorder.emit(
         EventKind.SYS,
-        "App Studio checks — " + "; ".join(lines)
+        "App Studio checks — "
+        + "; ".join(lines)
         + (f". Fix rounds: {outcome.rounds}." if outcome.rounds else "."),
         level=EventLevel.SYS if outcome.ok else EventLevel.WARN,
         data=run.studio_report,
@@ -987,13 +1032,18 @@ def _finish_studio(
         recorder.emit(
             EventKind.SYS,
             f"Build report: {outcome.report['html_path']}"
-            + (f" (verdict: {outcome.report['verdict']})" if outcome.report.get("verdict") else ""),
+            + (
+                f" (verdict: {outcome.report['verdict']})"
+                if outcome.report.get("verdict")
+                else ""
+            ),
             level=EventLevel.SYS,
         )
     if not_verified:
         recorder.emit(
             EventKind.SYS,
-            "Not verified: " + ", ".join(not_verified)
+            "Not verified: "
+            + ", ".join(not_verified)
             + ". These checks were skipped, not passed — see the reasons above.",
             level=EventLevel.WARN,
         )
@@ -1018,7 +1068,10 @@ def _finish_studio(
             + ". The files are already written; restore the pre-run snapshot with "
             "`manage.py agent_mode_restore` if you need to roll back."
         )
-        return RunStatus.PARTIAL, {"error_type": "StudioBringUpFailed", "error_message": message[:8000]}
+        return RunStatus.PARTIAL, {
+            "error_type": "StudioBringUpFailed",
+            "error_message": message[:8000],
+        }
     failing = outcome.failing
     message = (
         "The app was built and brought up, but these checks still fail"
@@ -1029,7 +1082,10 @@ def _finish_studio(
         )
         + ". See the build report for details."
     )
-    return RunStatus.PARTIAL, {"error_type": "StudioChecksFailed", "error_message": message[:8000]}
+    return RunStatus.PARTIAL, {
+        "error_type": "StudioChecksFailed",
+        "error_message": message[:8000],
+    }
 
 
 def _save_baseline(run_dir: str, manifest) -> str:
@@ -1076,14 +1132,21 @@ def _state_from_run(run) -> dict:
     }
     if run.total_cost_usd is not None:
         state["total_cost_usd"] = float(run.total_cost_usd)
-    for key in ("input_tokens", "output_tokens", "cache_read_tokens", "cache_creation_tokens"):
+    for key in (
+        "input_tokens",
+        "output_tokens",
+        "cache_read_tokens",
+        "cache_creation_tokens",
+    ):
         if getattr(run, key) is not None:
             state[key] = getattr(run, key)
     return state
 
 
 @shared_task(bind=True, name="zango.agent_mode.agent_run_continue")
-def agent_run_continue(self, run_uuid: str, tenant_name: str, skip: bool = False) -> dict:
+def agent_run_continue(
+    self, run_uuid: str, tenant_name: str, skip: bool = False
+) -> dict:
     """Go on with an App Studio build that paused for the user.
 
     Runs only what the pause held back — the AppBuilder routes, the checks
@@ -1110,7 +1173,9 @@ def agent_run_continue(self, run_uuid: str, tenant_name: str, skip: bool = False
 
     run.celery_task_id = (self.request.id or "")[:64]
     run.save(update_fields=["celery_task_id", "modified_at"])
-    return _continue(run, tenant, creds, workspaces_root(), build_app_context, skip=skip)
+    return _continue(
+        run, tenant, creds, workspaces_root(), build_app_context, skip=skip
+    )
 
 
 def _continue(run, tenant, creds, ws_root, build_app_context, *, skip=False) -> dict:
@@ -1125,7 +1190,10 @@ def _continue(run, tenant, creds, ws_root, build_app_context, *, skip=False) -> 
 
     checkpoint = dict(run.studio_checkpoint or {})
     last_seq = (
-        AgentRunEvent.objects.filter(run_id=run.id).order_by("-seq").values_list("seq", flat=True).first()
+        AgentRunEvent.objects.filter(run_id=run.id)
+        .order_by("-seq")
+        .values_list("seq", flat=True)
+        .first()
     ) or 0
     recorder = EventRecorder(run, start_seq=last_seq)
     recorder.set_phase(RunPhase.APPLYING)
@@ -1133,7 +1201,11 @@ def _continue(run, tenant, creds, ws_root, build_app_context, *, skip=False) -> 
 
     def emit(kind, message, *, level="info", is_error=False, data=None):
         recorder.emit(
-            kind, message, level=levels.get(level, EventLevel.INFO), is_error=is_error, data=data
+            kind,
+            message,
+            level=levels.get(level, EventLevel.INFO),
+            is_error=is_error,
+            data=data,
         )
         recorder.flush_if_stale(0.5)
 
@@ -1146,15 +1218,25 @@ def _continue(run, tenant, creds, ws_root, build_app_context, *, skip=False) -> 
         recorder.emit(
             EventKind.SYS,
             "Continuing the build"
-            + (" without the checks it was waiting to run." if skip else " from where it paused."),
+            + (
+                " without the checks it was waiting to run."
+                if skip
+                else " from where it paused."
+            ),
             level=EventLevel.SYS,
         )
 
         # Fix rounds resume the agent's session; that needs the same options a build has.
         requirement = getattr(run, "requirement", None)
-        template = requirement.template if requirement is not None and requirement.template_slug else None
+        template = (
+            requirement.template
+            if requirement is not None and requirement.template_slug
+            else None
+        )
         template_build = (
-            TemplateBuild(template=template, spec_path=run.spec_path or studio.spec_path)
+            TemplateBuild(
+                template=template, spec_path=run.spec_path or studio.spec_path
+            )
             if template is not None
             else None
         )
@@ -1176,7 +1258,15 @@ def _continue(run, tenant, creds, ws_root, build_app_context, *, skip=False) -> 
                 )
                 return None
             return _resume_stream(
-                digest, run, ctx, creds, settings_path, template_build, state, agent_cfg, recorder
+                digest,
+                run,
+                ctx,
+                creds,
+                settings_path,
+                template_build,
+                state,
+                agent_cfg,
+                recorder,
             )
 
         status, extra = _finish_studio(
@@ -1201,7 +1291,10 @@ def _continue(run, tenant, creds, ws_root, build_app_context, *, skip=False) -> 
         status = RunStatus.FAILED
         extra = {"error_type": exc.error_type[:128], "error_message": str(exc)[:8000]}
         recorder.emit(
-            EventKind.ERROR, f"{exc.error_type}: {str(exc)[:2000]}", level=EventLevel.ERR, is_error=True
+            EventKind.ERROR,
+            f"{exc.error_type}: {str(exc)[:2000]}",
+            level=EventLevel.ERR,
+            is_error=True,
         )
     except SoftTimeLimitExceeded:
         status = RunStatus.TIMEOUT
@@ -1209,7 +1302,9 @@ def _continue(run, tenant, creds, ws_root, build_app_context, *, skip=False) -> 
             "error_type": "SoftTimeLimitExceeded",
             "error_message": "The run exceeded its time limit.",
         }
-        recorder.emit(EventKind.ERROR, "Run timed out.", level=EventLevel.ERR, is_error=True)
+        recorder.emit(
+            EventKind.ERROR, "Run timed out.", level=EventLevel.ERR, is_error=True
+        )
     except Exception as exc:  # noqa: BLE001
         status = RunStatus.FAILED
         extra = {
@@ -1219,7 +1314,10 @@ def _continue(run, tenant, creds, ws_root, build_app_context, *, skip=False) -> 
         }
         logger.exception("agent_mode: continuing run %s failed", run.object_uuid)
         recorder.emit(
-            EventKind.ERROR, f"{type(exc).__name__}: {exc}", level=EventLevel.ERR, is_error=True
+            EventKind.ERROR,
+            f"{type(exc).__name__}: {exc}",
+            level=EventLevel.ERR,
+            is_error=True,
         )
     finally:
         if status != RunStatus.WAITING:
@@ -1399,12 +1497,17 @@ def agent_requirement_turn(self, requirement_uuid: str, tenant_name: str) -> dic
     bench = None
     try:
         ctx = build_app_context(tenant)
-        # The user's documents, where the analyst can read them.
         from .documents import write_docs_dir
+        from .preview_focus import focus_note
+
+        # The user's documents, where the analyst can read them.
 
         docs_path = write_docs_dir(tenant.name, req)
         prompt = compose_analyst_prompt(
-            req, ctx, last_user.content, docs_dir=str(docs_path) if docs_path else ""
+            req,
+            ctx,
+            last_user.content + focus_note(last_user.preview_focus, _plain_spec(req)),
+            docs_dir=str(docs_path) if docs_path else "",
         )
         stream = AgentStream(options=None, prompt=prompt)
 
@@ -1414,6 +1517,7 @@ def agent_requirement_turn(self, requirement_uuid: str, tenant_name: str) -> dic
         spec_server = None
         template = req.template if req.template_slug else None
         if template is not None and template.is_yaml:
+            from .preview_probe import probe_for
             from .spec_tools import SpecWorkbench, build_spec_server
 
             bench = SpecWorkbench(
@@ -1423,6 +1527,8 @@ def agent_requirement_turn(self, requirement_uuid: str, tenant_name: str) -> dic
                 flags=req.spec_flags,
                 open_decisions=req.open_decisions,
                 workflows=req.workflows,
+                probe=probe_for(template),
+                sketch_looks=req.sketch_looks,
             )
             spec_server = build_spec_server(bench)
         stream.options = build_analyst_options(
@@ -1431,6 +1537,7 @@ def agent_requirement_turn(self, requirement_uuid: str, tenant_name: str) -> dic
             requirement=req,
             spec_server=spec_server,
             docs_dir=str(docs_path) if docs_path else "",
+            preview=bench is not None and bench.probe is not None,
         )
 
         for item in stream:
@@ -1461,6 +1568,8 @@ def agent_requirement_turn(self, requirement_uuid: str, tenant_name: str) -> dic
         if stream is not None:
             stream.request_stop()
             stream.join(timeout=10)
+        if bench is not None:
+            bench.close()  # the preview runner, if a check started one this turn
 
     try:
         return _record_analyst_reply(req, text_parts, session_id, cost, bench=bench)
@@ -1470,12 +1579,26 @@ def agent_requirement_turn(self, requirement_uuid: str, tenant_name: str) -> dic
         return {"status": "failed"}
 
 
+def _plain_spec(req):
+    """The requirement's YAML spec as plain data, or None (not YAML, or broken)."""
+    if not (req.spec_markdown or "").strip():
+        return None
+    from zango.apps.shared.app_templates.services.spec import yamlio
+
+    try:
+        doc = yamlio.load(req.spec_markdown)
+    except yamlio.SpecYAMLError:
+        return None
+    return doc if isinstance(doc, dict) else None
+
+
 def _record_spec_edit(req, edit: dict) -> None:
     """Save one spec-tool result straight away, so the panel sees it land.
 
     An edit carries the new YAML; a provenance call (spec_flag, spec_unflag,
-    spec_open_decisions) carries only flags and open decisions, and
-    spec_set_workflows only the narrative workflows.
+    spec_open_decisions) carries only flags and open decisions,
+    spec_set_workflows only the narrative workflows, and preview_look only
+    which custom screens the analyst has seen.
     """
     edit = edit or {}
     fields = ["modified_at"]
@@ -1486,7 +1609,13 @@ def _record_spec_edit(req, edit: dict) -> None:
         req.draft_revision += 1
         req.changed_paths = list(edit.get("changed_paths") or [])
         req.validation_issues = list(edit.get("issues") or [])
-        fields += ["spec_markdown", "spec_is_draft", "draft_revision", "changed_paths", "validation_issues"]
+        fields += [
+            "spec_markdown",
+            "spec_is_draft",
+            "draft_revision",
+            "changed_paths",
+            "validation_issues",
+        ]
     if "flags" in edit:
         req.spec_flags = list(edit["flags"])
         fields.append("spec_flags")
@@ -1496,6 +1625,9 @@ def _record_spec_edit(req, edit: dict) -> None:
     if "workflows" in edit:
         req.workflows = dict(edit["workflows"] or {})
         fields.append("workflows")
+    if "sketch_looks" in edit:
+        req.sketch_looks = dict(edit["sketch_looks"] or {})
+        fields.append("sketch_looks")
     if len(fields) > 1:
         req.save(update_fields=fields)
 
