@@ -75,6 +75,7 @@ _BASH_HARD_DENY = [
     (r">\s*/etc/", "writing to /etc is not permitted"),
     (r"/dev/(tcp|udp)/", "raw network redirection is not permitted"),
     (r"\bANTHROPIC_API_KEY\b", "the API key must not be referenced"),
+    (r"\bCLAUDE_CODE_OAUTH_TOKEN\b", "the login token must not be referenced"),
     (r"^\s*(env|printenv|set)\s*$", "dumping the environment is not permitted"),
     # Interpreters: the easiest sandbox bypass. Read/Write/Edit/Grep cover
     # every legitimate need.
@@ -286,7 +287,8 @@ def _is_allowed_npm(segment: str, allow_frontend: bool) -> tuple[bool, str]:
             "Node tooling is disabled for this app. Set "
             "AGENT_MODE_ALLOW_FRONTEND_BUILD=True and ensure node is installed."
         )
-    rest = match.group(1).strip()
+    # Merging stderr into stdout changes nothing about what runs.
+    rest = re.sub(r"\s*2>&1\s*$", "", match.group(1).strip())
     for pattern in _NPM_ALLOWED:
         if pattern.match(rest):
             return True, ""

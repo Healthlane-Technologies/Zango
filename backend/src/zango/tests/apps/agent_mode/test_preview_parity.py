@@ -124,3 +124,11 @@ class OneLookTests(unittest.TestCase):
         self.assertFalse(studio_build.blocking({"design": only_parity}))
         self.assertTrue(studio_build.blocking({"design": other}))
         self.assertTrue(studio_build.blocking({"api": LayerResult(name="api", status="fail")}))
+
+    def test_build_status_and_report_verdict_agree_on_what_blocks(self):
+        # Regression: goldens failed as "Ready with gaps" in the report but StudioChecksFailed on the run.
+        from zango.apps.agent_mode import studio_build
+
+        self.assertEqual(set(studio_build.NON_FAILING), set(report.NON_BLOCKING))
+        gallery = LayerResult(name="design", status="fail", failures=[{"id": "design.gallery.badges"}])
+        self.assertFalse(studio_build.blocking({"design": gallery}))

@@ -86,11 +86,53 @@ class AppViewAPIV1(ZangoGenericPlatformAPIView):
             platform_user = request.user.platform_user
             apps = TenantModel.objects.all().exclude(schema_name="public")
 
+            # apps = TenantModel.objects.filter(
+            #     name__in=[
+            #         "bmspspmonitoring",
+            #         "BMSIBI01",
+            #         "newmicares",
+            #         "FinanceAppLocal",
+            #         "azcaresmab",
+            #         "cadence",
+            #         "EnrollmentAgent",
+            #         "AZAttendance",
+            #         "psp_template",
+            #         "merckferticompanion",
+            #         "psptest",
+            #         "enhertupap",
+            #         "wapp1",
+            #         "wapp2",
+            #         "wapp3",
+            #         "wapp4",
+            #         "wapp5",
+            #         "wapp6",
+            #         "wapp7",
+            #         "wapp8",
+            #         "TenderManager",
+            #         "ITAssetTracker",
+            #         "gearcheck",
+            #         "task_tracker",
+            #         "rx_manager",
+            #         "tenant_rent_tracker",
+            #         "new_app",
+            #         "garage_manager",
+            #         "tution_manager",
+            #         "pt_manager",
+            #         "dist_manager",
+            #         "psp_testapp1",
+            #         "remipsp",
+            #         "trial_site_hub",
+            #         "tagrissopap"
+            #     ]
+            # ).exclude(schema_name="public")
+
             # Returning Only allowed apps
             if not platform_user.is_superadmin:
                 apps = platform_user.apps
 
-            apps = apps.select_related("template_binding__template", "template_binding__version")
+            apps = apps.select_related(
+                "template_binding__template", "template_binding__version"
+            )
             serializer = TenantSerializerModel(apps, many=True)
             success = True
             response = {
@@ -1021,9 +1063,7 @@ class AppStatusActionView(ZangoGenericPlatformAPIView):
         try:
             tenant = TenantModel.objects.get(uuid=app_uuid)
         except TenantModel.DoesNotExist:
-            return get_api_response(
-                False, {"message": "App not found."}, 404
-            )
+            return get_api_response(False, {"message": "App not found."}, 404)
         # `tenant.suspend()` / `tenant.unsuspend()` — one line each.
         getattr(tenant, action)()
         return get_api_response(

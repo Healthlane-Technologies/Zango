@@ -1,5 +1,5 @@
 import type { RunDetail } from '@/api/agentRuns';
-import { fmtCost, fmtDuration, fmtTokens } from './format';
+import { fmtCost, fmtDuration, fmtTokens, runCost } from './format';
 
 const TOKEN_COLUMNS = [
 	['inputTokens', 'In'],
@@ -50,6 +50,7 @@ export function RunUsage({ run }: { run: RunDetail }) {
 		run.duration_ms;
 	if (!hasAnything) return <p className="text-t3">This run recorded no usage.</p>;
 
+	const cost = runCost(run.total_cost_usd, run.auth_source);
 	const footnotes = [
 		run.effort && `Effort: ${run.effort}`,
 		run.max_turns && `Turn limit: ${run.max_turns}`,
@@ -62,7 +63,11 @@ export function RunUsage({ run }: { run: RunDetail }) {
 	return (
 		<div className="grid gap-4">
 			<div className="grid grid-cols-4 gap-3">
-				<Metric label="Cost" value={fmtCost(run.total_cost_usd)} />
+				<Metric
+					label={cost.title ? 'Cost (subscription)' : 'Cost'}
+					value={cost.text}
+					title={cost.title}
+				/>
 				<Metric label="Turns" value={run.num_turns ?? '—'} />
 				<Metric
 					label="Tokens"

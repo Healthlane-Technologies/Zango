@@ -31,6 +31,27 @@ from typing import Any, Iterator
 
 logger = logging.getLogger("zango.agent_mode")
 
+
+def _log_auth_source(message) -> None:
+    """Log which credential the CLI authenticated with, once per session.
+
+    ``apiKeySource`` is "none" when no API key is in play, i.e. the CLI is on
+    the subscription login (AGENT_MODE_AUTH=subscription); anything else
+    names where the billed key came from.
+    """
+    if type(message).__name__ != "SystemMessage":
+        return
+    if getattr(message, "subtype", "") != "init":
+        return
+    data = getattr(message, "data", None) or {}
+    logger.info(
+        "agent_mode: CLI session %s auth apiKeySource=%s model=%s",
+        data.get("session_id") or "?",
+        data.get("apiKeySource") or "?",
+        data.get("model") or "?",
+    )
+
+
 # Bounded so a chatty agent cannot balloon worker memory. The consumer
 # batches its inserts, so blocking here is rare.
 DEFAULT_QUEUE_MAX = 2_000
@@ -150,12 +171,15 @@ class AgentStream:
                 give_up_at = None
                 try:
                     while True:
-                        done, _ = await asyncio.wait({pending}, timeout=STOP_POLL_SECONDS)
+                        done, _ = await asyncio.wait(
+                            {pending}, timeout=STOP_POLL_SECONDS
+                        )
                         if done:
                             try:
                                 message = pending.result()
                             except StopAsyncIteration:
                                 break
+                            _log_auth_source(message)
                             self._q.put(StreamItem("message", message))
                             pending = asyncio.ensure_future(messages.__anext__())
                         if not self.cancel.is_set():

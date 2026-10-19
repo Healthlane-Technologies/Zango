@@ -224,7 +224,8 @@ manual steps) + the HTML path. Rules: `references/report.md`.
 - Models: `DynamicModelBase`, `ZForeignKey(<class>, related_name="+")`, no `Meta`, no M2M, no `status` field.
 - Every write path is scoped by role (`access.in_scope`). Don't bypass it with `Model.objects.get(object_uuid=…)` in hooks
   that act on user-supplied ids. Use the scoped queryset.
-- Frontend: compose from `src/zas` only. No hex colours or colour styles in `src/custom/`.
+- Frontend: compose from `src/zas` only. No hex colours or colour styles in `src/custom/`, except in the
+  slot of a screen approved in the preview, which reproduces its sketch (custom-code.md §Porting a sketch).
 - Never edit `packages/`, the runtime inside the app, or the database by hand. Fix the generated code,
   the runtime in the skill (`assets/`), or report a spec problem.
 - Never print or commit passwords or tokens. `.zas/test_users.json` is chmod 600.

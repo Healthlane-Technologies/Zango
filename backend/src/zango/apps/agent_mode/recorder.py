@@ -22,6 +22,8 @@ import json
 import logging
 import time
 
+from django.utils import timezone
+
 from .credentials import redact, redact_obj
 from .models import AgentRunEvent, EventKind, EventLevel, RunPhase
 
@@ -89,6 +91,8 @@ class EventRecorder:
                 AgentRunEvent(
                     run=self._run,
                     seq=self._seq,
+                    # When it happened, not when the batch was written.
+                    ts=timezone.now(),
                     kind=kind,
                     phase=self.phase,
                     level=level,
@@ -105,7 +109,10 @@ class EventRecorder:
             logger.exception("agent_mode: failed to buffer event")
             return self._seq
 
-        if len(self._buffer) >= self._batch_size:
+        # A post step is followed by a blocking subprocess (an npm install can
+        # take minutes): write it now, or the panel keeps showing the previous
+        # step until the subprocess returns.
+        if len(self._buffer) >= self._batch_size or kind == EventKind.POST_STEP:
             self.flush()
         return self._seq
 

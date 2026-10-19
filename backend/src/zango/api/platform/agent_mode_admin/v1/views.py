@@ -12,8 +12,9 @@ from __future__ import annotations
 
 import logging
 
-from django.conf import settings as dj_settings
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
+
+from django.conf import settings as dj_settings
 
 from zango.apps.shared.agent_mode.models import AgentModeSettings
 from zango.core.api import ZangoGenericPlatformAPIView, get_api_response
@@ -210,6 +211,18 @@ class AgentModeSettingsValidateView(ZangoGenericPlatformAPIView):
 
             cfg = load_config()
             model = cfg.model or "claude-opus-5"
+            if creds.is_subscription:
+                # The login only works through the CLI; the first run is the test.
+                return get_api_response(
+                    True,
+                    {
+                        "valid": True,
+                        "message": "Subscription mode: runs use the Claude Code login.",
+                        "model": model,
+                        "source": creds.source,
+                    },
+                    200,
+                )
             try:
                 import anthropic
 
@@ -354,7 +367,11 @@ class AgentAppScaffoldCreateView(ZangoGenericPlatformAPIView):
                     r.get("id") for r in template_version.references or []
                 }:
                     return get_api_response(
-                        False, {"message": "That reference journey is not part of the template."}, 400
+                        False,
+                        {
+                            "message": "That reference journey is not part of the template."
+                        },
+                        400,
                     )
                 if not prompt:
                     catalogue = template_version.catalogue or {}
@@ -363,10 +380,14 @@ class AgentAppScaffoldCreateView(ZangoGenericPlatformAPIView):
                         or f"A new {template.name} app."
                     ).strip()
                     if documents:
-                        prompt = f"{prompt} The details are in the documents I uploaded."
+                        prompt = (
+                            f"{prompt} The details are in the documents I uploaded."
+                        )
             elif documents and template_version is None:
                 return get_api_response(
-                    False, {"message": "Documents can be used with a template only."}, 400
+                    False,
+                    {"message": "Documents can be used with a template only."},
+                    400,
                 )
 
             if not prompt:
@@ -388,7 +409,9 @@ class AgentAppScaffoldCreateView(ZangoGenericPlatformAPIView):
             from zango.apps.shared.agent_mode.models import AgentScaffoldDocument
 
             for doc in documents:
-                AgentScaffoldDocument.objects.create(scaffold=scaffold, **doc.model_fields())
+                AgentScaffoldDocument.objects.create(
+                    scaffold=scaffold, **doc.model_fields()
+                )
 
             def _dispatch():
                 result = agent_app_scaffold.apply_async(
@@ -488,4 +511,3 @@ class AgentAppScaffoldRequirementView(ZangoGenericPlatformAPIView):
         except Exception as exc:  # noqa: BLE001
             log.exception("agent_mode: scaffold hand-off failed")
             return get_api_response(False, {"message": str(exc)}, 500)
-

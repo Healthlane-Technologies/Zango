@@ -39,13 +39,21 @@ class AgentCredentials:
 
     provider: str = "anthropic"
     api_key: str = ""
+    # Claude Pro/Max login for the CLI (AGENT_MODE_AUTH=subscription). Only
+    # the Claude Code CLI accepts it; the Messages API does not.
+    oauth_token: str = ""
     extra_env: dict = field(default_factory=dict)
-    # "platform_settings" | "env" | "" — safe to surface in the availability probe.
+    # "platform_settings" | "env" | "subscription" | "" — safe to surface in
+    # the availability probe.
     source: str = ""
 
     @property
     def is_usable(self) -> bool:
-        return bool(self.api_key)
+        return bool(self.api_key or self.oauth_token)
+
+    @property
+    def is_subscription(self) -> bool:
+        return bool(self.oauth_token) and not self.api_key
 
 
 def register_secret(value: str) -> None:
@@ -95,10 +103,22 @@ def resolve_credentials() -> AgentCredentials:
     platform admin can rotate without a redeploy), then Django settings /
     environment as the bootstrap path.
 
+    ``AGENT_MODE_AUTH=subscription`` overrides both: runs go through the
+    CLI on the CLAUDE_CODE_OAUTH_TOKEN login and never see an API key, so
+    nothing is billed to the API. It is a local-testing switch and resolves
+    to no credential unless DEBUG is on.
+
     Must be called BEFORE ``connection.set_tenant(...)`` — AgentModeSettings
     lives in the public schema.
     """
     from django.conf import settings
+
+    if getattr(settings, "AGENT_MODE_AUTH", "api_key") == "subscription":
+        token = (getattr(settings, "CLAUDE_CODE_OAUTH_TOKEN", "") or "").strip()
+        if not settings.DEBUG or not token:
+            return AgentCredentials(source="subscription")
+        register_secret(token)
+        return AgentCredentials(oauth_token=token, source="subscription")
 
     try:
         from zango.apps.shared.agent_mode.models import AgentModeSettings

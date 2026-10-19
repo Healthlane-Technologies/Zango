@@ -78,7 +78,7 @@ Screenshots of every page, 360 and tab, per role, land in `.zas/screens/<role>/`
 | `tree` | per 360 × viewer: facts in spec order, stats ordered, status badge tone = the spec's colour, sidebar rail iff the layout has one | yes |
 | `gallery` | `/app/__zas` sections vs `<skill>/assets/goldens/*.png` (≤1% pixels differ; the gallery pins en-US/USD, UTC and a fixed clock) | no: skipped with a reason on another OS/Chromium build |
 | `layout` | menu pages and 360s at 1440 and 1280 px: no sideways scroll, no clipped titles, facts, stats or tabs | no (reported) |
-| preview parity | each custom screen's approved kit tree (`.zas/bundle/`) | `design --only parity`: blocks, titles, KPI labels and table columns per approved role, in order (`kit_tree.js` on both sides, values never compared). Reported, not blocking: failures go to the fix rounds first. Writes `.zas/screens/parity/` and `.zas/parity_looks.json` for the one look |
+| preview parity | each custom screen's approved kit tree (`.zas/bundle/`) | `design --only parity`: blocks, titles, KPI labels and table columns per approved role, in order, plus each block's look (gradient, coloured fill, chart, avatars, accent borders; hand-drawn blocks paired by their words) (`kit_tree.js` on both sides, values never compared). Reported, not blocking: failures go to the fix rounds first. Writes `.zas/screens/parity/` and `.zas/parity_looks.json` for the look rounds (up to `AGENT_MODE_STUDIO_LOOK_ROUNDS`, re-shot after each change) |
 
 After the machine checks, **look at the screenshots yourself** (`.zas/screens/`): open each
 role's main pages and 360s and compare them with the rubric: alignment, spacing, hierarchy,

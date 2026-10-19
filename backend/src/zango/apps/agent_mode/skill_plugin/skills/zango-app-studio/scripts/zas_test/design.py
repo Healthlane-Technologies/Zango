@@ -3,11 +3,14 @@ Design checks. No human approves anything: every check compares against a fixed 
 (rules, shipped goldens, tokens.css, or the spec). See references/design-system.md.
 
     python3 -m zas_test.design --workspace <ws> [--only lint,gallery,tokens,tree,layout]
+    python3 -m zas_test.design --make-goldens --workspace <ws> --out <skill>/assets/goldens
     python3 -m zas_test.design --make-goldens --gallery-url http://localhost:4173/ --out <skill>/assets/goldens
         (skill author only: re-shoot the goldens after changing the runtime)
 
   lint     src/custom/**: no colour literals, no colour/font inline styles, no new .css/<style>,
-           UI imported only from zas (static, no browser)
+           UI imported only from zas (static, no browser). A slot for a screen the user approved
+           in the preview may use inline styles and the colours its sketch.js uses, and no others
+
   gallery  /app/__zas sections vs <skill>/assets/goldens/<section>.png (pixel diff, small tolerance;
            skipped with a reason when no goldens are shipped or Pillow is missing)
   tokens   computed styles on /app/__zas: primary button = app brand, tone badges = tokens.css,
@@ -71,31 +74,81 @@ class D:
 
 # ───────────────────────── lint ─────────────────────────
 
+COLOUR = re.compile(r"(?<![\w-])#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?)\([^)]*\)")
+
+
+def colour_key(c):
+    """One spelling per colour: lower case, #abc as #aabbcc, no spaces in rgb()/hsl()."""
+    c = re.sub(r"\s+", "", c.lower())
+    if re.fullmatch(r"#[0-9a-f]{3,4}", c):
+        c = "#" + "".join(ch * 2 for ch in c[1:])
+    return c
+
+
+def approved_palettes(Dx):
+    """{slot file (abs path): (colours of its approved sketch, sketch path)} for approved screens.
+
+    A screen the user approved in the preview is built to look like it, so its slot may use the
+    sketch's own colours and inline styles. Everything else keeps the design-system-only rules.
+    """
+    out = {}
+    for h in Dx.M.get("holes") or []:
+        target = (h.get("target") or "").split("::", 1)[0]
+        if not (h.get("bundle") and target):
+            continue
+        sketch = os.path.join(Dx.ws, h["bundle"], "sketch.js")
+        try:
+            colours = {colour_key(c) for c in COLOUR.findall(open(sketch, encoding="utf-8").read())}
+        except OSError:
+            continue
+        out[os.path.normpath(os.path.join(Dx.ws, target))] = (colours, os.path.relpath(sketch, Dx.ws))
+    return out
+
+
 def g_lint(Dx, b=None):
     root = os.path.join(Dx.ws, "frontend", "src", "custom")
     files = [f for f in glob.glob(os.path.join(root, "**", "*"), recursive=True) if os.path.isfile(f)]
+    palettes = approved_palettes(Dx)
+    # a helper a ported slot imports (no marker of its own) may use any approved sketch's colours
+    any_approved = set().union(*(p[0] for p in palettes.values())) if palettes else set()
     probs = []
     for f in files:
         rel = os.path.relpath(f, Dx.ws)
         if f.endswith((".css", ".scss", ".less")):
-            probs.append(f"{rel}: stylesheet in src/custom (use zas classes)")
+            probs.append(f"{rel}: stylesheet in src/custom (use zas classes, or inline styles in an approved screen)")
             continue
         if not f.endswith((".ts", ".tsx", ".js", ".jsx")):
             continue
         src = open(f, encoding="utf-8").read()
         code = re.sub(r"//[^\n]*|/\*.*?\*/", "", src, flags=re.S)
+        approved = palettes.get(os.path.normpath(f))
+        if approved is None and any_approved and "zas:hole" not in src:
+            approved = (any_approved, "the approved sketches")
         for i, line in enumerate(code.splitlines(), 1):
-            if COLOR_LIT.search(line):
+            if approved is not None:
+                for c in COLOUR.findall(line):
+                    if colour_key(c) not in approved[0]:
+                        probs.append(f"{rel}:{i}: colour `{c}` is not in {approved[1]} "
+                                     "(use the sketch's colours, a tone or a zas variable)")
+            elif COLOR_LIT.search(line):
                 probs.append(f"{rel}:{i}: colour literal `{COLOR_LIT.search(line).group(0)}`")
             if BAD_IMPORT.search(line):
                 probs.append(f"{rel}:{i}: UI import outside zas: {line.strip()[:80]}")
-        for m in STYLE_COLOR.finditer(code):
-            probs.append(f"{rel}:{code[:m.start()].count(chr(10)) + 1}: inline `{m.group(1)}` style")
+        if approved is None:
+            for m in STYLE_COLOR.finditer(code):
+                probs.append(f"{rel}:{code[:m.start()].count(chr(10)) + 1}: inline `{m.group(1)}` style")
         if "<style" in code:
             probs.append(f"{rel}: <style> tag")
         for word in ("Lorem", "Coming soon", "TODO"):
             if re.search(rf">[^<]*{word}", code):
                 probs.append(f"{rel}: placeholder copy '{word}' rendered")
+    try:  # lucide_icons.py maps a name lucide does not have to Circle: a typo shows an empty circle
+        gen = open(os.path.join(Dx.ws, "frontend", "src", "zas", "icons.gen.ts"), encoding="utf-8").read()
+        unknown = [n for n, c in re.findall(r'^\s*"([a-z0-9-]+)":\s*(\w+),', gen, re.M) if c == "Circle" and n != "circle"]
+        if unknown:
+            probs.append(f"unknown lucide icon name(s), drawn as an empty circle: {', '.join(unknown)}")
+    except OSError:
+        pass
     Dx.check("design.lint", "custom code uses the design system only", "frontend/src/custom",
              lambda: (not probs, "\n".join(probs[:40])))
 
@@ -112,10 +165,17 @@ def first_session(Dx):
     raise RuntimeError("no test user could log in (zango_platform.py users)")
 
 
+# The gallery is shot at a fixed width, so the app shell's sidebar (or its absence on a bare
+# gallery page) never changes the screenshots. It fits inside the shell at the 1440px viewport.
+GALLERY_WIDTH = 1100
+
+
 def gallery_page(b, url=None, session=None, target=None):
     rp = browser.RolePage(b, url or target, session, pinned=True)
     rp.open(url or "/app/__zas", wait='[data-zas="page"][data-zas-key="__zas"]')
-    rp.page.add_style_tag(content="*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important}")
+    rp.page.add_style_tag(content="*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important}"
+                          f'[data-zas="page"][data-zas-key="__zas"]{{width:{GALLERY_WIDTH}px!important;max-width:none!important;'
+                          "min-width:0!important;box-sizing:border-box!important;flex:none!important}")
     rp.page.wait_for_timeout(300)
     return rp
 
@@ -318,22 +378,51 @@ KIT_TREE_JS = os.path.join(HERE, "kit_tree.js")
 
 
 def flat_tree(tree, depth=0):
-    """[(depth, kit, title, items)] in document order."""
+    """[(depth, kit, title, items, look, text)] in document order; ``look`` is None when not captured."""
     out = []
     for n in tree or []:
-        out.append((depth, n.get("kit"), n.get("title") or "", tuple(n.get("items") or ())))
+        look = tuple(n["look"]) if "look" in n else None
+        out.append((depth, n.get("kit"), n.get("title") or "", tuple(n.get("items") or ()), look, n.get("text") or ""))
         out += flat_tree(n.get("children"), depth + 1)
     return out
 
 
+LOOK_WORDS = {
+    "gradient": "a gradient background",
+    "filled": "a coloured background",
+    "chart": "a chart (donut, ring or SVG)",
+    "avatar": "avatar circles",
+    "accent": "coloured accent borders",
+}
+
+
+def _words(text):
+    """The words of a block's text without its numbers: what stays when the data changes."""
+    return {w for w in re.findall(r"[a-z][a-z']+", (text or "").lower()) if len(w) > 2}
+
+
+def _look_gaps(label, want, got):
+    lost = [f for f in want if f not in got and not (f == "filled" and "gradient" in want)]
+    return [f"{label}: approved has {LOOK_WORDS.get(f, f)}, built has none" for f in lost]
+
+
 def parity_diff(want, got):
-    """What the built screen lacks or adds against the approved kit tree, as short lines."""
+    """What the built screen lacks or adds against the approved kit tree, as short lines.
+
+    Structure: the kit blocks, their order, titles and labels. Look (when the bundle captured it):
+    each approved block's visual features (gradient, coloured fill, chart, avatars, accents) must
+    be on the built block too; hand-drawn blocks pair by their words, never their numbers.
+    Built blocks may add features; only what the approved screen has is required.
+    """
     import difflib
 
     def name(b):
         return f'{b[1]} "{b[2]}"' if b[2] else b[1]
 
-    W, G = flat_tree(want), flat_tree(got)
+    W_all, G_all = flat_tree(want), flat_tree(got)
+    looks = any(b[4] is not None for b in W_all)
+    W = [b for b in W_all if b[1] != "markup"]
+    G = [b for b in G_all if b[1] != "markup"]
     sm = difflib.SequenceMatcher(a=[(b[1], b[2]) for b in W], b=[(b[1], b[2]) for b in G], autojunk=False)
     probs = []
     for op, i1, i2, j1, j2 in sm.get_opcodes():
@@ -348,9 +437,23 @@ def parity_diff(want, got):
                             x for x in (f"missing {miss}" if miss else "", f"extra {extra}" if extra else "") if x))
                     else:
                         probs.append(f"{name(a)}: {what} out of order {list(b_[3])} (approved {list(a[3])})")
+                if looks and a[4]:
+                    probs += _look_gaps(name(a), a[4], b_[4] or ())
             continue
         probs += [f"missing {name(b)}" for b in W[i1:i2]]
         probs += [f"not in the approved screen: {name(b)}" for b in G[j1:j2]]
+    if looks:
+        # hand-drawn blocks: pair each approved one with the built block (any kind) sharing most words
+        built = [(b, _words(b[5] or b[2])) for b in G_all]
+        for a in (b for b in W_all if b[1] == "markup"):
+            words = _words(a[5])
+            label = f'hand-drawn block "{a[5][:40]}…"' if len(a[5]) > 40 else f'hand-drawn block "{a[5]}"'
+            score, match = max(((len(words & w) / max(1, len(words | w)), b) for b, w in built),
+                               default=(0, None), key=lambda x: x[0])
+            if match is None or score < 0.3:
+                probs.append(f"missing {label}")
+            elif a[4]:
+                probs += _look_gaps(label, a[4], match[4] or ())
     return probs
 
 
@@ -424,9 +527,10 @@ def g_parity(Dx, b):
                     looks.append({"screen": scr["path"], "where": hole["where"], "role": role,
                                   "approved": approved, "built": os.path.relpath(built, Dx.ws),
                                   "hand_written": bool(v.get("hand_written"))})
-                    if v.get("hand_written"):
+                    tree = v.get("tree") or []
+                    if v.get("hand_written") and not any("look" in n for n in tree):
                         return None, "hand-written sketch: no kit blocks to compare; the look covers it"
-                    probs = parity_diff(v.get("tree") or [], got)
+                    probs = parity_diff(tree, got)
                     pair = f" Compare {os.path.relpath(built, Dx.ws)} with {approved}." if approved else ""
                     return not probs, "; ".join(probs) + "." + pair if probs else ""
                 finally:
@@ -448,10 +552,15 @@ def main(argv=None):
     ap.add_argument("--out", default=GOLDENS)
     a = ap.parse_args(argv)
     if a.make_goldens:
-        if not a.gallery_url:
-            ap.error("--make-goldens needs --gallery-url (a page rendering ZasGallery, e.g. the scratch app's vite preview)")
+        if not (a.gallery_url or a.workspace):
+            ap.error("--make-goldens needs --workspace (a built app: shoots its /app/__zas) or --gallery-url "
+                     "(a page rendering ZasGallery, e.g. the scratch app's vite preview)")
         with browser.browser() as b:
-            rp = gallery_page(b, url=a.gallery_url)
+            if a.gallery_url:
+                rp = gallery_page(b, url=a.gallery_url)
+            else:
+                _, sess = first_session(D(a.workspace))
+                rp = gallery_page(b, session=sess, target=auth.load_users(a.workspace)["target"])
             paths = shoot_sections(rp, a.out)
             rp.close()
             with open(os.path.join(a.out, "meta.json"), "w") as f:

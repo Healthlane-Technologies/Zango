@@ -438,6 +438,12 @@ def setup_settings(settings, BASE_DIR):
         AWS_CLOUDFRONT_DOMAIN=(str, ""),
         # --- Agent Mode -------------------------------------------------
         ANTHROPIC_API_KEY=(str, ""),
+        # "api_key" bills the Anthropic API; "subscription" runs the Claude
+        # Code CLI on a Claude Pro/Max login (CLAUDE_CODE_OAUTH_TOKEN, from
+        # `claude setup-token`). Subscription is for local testing only and
+        # is refused unless DEBUG is on.
+        AGENT_MODE_AUTH=(str, "api_key"),
+        CLAUDE_CODE_OAUTH_TOKEN=(str, ""),
         AGENT_MODE_ENABLED=(bool, False),
         AGENT_MODE_ENSURE_PACKAGES=(bool, True),
         AGENT_MODE_ALLOW_FRONTEND_BUILD=(bool, False),
@@ -464,6 +470,7 @@ def setup_settings(settings, BASE_DIR):
         # App Panel API, and how many times failing checks go back to the agent.
         AGENT_MODE_PLATFORM_URL=(str, "http://localhost:8000"),
         AGENT_MODE_STUDIO_FIX_ROUNDS=(int, 2),
+        AGENT_MODE_STUDIO_LOOK_ROUNDS=(int, 2),
         AGENT_MODE_SNAPSHOT_RETENTION=(int, 5),
         AGENT_MODE_SNAPSHOT_MAX_BYTES=(int, 536870912),
     )
@@ -476,6 +483,8 @@ def setup_settings(settings, BASE_DIR):
     # probe can report it without decrypting the AgentModeSettings row;
     # AgentModeSettings (public schema, encrypted) takes precedence when set.
     settings.ANTHROPIC_API_KEY = env("ANTHROPIC_API_KEY")
+    settings.AGENT_MODE_AUTH = env("AGENT_MODE_AUTH").strip().lower()
+    settings.CLAUDE_CODE_OAUTH_TOKEN = env("CLAUDE_CODE_OAUTH_TOKEN")
     settings.AGENT_MODE_ENABLED = env("AGENT_MODE_ENABLED")
     settings.AGENT_MODE_ENSURE_PACKAGES = env("AGENT_MODE_ENSURE_PACKAGES")
     settings.AGENT_MODE_ALLOW_FRONTEND_BUILD = env("AGENT_MODE_ALLOW_FRONTEND_BUILD")
@@ -496,6 +505,7 @@ def setup_settings(settings, BASE_DIR):
     settings.AGENT_MODE_APP_BASE_URL = env("AGENT_MODE_APP_BASE_URL")
     settings.AGENT_MODE_PLATFORM_URL = env("AGENT_MODE_PLATFORM_URL")
     settings.AGENT_MODE_STUDIO_FIX_ROUNDS = env("AGENT_MODE_STUDIO_FIX_ROUNDS")
+    settings.AGENT_MODE_STUDIO_LOOK_ROUNDS = env("AGENT_MODE_STUDIO_LOOK_ROUNDS")
     settings.AGENT_MODE_SNAPSHOT_RETENTION = env("AGENT_MODE_SNAPSHOT_RETENTION")
     settings.AGENT_MODE_SNAPSHOT_MAX_BYTES = env("AGENT_MODE_SNAPSHOT_MAX_BYTES")
 

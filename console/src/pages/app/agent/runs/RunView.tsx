@@ -5,7 +5,7 @@ import { Button, cx, ErrorState, Icon, Skeleton, Tabs } from '@/ui';
 import { checksOf } from '@/api/agentRuns';
 import { AppReady } from './AppReady';
 import { filesWritten, latestActivity, relativePath } from './events';
-import { clock, fmtCost, PHASES, runStatus, timeOfDay } from './format';
+import { clock, PHASES, runCost, runStatus, timeOfDay } from './format';
 import { ActionNeeded, ChecksChip, ChecksReport } from './RunChecks';
 import { RunLog } from './RunLog';
 import { RunUsage } from './RunUsage';
@@ -67,12 +67,18 @@ function Phases({
 	const reached = failed
 		? Math.max(0, ...tail.events.map((e) => PHASES.findIndex((p) => p.id === e.phase)))
 		: PHASES.findIndex((p) => p.id === tail.phase);
+	// Phases are not always entered in order: a build can go from building straight to applying.
+	// A phase the run passed without a single event was skipped, not done. Without any events
+	// (not loaded yet, or pruned) there is nothing to tell them apart, so passed counts as done.
+	const seen = new Set(tail.events.map((e) => e.phase));
 	return (
 		<ol className="rp-steps">
 			{PHASES.map((p, i) => {
 				const state =
 					i < reached
-						? 'done'
+						? seen.size && !seen.has(p.id)
+							? 'skipped'
+							: 'done'
 						: i > reached
 							? 'todo'
 							: failed
@@ -94,6 +100,8 @@ function Phases({
 								<Icon name="alert" size={11} weight={2.4} />
 							) : state === 'active' ? (
 								<span className="spin" style={{ width: 10, height: 10 }} />
+							) : state === 'skipped' ? (
+								'–'
 							) : (
 								i + 1
 							)}
@@ -106,6 +114,8 @@ function Phases({
 								<small title={activity.message}>{activity.message}</small>
 							) : state === 'failed' ? (
 								<small>Stopped here</small>
+							) : state === 'skipped' ? (
+								<small>Skipped</small>
 							) : (
 								p.hint && state !== 'todo' && <small>{p.hint}</small>
 							)}
@@ -273,6 +283,7 @@ export function RunView({
 
 	const meta = runStatus(status ?? 'queued');
 	const cost = tail.progress?.cost_usd ?? d?.total_cost_usd;
+	const costShown = runCost(cost, d?.auth_source);
 	const ready =
 		d &&
 		!live &&
@@ -318,7 +329,11 @@ export function RunView({
 					{!waiting && (
 						<span className="num">{clock(d?.started_at, live ? null : d?.ended_at)}</span>
 					)}
-					{cost != null && <span className="num">{fmtCost(cost)}</span>}
+					{cost != null && (
+						<span className="num" title={costShown.title}>
+							{costShown.text}
+						</span>
+					)}
 					{working && (
 						<Button
 							size="xs"

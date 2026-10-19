@@ -13,7 +13,24 @@ from zango.apps.agent_mode.models import (
     AgentRequirement,
     AgentRequirementMessage,
     AgentRun,
+    EventKind,
 )
+
+
+def _auth_source(run):
+    """How the CLI authenticated, from the run's session-init event.
+
+    "none" means the Claude subscription login: nothing was billed, and the
+    run's cost is only the API-equivalent figure. None when no init event is
+    left (not started yet, or pruned).
+    """
+    data = (
+        run.events.filter(kind=EventKind.INIT)
+        .order_by("-seq")
+        .values_list("data", flat=True)
+        .first()
+    )
+    return data.get("api_key_source") if isinstance(data, dict) else None
 
 
 class AgentRunListSerializer(serializers.ModelSerializer):
@@ -38,10 +55,15 @@ class AgentRunListSerializer(serializers.ModelSerializer):
             "requires_restart",
             "checks",
             "pending_actions",
+            "auth_source",
         )
 
     checks = serializers.SerializerMethodField()
     pending_actions = serializers.SerializerMethodField()
+    auth_source = serializers.SerializerMethodField()
+
+    def get_auth_source(self, obj):
+        return _auth_source(obj)
 
     def get_pending_actions(self, obj):
         """What a WAITING build needs from the user (the history row shows it); [] otherwise."""
@@ -116,11 +138,16 @@ class AgentRunDetailSerializer(serializers.ModelSerializer):
             "requires_restart",
             "can_resume",
             "resumed_from",
+            "auth_source",
         )
 
     can_resume = serializers.SerializerMethodField()
     report = serializers.SerializerMethodField()
     pending_actions = serializers.SerializerMethodField()
+    auth_source = serializers.SerializerMethodField()
+
+    def get_auth_source(self, obj):
+        return _auth_source(obj)
 
     def get_pending_actions(self, obj):
         """What a WAITING build needs from the user; [] otherwise."""

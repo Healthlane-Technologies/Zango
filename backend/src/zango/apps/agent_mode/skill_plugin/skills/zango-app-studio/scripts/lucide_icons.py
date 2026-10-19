@@ -46,7 +46,7 @@ def collect(resolved):
 
 
 def collect_custom(ws):
-    """Icons used by hand-written slots/pages: <Icon name="…"/> and icon="…" props under src/custom."""
+    """Icons used by hand-written slots/pages under src/custom: <Icon name="…"/>, icon="…" and icon: "…"."""
     names = set()
     root = os.path.join(ws, "frontend", "src", "custom")
     for d, _, files in os.walk(root):
@@ -55,7 +55,8 @@ def collect_custom(ws):
                 src = open(os.path.join(d, f), encoding="utf-8").read()
                 for attrs in re.findall(r"<Icon\b([^>]*)>", src):  # also name={x ? "a" : "b"}
                     names |= set(re.findall(r'"([a-z0-9-]+)"', attrs))
-                names |= set(re.findall(r'\bicon="([a-z0-9-]+)"', src))
+                # icon="x" props and icon: "x" in item objects (Kpis, List rows)
+                names |= set(re.findall(r'\bicon\s*[:=]\s*["\']([a-z0-9-]+)["\']', src))
     return names
 
 
@@ -132,7 +133,13 @@ def main(argv=None):
     ts += ["} as const;", ""]
     out_ts = os.path.join(ws, "frontend", "src", "zas", "icons.gen.ts")
     os.makedirs(os.path.dirname(out_ts), exist_ok=True)
-    open(out_ts, "w", encoding="utf-8").write("\n".join(ts))
+    text = "\n".join(ts)
+    try:
+        same = open(out_ts, encoding="utf-8").read() == text
+    except OSError:
+        same = False
+    if not same:  # an unchanged file keeps its mtime, so a deployed build is not reported stale
+        open(out_ts, "w", encoding="utf-8").write(text)
     out_json = os.path.join(ws, ".zas", "menu_icons.json")
     json.dump(svgs, open(out_json, "w", encoding="utf-8"), indent=1)
     print(f"{len(found)} icons → {out_ts}; menu SVGs → {out_json}")

@@ -234,7 +234,8 @@ def agent_run_executor(self, run_uuid: str, tenant_name: str) -> dict:
             error_type="MissingCredentials",
             error_message=(
                 "No Anthropic credential configured. Set ANTHROPIC_API_KEY or "
-                "configure Agent Mode settings."
+                "configure Agent Mode settings (with AGENT_MODE_AUTH=subscription: "
+                "set CLAUDE_CODE_OAUTH_TOKEN, and DEBUG must be on)."
             ),
         )
         return {"status": run.status}
@@ -449,6 +450,11 @@ def _execute(run, tenant, creds, ws_root, build_app_context) -> dict:
         if is_studio(template_build):
             recorder.set_phase(RunPhase.PREPARING)
             studio = StudioBuild.for_run(template_build, ctx, run_dir)
+            # The platform half after the agent needs the app's build account.
+            # Exercise it now (create, scope to the app, disable): a database
+            # problem then fails here in a second, not after a finished agent pass.
+            with service_account(tenant, emit=_studio_emit):
+                pass
             try:
                 studio.prepare(emit=_studio_emit, template=template_build.template)
             finally:
@@ -950,7 +956,7 @@ def _finish_studio(
 
     more = {"checkpoint": checkpoint, "skip": skip} if checkpoint is not None else {}
     try:
-        with service_account(tenant) as platform_creds:
+        with service_account(tenant, emit=emit) as platform_creds:
             outcome = studio.finish(
                 platform_creds,
                 resume_agent=resume_agent,
@@ -1025,7 +1031,8 @@ def _finish_studio(
         "App Studio checks — "
         + "; ".join(lines)
         + (f". Fix rounds: {outcome.rounds}." if outcome.rounds else "."),
-        level=EventLevel.SYS if outcome.ok else EventLevel.WARN,
+        # a passing build can still carry look-only gaps: keep those visible
+        level=EventLevel.SYS if not outcome.failing else EventLevel.WARN,
         data=run.studio_report,
     )
     if outcome.report.get("html_path"):

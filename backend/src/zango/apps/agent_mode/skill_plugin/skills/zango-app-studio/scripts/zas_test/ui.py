@@ -12,7 +12,8 @@ Groups:
            Add button shown iff the role can add, quick-filter chips = spec chips for the role,
            every menu label is on screen; screenshot → .zas/screens/<role>/<page>.png
   detail   per 360 × role: viewers see header + stats + the tabs the role may see, in spec order;
-           others see the no-access state; every tab opens without error and is not blank;
+           others see the no-access state; no header banner is blank; every tab opens without error
+           and is not blank;
            screenshot → .zas/screens/<role>/<view>.png
 Results: <ws>/.zas/test_results.json (layer "ui"). Exit 1 when any check fails.
 """
@@ -176,6 +177,9 @@ def g_detail(U, b):
                     if rp.page.locator('[data-zas="header"]').count() == 0:
                         return False, "no header (not_found? row scoping?)"
                     probs = list(rp.errors)
+                    blank = rp.page.eval_on_selector_all('[data-zas="banner"]', "els => els.filter(e => !e.innerText.trim()).length")
+                    if blank:
+                        probs.append(f"{blank} header banner(s) with no text")
                     want_tabs = [t["code"] for t in V.get("tabs") or []
                                  if (not t.get("roles") or role in t["roles"])
                                  and (t.get("type") != "related_table" or U.can(t["entity"], role, "view"))]

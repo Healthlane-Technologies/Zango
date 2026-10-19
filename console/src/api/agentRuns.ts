@@ -24,6 +24,8 @@ export interface RunSummary {
 	requires_restart: boolean;
 	/** App Studio builds: a compact count of the checks, when the list serializer provides it. */
 	checks?: ChecksSummary | null;
+	/** The CLI's apiKeySource from the session-init event; "none" = Claude subscription login. */
+	auth_source?: string | null;
 }
 
 export interface ChecksSummary {

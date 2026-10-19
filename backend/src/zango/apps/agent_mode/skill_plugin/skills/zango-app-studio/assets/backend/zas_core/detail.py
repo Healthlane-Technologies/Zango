@@ -196,7 +196,11 @@ class ZasDetail:
         for i, b in enumerate(hd.get("banners") or []):
             if not self._ok(b, obj):
                 continue
-            banners.append({"tone": b.get("tone", "info"), "text": self._text(H, obj, b.get("text", "")), "order": i})
+            # banner text is copy, with optional {field} templates: never a field path
+            text = str(b.get("text") or "")
+            if "{" in text:
+                text = zr.interpolate(H, obj, text, txn_lookup=lambda k: zr.latest_form_value(obj, k))
+            banners.append({"tone": b.get("tone", "info"), "text": text, "order": i})
         return {"title": title, "subtitle": subtitle, "avatar": {"image": image, "initials": initials},
                 "badges": badges, "facts": facts, "banners": banners,
                 "back_to": V.get("back_to")}

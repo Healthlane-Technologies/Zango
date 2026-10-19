@@ -28,8 +28,9 @@ def _cli_path() -> str:
     if override and os.access(override, os.X_OK):
         return override
     try:
-        import claude_agent_sdk
         from pathlib import Path
+
+        import claude_agent_sdk
 
         bundled = Path(claude_agent_sdk.__file__).parent / "_bundled" / "claude"
         if bundled.is_file() and os.access(bundled, os.X_OK):
@@ -108,6 +109,9 @@ def probe(tenant=None) -> dict:
         "node_available": bool(shutil.which("node")),
         "tenant_status": getattr(tenant, "status", None) if tenant else None,
         "env": getattr(dj, "ENV", ""),
+        # Informational: a build repairs these itself (and says so in its
+        # log), but a lagging sequence means the DB was restored from a dump.
+        "pk_sequences_behind": _pk_sequences_behind(),
     }
 
     reasons = []
@@ -169,3 +173,20 @@ def _home_writable(home: str) -> bool:
         return os.access(home, os.W_OK)
     except Exception:  # noqa: BLE001
         return False
+
+
+def _pk_sequences_behind() -> list:
+    """Public tables a build inserts into whose id sequence is behind max(id)."""
+    try:
+        from django_tenants.utils import schema_context
+
+        from django.contrib.auth.models import User
+
+        from zango.apps.shared.platformauth.models import PlatformUserModel
+        from zango.core.utils import pk_sequence_lag
+
+        models = [User, PlatformUserModel, PlatformUserModel.apps.through]
+        with schema_context("public"):
+            return [m._meta.db_table for m in models if pk_sequence_lag(m) > 0]
+    except Exception:  # noqa: BLE001 - a probe must never fail on this
+        return []

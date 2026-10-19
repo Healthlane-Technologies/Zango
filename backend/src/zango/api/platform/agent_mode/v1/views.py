@@ -508,15 +508,17 @@ class AgentRunAbortView(ZangoGenericPlatformAPIView, TenantMixin):
             # code_execution abort view passes `execution_uuid=`, which is not
             # a field, so its TypeError is swallowed and the row never lands.
             try:
-                last = (
+                last_seq, last_phase = (
                     AgentRunEvent.objects.filter(run_id=run.id)
                     .order_by("-seq")
-                    .values_list("seq", flat=True)
+                    .values_list("seq", "phase")
                     .first()
-                )
+                ) or (0, "")
                 AgentRunEvent.objects.create(
                     run=run,
-                    seq=(last or 0) + 1,
+                    seq=last_seq + 1,
+                    # The stage the run is in, so the panel files it there.
+                    **({"phase": last_phase} if last_phase else {}),
                     kind="sys",
                     level="warn",
                     message=f"Abort requested by {_user_label(request)}.",

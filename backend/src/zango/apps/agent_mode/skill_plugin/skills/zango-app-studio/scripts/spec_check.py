@@ -2092,10 +2092,11 @@ def attach_bundle(holes, out):
         if not s or not s.get("sketched"):
             continue
         h["bundle"] = f".zas/bundle/screens/{folder}/"
-        note = (f" Approved look: `{h['bundle']}`. Port its sketch.js call for call onto the zas kit"
-                " (custom-code.md, \"Porting a sketch\"); the kit outline in .zas/bundle/index.md is what parity checks.")
-        if any(v.get("hand_written") for v in s.get("variants") or []):
-            note += " Parts are hand-written markup: match them from its shot.*.png."
+        note = (f" Approved look: `{h['bundle']}`. Before writing it, Read its shot.*.png and sketch.js: the"
+                " build has to look like the screenshot. Port ui.* calls onto the zas kit and hand-drawn markup"
+                " with the sketch's own styles (custom-code.md, \"Porting a sketch\").")
+        if s.get("markup") or any(v.get("hand_written") for v in s.get("variants") or []):
+            note += " It has hand-drawn parts (raw HTML and styles in the sketch): port them, do not simplify them."
         h["text"] += note
 
 

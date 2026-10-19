@@ -128,14 +128,17 @@ def record_message(message, recorder, state: dict) -> None:
                 state["session_id"] = session_id
             skills = data.get("skills") or []
             state["discovered_skills"] = skills
+            # "none" = no API key, i.e. the subscription login.
+            auth = data.get("apiKeySource") or "?"
             recorder.emit(
                 EventKind.INIT,
                 f"Session started · model={data.get('model', '?')} · "
-                f"{len(skills)} skill(s) discovered",
+                f"auth={auth} · {len(skills)} skill(s) discovered",
                 data={
                     "skills": skills,
                     "slash_commands": data.get("slash_commands"),
                     "session_id": session_id,
+                    "api_key_source": auth,
                 },
             )
         elif subtype == "compact_boundary":
@@ -237,6 +240,37 @@ def record_message(message, recorder, state: dict) -> None:
                 "terminal_reason": state["terminal_reason"],
                 "api_error_status": state["api_error_status"],
                 **totals,
+            },
+        )
+        return
+
+    if kind == "RateLimitEvent":
+        # On a subscription login this is the signal that matters: how close
+        # the run is to the plan's window, and when it resets.
+        info = getattr(message, "rate_limit_info", None)
+        status = getattr(info, "status", "") or "?"
+        utilization = getattr(info, "utilization", None)
+        resets_at = getattr(info, "resets_at", None)
+        rejected = status == "rejected"
+        recorder.emit(
+            EventKind.SYS,
+            f"Rate limit: {status}"
+            + (
+                f" · {utilization:.0%} used"
+                if isinstance(utilization, (int, float))
+                else ""
+            )
+            + (f" · resets at {resets_at}" if resets_at else ""),
+            level=EventLevel.ERR
+            if rejected
+            else (EventLevel.WARN if status == "allowed_warning" else EventLevel.INFO),
+            is_error=rejected,
+            data={
+                "status": status,
+                "rate_limit_type": getattr(info, "rate_limit_type", None),
+                "utilization": utilization,
+                "resets_at": resets_at,
+                "overage_status": getattr(info, "overage_status", None),
             },
         )
         return

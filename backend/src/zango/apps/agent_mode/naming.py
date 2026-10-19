@@ -28,12 +28,60 @@ MAX_NAME_LEN = 30
 # Words that say nothing about the app, so they never earn a place in a name
 # that is capped at 30 characters.
 _STOPWORDS = {
-    "a", "an", "and", "app", "application", "are", "as", "at", "be", "build",
-    "can", "create", "for", "from", "have", "i", "in", "into", "is", "it",
-    "like", "make", "me", "my", "need", "of", "on", "or", "our", "should",
-    "simple", "so", "system", "that", "the", "their", "them", "then", "there",
-    "they", "this", "to", "track", "want", "was", "we", "where", "which",
-    "who", "will", "with", "would", "you", "your",
+    "a",
+    "an",
+    "and",
+    "app",
+    "application",
+    "are",
+    "as",
+    "at",
+    "be",
+    "build",
+    "can",
+    "create",
+    "for",
+    "from",
+    "have",
+    "i",
+    "in",
+    "into",
+    "is",
+    "it",
+    "like",
+    "make",
+    "me",
+    "my",
+    "need",
+    "of",
+    "on",
+    "or",
+    "our",
+    "should",
+    "simple",
+    "so",
+    "system",
+    "that",
+    "the",
+    "their",
+    "them",
+    "then",
+    "there",
+    "they",
+    "this",
+    "to",
+    "track",
+    "want",
+    "was",
+    "we",
+    "where",
+    "which",
+    "who",
+    "will",
+    "with",
+    "would",
+    "you",
+    "your",
 }
 
 # Schema names Postgres or Zango already own.
@@ -122,9 +170,9 @@ def unique_name(base: str) -> str:
     # One query for the whole stem: the suffix loop below must not issue 98
     # round trips to find a free variant.
     taken = set(
-        TenantModel.objects.filter(name__startswith=base[: MAX_NAME_LEN - 3]).values_list(
-            "name", flat=True
-        )
+        TenantModel.objects.filter(
+            name__startswith=base[: MAX_NAME_LEN - 3]
+        ).values_list("name", flat=True)
     )
     if base not in taken and base not in RESERVED_NAMES:
         return base
@@ -182,7 +230,8 @@ def suggest_identity(prompt: str, creds=None, *, timeout: float = 30.0) -> AppId
     )
 
     creds = creds or resolve_credentials()
-    if not creds.is_usable or not prompt:
+    # The subscription login only works through the CLI, not the Messages API.
+    if not creds.api_key or not prompt:
         return fallback
 
     cfg = load_config()
@@ -223,6 +272,4 @@ def suggest_identity(prompt: str, creds=None, *, timeout: float = 30.0) -> AppId
 
     label = str(data.get("label") or "").strip()[:120] or label_from_name(name)
     description = str(data.get("description") or "").strip()[:2000] or prompt[:500]
-    return AppIdentity(
-        name=name, label=label, description=description, source="model"
-    )
+    return AppIdentity(name=name, label=label, description=description, source="model")

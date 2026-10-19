@@ -8,7 +8,7 @@ bundle keeps what the user actually saw:
       index.md                     what is here, screen by screen (read this first)
       manifest.json                the same as data
       screens/<screen>/
-        sketch.js                  the preview sketch: port it call for call onto zas/ui.tsx
+        sketch.js                  the preview sketch: port it onto zas/ui.tsx, hand-drawn markup included
         contract.json              text, data, interactions, states, acceptance, refs
         view.<role>.json           the kit tree the sketch drew for that role, and its summary
         shot.<role>.png            the screen as that role saw it (one per distinct structure)
@@ -78,14 +78,31 @@ def _slug(role: str) -> str:
 def _outline(tree: list, depth: int = 0) -> list:
     lines = []
     for node in tree or []:
-        line = "  " * depth + f"- {node['kit']}"
-        if node.get("title"):
-            line += f' "{node["title"]}"'
-        if node.get("items"):
-            line += ": " + ", ".join(node["items"])
+        if node["kit"] == "markup":
+            text = node.get("text") or ""
+            line = (
+                "  " * depth
+                + f'- hand-drawn block "{text[:50]}{"…" if len(text) > 50 else ""}"'
+            )
+        else:
+            line = "  " * depth + f"- {node['kit']}"
+            if node.get("title"):
+                line += f' "{node["title"]}"'
+            if node.get("items"):
+                line += ": " + ", ".join(node["items"])
+        if node.get("look"):
+            line += f" [look: {', '.join(node['look'])}]"
         lines.append(line)
         lines += _outline(node.get("children") or [], depth + 1)
     return lines
+
+
+def _has_kit_blocks(tree: list) -> bool:
+    """Whether the tree has any kit block; hand-drawn markup alone does not count."""
+    return any(
+        n.get("kit") != "markup" or _has_kit_blocks(n.get("children") or [])
+        for n in tree or []
+    )
 
 
 def write_bundle(
@@ -144,8 +161,11 @@ def write_bundle(
             )
         )
         if entry["sketched"]:
-            (sdir / "sketch.js").write_text(str(node["preview"]).rstrip() + "\n")
+            sketch = str(node["preview"]).rstrip() + "\n"
+            (sdir / "sketch.js").write_text(sketch)
             entry["sketch"] = f"screens/{folder}/sketch.js"
+            # raw HTML beside the kit calls: the kit outline cannot show it, only the screenshot does
+            entry["markup"] = has_markup(sketch)
         if probe is not None and entry["sketched"]:
             try:
                 res = probe.capture(spec_text, path, kit_js, MAX_VARIANTS)
@@ -162,7 +182,7 @@ def write_bundle(
                     "roles": v["roles"],
                     "record": v.get("record"),
                     "tree": v.get("tree") or [],
-                    "hand_written": not v.get("tree"),
+                    "hand_written": not _has_kit_blocks(v.get("tree")),
                     "draws": run.get("draws") or [],
                     "excerpt": run.get("excerpt"),
                     "warnings": run.get("warnings") or [],
@@ -193,15 +213,28 @@ def write_bundle(
     return manifest
 
 
+MARKUP = re.compile(
+    r"<(?:div|span|b|i|svg|section|p|h\d|ul|li|table|img)\b[^>]*>", re.I
+)
+
+
+def has_markup(sketch: str) -> bool:
+    """Whether a sketch draws raw HTML (its own markup and styles), not only ``ui.*`` kit calls."""
+    return bool(MARKUP.search(sketch or ""))
+
+
 def index_md(manifest: dict) -> str:
     """The bundle as the build agent reads it: one section per custom screen, outline first."""
     lines = [
         "# Approval bundle",
         "",
-        "What the user approved in the App Studio preview, for each custom screen. Port `sketch.js` call for",
-        'call onto the zas kit (references/custom-code.md, "Porting a sketch"); the kit outline below is',
-        "what the parity check compares. Screenshots show demo data: match the layout, never the numbers.",
-        "Open a screenshot when a part is hand-written markup, or when parity fails.",
+        "What the user approved in the App Studio preview, for each custom screen. The build has to",
+        "look like it. **Before you write a screen's slot, Read its screenshot(s) and its `sketch.js`**:",
+        "the screenshot is the look to reproduce, the sketch is how it was drawn. Port `ui.*` calls onto",
+        "the zas kit and hand-drawn markup with the sketch's own styles (references/custom-code.md,",
+        '"Porting a sketch"). The outline below is what the parity check compares: the blocks, their',
+        "labels and each block's `[look: …]` (gradient, filled, chart, avatar, accent), which the built",
+        "block must have too. Screenshots show demo data: match the look, never the numbers.",
         "",
     ]
     if manifest.get("probe") != "ok":
@@ -223,6 +256,13 @@ def index_md(manifest: dict) -> str:
         )
         if not s.get("sketched"):
             lines.append("- No sketch: build from the contract's text.")
+        elif s.get("markup") and not all(
+            v.get("hand_written") for v in s.get("variants") or [{}]
+        ):
+            lines.append(
+                "- Has hand-drawn parts (raw HTML and inline styles beside the kit calls): port them "
+                "from `sketch.js` with its styles, checked against the screenshot"
+            )
         if s.get("error"):
             lines.append(f"- Could not capture: {s['error']}")
         for v in s.get("variants") or []:
@@ -238,7 +278,7 @@ def index_md(manifest: dict) -> str:
             )
             if v.get("hand_written"):
                 lines.append(
-                    "  - hand-written markup (no kit blocks): match it from the screenshot"
+                    "  - hand-written markup (no kit blocks): port it from `sketch.js` with its styles, checked against the screenshot"
                 )
             else:
                 lines += ["  " + ln for ln in _outline(v["tree"])]

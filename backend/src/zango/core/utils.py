@@ -635,3 +635,63 @@ def mask_phone_number(phone_number):
         return "*" * len(digits_only)
     else:
         return "*" * (len(digits_only) - 4) + digits_only[-4:]
+
+
+def is_pk_conflict(exc) -> bool:
+    """Whether an IntegrityError is a duplicate primary key (a lagging id sequence),
+    as opposed to a real uniqueness clash on some other column."""
+    diag = getattr(getattr(exc, "__cause__", None), "diag", None)
+    constraint = getattr(diag, "constraint_name", "") or ""
+    if constraint:
+        return constraint.endswith("_pkey")
+    return "duplicate key" in str(exc) and "_pkey" in str(exc)
+
+
+def resync_pk_sequence(model, using="default"):
+    """Move ``model``'s primary-key sequence up to ``max(pk)``; never moves it back.
+
+    A sequence ends up behind its table when rows are restored from a dump (or
+    inserted with explicit ids) without resetting it, and every later insert
+    then collides with an existing id. Returns the new sequence value, or None
+    when the table has no sequence. Runs against the connection's current
+    schema, so call it inside the schema that owns the table.
+    """
+    from django.db import connections
+
+    table = model._meta.db_table
+    column = model._meta.pk.column
+    conn = connections[using]
+    qn = conn.ops.quote_name
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT pg_get_serial_sequence(%s, %s)", [table, column])
+        row = cursor.fetchone()
+        sequence = row[0] if row else None
+        if not sequence:
+            return None
+        cursor.execute(
+            f"SELECT setval(%s::regclass, GREATEST("
+            f"(SELECT COALESCE(MAX({qn(column)}), 0) FROM {qn(table)}), "
+            f"(SELECT last_value FROM {sequence})))",
+            [sequence],
+        )
+        return cursor.fetchone()[0]
+
+
+def pk_sequence_lag(model, using="default") -> int:
+    """How far ``model``'s pk sequence is behind ``max(pk)`` (0 when it is fine)."""
+    from django.db import connections
+
+    table = model._meta.db_table
+    column = model._meta.pk.column
+    conn = connections[using]
+    qn = conn.ops.quote_name
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT pg_get_serial_sequence(%s, %s)", [table, column])
+        row = cursor.fetchone()
+        if not row or not row[0]:
+            return 0
+        cursor.execute(
+            f"SELECT (SELECT COALESCE(MAX({qn(column)}), 0) FROM {qn(table)}) "
+            f"- (SELECT last_value FROM {row[0]})"
+        )
+        return max(0, int(cursor.fetchone()[0] or 0))

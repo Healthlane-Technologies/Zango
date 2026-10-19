@@ -26,6 +26,7 @@ from .prompt import DEVELOPER_SKILL
 
 
 SKILL_PLUGIN_DIR = str(Path(__file__).resolve().parent / "skill_plugin")
+ZANGO_PACKAGE_DIR = str(Path(__file__).resolve().parents[2])
 
 # Bash is present but the PreToolUse guard reduces it to read-only. Hooks are
 # evaluated before every other permission step and a hook deny is absolute,
@@ -60,6 +61,13 @@ SYSTEM_PROMPT_APPEND = """\
 You are running inside the Zango platform as a server-side app developer.
 There is no interactive user. Never ask a question you could answer by
 reading the workspace; state assumptions in your final summary instead.
+
+Bash is restricted by a policy hook; denied commands cost a turn, so do not
+try them: no shell loops (for/while), no interpreters (python, node), no
+nested shells, no file manipulation (cp, mv, rm, mkdir, touch, sed -i, tee) -
+use Read, Write, Edit, Glob and Grep instead, and read files one Read call
+each (in parallel) rather than with a loop. Paths outside the app workspace
+are readable only under the skill and the installed zango package.
 """
 
 
@@ -93,6 +101,14 @@ def build_env(creds, home: str) -> dict:
     }
     if creds.api_key:
         env["ANTHROPIC_API_KEY"] = creds.api_key
+    elif creds.oauth_token:
+        env["CLAUDE_CODE_OAUTH_TOKEN"] = creds.oauth_token
+        # The SDK lays this env over the worker's own, and the CLI prefers an
+        # API key to the login, so a key inherited from the worker would
+        # silently bill the API. Blank every API-billing variable.
+        env["ANTHROPIC_API_KEY"] = ""
+        env["ANTHROPIC_AUTH_TOKEN"] = ""
+        return env
     env.update(creds.extra_env or {})
     return env
 
@@ -136,6 +152,8 @@ def build_agent_options(
         hook_sink,
         read_roots=[
             SKILL_PLUGIN_DIR,
+            # The framework source, read-only, for looking up core helpers.
+            ZANGO_PACKAGE_DIR,
             *(
                 [
                     template_build.plugin_dir,

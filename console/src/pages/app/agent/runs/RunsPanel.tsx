@@ -16,7 +16,7 @@ import {
 } from '@/api/agentRuns';
 import { formatDateTime, timeAgo } from '@/format/time';
 import { Badge, Button, Card, cx, EmptyState, ErrorState, Skeleton } from '@/ui';
-import { fmtCost, fmtDuration, runStatus } from './format';
+import { fmtDuration, runCost, runStatus } from './format';
 import { ChecksChip } from './RunChecks';
 import { RunView } from './RunView';
 import './runs.css';
@@ -187,7 +187,12 @@ export function RunsPanel({
 											{timeAgo(s?.started_at ?? r.queued_at)}
 										</span>
 										<span className="w-[56px] text-right">{fmtDuration(s?.duration_ms)}</span>
-										<span className="w-[52px] text-right">{fmtCost(s?.total_cost_usd)}</span>
+										<span
+											className="w-[52px] text-right"
+											title={runCost(s?.total_cost_usd, s?.auth_source).title}
+										>
+											{runCost(s?.total_cost_usd, s?.auth_source).text}
+										</span>
 									</span>
 								</button>
 							);

@@ -35,6 +35,23 @@ export function fmtCost(v: string | number | null | undefined): string {
 	return `$${n > 0 && n < 0.01 ? n.toFixed(4) : n.toFixed(2)}`;
 }
 
+export const SUBSCRIPTION_COST_TITLE =
+	'API-equivalent cost — billed to the Claude subscription, not the API';
+
+/**
+ * A run's cost. On a Claude subscription login (`auth_source === "none"`) nothing is billed:
+ * the figure is only what the API would have charged, so it is shown as an estimate.
+ */
+export function runCost(
+	v: string | number | null | undefined,
+	authSource: string | null | undefined,
+): { text: string; title?: string } {
+	const text = fmtCost(v);
+	return authSource === 'none' && text !== '—'
+		? { text: `≈${text}`, title: SUBSCRIPTION_COST_TITLE }
+		: { text };
+}
+
 export function fmtTokens(v: number | null | undefined): string {
 	if (v === null || v === undefined) return '—';
 	if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(v >= 10_000_000 ? 0 : 1)}M`;

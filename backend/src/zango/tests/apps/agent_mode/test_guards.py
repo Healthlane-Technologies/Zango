@@ -444,6 +444,13 @@ class FrontendBuildAllowanceTests(unittest.TestCase):
             ok, _ = check_bash(cmd, app_name="X", allow_frontend=True)
             self.assertFalse(ok, f"{cmd!r} must stay denied")
 
+    def test_stderr_merge_does_not_change_the_verdict(self):
+        # The agent habitually appends 2>&1; it runs the same command.
+        ok, why = check_bash("npx --no tsc --noEmit 2>&1", app_name="X", allow_frontend=True)
+        self.assertTrue(ok, why)
+        ok, _ = check_bash("npm publish 2>&1", app_name="X", allow_frontend=True)
+        self.assertFalse(ok)
+
     def test_all_node_tooling_denied_by_default(self):
         for cmd in self.ALLOWED:
             ok, why = check_bash(cmd, app_name="X")

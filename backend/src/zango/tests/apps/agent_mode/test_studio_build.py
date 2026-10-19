@@ -517,18 +517,20 @@ from zango.tests.apps.app_templates.tests import AppTemplatesTestBase  # noqa: E
 
 
 class ServiceAccountTests(AppTemplatesTestBase):
-    def test_minted_for_the_app_and_disabled_afterwards_even_on_failure(self):
+    def test_scoped_to_the_app_and_disabled_afterwards_even_on_failure(self):
         from django.contrib.auth.models import User
 
         from zango.apps.shared.platformauth.models import PlatformUserModel
 
-        tenant = SimpleNamespace(uuid="00000000-0000-0000-0000-000000000000")
+        tenant = self.tenant
         with studio_build.service_account(tenant) as creds:
             user = PlatformUserModel.objects.get(email=creds["PLATFORM_USERNAME"])
             self.assertFalse(user.is_superadmin)
             self.assertTrue(user.is_active)
             self.assertTrue(user.check_password(creds["PLATFORM_USER_PASSWORD"]))
             self.assertTrue(PlatformUserModel.validate_password(creds["PLATFORM_USER_PASSWORD"]))
+            # The platform script finds the app through this link.
+            self.assertEqual(list(user.apps.all()), [tenant])
         user.refresh_from_db()
         self.assertFalse(user.is_active)
         self.assertFalse(user.has_usable_password())
@@ -539,6 +541,38 @@ class ServiceAccountTests(AppTemplatesTestBase):
             with studio_build.service_account(tenant) as creds:
                 raise RuntimeError("bring-up blew up")
         self.assertFalse(PlatformUserModel.objects.get(email=creds["PLATFORM_USERNAME"]).is_active)
+
+    def test_one_account_per_app_reused_with_a_fresh_password(self):
+        from zango.apps.shared.platformauth.models import PlatformUserModel
+
+        with studio_build.service_account(self.tenant) as first:
+            pass
+        users_after_first = PlatformUserModel.objects.count()
+        with studio_build.service_account(self.tenant) as second:
+            pass
+        self.assertEqual(first["PLATFORM_USERNAME"], second["PLATFORM_USERNAME"])
+        self.assertEqual(first["PLATFORM_USERNAME"], studio_build.service_email(self.tenant))
+        self.assertNotEqual(first["PLATFORM_USER_PASSWORD"], second["PLATFORM_USER_PASSWORD"])
+        self.assertEqual(PlatformUserModel.objects.count(), users_after_first)
+
+    def test_a_lagging_id_sequence_is_repaired_once_and_reported(self):
+        from django.contrib.auth.models import User
+
+        from zango.apps.shared.platformauth.models import PlatformUserModel
+
+        # A restored dump: a row exists at the id the sequence will hand out next.
+        probe = User.objects.create(username="seq-probe")
+        User.objects.create(id=probe.id + 1, username="restored-row")
+
+        events = []
+        account = studio_build.ensure_service_account(
+            self.tenant, emit=lambda kind, message, **kw: events.append((kind, message, kw))
+        )
+        self.assertTrue(PlatformUserModel.objects.filter(pk=account.pk).exists())
+        self.assertGreater(account.user_id, probe.id + 1)
+        self.assertEqual(len(events), 1)
+        self.assertIn("auth_user id sequence was behind", events[0][1])
+        self.assertEqual(events[0][2].get("level"), "warn")
 
 
 class FinishStudioTests(StudioTestBase):
@@ -556,7 +590,7 @@ class FinishStudioTests(StudioTestBase):
         recorder = mock.Mock()
 
         @contextlib.contextmanager
-        def account(tenant):
+        def account(tenant, emit=None):
             yield dict(CREDS)
 
         with mock.patch.object(tasks, "_abort_requested", return_value=False):
@@ -890,7 +924,7 @@ class WaitingRunTests(StudioTestBase):
         recorder = mock.Mock()
 
         @contextlib.contextmanager
-        def account(tenant):
+        def account(tenant, emit=None):
             yield dict(CREDS)
 
         with mock.patch.object(tasks, "_abort_requested", return_value=False):
@@ -1258,3 +1292,18 @@ class DeclaredViewsTests(StudioTestBase):
         prompt = compose_studio_prompt(ctx, template_build, build)
         self.assertIn("tasks (kanban)", prompt)
         self.assertIn("references/views.md", prompt)
+
+
+class RerunGroupTests(unittest.TestCase):
+    """A fix round re-runs only the failing checks' --only groups; each must exist."""
+
+    def test_every_ui_and_design_check_maps_to_a_runner_group(self):
+        import re as _re
+
+        scripts = Path(studio_build.__file__).parent / "skill_plugin" / "skills" / "zango-app-studio" / "scripts" / "zas_test"
+        for layer in ("ui", "design"):
+            source = (scripts / f"{layer}.py").read_text(encoding="utf-8")
+            groups = set(_re.search(r"^GROUPS = \[(.*)\]$", source, _re.M).group(1).replace('"', "").replace(" ", "").split(","))
+            for prefix in set(_re.findall(rf"{layer}\.([a-z_]+)\.", source)):
+                group = studio_build._group_of(layer, f"{layer}.{prefix}.x.admin")
+                self.assertIn(group, groups, f"{layer}.{prefix}.* re-runs --only {group!r}, not a {layer}.py group")

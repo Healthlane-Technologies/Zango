@@ -104,6 +104,15 @@ def main(html_path: str) -> int:
             page.set_viewport_size({"width": width, "height": 900})
             return base64.b64encode(shot).decode("ascii")
 
+        def _untexted(tree):
+            return [
+                {
+                    **{k: v for k, v in n.items() if k != "text"},
+                    "children": _untexted(n.get("children") or []),
+                }
+                for n in tree or []
+            ]
+
         def capture(req: dict) -> dict:
             path = req.get("path")
             sk = next(
@@ -124,7 +133,12 @@ def main(html_path: str) -> int:
                     path,
                 )
                 # Hand-written markup has no tree: each role counts as its own variant (capped below).
-                key = json.dumps(tree, sort_keys=True) if tree else f"raw:{role}"
+                # A hand-drawn block's text holds data, so roles group by structure and look only.
+                key = (
+                    json.dumps(_untexted(tree), sort_keys=True)
+                    if tree
+                    else f"raw:{role}"
+                )
                 if key not in groups:
                     groups[key] = {
                         "roles": [],

@@ -639,7 +639,8 @@ class AgentRunEvent(models.Model):
     run = models.ForeignKey(AgentRun, on_delete=models.CASCADE, related_name="events")
     # Monotonic within a run — what /event-tail/?after_seq=N keys on.
     seq = models.PositiveIntegerField()
-    ts = models.DateTimeField(auto_now_add=True)
+    # Set when the event is emitted; rows are written in batches later.
+    ts = models.DateTimeField(default=timezone.now)
     kind = models.CharField(max_length=16, choices=EventKind.choices, db_index=True)
     phase = models.CharField(
         max_length=12,

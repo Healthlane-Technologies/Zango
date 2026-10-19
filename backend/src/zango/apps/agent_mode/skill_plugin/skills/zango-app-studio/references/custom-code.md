@@ -77,6 +77,8 @@ not an import error. It shows up as "not implemented yet" in the log and the UI.
   `Timeline`, `EmptyState`, the sketch kit (`Stack`, `Grid`, `Kpis`, `Bars`, `List`, `MiniTable`, `Board`,
   `Progress`, `KitEmpty`, `KitBadge`; see "Porting a sketch") and the `zas-*` classes from `tokens.css`. No hex colours, no inline colour
   styles, no new CSS files. `design.py lint` fails the build on them ([design-system](design-system.md)).
+  **Exception: a screen the user approved in the preview** (its hole says "Approved look") is built
+  to look like its screenshot. Its slot may use inline styles and any colour its `sketch.js` uses.
 - **Writes** go through `api.runTransition / runTag / runRowAction` or `FormDialog`, then
   `props.refresh()` so header and stats update.
 - **Custom pages** (`type: custom`) are full slots rendered by `makeCustomPage`. A page that needs
@@ -88,13 +90,19 @@ not an import error. It shows up as "not implemented yet" in the log and the UI.
 ## Porting a sketch (custom screens the user approved)
 
 A custom page, tab or panel whose hole says **"Approved look: `.zas/bundle/screens/<screen>/`"** was
-drawn in the App Studio preview, and the user approved that screen. Build that screen, not your own
-idea of the text. Read `.zas/bundle/index.md` first. It lists every custom screen with its kit
-outline. Each screen's folder has:
+drawn in the App Studio preview, and the user approved that screen. **The built screen has to look
+like the approved screenshot**: same blocks, same visual treatment (banners, gradients, charts,
+avatars, coloured accents, icons), same density. Build that screen, not your own idea of the text,
+and never simplify it to what the kit happens to have.
+
+Read `.zas/bundle/index.md` first. It lists every custom screen with its kit outline. Then, **before
+writing each slot, Read its `shot.<role>.png` and its `sketch.js`.** The outline only lists the kit
+blocks; hand-drawn parts (a gradient banner, a donut, avatars) are only in the sketch and the
+screenshot. Each screen's folder has:
 
 | File | Use |
 |---|---|
-| `sketch.js` | The preview code. Port it call for call (below). Never run or import it. |
+| `sketch.js` | The preview code. Port it call for call, markup included (below). Never run or import it. |
 | `contract.json` | `data`, `interactions`, `states`, `acceptance`: the real behaviour and your tests |
 | `view.<role>.json` | The kit tree that role saw (blocks, titles, KPI labels, table columns) |
 | `shot.<role>.png` | The screen as that role saw it. Values are demo data |
@@ -128,7 +136,17 @@ The parity check (`zas_test parity`) compares them with `view.<role>.json`.
 - `ctx.today`: the server date. `ctx.role`: the requesting user's role (the hook knows it).
 - **Add what a sketch never shows:** the four states (Skeleton, Empty, `data.error`, content). Then `contract.json` `states`, `interactions` and `acceptance` become tests.
 
-**Hand-written markup.** Some sketches return HTML strings instead of `ui.*` calls (`view.*.json` says `"hand_written": true`). Open the `shot.*.png` and build the closest layout from design-system components. No new CSS and no hex colours.
+**Hand-drawn markup.** Many sketches mix `ui.*` calls with HTML strings (index.md says "hand-drawn
+parts"), and some are all markup (`view.*.json` says `"hand_written": true`). Port that markup to JSX
+faithfully, keeping its structure and its inline styles (`style="background:linear-gradient(…)"` becomes
+`style={{ background: "linear-gradient(…)" }}`). Rules for it:
+- Use the sketch's colours; where the sketch uses the brand colour (`#4f46e5` in the default preview
+  brand), write `var(--brand)` so the app's brand applies. Design lint rejects any colour the
+  sketch does not use.
+- A part the kit already draws the same way stays a kit component (`ui.kpis` → `<Kpis>`).
+- Icons go through `<Icon name="…"/>`; values come from the hook, never the sketch's demo rows.
+- Check the result against the screenshot: the platform shows you both after the build, and again
+  after each change, until they match.
 
 **Roles.** When `index.md` lists several variants of one screen, each role sees a different structure. Build every variant; the kit outline tells you which blocks belong to which role.
 

@@ -79,11 +79,16 @@ Two traps found in a live build, both fixed in the runtime; keep them fixed:
 1. Import UI only from `../../zas` (or `../zas`). No other component library, and no
    `@zango-core/components` in slots.
 2. No hex/rgb/hsl colour literals in `.tsx` under `src/custom/`. Use tones (`tone="green"`) or classes.
+   Exception: the slot of a screen approved in the preview (its hole says "Approved look") may use
+   the colours its `sketch.js` uses, and inline styles (rule 3) to reproduce it
+   ([custom-code](custom-code.md) §Porting a sketch).
 3. No `style={{ color | background | border* | font* | boxShadow }}`. Layout-only inline styles
    (`display`, `gap`, `gridTemplateColumns`, `width`, margins and paddings) are allowed.
 4. No new `.css` files under `src/custom/`, and no `<style>` tags.
-5. Icons through `<Icon name="…"/>` (lucide names), so `lucide_icons.py` picks them up. Run it again
-   after adding one.
+5. Icons through `<Icon name="…"/>`, `icon="…"` or `icon: "…"` (lucide names), so `lucide_icons.py`
+   picks them up. Run it again after adding one; in server mode the platform runs it after you
+   finish and, if it added icons, sends you back to rebuild. A name lucide does not have renders as
+   an empty circle and fails design lint.
 6. Copy comes from the spec or the hole text. Never ship "Lorem", "TODO", "Coming soon" or "N/A".
 
 If a slot needs something the components cannot express, add it to the **skill's**

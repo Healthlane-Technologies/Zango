@@ -89,6 +89,29 @@ class MapperTests(unittest.TestCase):
         self.assertEqual(self.rec.kinds(), [EventKind.INIT])
         self.assertIn("1 skill(s)", self.rec.events[0]["message"])
 
+    def test_init_records_auth_source(self):
+        # "none" is the CLI's apiKeySource on the subscription login.
+        mapper.record_message(
+            SystemMessage("init", {"session_id": "s", "apiKeySource": "none"}),
+            self.rec,
+            self.state,
+        )
+        self.assertIn("auth=none", self.rec.events[0]["message"])
+        self.assertEqual(self.rec.events[0]["data"]["api_key_source"], "none")
+
+    def test_rate_limit_event_keeps_its_status(self):
+        info = type("RateLimitInfo", (), {})()
+        info.status, info.utilization, info.resets_at = "allowed_warning", 0.82, 1792140000
+        info.rate_limit_type, info.overage_status = "five_hour", None
+        event = type("RateLimitEvent", (), {})()
+        event.rate_limit_info = info
+        mapper.record_message(event, self.rec, self.state)
+        ev = self.rec.events[0]
+        self.assertIn("allowed_warning", ev["message"])
+        self.assertIn("82% used", ev["message"])
+        self.assertEqual(ev["data"]["utilization"], 0.82)
+        self.assertEqual(ev["level"], "warn")
+
     def test_system_message_has_subtype_and_data_not_content(self):
         # Regression: an earlier draft assumed SystemMessage.content.
         mapper.record_message(

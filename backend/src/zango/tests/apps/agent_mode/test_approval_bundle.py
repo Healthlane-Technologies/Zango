@@ -87,7 +87,7 @@ class WriteBundleTests(unittest.TestCase):
         self.assertTrue((self.out / panel["in_page"]).is_file())
         index = (self.out / "index.md").read_text()
         self.assertIn('  - bars "PO value by month"', index)
-        self.assertIn("hand-written markup (no kit blocks): match it from the screenshot", index)
+        self.assertIn("hand-written markup (no kit blocks): port it from `sketch.js` with its styles", index)
         self.assertIn("In its 360 page:", index)
 
     def test_a_screen_that_cannot_be_captured_is_named_not_fatal(self):
@@ -133,7 +133,7 @@ class HoleTextTests(unittest.TestCase):
         row = next(line for line in md.splitlines() if "`pages.dashboard`" in line)
         self.assertIn("Approved look: `.zas/bundle/screens/pages.dashboard/`", row)
         panel = next(h for w, h in holes.items() if w.startswith("detail_views.vendor_360.sidebar"))
-        self.assertIn("hand-written markup: match them from its shot.*.png", panel["text"])
+        self.assertIn("hand-drawn parts (raw HTML and styles in the sketch): port them, do not simplify them", panel["text"])
         self.assertNotIn("bundle", holes.get("pages.finance_home", {}))  # a declared dashboard is not custom
 
     def test_without_a_bundle_the_holes_are_as_before(self):

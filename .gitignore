@@ -135,3 +135,6 @@ package-lock.json
 
 # Local planning / scratch docs (kept out of git)
 .claude/plans/
+
+# Agent Mode runtime files (sessions, workspaces) from local test runs
+backend/test_project/.agent_mode/

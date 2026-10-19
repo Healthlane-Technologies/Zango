@@ -18,7 +18,7 @@ agent the same):
 
 Every script runs as a subprocess of the platform's own interpreter, with the
 Anthropic credentials stripped from its environment. The platform API is
-reached with a service account minted for the run (:func:`service_account`):
+reached with the app's build service account (:func:`service_account`):
 its password only ever exists in a subprocess environment, never in the
 agent's context or the run's events, and the account is disabled afterwards.
 """
@@ -85,8 +85,10 @@ LAYERS = (
     ("scenarios", "zas_test.scenarios", False, True),
 )
 DESIGN_BROWSER_GROUPS = ("gallery", "tokens", "tree", "layout", "parity")
-# Preview parity failures go to the fix rounds, then stay in the report as gaps, never failing the build.
-NON_FAILING = ("design.parity",)
+# Look-only failures (preview parity, screenshot goldens, layout) go to the fix rounds, then stay in
+# the report as gaps, never failing the build. Kept equal to zas_test/report.py NON_BLOCKING, so the
+# run status and the report's verdict agree.
+NON_FAILING = ("design.layout", "design.gallery", "design.parity")
 APP_LAYERS = tuple(name for name, _, _, needs_app in LAYERS if needs_app)
 BROWSER_LAYERS = tuple(name for name, _, browser, _ in LAYERS if browser)
 # The one bring-up step that needs the app reachable on its own domain.
@@ -127,7 +129,7 @@ def platform_url() -> str:
 
 
 def blocking(layers: dict) -> bool:
-    """Whether a failing check fails the build: any failure except preview parity (NON_FAILING)."""
+    """Whether a failing check fails the build: any failure except the look-only ones (NON_FAILING)."""
     return any(
         any(not str(f.get("id", "")).startswith(NON_FAILING) for f in x.failures)
         or (x.status == "fail" and not x.failures)
@@ -139,6 +141,13 @@ def fix_rounds() -> int:
     from django.conf import settings
 
     return max(0, int(getattr(settings, "AGENT_MODE_STUDIO_FIX_ROUNDS", 2)))
+
+
+def look_rounds() -> int:
+    """How many times the agent compares its custom screens with the approved preview."""
+    from django.conf import settings
+
+    return max(0, int(getattr(settings, "AGENT_MODE_STUDIO_LOOK_ROUNDS", 2)))
 
 
 # ---------------------------------------------------------------------------
@@ -161,58 +170,169 @@ def _service_password() -> str:
     return "".join(core)
 
 
+def service_email(tenant) -> str:
+    """The one build account of an app; stable, so it is inserted once per app."""
+    return f"agent-build-{tenant.uuid}@agent-mode.invalid"
+
+
+def _create_healing(model, create, emit=None):
+    """``create()`` in a savepoint; on a duplicate primary key, repair the sequence once and retry.
+
+    A primary-key clash means the table's id sequence is behind its rows
+    (typically a restored dump), not that the row exists, so moving the
+    sequence up is safe and the retry gets a fresh id.
+    """
+    from django.db import IntegrityError, transaction
+
+    from zango.core.utils import is_pk_conflict, resync_pk_sequence
+
+    try:
+        with transaction.atomic():
+            return create()
+    except IntegrityError as exc:
+        if not is_pk_conflict(exc):
+            raise
+        table = model._meta.db_table
+        value = resync_pk_sequence(model)
+        logger.warning(
+            "agent_mode: %s id sequence was behind its rows; moved to %s", table, value
+        )
+        if emit is not None:
+            emit(
+                "sys",
+                f"The {table} id sequence was behind its rows (usually after restoring "
+                f"a database dump); moved it to {value} and retried.",
+                level="warn",
+            )
+        try:
+            with transaction.atomic():
+                return create()
+        except IntegrityError as again:
+            if not is_pk_conflict(again):
+                raise
+            raise StudioError(
+                "DatabaseSequenceBehind",
+                f"The {table} id sequence is behind its rows and could not be "
+                f"repaired automatically. Run: SELECT setval(pg_get_serial_sequence("
+                f"'{table}', 'id'), (SELECT max(id) FROM {table})); then resume.",
+            ) from again
+
+
+def ensure_service_account(tenant, emit=None):
+    """Get or create this app's build account, disabled. Returns its PlatformUserModel.
+
+    Called in Preparing, before the agent runs, so a database problem here
+    fails the build in a second instead of after a finished agent pass. Both
+    rows are written in one transaction (``PlatformUserModel.create_user``
+    swallows errors and can leave a lone ``auth_user`` row behind).
+    """
+    import uuid
+
+    from django_tenants.utils import schema_context
+
+    from django.contrib.auth.models import User
+    from django.db import transaction
+
+    from zango.apps.shared.platformauth.models import PlatformUserModel
+
+    email = service_email(tenant)
+    with schema_context("public"), transaction.atomic():
+        account = (
+            PlatformUserModel.objects.select_for_update().filter(email=email).first()
+        )
+        if account is not None:
+            return account
+        # Same auth_user shape create_user gives every platform user.
+        user = _create_healing(
+            User,
+            lambda: User.objects.create(
+                username=str(uuid.uuid4()),
+                is_active=False,
+                is_staff=True,
+                is_superuser=True,
+            ),
+            emit,
+        )
+        user.set_unusable_password()
+        user.save(update_fields=["password"])
+
+        def _platform_user():
+            account = PlatformUserModel(
+                name="Agent Mode build",
+                email=email,
+                mobile="",
+                is_superadmin=False,
+                is_active=False,
+                user=user,
+            )
+            account.set_unusable_password()
+            account.save()
+            return account
+
+        return _create_healing(PlatformUserModel, _platform_user, emit)
+
+
 @contextmanager
-def service_account(tenant):
-    """A platform user that can reach this one app, for the length of a build.
+def service_account(tenant, emit=None):
+    """This app's build account, enabled and scoped to the app for the length of a build.
 
     Yields the environment the skill's platform script reads
     (``PLATFORM_USERNAME`` / ``PLATFORM_USER_PASSWORD``). Not a superadmin:
     it is scoped to the tenant through ``PlatformUserModel.apps``, which is
-    all the App Panel endpoints the script calls require. Disabled on exit
-    (inactive, unusable password, no apps), whatever happened in between.
+    all the App Panel endpoints the script calls require. The account is
+    reused across builds with a fresh password each time, and disabled on
+    exit (inactive, unusable password, no apps), whatever happened in between.
     """
+    from django_tenants.utils import schema_context
+
+    from django.db import transaction
+
+    from zango.apps.shared.platformauth.models import PlatformUserModel
+
+    account = ensure_service_account(tenant, emit)
+    password = _service_password()
+    with schema_context("public"), transaction.atomic():
+        account = PlatformUserModel.objects.select_for_update().get(pk=account.pk)
+        account.set_password(password)
+        account.is_active = True
+        account.save()
+        account.apps.set([tenant])
+        type(account.user).objects.filter(pk=account.user_id).update(is_active=True)
+        linked = account.apps.filter(pk=tenant.pk).exists()
+    if not linked:
+        _disable_service_account(account.pk)
+        raise StudioError(
+            "ServiceAccountFailed",
+            "The build's service account could not be given access to this app, "
+            "so the platform API would not find it.",
+        )
+    try:
+        yield {"PLATFORM_USERNAME": account.email, "PLATFORM_USER_PASSWORD": password}
+    finally:
+        _disable_service_account(account.pk)
+
+
+def _disable_service_account(pk) -> None:
+    """Deactivated, not deleted: deleting a platform user cascades into
+    tenant-only tables (the audit log), and a disabled row with no password
+    and no apps is as dead as a deleted one, with a trail."""
     from django_tenants.utils import schema_context
 
     from zango.apps.shared.platformauth.models import PlatformUserModel
 
-    email = f"agent-build-{secrets.token_hex(6)}@agent-mode.invalid"
-    password = _service_password()
     with schema_context("public"):
-        result = PlatformUserModel.create_user(
-            name="Agent Mode build",
-            email=email,
-            mobile="",
-            password=password,
-            is_superadmin=False,
-            require_verification=False,
-            app_uuids=[str(tenant.uuid)],
-        )
-        if not result.get("success"):
-            raise StudioError(
-                "ServiceAccountFailed",
-                f"Could not create the build's service account: {result.get('message')}",
-            )
-    try:
-        yield {"PLATFORM_USERNAME": email, "PLATFORM_USER_PASSWORD": password}
-    finally:
-        # Deactivated, not deleted: deleting a platform user cascades into
-        # tenant-only tables (the audit log), and a disabled row with no
-        # password and no apps is as dead as a deleted one, with a trail.
-        with schema_context("public"):
-            try:
-                for user in PlatformUserModel.objects.filter(email=email):
-                    user.is_active = False
-                    user.set_unusable_password()
-                    user.save()
-                    user.apps.clear()
-                    if user.user_id:
-                        type(user.user).objects.filter(pk=user.user_id).update(
-                            is_active=False
-                        )
-            except Exception:  # noqa: BLE001 - never mask the build's own outcome
-                logger.exception(
-                    "agent_mode: could not disable the build service account"
-                )
+        try:
+            for user in PlatformUserModel.objects.filter(pk=pk):
+                user.is_active = False
+                user.set_unusable_password()
+                user.save()
+                user.apps.clear()
+                if user.user_id:
+                    type(user.user).objects.filter(pk=user.user_id).update(
+                        is_active=False
+                    )
+        except Exception:  # noqa: BLE001 - never mask the build's own outcome
+            logger.exception("agent_mode: could not disable the build service account")
 
 
 # ---------------------------------------------------------------------------
@@ -1380,6 +1500,37 @@ class StudioBuild:
             ),
         )
 
+    def refresh_icons(self, emit=None) -> list:
+        """Regenerate icons.gen.ts now that the slots exist; the icon names it gained.
+
+        Prepare generates it from the spec alone, and the agent cannot run the script
+        itself, so an icon used only by a hand-written slot would render as the circle
+        fallback. A changed file is newer than the build, so app_shell asks for a rebuild.
+        """
+        path = Path(self.workspace) / "frontend" / "src" / "zas" / "icons.gen.ts"
+
+        def names():
+            try:
+                return set(
+                    re.findall(
+                        r'^\s*"([a-z0-9-]+)":', path.read_text(encoding="utf-8"), re.M
+                    )
+                )
+            except OSError:
+                return set()
+
+        before = names()
+        result = self.script(
+            "frontend:icons",
+            "lucide_icons.py",
+            "--workspace",
+            self.workspace,
+            emit=emit,
+        )
+        if result.returncode != 0:
+            return []  # the build keeps the icons it has; the step's own event shows why
+        return sorted(names() - before)
+
     def check_app_shell(self, emit=None) -> LayerResult:
         """What serving /app needs: the app module, its route, and a fresh build it loads.
 
@@ -1388,6 +1539,7 @@ class StudioBuild:
         """
         ws = Path(self.workspace)
         problems = []
+        icons_added = self.refresh_icons(emit) if self.frontend_ready else []
 
         def problem(pid, title, detail=""):
             problems.append(
@@ -1455,7 +1607,13 @@ class StudioBuild:
             if newest > build.stat().st_mtime + 1:
                 problem(
                     "stale",
-                    f"static/js/{build.name} is older than the frontend sources",
+                    f"static/js/{build.name} is older than the frontend sources"
+                    + (
+                        f" (the platform added icons your slots use to src/zas/icons.gen.ts: "
+                        f"{', '.join(icons_added)})"
+                        if icons_added
+                        else ""
+                    ),
                     "Rebuild (`npm run build:zango`), deploy the new file and update app.html.",
                 )
 
@@ -1599,6 +1757,9 @@ class StudioBuild:
                     layers.update(self.verify(emit, only=todo, bring_up_ok=bring_up_ok))
 
         hold_steps = {f"platform:{x}" for x in held_steps}
+        parity_stale = (
+            checkpoint is not None
+        )  # a resumed build did not shoot this session
         while (
             done < rounds
             and resume_agent is not None
@@ -1622,16 +1783,20 @@ class StudioBuild:
             was_ok = bring_up_ok
             bring_up_ok = self.bring_up(creds, emit, hold=hold_steps)
             if not was_ok:
-                ran = {n: [] for n in layers} if checkpoint is not None else None
-                fresh = self.verify(
-                    emit, only=ran, bring_up_ok=bring_up_ok, hold=held_layers
-                )
+                only = {n: [] for n in layers} if checkpoint is not None else None
             else:
                 only = {n: x.groups for n, x in layers.items() if x.status == "fail"}
-                fresh = self.verify(
-                    emit, only=only, bring_up_ok=bring_up_ok, hold=held_layers
-                )
+            fresh = self.verify(
+                emit, only=only, bring_up_ok=bring_up_ok, hold=held_layers
+            )
             layers.update(fresh)
+            # the agent changed files: the built-screen shots are stale unless parity just re-ran
+            design_groups = (only or {}).get("design") or []
+            parity_stale = not (
+                "design" in fresh
+                and fresh["design"].status != "skip"
+                and (not design_groups or "parity" in design_groups)
+            )
 
         if actions and bring_up_ok:
             # Everything that could run has; the rest waits for the user.
@@ -1661,38 +1826,89 @@ class StudioBuild:
                 self.verify(emit, only={n: [] for n in held_layers}, bring_up_ok=False)
             )
         elif resume_agent is not None and bring_up_ok:
-            # One look: the agent sees each custom screen it built next to the one the user approved.
-            look = self.look_digest()
-            if look:
-                if emit:
-                    emit(
-                        "sys",
-                        "One look: the agent compares each custom screen with the approved preview.",
-                        level="sys",
-                    )
-                if resume_agent(look):
-                    bring_up_ok = self.bring_up(creds, emit, hold=hold_steps)
-                    design = layers.get("design")
-                    groups = sorted(set(design.groups if design else []) | {"parity"})
-                    layers.update(
-                        self.verify(
-                            emit,
-                            only={"design": groups},
-                            bring_up_ok=bring_up_ok,
-                            hold=held_layers,
-                        )
-                    )
+            bring_up_ok = self.look_rounds(
+                layers, creds, resume_agent, emit, parity_stale, hold_steps, held_layers
+            )
         report = self.report(emit)
         ok = bring_up_ok and not blocking(layers)
         return StudioOutcome(
             ok=ok, bring_up_ok=bring_up_ok, layers=layers, rounds=done, report=report
         )
 
-    def look_digest(self) -> str:
-        """The one-look message: each custom screen as built next to the approved one, or "".
+    def look_rounds(
+        self, layers, creds, resume_agent, emit, parity_stale, hold_steps, held_layers
+    ) -> bool:
+        """Show the agent its custom screens next to the approved preview until they match.
 
-        zas_test.design parity writes the pairs (.zas/parity_looks.json). Only screens with an
-        approved screenshot are listed; the agent opens them with Read.
+        Each round re-shoots the built screens first, so the agent never judges a stale build.
+        It stops when the agent changes nothing (it says the screens match), when the agent
+        cannot continue, or after ``look_rounds()``. Updates ``layers``; returns bring_up_ok.
+        """
+        total = look_rounds()
+
+        def reshoot():
+            design = layers.get("design")
+            groups = sorted(set(design.groups if design else []) | {"parity"})
+            layers.update(
+                self.verify(
+                    emit,
+                    only={"design": groups, "design_lint": []},
+                    bring_up_ok=True,
+                    hold=held_layers,
+                )
+            )
+
+        if parity_stale and total:
+            reshoot()
+        for n in range(1, total + 1):
+            design = layers.get("design")
+            gaps = [
+                f
+                for f in (design.failures if design else [])
+                if str(f.get("id", "")).startswith("design.parity")
+            ]
+            look = self.look_digest(n, total, gaps)
+            if not look:
+                break
+            if emit:
+                emit(
+                    "sys",
+                    f"Look {n} of {total}: the agent compares each custom screen with the approved preview.",
+                    level="sys",
+                )
+            before = self.custom_fingerprint()
+            if not resume_agent(look):
+                break
+            if self.custom_fingerprint() == before:
+                if emit:
+                    emit(
+                        "sys",
+                        "The agent changed nothing after looking: the custom screens match the approved preview.",
+                        level="sys",
+                    )
+                break
+            if not self.bring_up(creds, emit, hold=hold_steps):
+                return False
+            reshoot()
+        return True
+
+    def custom_fingerprint(self) -> tuple:
+        """What a look round can change: the custom frontend sources and the deployed build."""
+        ws = Path(self.workspace)
+        out = []
+        for root in (ws / "frontend" / "src" / "custom", ws / "static" / "js"):
+            if root.is_dir():
+                for p in sorted(root.rglob("*")):
+                    if p.is_file():
+                        st = p.stat()
+                        out.append((str(p), st.st_size, st.st_mtime_ns))
+        return tuple(out)
+
+    def look_digest(self, n: int = 1, total: int = 1, gaps=()) -> str:
+        """A look round's message: each custom screen as built next to the approved one, or "".
+
+        zas_test.design parity writes the pairs (.zas/parity_looks.json), shot from the current
+        build. Only screens with an approved screenshot are listed; the agent opens them with Read.
         """
         try:
             looks = json.loads(
@@ -1704,22 +1920,49 @@ class StudioBuild:
         if not pairs:
             return ""
         lines = [
-            "## One look: your custom screens next to what the user approved",
+            f"## Look {n} of {total}: your custom screens next to what the user approved",
             "",
-            "Open each pair with Read: the approved screenshot (from the preview), then the screen "
-            "you built. The numbers differ (the preview used demo data); compare the layout: the "
-            "blocks and their order, titles and labels, emphasis, density and empty states. Fix a "
-            "slot that does not match the approved one; when they all match, say so and stop.",
+            "The user approved these screens in the preview; the build has to look like them. For each "
+            "pair, Read the approved screenshot, then the screen you built (shot from your latest build).",
+            "",
+            "1. List every visible part of the approved screen (banner, tiles, panels, charts, lists, "
+            "avatars, badges, icons, spacing) and mark each **matches** or **differs**. The numbers and "
+            "names differ (the preview used demo data): ignore the values, compare the look.",
+            "2. Fix every part that differs. Port the approved `sketch.js` faithfully: its own colours, "
+            "gradients, charts and inline styles are allowed in that screen's slot (design lint only "
+            "rejects colours the sketch does not use). Use `var(--brand)` where the sketch uses the "
+            "brand colour. Then type-check, rebuild and deploy as in Phase 6.",
+            "3. If every part already matches, change nothing and say so: the platform stops comparing "
+            "when a round changes no files.",
             "",
         ]
+        if n < total:
+            lines += [
+                "After your changes the platform rebuilds, re-shoots and shows you the result again.",
+                "",
+            ]
+        else:
+            lines += [
+                "This is the last look: what still differs goes to the build report as a gap, so name it.",
+                "",
+            ]
+        if gaps:
+            lines += [
+                "The parity check already found these differences (structure and look, data ignored); "
+                "fix each one:",
+                "",
+            ]
+            lines += [
+                f"- `{g.get('id')}`: {(g.get('detail') or g.get('title') or '').split(' Compare ')[0]}"
+                for g in gaps
+            ]
+            lines.append("")
         for x in pairs:
-            note = (
-                " (hand-written in the preview: match it by eye)"
-                if x.get("hand_written")
-                else ""
-            )
+            sketch = x["approved"].rsplit("/", 1)[0] + "/sketch.js"
+            note = " (drawn as hand-written markup)" if x.get("hand_written") else ""
             lines.append(
-                f"- `{x['screen']}` as {x['role']}{note}: approved `{x['approved']}`, built `{x['built']}`"
+                f"- `{x['screen']}` as {x['role']}{note}: approved `{x['approved']}`, "
+                f"built `{x['built']}`, sketch `{sketch}`"
             )
         return "\n".join(lines) + "\n"
 
@@ -1809,12 +2052,19 @@ def _load_results(workspace: str) -> list:
     return data.get("results") or []
 
 
+# ui.py names its checks ui.page.* and ui.menu.*, but both come from its
+# "pages" group; passing the raw segment made the re-run crash (KeyError).
+UI_GROUP = {"page": "pages", "menu": "pages"}
+
+
 def _group_of(layer: str, result_id: str) -> str:
     """The --only group a failing check belongs to."""
     parts = str(result_id or "").split(".")
     if layer == "api":
         return API_GROUP.get(parts[0], "")
-    if layer in ("ui", "design") and len(parts) > 1:
+    if layer == "ui" and len(parts) > 1:
+        return UI_GROUP.get(parts[1], parts[1])
+    if layer == "design" and len(parts) > 1:
         return parts[1]
     if layer == "scenarios" and len(parts) > 1 and re.match(r"^H-\d+", parts[1]):
         return parts[1]

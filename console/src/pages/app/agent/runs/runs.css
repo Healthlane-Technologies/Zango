@@ -89,7 +89,8 @@
 	background: var(--red-soft);
 	color: var(--red-t);
 }
-.rp-steps li.todo b {
+.rp-steps li.todo b,
+.rp-steps li.skipped b {
 	color: var(--t4);
 	font-weight: 500;
 }
