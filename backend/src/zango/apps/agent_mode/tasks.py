@@ -1343,15 +1343,15 @@ def sweep_stuck_agent_runs() -> dict:
     """Reap runs whose worker died, and runs stranded with no worker at all."""
     from datetime import timedelta
 
-    from django.conf import settings as dj
     from django.db import connection as conn
     from django.db.models import Q
 
     from zango.apps.shared.tenancy.models import TenantModel
 
+    from .config import load_config
     from .models import ACTIVE_STATUSES, AgentRun, RunStatus
 
-    max_seconds = getattr(dj, "AGENT_MODE_MAX_RUN_SECONDS", 1800)
+    max_seconds = load_config().max_run_seconds
     now = timezone.now()
     running_cutoff = now - timedelta(seconds=int(max_seconds * 1.5))
     queued_cutoff = now - timedelta(minutes=15)

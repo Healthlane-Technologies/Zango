@@ -40,6 +40,8 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from celery.exceptions import SoftTimeLimitExceeded
+
 from .postrun import STRIPPED_ENV, StepResult, _tail, run_step
 
 
@@ -561,6 +563,10 @@ class StudioBuild:
         except subprocess.TimeoutExpired:
             result.returncode = -1
             result.stderr_tail = f"step timed out after {timeout}s"
+        except SoftTimeLimitExceeded:
+            # The run's time limit, not the step's: it must reach the task so
+            # the run ends cleanly before the hard limit kills the worker.
+            raise
         except Exception as exc:  # noqa: BLE001
             result.returncode = -1
             result.stderr_tail = f"{type(exc).__name__}: {exc}"
@@ -2060,6 +2066,9 @@ UI_GROUP = {"page": "pages", "menu": "pages"}
 def _group_of(layer: str, result_id: str) -> str:
     """The --only group a failing check belongs to."""
     parts = str(result_id or "").split(".")
+    if parts[-1] == "crashed":
+        # The stand-in for a layer that did not run: re-run all of it.
+        return ""
     if layer == "api":
         return API_GROUP.get(parts[0], "")
     if layer == "ui" and len(parts) > 1:

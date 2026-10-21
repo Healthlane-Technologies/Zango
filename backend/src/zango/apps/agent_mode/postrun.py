@@ -27,6 +27,8 @@ import time
 
 from dataclasses import dataclass, field
 
+from celery.exceptions import SoftTimeLimitExceeded
+
 
 DEFAULT_STEP_TIMEOUT = 300
 OUTPUT_TAIL_CHARS = 4_000
@@ -104,6 +106,9 @@ def run_step(
             duration_ms=int((time.monotonic() - started) * 1000),
             stderr_tail=f"step timed out after {timeout}s",
         )
+    except SoftTimeLimitExceeded:
+        # The run's time limit, not the step's: let the task handle it.
+        raise
     except Exception as exc:  # noqa: BLE001
         return StepResult(
             step=step,

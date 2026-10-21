@@ -16,6 +16,7 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from django.db import IntegrityError, connection, transaction
 from django.utils.decorators import method_decorator
 
+from zango.apps.agent_mode.config import load_config
 from zango.apps.agent_mode.models import (
     ACTIVE_STATUSES,
     RUN_PHASE_ORDER,
@@ -247,7 +248,7 @@ class AgentRunListCreateView(
                 )
 
             prompt = payload["prompt"]
-            max_seconds = int(getattr(dj, "AGENT_MODE_MAX_RUN_SECONDS", 1800))
+            max_seconds = int(load_config().max_run_seconds)
 
             try:
                 with transaction.atomic():
@@ -657,7 +658,7 @@ class AgentRunContinueView(ZangoGenericPlatformAPIView, TenantMixin):
                     False, {"message": "This build is already continuing."}, 409
                 )
 
-            max_seconds = int(getattr(dj, "AGENT_MODE_MAX_RUN_SECONDS", 1800))
+            max_seconds = int(load_config().max_run_seconds)
 
             def _dispatch():
                 result = agent_run_continue.apply_async(
@@ -761,7 +762,7 @@ class AgentRunResumeView(ZangoGenericPlatformAPIView, TenantMixin):
                     409,
                 )
 
-            max_seconds = int(getattr(dj, "AGENT_MODE_MAX_RUN_SECONDS", 1800))
+            max_seconds = int(load_config().max_run_seconds)
             try:
                 with transaction.atomic():
                     run = AgentRun.objects.create(

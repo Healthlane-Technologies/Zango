@@ -1307,3 +1307,29 @@ class RerunGroupTests(unittest.TestCase):
             for prefix in set(_re.findall(rf"{layer}\.([a-z_]+)\.", source)):
                 group = studio_build._group_of(layer, f"{layer}.{prefix}.x.admin")
                 self.assertIn(group, groups, f"{layer}.{prefix}.* re-runs --only {group!r}, not a {layer}.py group")
+
+    def test_a_crashed_layer_reruns_in_full(self):
+        # "design.crashed" is the stand-in for a layer that did not run; read
+        # as a group it made design.py die with KeyError: 'crashed'.
+        for layer in ("api", "ui", "design", "scenarios"):
+            self.assertEqual(studio_build._group_of(layer, f"{layer}.crashed"), "")
+
+
+class RunTimeLimitTests(StudioTestBase):
+    """The run's soft time limit must reach the task, not be recorded as a failed step."""
+
+    def test_a_studio_step_does_not_swallow_the_soft_time_limit(self):
+        from celery.exceptions import SoftTimeLimitExceeded
+
+        with mock.patch.object(studio_build.subprocess, "run", side_effect=SoftTimeLimitExceeded()):
+            with self.assertRaises(SoftTimeLimitExceeded):
+                self.build()._run("test:design", ["true"])
+
+    def test_a_post_step_does_not_swallow_the_soft_time_limit(self):
+        from celery.exceptions import SoftTimeLimitExceeded
+
+        from zango.apps.agent_mode import postrun
+
+        with mock.patch.object(postrun.subprocess, "run", side_effect=SoftTimeLimitExceeded()):
+            with self.assertRaises(SoftTimeLimitExceeded):
+                postrun.run_step("x", ["check"], tempfile.gettempdir())
