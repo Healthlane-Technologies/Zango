@@ -2060,7 +2060,7 @@ def _load_results(workspace: str) -> list:
 
 # ui.py names its checks ui.page.* and ui.menu.*, but both come from its
 # "pages" group; passing the raw segment made the re-run crash (KeyError).
-UI_GROUP = {"page": "pages", "menu": "pages"}
+UI_GROUP = {"page": "pages", "menu": "pages", "flow": "flows"}
 
 
 def _group_of(layer: str, result_id: str) -> str:

@@ -15,6 +15,9 @@ Groups:
            others see the no-access state; no header banner is blank; every tab opens without error
            and is not blank;
            screenshot → .zas/screens/<role>/<view>.png
+  flows    the journeys end to end, checked on screen and in the backend after each step: create
+           from the list page, every manual workflow move from the 360, child adds from 360 tabs
+           (zas_test/flows.py)
 Results: <ws>/.zas/test_results.json (layer "ui"). Exit 1 when any check fails.
 """
 
@@ -26,7 +29,7 @@ import sys
 
 from . import auth, browser, load_json, print_summary, save_results
 
-GROUPS = ["login", "pages", "detail"]
+GROUPS = ["login", "pages", "detail", "flows"]
 
 
 def slug(s):
@@ -124,7 +127,8 @@ def g_pages(U, b):
                         add_label = (E.get("table") or {}).get("add_button") or E["names"].get("add_label") or f"Add {E['name']}"
                         cr = (E.get("form") or {}).get("create") or {}
                         want_add = U.can(P["entity"], role, "add") and (not cr.get("roles") or role in cr["roles"])
-                        has_add = rp.page.get_by_role("button", name=re.compile(re.escape(add_label), re.I)).count() > 0
+                        # the kit's Add button, not any button with that text: a status chip can share the label
+                        has_add = rp.page.locator('[data-zas="action"][data-zas-key="add"]').count() > 0
                         if want_add != has_add:
                             probs.append(f"Add button {'missing' if want_add else 'shown'} (looked for {add_label!r})")
                         qfs = [q["label"] for q in (E.get("table") or {}).get("quick_filters", []) if not q.get("roles") or role in q["roles"]]
@@ -204,7 +208,12 @@ def g_detail(U, b):
             U.check(f"ui.detail.{vcode}.{slug(role)}", f"{vcode} {'renders' if viewer else 'refused'}", role, f"detail_views.{vcode}", t_view)
 
 
-RUNNERS = {"login": g_login, "pages": g_pages, "detail": g_detail}
+def g_flows(U, b):
+    from .flows import g_flows as run
+    run(U, b)
+
+
+RUNNERS = {"login": g_login, "pages": g_pages, "detail": g_detail, "flows": g_flows}
 
 
 def main(argv=None):

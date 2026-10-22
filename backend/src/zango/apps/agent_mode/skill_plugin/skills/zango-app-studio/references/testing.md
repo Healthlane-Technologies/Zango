@@ -66,8 +66,17 @@ Python Playwright, headless Chromium, one browser context per role (logged in by
 | `login` | `/app/` shows the branded login (`data-zas="login"`), so the app serves its own build |
 | `pages` | every page in each role's menu renders (`[data-zas="page"][data-zas-key=<code>]`) with no console errors or 5xx; Add shown iff the role can add; quick-filter chips equal the spec's for that role; every menu label and group is on screen |
 | `detail` | for each 360 and role: viewers get the header and exactly the tabs the role may see, in spec order; each tab opens without errors or "not implemented"; non-viewers get the no-access state |
+| `flows` | the journeys end to end ([`zas_test/flows.py`](../scripts/zas_test/flows.py)): per entity, the first role that may create it fills the create form through its real widgets and submits; the record is walked along the longest chain of manual moves from the 360 header, and every other manual move runs on a record the API walks to its from-status; each 360 tab whose child the role may add gets one child. After every step it checks the screen (dialog closed, status badge, no browser errors) and the backend (record saved with the typed values, status is `to`, a timeline event written) |
 
-Screenshots of every page, 360 and tab, per role, land in `.zas/screens/<role>/`.
+Screenshots of every page, 360 and tab, per role, land in `.zas/screens/<role>/`; a failed flow step
+lands in `.zas/screens/flows/`.
+
+`flows` fills forms with the same values the API layer posts and runs the same
+`.zas/test_fixtures.py` hooks (`values`, `transition_values`, `before_transition`, `record_for`), so a
+fixture written for the API layer already covers it. The API layer stays: it proves what a browser
+cannot, that the server refuses a role the UI merely hides a button from (`access`, `transitions`,
+`scoping`). Read the two together: when a flow step fails it repeats the step over the API with the same
+values and says which side broke.
 
 ## Layer 3: design (`python3 -m zas_test.design --workspace <ws>`)
 
@@ -139,6 +148,9 @@ a save, `ctx.call("<module>.tasks.<fn>")` for a scheduled job), assert the outco
 | `detail.*` | `<Model>Detail`, `Meta.detail_class`, child `parents`, the tab's `param` |
 | `ui.page.*` | `pages/index.ts` export = route `component`; build copied to `static/js`; AppBuilder routes |
 | `ui.detail.*` | `ListPage` route ownership, `detail_path`; screenshots in `.zas/screens/<role>/` |
+| `ui.flow.*` "the API accepted the same values" | the browser side: the field's `pattern` against what its widget submits (a phone widget sends `+<cc>…`), a `show_when` hiding a required field, a form default (a callable model default is served as `"<function …>"`); the on-screen errors are in the detail |
+| `ui.flow.*` "the API refused them too" | the backend, as for `create.*` / `transition*` above |
+| `ui.flow.*` "saved, but" | the saved row differs from what was typed, or the form served a broken default; fix the form or model, not the check |
 | `design.lint` | the file and line in the detail |
 | `scenario.H-NN.*` | the hole's hook/task in `backend/<module>/hooks.py` / `tasks.py`; the scenario names the spec text it proves |
 
