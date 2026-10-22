@@ -209,7 +209,7 @@ interface ThreadProps {
 	agentCard?: ReactNode;
 	/** The composer's prompt once the agent has replied (e.g. "Ask for changes to the preview…"). */
 	idlePlaceholder?: string;
-	/** What the user pointed at in the preview; it goes with the next reply. */
+	/** What the user pointed at in the preview; it goes with the next reply or new change. */
 	pointer?: PreviewFocus | null;
 	onClearPointer?: () => void;
 }
@@ -303,7 +303,7 @@ export function Thread({
 	}, [draft]);
 
 	const disabled = !enabled || sending || (mode === 'reply' && thinking);
-	const pointed = mode === 'reply' ? pointer?.pointed : undefined;
+	const pointed = mode !== 'first' ? pointer?.pointed : undefined;
 	// Pointing is the start of a message: put the cursor in the box.
 	useEffect(() => {
 		if (pointer?.pointed) inputRef.current?.focus();
@@ -333,7 +333,9 @@ export function Thread({
 		: mode === 'first'
 			? 'e.g. a way for staff to book patient appointments and track whether they were attended'
 			: mode === 'next'
-				? 'Describe the next change…'
+				? pointed
+					? 'What should change about it?'
+					: 'Describe the next change…'
 				: thinking
 					? 'The agent is replying…'
 					: pointed

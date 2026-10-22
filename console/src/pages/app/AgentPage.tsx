@@ -438,7 +438,15 @@ export function AgentPage() {
 			? specHighlights(viewed.detail.spec_markdown).groups.reduce((n, g) => n + g.items.length, 0)
 			: 0;
 
-	const newChange = (input: NewRoundInput) => attempt(create.mutateAsync(input));
+	// A new change carries what the user pointed at (or where they were) in the preview, like a reply.
+	const newChange = async (input: NewRoundInput) => {
+		const focus = pointer ?? place.current;
+		const ok = await attempt(
+			create.mutateAsync(typeof input === 'string' ? { prompt: input, focus } : { ...input, focus }),
+		);
+		if (ok) setPointer(null);
+		return ok;
+	};
 
 	const decisionsCard =
 		decisionsInChat && open && openDecisions > 0 && active ? (
@@ -590,7 +598,7 @@ export function AgentPage() {
 						onSend={async (c) =>
 							(!active?.template || (await flushTemplate())) && sendReply(c)
 						}
-						onNewRound={(p) => attempt(create.mutateAsync(p))}
+						onNewRound={newChange}
 						onOpenBuild={(uuid) => setView({ round: uuid, tab: 'builds' })}
 						focusSignal={focusSignal}
 						pointer={pointer}
@@ -710,7 +718,8 @@ export function AgentPage() {
 											jump={viewingActive ? specJump : null}
 											commit={viewingActive && open ? commitAction : undefined}
 											sheet={viewingActive ? sheetSignal : null}
-											onPreviewFocus={viewingActive && open ? onPreviewFocus : undefined}
+											// Once approved, what the user points at starts the next change.
+											onPreviewFocus={viewingActive ? onPreviewFocus : undefined}
 										/>
 									) : (
 										markdown()

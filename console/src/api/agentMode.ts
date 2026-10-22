@@ -349,8 +349,13 @@ export function useRequirement(appId: string, reqId: string | undefined) {
 	return useQuery(requirementQuery(appId, reqId));
 }
 
-/** A new round: plain text, or (template apps) a brief with documents and a reference. */
-export type NewRoundInput = string | { prompt?: string; reference?: string; documents?: File[] };
+/**
+ * A new round: plain text, or (template apps) a brief with documents and a reference. `focus` is
+ * where the user was in the preview (or what they pointed at), as on a reply.
+ */
+export type NewRoundInput =
+	| string
+	| { prompt?: string; reference?: string; documents?: File[]; focus?: PreviewFocus | null };
 
 export function useCreateRequirement(appId: string, onCreated: (uuid: string) => void) {
 	return useApiMutation({
@@ -361,6 +366,7 @@ export function useCreateRequirement(appId: string, onCreated: (uuid: string) =>
 			const body = new FormData();
 			if (input.prompt) body.append('prompt', input.prompt);
 			if (input.reference) body.append('reference', input.reference);
+			if (input.focus) body.append('focus', JSON.stringify(input.focus));
 			for (const file of input.documents ?? []) body.append('documents', file, file.name);
 			return api<{ uuid: string; status: RequirementStatus }>(url, 'POST', body);
 		},

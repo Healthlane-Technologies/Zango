@@ -70,6 +70,13 @@ class FocusNoteTests(unittest.TestCase):
         self.assertEqual(focus_note({}), "")
         self.assertEqual(focus_note(None), "")
 
+    def test_a_multipart_focus_arrives_as_json_text(self):
+        raw = '{"page": "Referrals", "pointed": {"path": "/pages/0", "label": "New Referral"}}'
+        out = clean_focus(raw)
+        self.assertEqual(out["page"], "Referrals")
+        self.assertEqual(out["pointed"]["label"], "New Referral")
+        self.assertEqual(clean_focus("not json"), {})
+
 
 class WiringTests(unittest.TestCase):
     """The message view stores the cleaned focus; the turn reads it under the message."""
@@ -80,6 +87,12 @@ class WiringTests(unittest.TestCase):
         views = (self.SRC / "api/platform/agent_mode/v1/views.py").read_text()
         self.assertIn('clean_focus(request.data.get("focus"))', views)
         self.assertIn("preview_focus=focus or {}", views)
+
+    def test_a_new_change_stores_the_focus_on_its_first_message(self):
+        views = (self.SRC / "api/platform/agent_mode/v1/views.py").read_text()
+        self.assertIn(
+            'requirement, prompt, clean_focus(request.data.get("focus"))', views
+        )
 
     def test_the_turn_appends_the_note_to_the_message(self):
         tasks = (self.SRC / "apps/agent_mode/tasks.py").read_text()

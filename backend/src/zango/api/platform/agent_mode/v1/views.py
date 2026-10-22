@@ -959,7 +959,12 @@ class AgentRequirementListCreateView(
                     AgentRequirementDocument.objects.create(
                         requirement=requirement, **doc.model_fields()
                     )
-                _append_user_message(requirement, prompt)
+                from zango.apps.agent_mode.preview_focus import clean_focus
+
+                # What the user pointed at in the preview starts the change.
+                _append_user_message(
+                    requirement, prompt, clean_focus(request.data.get("focus"))
+                )
 
             _dispatch_turn(requirement, tenant)
             return get_api_response(

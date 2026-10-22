@@ -10,6 +10,8 @@ The focus comes from the browser, so it is reduced to a small, known shape befor
 
 from __future__ import annotations
 
+import json
+
 
 MAX_TEXT = 160
 MAX_PATH = 300
@@ -29,7 +31,15 @@ def _path(value) -> str:
 
 
 def clean_focus(raw) -> dict:
-    """``raw`` (from the request) as {role, page, title, path, record?, tab?, view?, pointed?}."""
+    """``raw`` (from the request) as {role, page, title, path, record?, tab?, view?, pointed?}.
+
+    A multipart request (a new change with documents) sends it as a JSON string.
+    """
+    if isinstance(raw, str):
+        try:
+            raw = json.loads(raw)
+        except ValueError:
+            return {}
     if not isinstance(raw, dict):
         return {}
     out = {
