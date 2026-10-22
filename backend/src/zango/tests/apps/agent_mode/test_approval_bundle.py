@@ -50,6 +50,61 @@ class FakeProbe:
              "tree": [], "run": {"excerpt": "3 of 5 done"}, "png": PNG}], "in_page": PNG}
 
 
+VIEWS_SPEC = """
+app: {code: demo, name: Demo}
+pages:
+  - {code: tasks, type: crud, title: Tasks, entity: task, views: [{type: table}, {type: kanban, label: Board}]}
+  - {code: notes, type: crud, title: Notes, entity: note}
+"""
+LAYOUT = {"switcher": "toolbar", "shell": {"sidebar": True, "brand": "Demo", "brand_role": "Admin",
+                                           "user_in_sidebar": True, "topbar": True, "topbar_title": "Tasks",
+                                           "topbar_actions": 2}}
+
+
+class LayoutProbe(FakeProbe):
+    def __init__(self):
+        super().__init__()
+        self.layouts = []
+
+    def capture_layout(self, yaml_text, kind, page=None, view=0):
+        self.layouts.append((kind, page, view))
+        return {"role": "Admin", "page": page or "tasks", "layout": LAYOUT, "png": PNG}
+
+
+class StandardScreenTests(unittest.TestCase):
+    """List pages with views and the app shell get screenshots too (they were missing, so a built
+    list page and shell could differ from the approved preview without the agent ever seeing it)."""
+
+    def setUp(self):
+        self.out = Path(tempfile.mkdtemp())
+
+    def test_each_view_of_a_page_with_a_switcher_and_the_shell_are_shot(self):
+        probe = LayoutProbe()
+        manifest = write_bundle(VIEWS_SPEC, self.out, probe=probe)
+        self.assertEqual(probe.layouts, [("view", "tasks", 0), ("view", "tasks", 1), ("shell", None, 0)])
+        paths = [s["path"] for s in manifest["screens"]]
+        self.assertEqual(paths, ["/pages/@tasks/views/0", "/pages/@tasks/views/1", "/shell"])
+        board = manifest["screens"][1]
+        self.assertEqual((board["kind"], board["view_type"], board["layout"]["switcher"]), ("view", "kanban", "toolbar"))
+        self.assertTrue((self.out / board["variants"][0]["shot"]).is_file())
+        self.assertEqual(json.loads((self.out / "screens" / "shell" / "layout.json").read_text())["role"], "Admin")
+
+    def test_the_index_names_the_lever_for_each_standard_screen(self):
+        write_bundle(VIEWS_SPEC, self.out, probe=LayoutProbe())
+        index = (self.out / "index.md").read_text()
+        self.assertIn("# Standard screens", index)
+        self.assertIn('makeViewsPage("tasks", { … }, { switcher: "toolbar" })', index)
+        self.assertIn("frontend/src/custom/views/tasks_kanban.tsx", index)
+        self.assertIn("navbarConfig.customLogo", index)
+        self.assertIn('data-zas="shell-user"', index)
+        self.assertIn("2 icon button(s)", index)
+
+    def test_a_probe_without_layout_capture_still_lists_the_screens(self):
+        manifest = write_bundle(VIEWS_SPEC, self.out, probe=FakeProbe())
+        shell = next(s for s in manifest["screens"] if s["kind"] == "shell")
+        self.assertEqual(shell["variants"], [])
+
+
 class FolderTests(unittest.TestCase):
     def test_a_folder_is_the_holes_spec_path(self):
         self.assertEqual(screen_folder("/pages/@dashboard"), "pages.dashboard")
@@ -94,7 +149,8 @@ class WriteBundleTests(unittest.TestCase):
         probe = FakeProbe()
         probe.capture = mock.Mock(side_effect=ProbeError("hung"))
         manifest = write_bundle(EXAMPLE, self.out, probe=probe)
-        self.assertTrue(all(s.get("error") == "hung" for s in manifest["screens"]))
+        custom = [s for s in manifest["screens"] if s.get("kind") not in ("view", "shell")]
+        self.assertTrue(custom and all(s.get("error") == "hung" for s in custom))
         self.assertIn("Could not capture: hung", (self.out / "index.md").read_text())
 
     def test_an_unsketched_screen_is_built_from_its_text(self):

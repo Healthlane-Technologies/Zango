@@ -150,6 +150,28 @@ faithfully, keeping its structure and its inline styles (`style="background:line
 
 **Roles.** When `index.md` lists several variants of one screen, each role sees a different structure. Build every variant; the kit outline tells you which blocks belong to which role.
 
+## The app shell (sidebar header, user card, top bar)
+
+The shell comes from `@zango-core/appbuilder`'s `ZangoApp`; the preview draws its own. When
+`.zas/bundle/index.md` has a `/shell` screen, **Read its screenshot first**, then make the shell
+look like it through `ZangoApp`'s props in `src/App.tsx` (`references/zango/frontend/appbuilder.md`,
+"Navbar & Topbar"). Never edit the appbuilder package or replace the whole navbar or topbar
+(`customNavbar`, `customTopbar`): the menu, routing and profile stay the platform's.
+
+| What the screenshot shows | Prop | Component in `src/custom/shell/`, root marked |
+|---|---|---|
+| Sidebar header: initials avatar, app name, the role | `navbarConfig.customLogo` | `data-zas="shell-brand"` |
+| User card at the sidebar's bottom: avatar, name, role | `navbarConfig.customBottomContent`, and `topbarConfig.showProfile: false` | `data-zas="shell-user"` |
+| Top bar: page title (breadcrumb on a 360), icon buttons | `topbarConfig.customLeftContent` / `customRightContent` | `data-zas="shell-top"` |
+
+- Compose them from the zas kit and classes (`Avatar`-like initials with `zas` classes, `Icon`,
+  `Button`): `src/custom/shell/` is under the design lint like the rest of `src/custom/`.
+- Data: the user and role from `useAppContext()` (appbuilder), the app name from `SPEC.app.name`,
+  the page title from `SPEC.pages` by the current route (`useLocation()`).
+- Icon buttons with nothing behind them in the spec (the preview's search and bell) are decoration:
+  draw them only if the screenshot has them, and give them no fake behaviour.
+- The parity check opens the landing page and looks for each marker the screenshot calls for.
+
 ## Notes on an item (`zas:note`)
 
 Put what a reader needs to know about an implementation (the guess behind a `needs-review`, where a

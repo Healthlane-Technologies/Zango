@@ -801,6 +801,10 @@ class StudioBuild:
         shots = sum(
             1 for s in manifest["screens"] for v in s["variants"] if v.get("shot")
         )
+        standard = sum(
+            1 for s in manifest["screens"] if s.get("kind") in ("view", "shell")
+        )
+        custom = len(manifest["screens"]) - standard
         self.steps.append(
             StepResult(
                 step=STEP_PREFIX + "bundle",
@@ -811,7 +815,8 @@ class StudioBuild:
         if emit:
             emit(
                 "sys",
-                f"Approval bundle: {len(manifest['screens'])} custom screen(s), {shots} screenshot(s).",
+                f"Approval bundle: {custom} custom screen(s), {standard} standard screen(s) "
+                f"(list views, shell), {shots} screenshot(s).",
                 level="sys",
             )
         return manifest
@@ -1964,6 +1969,17 @@ class StudioBuild:
             ]
             lines.append("")
         for x in pairs:
+            if x.get("kind") in ("view", "shell"):
+                lever = (
+                    "arrange it with makeViewsPage's switcher option and your view's layout (views.md)"
+                    if x["kind"] == "view"
+                    else "arrange it with ZangoApp's navbarConfig / topbarConfig and src/custom/shell/ (custom-code.md)"
+                )
+                lines.append(
+                    f"- `{x['screen']}` as {x['role']} (standard screen: {lever}): approved "
+                    f"`{x['approved']}`, built `{x['built']}`"
+                )
+                continue
             sketch = x["approved"].rsplit("/", 1)[0] + "/sketch.js"
             note = " (drawn as hand-written markup)" if x.get("hand_written") else ""
             lines.append(

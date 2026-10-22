@@ -382,6 +382,23 @@ class PreviewProbe:
             CAPTURE_TIMEOUT,
         )
 
+    def capture_layout(
+        self, yaml_text: str, kind: str, page: str | None = None, view: int = 0
+    ) -> dict:
+        """A standard screen for the approval bundle: a list page in one declared view
+        (``kind="view"``) or the app shell on a role's landing page (``kind="shell"``):
+        {role, page, layout, png}."""
+        return self._request(
+            {
+                "op": "capture_layout",
+                "yaml": yaml_text,
+                "kind": kind,
+                "page": page,
+                "view": view,
+            },
+            LOOK_TIMEOUT,
+        )
+
 
 def probe_for(template) -> PreviewProbe | None:
     """A probe for ``template``'s preview page, or None when it cannot have one.

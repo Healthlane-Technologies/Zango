@@ -27,13 +27,33 @@ or an empty one, means there is nothing to do here.
 leaves the record's 360 route to the table page. Your component renders everything inside the
 page for its view.
 
+## Matching the approved page
+
+The user approved this page in the preview, switcher included. `.zas/bundle/index.md` lists it
+under "Standard screens" with a screenshot per view (`screens/pages.<page>.views.<i>/shot.*.png`)
+and where the switcher sits (`layout.json`). **Read every one of them before writing the view.**
+
+- **Switcher in the toolbar** (the preview's place: a segmented control at the toolbar's right,
+  before Export): pass `{ switcher: "toolbar" }` as `makeViewsPage`'s third argument. The table
+  view then shows it in its own toolbar; your view gets `props.placement === "toolbar"` and renders
+  `props.switcher` in its `zas-tb` toolbar row, after the `zas-sp` spacer and before Export.
+- **Switcher above the page**: leave the third argument out (tabs above the page).
+- Lay your view out as its screenshot shows it: the same header, toolbar (search, filters, the
+  switcher, Export), columns or cards, and what each card shows. Compose it from the zas kit; this
+  is arranging, not new design.
+
+The parity check compares the built page with each screenshot (switcher placement, and the pair
+of screenshots goes to the look round).
+
 ## The component
 
 `props`: `pageCode`, `title`, `entity`, `endpoint`, `view` (the declared view from the spec plus
-`label`, `icon` and, for a kanban on status, the workflow's `transitions`), and `switcher`.
+`label`, `icon` and, for a kanban on status, the workflow's `transitions`), `switcher` and
+`placement` (`"toolbar"` or `"header"`: where `switcher` goes, see above).
 
 - **Header.** A `zas-ph` row like the table's: the page `title`, the record count, then
-  `props.switcher`, then the Add button when the role may add. Read `src/zas/ZasTable.tsx` and
+  `props.switcher` when `placement` is `"header"`, then the Add button when the role may add.
+  With `"toolbar"`, the switcher goes in your `zas-tb` row (search, filters, spacer, switcher, Export). Read `src/zas/ZasTable.tsx` and
   reuse how it decides and opens Add (the same `FormDialog`), search and filters where they make
   sense for the view. Do not rebuild the table.
 - **Data.** The same endpoint as the table, so access and row scoping are the server's and

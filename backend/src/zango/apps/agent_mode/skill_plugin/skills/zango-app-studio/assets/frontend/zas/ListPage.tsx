@@ -18,7 +18,7 @@ function detailUuid(params: Record<string, string | undefined>): string | null {
   return i >= 0 && path[i + 1] ? path[i + 1] : null;
 }
 
-function ListPageInner({ pageCode }: { pageCode: string }) {
+function ListPageInner({ pageCode, toolbar }: { pageCode: string; toolbar?: React.ReactNode }) {
   const params = useParams();
   const page = SPEC.pages[pageCode];
   const E = page?.entity ? SPEC.entities[page.entity] : null;
@@ -32,7 +32,7 @@ function ListPageInner({ pageCode }: { pageCode: string }) {
   return (
     <div className="zas zas-page" data-zas="page" data-zas-key={pageCode}>
       <ZasTable entity={page.entity as string} endpoint={E.endpoint} page={{ code: pageCode, title: page.title }}
-        addLabel={E.add_button} rowClick={E.row_click} zasKey={pageCode} />
+        addLabel={E.add_button} rowClick={E.row_click} zasKey={pageCode} toolbar={toolbar} />
     </div>
   );
 }
@@ -46,4 +46,9 @@ export function makeListPage(pageCode: string): React.FC {
     listPages[pageCode] = C;
   }
   return listPages[pageCode];
+}
+
+/** The list page with extra toolbar controls (ViewsPage puts its switcher there). */
+export function ListPageView({ pageCode, toolbar }: { pageCode: string; toolbar?: React.ReactNode }) {
+  return <ToastHost><ListPageInner pageCode={pageCode} toolbar={toolbar} /></ToastHost>;
 }

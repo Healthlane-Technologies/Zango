@@ -92,6 +92,7 @@ export interface ZasTableProps {
   pageSize?: number;
   onChanged?: () => void;                   // after any write (the 360 refreshes its header/stats)
   zasKey?: string;
+  toolbar?: React.ReactNode;                // extra controls at the toolbar's right, before Export (a view switcher)
 }
 
 export function ZasTable(p: ZasTableProps) {
@@ -250,6 +251,7 @@ export function ZasTable(p: ZasTableProps) {
             </div>
           )}
           <span className="zas-sp" />
+          {p.toolbar}
           {meta?.has_download_perm && !p.footer?.length && <Button icon={<Download />} onClick={exportRows} zasKey="export">Export</Button>}
           {!p.page && addBtn}
         </div>

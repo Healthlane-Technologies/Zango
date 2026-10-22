@@ -498,6 +498,161 @@ def _safe_posix_split(segment: str) -> bool:
         return False
 
 
+# ---------------------------------------------------------------------------
+# Approved screens: Read the screenshots before writing the screen
+# ---------------------------------------------------------------------------
+#
+# The approval bundle (.zas/bundle/, approval_bundle.py) holds what the user approved in the
+# preview. Its index tells the agent to Read a screen's screenshots (and sketch) before writing
+# it; a first build that skipped them produced screens that did not look approved. So a Write or
+# Edit of a screen's file is refused until its approved files have been read.
+#
+# Reads are kept per bundle (workspace + the bundle's created_at), in this worker process: a fix
+# round is a new agent session in the same run and need not read them again.
+
+_BUNDLE_READS: dict = {}
+_BUNDLE_RULES: dict = {}
+
+
+def _json(path: str):
+    import json
+
+    try:
+        with open(path, encoding="utf-8") as fh:
+            return json.load(fh)
+    except (OSError, ValueError):
+        return None
+
+
+def _mtime(path: str) -> int:
+    try:
+        return os.stat(path).st_mtime_ns
+    except OSError:
+        return 0
+
+
+def bundle_rules(workspace_root: str) -> tuple[str, list]:
+    """(bundle key, [(matches(rel) -> bool, [absolute files to Read first], screen label)]).
+
+    Only files that exist are required: a bundle without screenshots gates nothing.
+    """
+    ws = os.path.realpath(workspace_root)
+    bundle = os.path.join(ws, ".zas", "bundle")
+    mpath = os.path.join(bundle, "manifest.json")
+    rpath = os.path.join(ws, ".zas", "spec.resolved.json")
+    stamp = (ws, _mtime(mpath), _mtime(rpath))
+    cached = _BUNDLE_RULES.get(ws)
+    if cached and cached[0] == stamp:
+        return cached[1], cached[2]
+    manifest = _json(mpath) or {}
+    key = f"{ws}|{manifest.get('created_at', '')}"
+    by_folder: dict = {}
+    for scr in manifest.get("screens") or []:
+        folder = os.path.join(bundle, scr.get("folder") or "")
+        need = [
+            os.path.join(bundle, v["shot"])
+            for v in scr.get("variants") or []
+            if v.get("shot")
+        ]
+        if scr.get("sketch"):
+            need.append(os.path.join(bundle, scr["sketch"]))
+        need = [f for f in need if os.path.isfile(f)]
+        by_folder[os.path.realpath(folder)] = (scr, need)
+
+    rules: list = []
+    # Custom screens: the slot named by the hole that points at the screen's folder.
+    for hole in (_json(rpath) or {}).get("holes") or []:
+        if not isinstance(hole, dict) or not hole.get("bundle") or not hole.get("slot"):
+            continue
+        hit = by_folder.get(os.path.realpath(os.path.join(ws, hole["bundle"])))
+        if hit and hit[1]:
+            rel = f"frontend/src/custom/slots/{hole['slot']}.tsx"
+            rules.append((lambda r, rel=rel: r == rel, hit[1], hit[0].get("path")))
+    # A list page's views: every view file of that page needs every view's shot.
+    pages: dict = {}
+    for scr, need in by_folder.values():
+        if scr.get("kind") == "view" and scr.get("page"):
+            pages.setdefault(scr["page"], []).extend(need)
+    for page, need in pages.items():
+        if need:
+            prefix = f"frontend/src/custom/views/{page}_"
+            rules.append(
+                (
+                    lambda r, p=prefix: r.startswith(p) and r.endswith(".tsx"),
+                    need,
+                    f"/pages/@{page}",
+                )
+            )
+    # The shell: App.tsx and the shell components.
+    for scr, need in by_folder.values():
+        if scr.get("kind") == "shell" and need:
+            rules.append(
+                (
+                    lambda r: r == "frontend/src/App.tsx"
+                    or r.startswith("frontend/src/custom/shell/"),
+                    need,
+                    "the app shell",
+                )
+            )
+    _BUNDLE_RULES[ws] = (stamp, key, rules)
+    return key, rules
+
+
+def unread_approved(workspace_root: str, path: str) -> tuple[str, list]:
+    """(screen, [approved files not yet Read]) for a write to *path*; ("", []) when free."""
+    ws = os.path.realpath(workspace_root)
+    try:
+        real = os.path.realpath(path if os.path.isabs(path) else os.path.join(ws, path))
+        rel = os.path.relpath(real, ws).replace(os.sep, "/")
+    except ValueError:
+        return "", []
+    key, rules = bundle_rules(ws)
+    seen = _BUNDLE_READS.get(key, set())
+    for matches, need, label in rules:
+        if matches(rel):
+            missing = [f for f in need if f not in seen]
+            if missing:
+                return label or rel, missing
+    return "", []
+
+
+def note_read(workspace_root: str, path: str) -> None:
+    """Record that the agent Read *path* (only bundle files matter)."""
+    ws = os.path.realpath(workspace_root)
+    real = os.path.realpath(path if os.path.isabs(path) else os.path.join(ws, path))
+    if f"{os.sep}.zas{os.sep}bundle{os.sep}" not in real:
+        return
+    key, _ = bundle_rules(ws)
+    _BUNDLE_READS.setdefault(key, set()).add(real)
+
+
+def note_bash_reads(workspace_root: str, command: str) -> None:
+    """A sketch or layout file printed with cat/head counts as read; a screenshot needs Read."""
+    if ".zas/bundle/" not in (command or ""):
+        return
+    ws = os.path.realpath(workspace_root)
+    key, rules = bundle_rules(ws)
+    for _m, need, _l in rules:
+        for f in need:
+            if f.endswith(".png"):
+                continue
+            rel = os.path.relpath(f, ws).replace(os.sep, "/")
+            if rel in command or f in command:
+                _BUNDLE_READS.setdefault(key, set()).add(f)
+
+
+def _unread_reason(screen: str, missing: list, workspace_root: str) -> str:
+    ws = os.path.realpath(workspace_root)
+    names = ", ".join(
+        f"`{os.path.relpath(f, ws).replace(os.sep, '/')}`" for f in missing[:6]
+    )
+    more = f" (+{len(missing) - 6} more)" if len(missing) > 6 else ""
+    return (
+        f"the user approved {screen} in the preview: Read its approved files first ({names}{more}), "
+        "then write it to match. .zas/bundle/index.md says what to match."
+    )
+
+
 def _deny(reason: str) -> dict:
     """PreToolUse deny, in the SDK's verified output shape."""
     return {
@@ -540,11 +695,26 @@ def make_pre_tool_use_guard(
         if tool_name in PATH_TOOLS:
             # Writes: workspace only. Reads: workspace + the skill's docs.
             roots = [workspace_root] if tool_name in WRITE_TOOLS else read_allowed
-            for path in extract_paths(tool_name, tool_input):
+            paths = extract_paths(tool_name, tool_input)
+            for path in paths:
                 ok, why = resolve_within_any(path, roots)
                 if not ok:
                     reason = f"{tool_name}: {why}"
                     break
+            try:
+                if not reason and tool_name in WRITE_TOOLS:
+                    for path in paths:
+                        screen, missing = unread_approved(workspace_root, path)
+                        if missing:
+                            reason = f"{tool_name}: " + _unread_reason(
+                                screen, missing, workspace_root
+                            )
+                            break
+                elif not reason and tool_name == "Read":
+                    for path in paths:
+                        note_read(workspace_root, path)
+            except Exception:  # noqa: BLE001 - the gate is an aid; never break the run on it
+                pass
         elif tool_name == "Bash":
             ok, why = check_bash(
                 tool_input.get("command") or "",
@@ -555,6 +725,11 @@ def make_pre_tool_use_guard(
             )
             if not ok:
                 reason = f"Bash blocked: {why}"
+            else:
+                try:
+                    note_bash_reads(workspace_root, tool_input.get("command") or "")
+                except Exception:  # noqa: BLE001
+                    pass
 
         if reason:
             if sink is not None:

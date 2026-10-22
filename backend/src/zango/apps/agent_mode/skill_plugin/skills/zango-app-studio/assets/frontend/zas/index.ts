@@ -12,7 +12,7 @@ import { applyTheme } from "./config";
 
 applyTheme();
 
-export { makeListPage } from "./ListPage";
+export { makeListPage, ListPageView } from "./ListPage";
 export { RecordDrawer, ZasTable } from "./ZasTable";
 export { getDetailComponent, makeDetailPage } from "./Detail360";
 export { makeCustomPage } from "./CustomPage";

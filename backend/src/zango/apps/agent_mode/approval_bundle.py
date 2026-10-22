@@ -13,6 +13,14 @@ bundle keeps what the user actually saw:
         view.<role>.json           the kit tree the sketch drew for that role, and its summary
         shot.<role>.png            the screen as that role saw it (one per distinct structure)
         in_page.<role>.png         a tab or panel in its 360 page
+      screens/pages.<page>.views.<i>/   a list page with declared views, in view <i> (shell included)
+        shot.<role>.png, layout.json  the screen, and where its switcher sits
+      screens/shell/               the app shell (sidebar, top bar) on a role's landing page
+        shot.<role>.png, layout.json  the screen, and what the shell shows
+
+The standard screens (list pages with views, the shell) are drawn by the runtime, which the build
+agent arranges at defined points (the switcher's place, the shell's logo, user card and top bar)
+but does not edit: their shots show it the layout to arrange.
 
 Roles whose screen has the same kit tree share one view and one screenshot, so a screenshot
 means a layout the build must actually produce. Values are demo data: the build matches the
@@ -118,6 +126,7 @@ def write_bundle(
     out.mkdir(parents=True, exist_ok=True)
     doc = yaml.safe_load(spec_text or "") or {}
     screens = custom_screens(doc) if isinstance(doc, dict) else {}
+    layouts = layout_screens(doc)
     manifest = {
         "version": 1,
         "spec_sha256": hashlib.sha256((spec_text or "").encode()).hexdigest(),
@@ -129,7 +138,7 @@ def write_bundle(
         "screens": [],
     }
     kit_js = kit_tree_js() if probe is not None and screens else ""
-    if probe is not None and screens:
+    if probe is not None and (screens or layouts):
         try:
             listed = probe.sketches(spec_text)
             if listed.get("parse_error"):
@@ -208,9 +217,99 @@ def write_bundle(
                 entry["in_page"] = f"screens/{folder}/in_page.{role}.png"
         manifest["screens"].append(entry)
 
+    for item in layouts:
+        manifest["screens"].append(_layout_entry(out, item, spec_text, probe))
+
     (out / "manifest.json").write_text(json.dumps(manifest, indent=2))
     (out / "index.md").write_text(index_md(manifest))
     return manifest
+
+
+def layout_screens(doc) -> list:
+    """The standard screens the build arranges: every crud page that declares two or more views
+    (one entry per view, so the switcher and each view are shot), then the app shell."""
+    if not isinstance(doc, dict):
+        return []
+    out = []
+    for page in doc.get("pages") or []:
+        if (
+            not isinstance(page, dict)
+            or page.get("type") != "crud"
+            or not page.get("code")
+        ):
+            continue
+        views = [v for v in page.get("views") or [] if isinstance(v, dict)]
+        if len(views) < 2:
+            continue
+        for i, v in enumerate(views):
+            out.append(
+                {
+                    "kind": "view",
+                    "page": page["code"],
+                    "view": i,
+                    "view_type": v.get("type") or "table",
+                    "title": f"{page.get('title') or page['code']} · {v.get('label') or (v.get('type') or 'table').title()}",
+                }
+            )
+    if doc.get("pages"):
+        out.append({"kind": "shell", "page": None, "view": 0, "title": "App shell"})
+    return out
+
+
+def _layout_entry(out: Path, item: dict, spec_text: str, probe) -> dict:
+    """One standard screen: its folder, layout.json and screenshot (when the preview can shoot)."""
+    from .preview_probe import ProbeError
+
+    if item["kind"] == "view":
+        path = f"/pages/@{item['page']}/views/{item['view']}"
+        folder = f"pages.{item['page']}.views.{item['view']}"
+    else:
+        path, folder = "/shell", "shell"
+    sdir = out / "screens" / folder
+    sdir.mkdir(parents=True, exist_ok=True)
+    entry = {
+        "path": path,
+        "folder": f"screens/{folder}",
+        "kind": item["kind"],
+        "title": item["title"],
+        "page": item["page"],
+        "view_type": item.get("view_type"),
+        "sketched": False,
+        "variants": [],
+        "in_page": None,
+        "layout": None,
+    }
+    if probe is None or not hasattr(probe, "capture_layout"):
+        return entry
+    try:
+        res = probe.capture_layout(
+            spec_text, item["kind"], page=item["page"], view=item["view"]
+        )
+    except ProbeError as exc:
+        entry["error"] = str(exc)
+        return entry
+    if res.get("error") or res.get("parse_error"):
+        entry["error"] = res.get("error") or res.get("parse_error")
+        return entry
+    role = res.get("role") or ""
+    entry["layout"] = res.get("layout") or {}
+    if item["kind"] == "shell":
+        entry["page"] = res.get("page")
+    (sdir / "layout.json").write_text(
+        json.dumps({"role": role, "page": res.get("page"), **entry["layout"]}, indent=2)
+    )
+    variant = {
+        "roles": [role],
+        "tree": [],
+        "hand_written": False,
+        "shot": None,
+        "record": None,
+    }
+    if res.get("png"):
+        (sdir / f"shot.{_slug(role)}.png").write_bytes(base64.b64decode(res["png"]))
+        variant["shot"] = f"screens/{folder}/shot.{_slug(role)}.png"
+    entry["variants"].append(variant)
+    return entry
 
 
 MARKUP = re.compile(
@@ -242,9 +341,11 @@ def index_md(manifest: dict) -> str:
             f"> No screenshots or kit outlines: {manifest.get('probe')}. Build from the sketch and the contract.",
             "",
         ]
-    if not manifest.get("screens"):
+    custom = [s for s in manifest.get("screens") or [] if s.get("kind") not in STANDARD]
+    standard = [s for s in manifest.get("screens") or [] if s.get("kind") in STANDARD]
+    if not custom:
         lines.append("No custom screens in this spec.")
-    for s in manifest.get("screens") or []:
+    for s in custom:
         lines.append(
             f"## `{s['path']}`" + (f" — {s['title']}" if s.get("title") else "")
         )
@@ -285,4 +386,81 @@ def index_md(manifest: dict) -> str:
         if s.get("in_page"):
             lines.append(f"- In its 360 page: `{s['in_page']}`")
         lines.append("")
+    if standard:
+        lines += standard_md(standard)
     return "\n".join(lines)
+
+
+STANDARD = ("view", "shell")
+
+
+def standard_md(screens: list) -> list:
+    """The standard screens' section of index.md: what to arrange, and with which lever."""
+    lines = [
+        "# Standard screens: arrange them like the preview",
+        "",
+        "The runtime draws these (list pages, the switcher, the shell). Never edit `src/zas/` or",
+        "`ViewsPage.tsx`; arrange them with the levers below, then compare with the screenshot",
+        '(`references/views.md` "Matching the approved page", `references/custom-code.md` "The app shell").',
+        "Each shot is the whole app at 1440px with demo data: match the layout, never the values.",
+        "",
+    ]
+    for s in screens:
+        lay = s.get("layout") or {}
+        lines.append(f"## `{s['path']}` — {s.get('title') or ''}".rstrip(" —"))
+        lines.append("")
+        for v in s.get("variants") or []:
+            who = ", ".join(r for r in v["roles"] if r)
+            lines.append(
+                f"- As {who or 'the first role'}: "
+                + (f"`{v['shot']}`" if v.get("shot") else "no screenshot")
+            )
+        if s.get("error"):
+            lines.append(f"- Could not capture: {s['error']}")
+        if s["kind"] == "view":
+            place = lay.get("switcher")
+            if place == "toolbar":
+                lines.append(
+                    f'- Switcher in the toolbar, before Export: `makeViewsPage("{s["page"]}", {{ … }}, '
+                    '{ switcher: "toolbar" })`; a custom view renders `props.switcher` in its own '
+                    '`zas-tb` toolbar row, at the right, before Export.'
+                )
+            elif place == "header":
+                lines.append(
+                    "- Switcher above the page (the default `makeViewsPage` placement)."
+                )
+            if s.get("view_type") and s["view_type"] != "table":
+                lines.append(
+                    f"- The {s['view_type']} view: `frontend/src/custom/views/{s['page']}_{s['view_type']}.tsx`"
+                    " when this runtime has no component for it (`.zas/views.md`)."
+                )
+        else:
+            sh = lay.get("shell") or {}
+            if sh.get("brand"):
+                role_note = (
+                    f', then the role "{sh["brand_role"]}"'
+                    if sh.get("brand_role")
+                    else ""
+                )
+                lines.append(
+                    f'- Sidebar header: the app\'s initials avatar and "{sh["brand"]}"{role_note}: '
+                    '`navbarConfig.customLogo`, root marked `data-zas="shell-brand"`.'
+                )
+            if sh.get("user_in_sidebar"):
+                lines.append(
+                    "- User card at the bottom of the sidebar (avatar, name, role): "
+                    '`navbarConfig.customBottomContent`, root `data-zas="shell-user"`; '
+                    "`topbarConfig.showProfile: false` so it is not shown twice."
+                )
+            if sh.get("topbar"):
+                n = sh.get("topbar_actions") or 0
+                lines.append(
+                    "- Top bar with the page title (breadcrumb on a 360 page)"
+                    + (f" and {n} icon button(s) at the right" if n else "")
+                    + ': `topbarConfig.customLeftContent` / `customRightContent`, root `data-zas="shell-top"`.'
+                )
+            lines.append(
+                "- Write these in `frontend/src/custom/shell/` from the zas kit and pass them in `src/App.tsx`."
+            )
+        lines.append("")
+    return lines

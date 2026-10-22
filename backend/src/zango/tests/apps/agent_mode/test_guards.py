@@ -538,3 +538,88 @@ class DesignPackageAllowanceTests(unittest.TestCase):
         ok, reason = check_bash("npm install echarts", allow_frontend=False)
         self.assertFalse(ok)
         self.assertIn("Node tooling is disabled", reason)
+
+
+class ApprovedScreenGateTests(unittest.TestCase):
+    """A screen the user approved in the preview cannot be written before its screenshots
+    (and sketch) were Read: the first build wrote two approved panels without opening them."""
+
+    def setUp(self):
+        import json
+
+        self.root = tempfile.mkdtemp(prefix="ws-")
+        zas = os.path.join(self.root, ".zas")
+        b = os.path.join(zas, "bundle", "screens")
+        for folder in ("detail_views.v.sidebar.0", "pages.tasks.views.0", "pages.tasks.views.1", "shell"):
+            os.makedirs(os.path.join(b, folder))
+            open(os.path.join(b, folder, "shot.admin.png"), "wb").write(b"png")
+        open(os.path.join(b, "detail_views.v.sidebar.0", "sketch.js"), "w").write("ui.panel()")
+        manifest = {"created_at": "2026-10-21T10:00:00+00:00", "screens": [
+            {"path": "/detail_views/@v/sidebar/0", "folder": "screens/detail_views.v.sidebar.0", "kind": "panel",
+             "sketch": "screens/detail_views.v.sidebar.0/sketch.js",
+             "variants": [{"shot": "screens/detail_views.v.sidebar.0/shot.admin.png"}]},
+            {"path": "/pages/@tasks/views/0", "folder": "screens/pages.tasks.views.0", "kind": "view", "page": "tasks",
+             "variants": [{"shot": "screens/pages.tasks.views.0/shot.admin.png"}]},
+            {"path": "/pages/@tasks/views/1", "folder": "screens/pages.tasks.views.1", "kind": "view", "page": "tasks",
+             "variants": [{"shot": "screens/pages.tasks.views.1/shot.admin.png"}]},
+            {"path": "/shell", "folder": "screens/shell", "kind": "shell",
+             "variants": [{"shot": "screens/shell/shot.admin.png"}]},
+        ]}
+        json.dump(manifest, open(os.path.join(zas, "bundle", "manifest.json"), "w"))
+        json.dump({"holes": [{"slot": "Validity", "bundle": ".zas/bundle/screens/detail_views.v.sidebar.0/"}]},
+                  open(os.path.join(zas, "spec.resolved.json"), "w"))
+        self.guard = make_pre_tool_use_guard(self.root)
+
+    def tearDown(self):
+        shutil.rmtree(self.root, ignore_errors=True)
+
+    def _run(self, tool, **inp):
+        return asyncio.run(self.guard({"tool_name": tool, "tool_input": inp}, "tu", None))
+
+    def _denied(self, res):
+        return (res.get("hookSpecificOutput") or {}).get("permissionDecision") == "deny"
+
+    def _abs(self, rel):
+        return os.path.join(self.root, rel)
+
+    def test_a_slot_waits_for_its_screenshot_and_sketch(self):
+        slot = self._abs("frontend/src/custom/slots/Validity.tsx")
+        res = self._run("Write", file_path=slot, content="x")
+        self.assertTrue(self._denied(res))
+        reason = res["hookSpecificOutput"]["permissionDecisionReason"]
+        self.assertIn("shot.admin.png", reason)
+        self.assertIn("sketch.js", reason)
+        self._run("Read", file_path=self._abs(".zas/bundle/screens/detail_views.v.sidebar.0/shot.admin.png"))
+        self.assertTrue(self._denied(self._run("Write", file_path=slot, content="x")))
+        self._run("Read", file_path=self._abs(".zas/bundle/screens/detail_views.v.sidebar.0/sketch.js"))
+        self.assertEqual(self._run("Write", file_path=slot, content="x"), {})
+
+    def test_a_sketch_printed_with_cat_counts_but_a_screenshot_needs_read(self):
+        self._run("Bash", command="cat .zas/bundle/screens/detail_views.v.sidebar.0/sketch.js")
+        self._run("Read", file_path=self._abs(".zas/bundle/screens/detail_views.v.sidebar.0/shot.admin.png"))
+        self.assertEqual(self._run("Edit", file_path="frontend/src/custom/slots/Validity.tsx",
+                                   old_string="a", new_string="b"), {})
+
+    def test_a_view_waits_for_every_view_of_its_page(self):
+        view = self._abs("frontend/src/custom/views/tasks_kanban.tsx")
+        self._run("Read", file_path=self._abs(".zas/bundle/screens/pages.tasks.views.1/shot.admin.png"))
+        self.assertTrue(self._denied(self._run("Write", file_path=view, content="x")))
+        self._run("Read", file_path=self._abs(".zas/bundle/screens/pages.tasks.views.0/shot.admin.png"))
+        self.assertEqual(self._run("Write", file_path=view, content="x"), {})
+
+    def test_the_shell_gates_app_tsx_and_shell_components(self):
+        for rel in ("frontend/src/App.tsx", "frontend/src/custom/shell/Brand.tsx"):
+            self.assertTrue(self._denied(self._run("Write", file_path=self._abs(rel), content="x")))
+        self._run("Read", file_path=self._abs(".zas/bundle/screens/shell/shot.admin.png"))
+        self.assertEqual(self._run("Write", file_path=self._abs("frontend/src/App.tsx"), content="x"), {})
+
+    def test_other_files_and_workspaces_without_a_bundle_are_free(self):
+        self.assertEqual(self._run("Write", file_path=self._abs("backend/tasks/models.py"), content="x"), {})
+        other = tempfile.mkdtemp(prefix="ws-")
+        try:
+            guard = make_pre_tool_use_guard(other)
+            res = asyncio.run(guard({"tool_name": "Write", "tool_input": {
+                "file_path": os.path.join(other, "frontend/src/custom/slots/Validity.tsx"), "content": "x"}}, "tu", None))
+            self.assertEqual(res, {})
+        finally:
+            shutil.rmtree(other, ignore_errors=True)

@@ -23,6 +23,9 @@ Design checks. No human approves anything: every check compares against a fixed 
            and table columns as the approved role saw them, in order (kit_tree.js on both sides;
            values are never compared). Saves the built screen to .zas/screens/parity/ and lists
            approved/built pairs in .zas/parity_looks.json. Reported, not blocking.
+           Standard screens in the bundle too: a list page in each declared view (the switcher's
+           place) and the app shell (the shell-brand / shell-user / shell-top markers), each with
+           its screenshot pair.
 Results: <ws>/.zas/test_results.json (layer "design"). Exit 1 when a blocking check fails.
 """
 
@@ -536,8 +539,91 @@ def g_parity(Dx, b):
                 finally:
                     rp.close()
             Dx.check(rid, f"{scr['path']} matches the approved preview", hole["where"], t, role)
+    standard_parity(Dx, b, manifest, looks)
     with open(os.path.join(Dx.ws, ".zas", "parity_looks.json"), "w", encoding="utf-8") as f:
         json.dump(looks, f, indent=1)
+
+
+SHELL_MARKERS = (
+    ("brand", "shell-brand", "the sidebar header (app avatar, name, role): navbarConfig.customLogo"),
+    ("user_in_sidebar", "shell-user", "the user card at the sidebar's bottom: navbarConfig.customBottomContent"),
+    ("topbar", "shell-top", "the top bar's page title and buttons: topbarConfig.customLeftContent / customRightContent"),
+)
+
+
+def standard_parity(Dx, b, manifest, looks):
+    """List pages with views and the app shell (approval bundle "standard screens"): the layout facts
+    the preview recorded (switcher placement, shell parts), plus a screenshot pair for the look round."""
+    target = auth.load_users(Dx.ws)["target"]
+    for scr in manifest.get("screens") or []:
+        if scr.get("kind") not in ("view", "shell"):
+            continue
+        lay = scr.get("layout") or {}
+        page = (Dx.M.get("pages") or {}).get(scr.get("page") or "") or {}
+        folder = scr["folder"].split("/", 1)[-1]
+        where = f"pages.{scr['page']}.views" if scr["kind"] == "view" else "app.shell"
+        for v in scr.get("variants") or []:
+            role = v["roles"][0]
+            if not role:
+                continue
+            slug = re.sub(r"[^a-z0-9]+", "_", role.lower())
+            rid = f"design.parity.{folder}.{slug}"
+
+            def t(v=v, role=role, slug=slug, scr=scr, lay=lay, page=page, folder=folder, where=where):
+                if not page.get("route"):
+                    return None, f"no route for page {scr.get('page')}"
+                sess = auth.login(Dx.ws, role)
+                rp = browser.RolePage(b, target, sess, viewport={"width": 1440, "height": 900})
+                try:
+                    rp.open(page["route"], wait='[data-zas="page"], [data-zas="header"], [data-zas="empty"]')
+                    probs = []
+                    if scr["kind"] == "view":
+                        sw = rp.page.query_selector('[data-zas="view-switch"]')
+                        want = scr.get("view_type")
+                        if sw and want:
+                            tab = sw.query_selector(f'[data-zas="tab"][data-zas-key="{want}"]')
+                            if tab:
+                                tab.click()
+                                rp.page.wait_for_load_state("networkidle")
+                                rp.page.wait_for_timeout(250)
+                        placed = lay.get("switcher")
+                        if placed and not sw:
+                            probs.append("the page has no view switcher; the approved page does")
+                        elif placed and sw:
+                            in_tb = sw.evaluate("el => !!el.closest('.zas-tb')")
+                            if placed == "toolbar" and not in_tb:
+                                probs.append("the switcher is above the page; the approved page has it in the "
+                                             "toolbar, before Export (makeViewsPage(…, { switcher: \"toolbar\" }), "
+                                             "and props.switcher in the view's zas-tb row)")
+                            if placed == "header" and in_tb:
+                                probs.append("the switcher is in the toolbar; the approved page has it above the page")
+                        shown = rp.page.query_selector(f'[data-zas-view="{want}"]') if want else True
+                        if want and not shown:
+                            probs.append(f"the {want} view is not what the page shows after choosing it")
+                    else:
+                        sh = lay.get("shell") or {}
+                        for flag, marker, what in SHELL_MARKERS:
+                            if sh.get(flag) and not rp.page.query_selector(f'[data-zas="{marker}"]'):
+                                probs.append(f'no [data-zas="{marker}"]: the approved shell has {what}')
+                    # The pair is only worth comparing once the data is in: wait out loading placeholders.
+                    try:
+                        rp.page.wait_for_function(
+                            "() => !document.querySelector('[aria-busy=\"true\"], .zas-skel')", timeout=15000)
+                    except Exception:  # noqa: BLE001 - shoot what is there; the check above already ran
+                        pass
+                    rp.page.wait_for_timeout(250)
+                    shot_dir = os.path.join(Dx.ws, ".zas", "screens", "parity")
+                    os.makedirs(shot_dir, exist_ok=True)
+                    built = os.path.join(shot_dir, f"{folder}.{slug}.png")
+                    rp.page.screenshot(path=built)
+                    approved = f".zas/bundle/{v['shot']}" if v.get("shot") else None
+                    looks.append({"screen": scr["path"], "where": where, "role": role, "kind": scr["kind"],
+                                  "approved": approved, "built": os.path.relpath(built, Dx.ws), "hand_written": False})
+                    pair = f" Compare {os.path.relpath(built, Dx.ws)} with {approved}." if approved else ""
+                    return not probs, "; ".join(probs) + "." + pair if probs else ""
+                finally:
+                    rp.close()
+            Dx.check(rid, f"{scr['path']} is laid out like the approved preview", where, t, role)
 
 
 RUNNERS = {"lint": g_lint, "gallery": g_gallery, "tokens": g_tokens, "tree": g_tree, "layout": g_layout, "parity": g_parity}

@@ -14,6 +14,10 @@ Chromium, then answers JSON requests, one per stdin line, with one JSON line on 
         → {"id": 4, "ok": true, "result": {"variants": [{roles, record, tree, run, png}], "in_page": "<base64>"}}
       (the approval bundle: one screen for every role that opens it; roles whose screen has the same
       kit tree share one screenshot; a tab or panel is also shot once in its 360 page)
+    {"id": 5, "op": "capture_layout", "yaml": "...", "kind": "view" | "shell", "page": "<code>", "view": 1}
+        → {"id": 5, "ok": true, "result": {"role", "page", "layout": {...}, "png": "<base64>"}}
+      (the approval bundle's standard screens: a list page in one of its declared views, or the app
+      shell on a role's landing page, shot with the shell around it at 1440px)
 
 The page is sealed: every request is refused except the web fonts it styles text with. Sketch
 code written by the agent runs only against the page's seeded demo data. The parent kills this
@@ -31,6 +35,46 @@ from urllib.parse import urlparse
 
 FONT_HOSTS = {"fonts.googleapis.com", "fonts.gstatic.com"}
 MAX_SHOT_HEIGHT = 2000
+APP_WIDTH = 1440  # the app frame's width in a layout shot (the preview's "1440" frame)
+
+# Puts a list page (in one declared view) or a role's landing page on screen, in the preview's own
+# state, and says how the page is laid out. Uses the page's globals (S, canPage, landingRoute,
+# render): a preview without them answers {ok: false}.
+LAYOUT_JS = """([kind, pageCode, viewIndex]) => {
+  if (typeof S !== 'object' || !S.M || typeof render !== 'function' || typeof canPage !== 'function')
+    return { ok: false, error: 'This preview page cannot be driven to a page (no S/render/canPage).' };
+  const M = S.M; const roles = M.roles.map(r => r.name);
+  let role = null, page = null;
+  if (kind === 'view') {
+    page = M.pages[pageCode];
+    if (!page) return { ok: false, error: `No page ${pageCode} in the spec` };
+    role = roles.find(r => canPage(page, r));
+    if (!role) return { ok: false, error: `No role can open ${pageCode}` };
+  } else {
+    for (const r of roles) { S.role = r; const lr = landingRoute(); if (lr && lr.page) { role = r; page = M.pages[lr.page]; break; } }
+    if (!role) return { ok: false, error: 'No role has a landing page' };
+  }
+  S.role = role; S.frame = '1440'; S.ui = { tables: {}, drawer: null };
+  try { MODAL = null; } catch (e) { /* older page */ }
+  if (kind === 'view') S.views[page.code] = viewIndex || 0;
+  S.route = { page: page.code };
+  render();
+  const q = s => document.querySelector('#zapp ' + s);
+  const sw = q('.z-vsw');
+  const text = el => el ? el.textContent.replace(/\\s+/g, ' ').trim() : null;
+  return { ok: true, role, page: page.code, layout: {
+    switcher: sw ? (sw.closest('.z-tb') ? 'toolbar' : 'header') : null,
+    shell: {
+      sidebar: !!q('.z-side'),
+      brand: text(q('.z-side .z-brand b')),
+      brand_role: text(q('.z-side .z-brand span')),
+      user_in_sidebar: !!q('.z-side .z-user'),
+      topbar: !!q('.z-top'),
+      topbar_title: text(q('.z-top .z-crumbs')),
+      topbar_actions: [...document.querySelectorAll('#zapp .z-top .z-ib')].length,
+    },
+  } };
+}"""
 
 
 def _send(message: dict) -> None:
@@ -165,6 +209,34 @@ def main(html_path: str) -> int:
                 "title": sk.get("title"),
             }
 
+        def capture_layout(req: dict) -> dict:
+            info = page.evaluate(
+                LAYOUT_JS, [req.get("kind"), req.get("page"), int(req.get("view") or 0)]
+            )
+            if not info.get("ok"):
+                return {"error": info.get("error")}
+            # The editor takes about a third of the page: make the stage wide enough for the frame.
+            page.set_viewport_size({"width": int(APP_WIDTH * 1.6), "height": 1000})
+            page.evaluate("render()")
+            try:
+                page.evaluate("document.fonts.ready.then(() => true)")
+            except Exception:  # noqa: BLE001 - fonts are a nicety
+                pass
+            png = None
+            frame = page.query_selector("#zapp")
+            if frame is not None:
+                png = base64.b64encode(
+                    frame.screenshot(type="png", timeout=15000)
+                ).decode("ascii")
+            page.set_viewport_size({"width": 1280, "height": 900})
+            page.evaluate("S.frame = 'full'; render()")
+            return {
+                "role": info["role"],
+                "page": info["page"],
+                "layout": info["layout"],
+                "png": png,
+            }
+
         def load(yaml_text: str):
             nonlocal loaded
             if yaml_text == loaded:
@@ -251,6 +323,13 @@ def main(html_path: str) -> int:
                             },
                         }
                     )
+                elif op == "capture_layout":
+                    result = (
+                        {"parse_error": parse_error}
+                        if parse_error
+                        else capture_layout(req)
+                    )
+                    _send({"id": req.get("id"), "ok": True, "result": result})
                 elif op == "capture":
                     result = (
                         {"parse_error": parse_error} if parse_error else capture(req)

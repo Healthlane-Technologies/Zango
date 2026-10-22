@@ -355,10 +355,13 @@ def compose_studio_prompt(ctx, template_build, studio) -> str:
     bundle = studio.zas_dir / "bundle" / "index.md"
     if studio.frontend_ready and bundle.is_file():
         frontend_steps += (
-            ". The user approved how every custom page, tab and panel looks: `.zas/bundle/index.md` "
-            "lists each with its sketch, kit outline and screenshots. Port each sketch onto the zas "
-            'kit (`references/custom-code.md`, "Porting a sketch"); the platform checks the result '
-            "against that outline"
+            ". The user approved how every custom page, tab and panel looks, and the list pages with "
+            "views and the app shell: `.zas/bundle/index.md` lists each with its screenshots (and, for "
+            "custom screens, its sketch and kit outline). Read a screen's screenshots before writing it "
+            "(the platform refuses the write until you have). Port each sketch onto the zas kit "
+            '(`references/custom-code.md`, "Porting a sketch"); arrange the standard screens with their '
+            'levers only (`references/views.md` "Matching the approved page", `references/custom-code.md` '
+            '"The app shell"). The platform checks the result against the bundle'
         )
     rules = _STUDIO_RULES.format(
         skill_dir=template_build.skill_dir, frontend=frontend, npm=npm

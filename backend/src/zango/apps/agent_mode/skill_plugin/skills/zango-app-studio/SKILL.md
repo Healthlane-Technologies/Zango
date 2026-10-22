@@ -171,7 +171,8 @@ catch backend bugs before the frontend exists.
    (`zas/index.ts` imports `tokens.css`; nothing to add to the entry files.)
 3. `python3 <skill>/scripts/lucide_icons.py --workspace <ws>` (icons.gen.ts + `.zas/menu_icons.json`).
 4. `src/custom/pages/index.ts` and `src/App.tsx` from `assets/templates/frontend/` (keep the
-   scaffold's `appInitializerEndpoint`). One export per page (`references/map/pages-menus.md`).
+   scaffold's `appInitializerEndpoint`; add the shell props when the bundle has a `/shell` screen,
+   custom-code.md §The app shell). One export per page (`references/map/pages-menus.md`).
 5. Slots for `custom_page` / `custom_tab` / `custom_panel` holes from `Slot.tsx.tmpl`, exported in
    `slots/index.ts` (`references/custom-code.md` §Slots). A hole that names `.zas/bundle/screens/…`
    was approved in the preview: port its `sketch.js` onto the zas kit, block for block
@@ -226,6 +227,11 @@ manual steps) + the HTML path. Rules: `references/report.md`.
   that act on user-supplied ids. Use the scoped queryset.
 - Frontend: compose from `src/zas` only. No hex colours or colour styles in `src/custom/`, except in the
   slot of a screen approved in the preview, which reproduces its sketch (custom-code.md §Porting a sketch).
+- Match what the user approved: every screen in `.zas/bundle/index.md` has screenshots, and the platform
+  blocks writing its file until you have Read them. Custom screens are ported from their sketch; standard
+  screens are arranged with their levers only: the switcher's place (`makeViewsPage(…, { switcher })`,
+  views.md §Matching the approved page) and the shell's logo, user card and top bar (`ZangoApp` props in
+  `src/App.tsx`, components in `src/custom/shell/`, custom-code.md §The app shell).
 - Never edit `packages/`, the runtime inside the app, or the database by hand. Fix the generated code,
   the runtime in the skill (`assets/`), or report a spec problem.
 - Never print or commit passwords or tokens. `.zas/test_users.json` is chmod 600.

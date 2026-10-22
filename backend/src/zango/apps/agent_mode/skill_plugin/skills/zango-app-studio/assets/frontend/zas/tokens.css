@@ -207,6 +207,12 @@ table.zas-t { width: 100%; border-collapse: separate; border-spacing: 0; font-si
 /* list tables (ZasTable) - the Studio preview's .z-tb / .z-t / .z-pg, rule for rule */
 .zas-tb { display: flex; align-items: center; gap: 8px; padding: 12px 14px; flex-wrap: wrap; border-bottom: 1px solid var(--z-bd); }
 .zas-tb .zas-sp { flex: 1; }
+/* View switcher as a segmented control in a toolbar (the preview's place for it). */
+.zas-vsw { display: inline-flex; border: 1px solid var(--z-bds); border-radius: var(--z-r-ctl); overflow: hidden; box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05); }
+.zas-vsw button { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; font-size: 12.5px; font-weight: 600; color: var(--z-text2); background: var(--z-card); border-right: 1px solid var(--z-bd); }
+.zas-vsw button:last-child { border-right: 0; }
+.zas-vsw button .zi { width: 15px; height: 15px; }
+.zas-vsw button.on { background: var(--b50); color: var(--b600); }
 .zas-search { display: flex; align-items: center; gap: 7px; height: var(--z-ctl-h); border: 1px solid var(--z-bds); border-radius: var(--z-r-ctl); padding: 0 11px; width: 260px; background: var(--z-card); color: var(--z-muted); }
 .zas-search:focus-within { border-color: var(--brand); box-shadow: 0 0 0 3px var(--b50); }
 .zas-search input { border: 0; outline: 0; flex: 1; min-width: 0; font: inherit; font-size: 13.5px; color: var(--z-text); background: transparent; }
