@@ -840,19 +840,29 @@ def _finish_classic(*, run, tenant, ctx, changes, recorder):
     return status, extra
 
 
+# A fix round resumes the build's session, and the resumed session's ResultMessage
+# reports cost, tokens and API time as running totals for the whole session, so
+# the fix round's figures already include the build's. Adding them counted the
+# build again on every round (a $7 build was recorded as $38). Turns are per query.
+_SESSION_TOTALS = (
+    "total_cost_usd",
+    "input_tokens",
+    "output_tokens",
+    "cache_read_tokens",
+    "cache_creation_tokens",
+    "duration_api_ms",
+)
+
+
 def _merge_state(state: dict, more: dict) -> None:
-    """Add a fix round's usage to the run's totals; the run keeps its first session."""
-    for key in (
-        "total_cost_usd",
-        "num_turns",
-        "input_tokens",
-        "output_tokens",
-        "cache_read_tokens",
-        "cache_creation_tokens",
-        "duration_api_ms",
-    ):
+    """Fold a fix round's usage into the run's totals; the run keeps its first session."""
+    for key in _SESSION_TOTALS:
         if more.get(key) is not None:
-            state[key] = (state.get(key) or 0) + more[key]
+            state[key] = max(state.get(key) or 0, more[key])
+    if more.get("model_usage"):
+        state["model_usage"] = more["model_usage"]
+    if more.get("num_turns") is not None:
+        state["num_turns"] = (state.get("num_turns") or 0) + more["num_turns"]
     counts = dict(state.get("tool_use_counts") or {})
     for name, n in (more.get("tool_use_counts") or {}).items():
         counts[name] = counts.get(name, 0) + n
