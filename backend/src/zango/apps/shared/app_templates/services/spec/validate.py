@@ -42,7 +42,11 @@ def _validator(schema: dict):
 
 def _message(error) -> str:
     # {"not": {"required": [key]}}: a key that is only allowed in another shape.
-    forbidden = (error.validator_value or {}).get("required") if error.validator == "not" and isinstance(error.validator_value, dict) else None
+    forbidden = (
+        (error.validator_value or {}).get("required")
+        if error.validator == "not" and isinstance(error.validator_value, dict)
+        else None
+    )
     if forbidden:
         return f"{', '.join(forbidden)} is not allowed here."
     if error.validator in ("anyOf", "oneOf") and error.context:
@@ -92,7 +96,15 @@ def validate_doc(doc, template, *, strict: bool = False) -> list:
     return issues
 
 
-PROSE_KEYS = {"text", "on_done", "on_create", "computed", "description", "condition_msg", "message"}
+PROSE_KEYS = {
+    "text",
+    "on_done",
+    "on_create",
+    "computed",
+    "description",
+    "condition_msg",
+    "message",
+}
 
 
 def _braced_prose(doc) -> list:
@@ -144,7 +156,24 @@ def validate_text(text: str, template, *, strict: bool = False):
                 "section": "",
             }
         ]
-    return doc, validate_doc(doc, template, strict=strict)
+    issues = validate_doc(doc, template, strict=strict)
+    compat = yamlio.pyyaml_problem(text)
+    if compat is not None:
+        issues.insert(
+            0,
+            {
+                "level": "error",
+                "path": "",
+                "message": "The build cannot read this YAML (it uses PyYAML, which is "
+                "stricter): put quotes around text that has ? : # , [ ] { } inside "
+                f"{{ }} or [ ]. {compat}",
+                "code": "yaml_compat",
+                "structural": True,
+                "line": compat.line,
+                "section": "",
+            },
+        )
+    return doc, issues
 
 
 def has_errors(issues) -> bool:

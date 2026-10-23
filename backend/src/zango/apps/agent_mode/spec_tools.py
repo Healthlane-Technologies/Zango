@@ -102,6 +102,21 @@ class SpecWorkbench:
                 }
             ]
         issues = validate_doc(self._plain(doc), self.template, strict=strict)
+        if doc is self.doc:
+            from zango.apps.shared.app_templates.services.spec import yamlio
+
+            compat = yamlio.pyyaml_problem(self.text)
+            if compat is not None:
+                issues.insert(
+                    0,
+                    {
+                        "level": "error",
+                        "path": "",
+                        "message": "The build cannot read this draft with PyYAML "
+                        f"({compat}). Any edit rewrites it with the risky text quoted.",
+                        "code": "yaml_compat",
+                    },
+                )
         if self.proto is not None:
             issues = [i for i in issues if i.get("rule") not in UNSKETCHED_RULES]
         return issues

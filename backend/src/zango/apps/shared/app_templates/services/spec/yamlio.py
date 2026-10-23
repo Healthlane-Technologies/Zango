@@ -89,11 +89,70 @@ def load_rt(text: str):
 
 
 def dump_rt(doc) -> str:
+    _quote_flow_scalars(doc)
     buf = io.StringIO()
     rt = _rt()
     rt.version = None  # don't write a %YAML directive into the spec
     rt.dump(doc, buf)
     return buf.getvalue()
+
+
+# --- PyYAML compatibility ---------------------------------------------------
+# The build reads specs with PyYAML (spec_check.py in the app workspace). YAML
+# 1.2 lets a plain scalar inside ``{…}``/``[…]`` carry ``?`` or ``:``, PyYAML
+# does not: ``{confirm: Submit this?, on_done: …}`` loads here and fails there.
+# So the writer quotes such scalars, and validation rejects text PyYAML can't
+# parse.
+
+_FLOW_RISKY = set("?:#,[]{}")
+
+
+def _quote_flow_scalars(node, in_flow=False):
+    """Double-quote plain strings with flow indicators inside flow collections, in place."""
+    from ruamel.yaml.comments import CommentedMap, CommentedSeq
+    from ruamel.yaml.scalarstring import DoubleQuotedScalarString, ScalarString
+
+    def risky(value):
+        return (
+            in_flow_here
+            and isinstance(value, str)
+            and not isinstance(value, ScalarString)
+            and any(ch in _FLOW_RISKY for ch in value)
+        )
+
+    if isinstance(node, (CommentedMap, CommentedSeq)):
+        in_flow_here = in_flow or node.fa.flow_style()
+    else:
+        in_flow_here = in_flow
+    if isinstance(node, dict):
+        for key in list(node.keys()):
+            value = node[key]
+            if risky(value):
+                node[key] = DoubleQuotedScalarString(value)
+            else:
+                _quote_flow_scalars(value, in_flow_here)
+    elif isinstance(node, list):
+        for i, value in enumerate(node):
+            if risky(value):
+                node[i] = DoubleQuotedScalarString(value)
+            else:
+                _quote_flow_scalars(value, in_flow_here)
+
+
+def pyyaml_problem(text: str):
+    """A SpecYAMLError if PyYAML (what the build uses) can't parse ``text``, else None."""
+    import yaml as pyyaml
+
+    try:
+        pyyaml.safe_load(text or "")
+    except pyyaml.YAMLError as exc:
+        mark = getattr(exc, "problem_mark", None)
+        return SpecYAMLError(
+            str(exc).strip(),
+            line=mark.line + 1 if mark else None,
+            column=mark.column + 1 if mark else None,
+        )
+    return None
 
 
 def to_plain(node):

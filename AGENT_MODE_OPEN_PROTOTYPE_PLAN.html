@@ -644,8 +644,8 @@ a{color:var(--blue)}
     <p><b>Requirement side:</b> every prototype screen that shows records maps to a crud page, a detail/360 page or a declared view or dashboard. A <code>type: custom</code> page needs a stated reason and a contract, checked in <code>spec_mark_ready</code>.</p>
     <p><b>Build side:</b> a screen is rebuilt as custom only if the spec already marks it custom, or the runtime can't reach its layout even with tokens and screen styling. Each rebuild carries a one-line reason in the bundle and the build report. <code>spec_check</code> decides; the build agent can't upgrade a page on its own.</p>
     <p><b>Checked on the imported sponsorship app:</b> the ladder held. A home dashboard, 12 crud pages and 2 detail (360) pages; no custom page.</p></div>
-  <div class="decision"><div class="h">Fix first · specs the build can't parse</div>
-    <p>The imported app's spec has three flow mappings with an unquoted <code>?</code>. The console's loader accepts them, but <code>spec_check.py</code> reads with PyYAML and fails. The spec tools should write such values quoted, and validation should fail on a spec PyYAML can't read. This isn't specific to open mode.</p></div>
+  <div class="decision"><div class="h">Fixed · specs the build can't parse (23 Oct 2026)</div>
+    <p>The imported app's spec had three flow mappings with an unquoted <code>?</code>. The console's loader accepted them, but <code>spec_check.py</code> reads with PyYAML and failed. Now <code>yamlio.dump_rt</code> double-quotes any plain string with <code>? : # , [ ] { }</code> inside a flow collection, and validation (console and the agent's <code>spec_validate</code>/<code>spec_mark_ready</code>) reports <code>yaml_compat</code> as an error when PyYAML can't read the text. The sponsorship spec was rewritten (same data, three lines quoted).</p></div>
   <div class="decision"><div class="h">Decided · 23 Oct 2026</div>
     <p><b>Build match:</b> hybrid (tokens + custom shell everywhere, theme standard screens, rebuild structurally different ones).</p>
     <p><b>Rollout:</b> open mode is a "Free design" toggle on intake; kit mode stays the default until the P4 runs pass.</p>
@@ -736,7 +736,7 @@ a{color:var(--blue)}
     <thead><tr><th>Week</th><th>Requirement side</th><th>Build side</th></tr></thead>
     <tbody>
       <tr><td>done</td><td>P1 · import slice of U (checked live)</td><td></td></tr>
-      <tr><td>next 1</td><td>Fix: specs PyYAML can't read</td><td>S0 tokens in the spec + guard · B1 bundle on both test apps · B2 tokens in the runtime</td></tr>
+      <tr><td>next 1</td><td>Fix: specs PyYAML can't read (done)</td><td>S0 tokens in the spec + guard · B1 bundle on both test apps · B2 tokens in the runtime</td></tr>
       <tr><td>next 2</td><td>P2 markers + map (unblocks marker parity)</td><td>B3 shell · B4 screens · B5 lint</td></tr>
       <tr><td>next 3</td><td>P3 look/Point · rest of U (chat attachments)</td><td>B6 parity · end-to-end: imported sponsorship app approved and built</td></tr>
     </tbody>

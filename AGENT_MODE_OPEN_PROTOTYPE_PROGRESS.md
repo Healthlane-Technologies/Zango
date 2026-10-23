@@ -267,5 +267,11 @@ The imported app's spec has flow mappings with an unquoted `?` inside a value (l
 S0: have the spec tools re-emit risky scalars quoted (or block style) when they write, and make validation
 fail on a spec PyYAML can't parse. This is not specific to open mode.
 
+**Fixed (Stage 2 step 1, 2026-10-23):** `yamlio.dump_rt` now double-quotes plain strings with
+`? : # , [ ] { }` inside flow collections (`_quote_flow_scalars`), so every spec-tool write is
+PyYAML-readable; `yamlio.pyyaml_problem(text)` backs a `yaml_compat` error in `validate_text` (console,
+approval) and in `SpecWorkbench.issues()` (agent's validate / mark ready). Tests in `test_spec_engine.py`.
+The sponsorship spec in the local DB was rewritten once (data identical, lines 554/582/815 quoted).
+
 Recommended first move next session: the YAML bug, then S0 (with guard 1) + B1 on the two test apps above
 (both kinds), then B2.
