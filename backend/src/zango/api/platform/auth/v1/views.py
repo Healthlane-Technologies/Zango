@@ -83,13 +83,21 @@ class PlatformUserViewAPIV1(ZangoGenericPlatformAPIView, ZangoAPIPagination):
     def post(self, request, *args, **kwargs):
         data = request.data
         try:
+            role = data.get("role", "app_admin")
+            if role not in ("app_admin", "platform_admin"):
+                return get_api_response(
+                    False,
+                    {"message": "Invalid role. Choose App Admin or Platform Admin."},
+                    400,
+                )
+            is_superadmin = role == "platform_admin"
             app_uuids = data.getlist("apps")
             creation_result = PlatformUserModel.create_user(
                 name=data["name"],
                 email=data["email"],
                 mobile="",
                 password=data["password"],
-                is_superadmin=False,
+                is_superadmin=is_superadmin,
                 require_verification=False,
                 app_uuids=app_uuids,
             )

@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import * as Yup from 'yup';
 import InputField from '../../../../../components/Form/InputField';
 import MultiSelectField from '../../../../../components/Form/MultiSelectField';
+import SelectField from '../../../../../components/Form/SelectField';
 import SubmitButton from '../../../../../components/Form/SubmitButton';
 import useApi from '../../../../../hooks/useApi';
 import { transformToFormData } from '../../../../../utils/form';
@@ -11,6 +12,11 @@ import {
 	selectPlatformUserManagementData,
 	toggleRerenderPage,
 } from '../../../slice';
+
+const roleOptions = [
+	{ id: 'app_admin', label: 'App Admin' },
+	{ id: 'platform_admin', label: 'Platform Admin' },
+];
 
 const AddNewUserForm = ({ closeModal }) => {
 	const platformUserManagementData = useSelector(
@@ -23,6 +29,7 @@ const AddNewUserForm = ({ closeModal }) => {
 		name: '',
 		email: '',
 		password: '',
+		role: 'app_admin',
 		apps: [],
 	};
 
@@ -30,11 +37,20 @@ const AddNewUserForm = ({ closeModal }) => {
 		name: Yup.string().required('Required'),
 		email: Yup.string().email('Invalid email address').required('Required'),
 		password: Yup.string().required('Required'),
-		apps: Yup.array().min(1, 'Minimun one is required').required('Required'),
+		role: Yup.string().required('Required'),
+		apps: Yup.array().when('role', {
+			is: 'app_admin',
+			then: (schema) =>
+				schema.min(1, 'Minimun one is required').required('Required'),
+			otherwise: (schema) => schema,
+		}),
 	});
 
 	let onSubmit = (values) => {
-		let tempValues = values;
+		let tempValues = { ...values };
+		if (tempValues.role === 'platform_admin') {
+			tempValues.apps = [];
+		}
 
 		let dynamicFormData = transformToFormData(tempValues);
 
@@ -99,19 +115,32 @@ const AddNewUserForm = ({ closeModal }) => {
 								onChange={formik.handleChange}
 								formik={formik}
 							/>
-							<MultiSelectField
-								key="apps"
-								label="Apps Access"
-								name="apps"
-								id="apps"
-								placeholder="Select app(s)"
-								value={get(formik.values, 'apps', [])}
-								optionsDataName="apps"
-								optionsData={
-									platformUserManagementData?.dropdown_options?.apps ?? []
-								}
+							<SelectField
+								key="role"
+								label="Role"
+								name="role"
+								id="role"
+								placeholder="Select role"
+								value={get(formik.values, 'role', 'app_admin')}
+								optionsDataName="role"
+								optionsData={roleOptions}
 								formik={formik}
 							/>
+							{formik.values.role === 'app_admin' && (
+								<MultiSelectField
+									key="apps"
+									label="Apps Access"
+									name="apps"
+									id="apps"
+									placeholder="Select app(s)"
+									value={get(formik.values, 'apps', [])}
+									optionsDataName="apps"
+									optionsData={
+										platformUserManagementData?.dropdown_options?.apps ?? []
+									}
+									formik={formik}
+								/>
+							)}
 						</div>
 						<div className="sticky bottom-0 flex flex-col gap-[8px] bg-[#ffffff] pt-[24px] font-lato text-[#696969]">
 							<SubmitButton label={'Add User'} formik={formik} />

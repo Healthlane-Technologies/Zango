@@ -1,19 +1,23 @@
 import { useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import useApi from '../hooks/useApi';
 import PlatformAppRoutes from '../pages/app/routes';
 import PlatformLogsRoutes from '../pages/platformLogs/routes';
 import PlatformRoutes from '../pages/platform/routes';
 import PlatformSettingsRoutes from '../pages/platformSettings/routes';
-import { setAppPanelInitialData } from '../pages/platform/slice';
+import {
+	selectAppPanelInitialData,
+	setAppPanelInitialData,
+} from '../pages/platform/slice';
 import PlatformUserManagementRoutes from '../pages/platformUserManagement/routes';
 
 export const AppRoutes = () => {
 	const location = useLocation();
 	const dispatch = useDispatch();
 	const triggerApi = useApi();
+	const appPanelInitialData = useSelector(selectAppPanelInitialData);
 	let pathnameArray = location.pathname.split('/').filter((each) => each);
 
 	useEffect(() => {
@@ -39,7 +43,15 @@ export const AppRoutes = () => {
 				<Route path="/platform/apps/*" element={<PlatformRoutes />}></Route>
 				<Route
 					path="/platform/user-managements/*"
-					element={<PlatformUserManagementRoutes />}
+					element={
+						// Only platform admins (super admins) can manage platform users
+						!appPanelInitialData ? null : appPanelInitialData?.user_logged_in
+								?.is_superadmin ? (
+							<PlatformUserManagementRoutes />
+						) : (
+							<Navigate to="/platform/apps" replace />
+						)
+					}
 				></Route>
 				<Route
 					path="/platform/settings/*"

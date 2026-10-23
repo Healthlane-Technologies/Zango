@@ -2,11 +2,13 @@ import { Formik, useFormikContext } from 'formik';
 import debounce from 'just-debounce-it';
 import { get } from 'lodash';
 import { useCallback, useEffect, useState } from 'react';
+import { useSelector } from 'react-redux';
 import * as Yup from 'yup';
 import { ReactComponent as SearchIcon } from '../../../assets/images/svg/search-icon.svg';
 import SelectField from './SelectField';
 import useApi from '../../../hooks/useApi';
 import {useLocation} from 'react-router-dom'
+import { selectAppPanelInitialData } from '../../../pages/platform/slice';
 const AutoSave = ({ debounceMs }) => {
 	const formik = useFormikContext();
 	const [lastSaved, setLastSaved] = useState(null);
@@ -26,6 +28,8 @@ const AutoSave = ({ debounceMs }) => {
 
 export default function NavSearchForm() {
 	const location = useLocation();
+	const appPanelInitialData = useSelector(selectAppPanelInitialData);
+	const isSuperAdmin = !!appPanelInitialData?.user_logged_in?.is_superadmin;
 	const isValidPath =
 		location.pathname === '/platform/apps' ||
 		location.pathname === '/platform/apps/';
@@ -124,7 +128,9 @@ export default function NavSearchForm() {
 										optionsDataName="searchType"
 										optionsData={[
 											{ id: 'Apps', label: 'Apps' },
-											{ id: 'User Management', label: 'User Management' },
+											...(isSuperAdmin
+												? [{ id: 'User Management', label: 'User Management' }]
+												: []),
 										]}
 										onChange={formik.handleChange}
 										formik={formik}
