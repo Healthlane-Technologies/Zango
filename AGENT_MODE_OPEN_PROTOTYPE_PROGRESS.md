@@ -1,9 +1,9 @@
 # Agent Mode: Open Prototype ("Free design"), implementation progress
 
 > **Next session: start Stage 2 (build agent follows the prototype).** Read "Stage 2 handoff" at the
-> end of this file first. Plan: https://claude.ai/artifact/1x8D2VWgxjKYG6N68BhnJC §10 (v5).
+> end of this file first. Plan: https://claude.ai/artifact/1x8D2VWgxjKYG6N68BhnJC §10 (v6). A new session reads it with the Artifact tool (action "read", this URL).
 
-Plan: https://claude.ai/artifact/1x8D2VWgxjKYG6N68BhnJC ("Open Prototype Plan", v4).
+Plan: https://claude.ai/artifact/1x8D2VWgxjKYG6N68BhnJC ("Open Prototype Plan", v6).
 Branch: `feat/agent-mode-open-prototype` (from `feat/agent-mode-app-studio-skill`). Started 2026-10-23.
 
 Goal of P1: in chat, the requirement agent generates a working HTML prototype of the app in any look
