@@ -143,6 +143,23 @@ cd backend/test_project
 - Tests: 16 in `test_prototype.py` (import split, rules, html document outline, headless drive of an
   imported page through its own router).
 
+## Live run 3: new app from the uploaded HTML (2026-10-23, checked in Chrome)
+
+- New app form: "Describe it", Free design on, the capability-bar HTML attached (232 KB, shown as HTML).
+  App `sponsorship_management_hcp` created; first turn ran on Sonnet 5.5 (draft mode, one pass).
+- The page showed in the preview as it is from the first write (its own sign-in screen), then on Home
+  once the agent's bridge was in: same look, data, nav and banners as the file. Its own "not connected to
+  the shared workspace" fallback ran (no `window.claude` in the sandbox), so no compat shim was needed
+  for viewing.
+- The agent's YAML: 0 errors, 9 warnings; roles Sponsorship Office, Requester, Budget owner, Compliance,
+  Legal, Finance, Signatory; organisers, requests (draft → closed, benefits, approvals), agreements,
+  payments, evidence, library entities; home dashboard, list pages, full pages for sponsorships and
+  organisers; 7 role journeys, 10 flags, 7 open decisions. Its stated gaps: Home can't yet show each
+  person only their own waiting work; AI, DocuSign, SAP and screening steps are plain requirements.
+- Clicked in Chrome: Home, Organisers, Requests (stage chips, table), a request record (8-stage stepper,
+  Run AI review, tabs). No console errors. One nav click landed during the end-of-turn reload and did
+  nothing; the next click worked.
+
 ## Notes / gotchas
 
 - The SDK's sub-agent tool is named `Agent` in this CLI (allowed both `Agent` and `Task`).
