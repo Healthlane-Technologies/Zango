@@ -563,7 +563,11 @@ _OPEN_PROTOTYPE_APPEND = (
     'layouts are not offered" rule do not apply. Custom pages need no `preview` sketch; '
     "their screen in the prototype is the sketch. Contracts (data, acceptance) still apply.\n"
     "- A [Preview: …] note names the screen and persona the user was on; locate the text "
-    "with proto_find, then patch only what they asked for."
+    "with proto_find, then patch only what they asked for.\n"
+    "- If the user uploaded their app as an HTML file, that file IS the prototype: call "
+    "proto_import with its name first and never redraw it. Then fill manifest.json (screens "
+    "and roles from the page's own navigation and personas), add one small part that calls "
+    "ZAS.ready({go}) with the page's own router, and write the YAML from what the page shows."
 )
 
 

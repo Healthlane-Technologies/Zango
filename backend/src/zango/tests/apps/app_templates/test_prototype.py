@@ -145,6 +145,70 @@ class BenchTests(unittest.TestCase):
             patch({"part": "missing.js", "find": "a", "replace": "b"})
 
 
+PAGE = """<!doctype html><html><head><meta charset=utf8><title>Field Visits</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet">
+<style>body{margin:0}</style></head><body>
+<style>.card{border:1px solid #ddd}</style>
+<script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.10/dayjs.min.js"></script>
+<script src="https://evil.example/x.js"></script>
+<script type="application/json" id="seed">{"visits": 2}</script>
+<div id="root"></div>
+<script>
+let S = {who: 'rep', sec: 'home'};
+const css = '<style>.not-a-style-element{}</style>';
+function render() {
+  document.getElementById('root').innerHTML = S.sec === 'home'
+    ? '<h1>Home for ' + S.who + '</h1>' : '<h1>Visits</h1>';
+}
+render();
+</script></body></html>"""
+
+BRIDGE = (
+    "ZAS.ready({go(screen, o) { if (o.role) S.who = o.role; S.sec = screen; render(); "
+    "ZAS.at(screen, {role: S.who}); }});"
+)
+
+
+class ImportTests(unittest.TestCase):
+    def test_page_is_split_without_changing_its_code(self):
+        parts, notes = P.import_html(PAGE)
+        manifest = json.loads(parts["manifest.json"])
+        self.assertEqual(manifest["title"], "Field Visits")
+        self.assertEqual(manifest["source"], "imported")
+        self.assertEqual(manifest["fonts"], ["https://fonts.googleapis.com/css2?family=Inter&display=swap"])
+        self.assertEqual(manifest["libraries"], ["https://cdn.jsdelivr.net/npm/dayjs@1.11.10/dayjs.min.js"])
+        self.assertIn("body{margin:0}", parts["imported/styles.css"])
+        self.assertIn(".card{", parts["imported/styles.css"])
+        # A "<style" inside a script string stays in the script.
+        self.assertIn("not-a-style-element", parts["imported/script-01.js"])
+        self.assertNotIn("not-a-style-element", parts["imported/styles.css"])
+        self.assertIn('id="seed"', parts["body.html"])
+        self.assertIn('<div id="root">', parts["body.html"])
+        self.assertNotIn("<title>", parts["body.html"])
+        self.assertTrue(any("evil.example" in n for n in notes))
+
+    def test_imported_prototype_rules(self):
+        pb = P.PrototypeBench({}, lambda e: None, documents={"Field Visits.html": PAGE})
+        out = pb.import_document("field visits.html")
+        self.assertIn("Imported Field Visits.html", out)
+        self.assertFalse(P.is_drafting(pb.parts))  # its screens are drawn by its own code
+        self.assertTrue(any("ZAS.ready" in p for p in P.static_problems(pb.parts)))
+        pb.write("zas-bridge.js", BRIDGE)
+        self.assertFalse(any("ZAS.ready" in p for p in P.static_problems(pb.parts)))
+        # Imported parts may be larger than a written part.
+        pb.write("imported/big.css", "x" * (P.MAX_PART_BYTES + 10))
+        with self.assertRaisesRegex(P.ProtoRefused, "No uploaded HTML file"):
+            pb.import_document("other.html")
+
+    def test_html_documents_are_accepted_with_an_outline(self):
+        from zango.apps.agent_mode.documents import extract
+
+        doc = extract("Field Visits.html", PAGE.encode())
+        self.assertEqual(doc.content_type, "text/html")
+        self.assertIn("Title: Field Visits", doc.text)
+        self.assertIn("proto_import", doc.text)
+
+
 class ApprovalTests(unittest.TestCase):
     def test_open_mode_does_not_ask_for_sketches(self):
         from zango.apps.agent_mode.template_spec import unfinished_custom_work
@@ -209,6 +273,36 @@ class RuntimeTests(unittest.TestCase):
                 self.assertIn("Result released", page.inner_text("body"))
                 # Pointing back: the runtime reports where the user is.
                 self.assertEqual(page.evaluate("ZAS.state.role"), "lead")
+                self.assertEqual(errors, [])
+            finally:
+                browser.close()
+
+    def test_an_imported_page_runs_and_the_preview_can_drive_it(self):
+        from playwright.sync_api import sync_playwright
+
+        parts, _ = P.import_html(PAGE)
+        manifest = json.loads(parts["manifest.json"])
+        manifest.update(
+            roles={"rep": "Field rep", "lead": "Lead"},
+            screens=[{"id": "home", "title": "Home"}, {"id": "visits", "title": "Visits"}],
+        )
+        parts["manifest.json"] = json.dumps(manifest)
+        parts["zas-bridge.js"] = BRIDGE
+        html = P.assemble(parts)
+        with sync_playwright() as pw:
+            browser = pw.chromium.launch()
+            try:
+                page = browser.new_page()
+                errors = []
+                page.on("pageerror", lambda e: errors.append(str(e)))
+                page.route("**/*", lambda r: r.abort() if "jsdelivr" in r.request.url else r.continue_())
+                page.set_content(html)
+                page.wait_for_function("window.ZAS")
+                self.assertIn("Home for rep", page.inner_text("#root"))
+                page.evaluate("ZAS.go('visits', {role: 'lead'})")
+                self.assertIn("Visits", page.inner_text("#root"))
+                self.assertEqual(page.evaluate("ZAS.state.screen"), "visits")
+                self.assertEqual(page.inner_text("#zas-app"), "")  # the runtime draws nothing over it
                 self.assertEqual(errors, [])
             finally:
                 browser.close()

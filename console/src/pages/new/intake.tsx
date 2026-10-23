@@ -8,7 +8,7 @@ import './intake.css';
 
 export const MAX_FILES = 10;
 export const MAX_TOTAL_BYTES = 25 * 1024 * 1024;
-export const ACCEPTED = ['pdf', 'docx', 'xlsx', 'csv', 'txt', 'md'] as const;
+export const ACCEPTED = ['pdf', 'docx', 'xlsx', 'csv', 'txt', 'md', 'html', 'htm'] as const;
 
 export const DRAFT_GUIDANCE =
 	'Who uses it, the programs, eligibility, documents, dispensing and schemes, consent, reports — or just upload your SOP or RFP.';

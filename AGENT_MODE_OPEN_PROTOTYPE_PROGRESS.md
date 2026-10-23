@@ -103,6 +103,46 @@ cd backend/test_project
   for `localhost` (AppUserModelBackend), which the public-schema console can't resolve. Clear the cookies
   and sign in again.
 
+## Live run 2 (same requirement, after the fix and a worker restart)
+
+- A console reply ended in 12 s with "(no reply)": two `proto_outline` calls were "interrupted before a
+  result". A replay of the same code path in a shell (Haiku) worked, so this looks like a one-off (the
+  transcript shows subscription rate-limit events). Not reproduced since.
+- Turn limits: a later turn only had 600 s / $4. Fixed: `prototype.is_drafting(parts)` (no parts, or
+  manifest screens without a part) gives any such turn the first draft's limits (analyst options and
+  `_dispatch_turn`).
+- Then "write every remaining screen": the analyst launched 5 screen writers in one message; all 14
+  missing screens (plus 4 screen CSS parts) landed between 44 s and 115 s, the analyst validated the
+  spec and patched one screen; 134 s, $2.73.
+- Checked in Chrome (full-page preview): PSP home (KPIs, reports to review, status bars, expiring),
+  Vouchers (21, status chips, search, table/board), voucher record (stepper, patient & prescription,
+  documents tabs, validity, lab, activity), "Mark report shared" → in-prototype confirm modal → status,
+  stepper and activity update, toast. Patients and Lab invoices draw with domain data. No console errors.
+- Not checked in Chrome: switching persona (the native select inside the sandboxed frame can't be
+  driven by the browser tool; covered by the headless runtime tests).
+
+## Slice of U: import an uploaded HTML page (2026-10-23)
+
+- `documents.py`: `.html`/`.htm` accepted (`text/html`); the extract is an outline (title, headings,
+  buttons/links, table columns, labels) that says to use `proto_import`; the original is written to the
+  docs dir and INDEX.md says how to import it.
+- `prototype.import_html(html)`: styles → `imported/styles.css`; inline scripts → `imported/script-NN.js`
+  in order, unchanged (non-JS script elements stay in the body); allowed library scripts and Google Fonts
+  → manifest; other script hosts dropped with a note; remaining markup → `body.html`; starter manifest
+  `{"source": "imported", screens: [], roles: {}}`. Elements are matched in document order, so a `<style`
+  inside a script's string stays in the script.
+- `body.html` is the one HTML part (assembled before `#zas-app`); `imported/*` and `body.html` may be up to
+  1 MB each (a script can't be split). An imported prototype is never "drafting" and must have a part
+  calling `ZAS.ready({go})` (static problem until it does). Runtime boot draws nothing over an imported
+  page.
+- `PrototypeBench(documents=…)` + tool `proto_import(document)`; `tasks.py` passes the requirement's HTML
+  documents. Prompt and skill: import first, never redraw, fill manifest, add `zas-bridge.js`, write YAML.
+- Console: `ACCEPTED` in `pages/new/intake.tsx` adds html/htm (new-app form and the change modal).
+- Checked locally (not in the repo): the capability-bar file splits into one 159 KB script (parses),
+  77 KB of styles, its Google Fonts link and 0.3 KB of body markup.
+- Tests: 16 in `test_prototype.py` (import split, rules, html document outline, headless drive of an
+  imported page through its own router).
+
 ## Notes / gotchas
 
 - The SDK's sub-agent tool is named `Agent` in this CLI (allowed both `Agent` and `Task`).

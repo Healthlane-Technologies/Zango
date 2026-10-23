@@ -225,7 +225,8 @@
     at: function (screen, o) { state.screen = screen; o = o || {}; if (o.role) state.role = o.role; state.record = o.record == null ? null : o.record; locate(); },
     boot: function () {
       root = document.getElementById('zas-app');
-      if (custom) { post('ready', { screens: M.screens.map(function (s) { return s.id; }) }); return; }
+      // An imported page draws itself; until it registers ZAS.ready, leave it alone.
+      if (custom || !Object.keys(screens).length) { post('ready', { screens: M.screens.map(function (s) { return s.id; }) }); return; }
       state.screen = home(state.role);
       render();
       post('ready', { screens: Object.keys(screens) });

@@ -1543,8 +1543,15 @@ def agent_requirement_turn(self, requirement_uuid: str, tenant_name: str) -> dic
 
                 # Open mode: the analyst writes the prototype itself; the template's
                 # kit preview and its sketch probe do not apply.
+                # Uploaded HTML files, for proto_import (read here: the tools can't use the ORM).
+                html_docs = {
+                    d.name: bytes(d.data).decode("utf-8", "replace")
+                    for d in req.documents.filter(content_type="text/html")
+                }
                 proto = PrototypeBench(
-                    req.prototype_parts, emit=lambda edit: stream.push("spec", edit)
+                    req.prototype_parts,
+                    emit=lambda edit: stream.push("spec", edit),
+                    documents=html_docs,
                 )
             bench = SpecWorkbench(
                 req.spec_markdown,

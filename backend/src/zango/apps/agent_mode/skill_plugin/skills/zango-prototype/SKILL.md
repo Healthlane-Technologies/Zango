@@ -156,4 +156,33 @@ ZAS.on('approve', (data, el, event, ctx) => { ... })        // data-act="approve
   scroll at 1280 px, readable at 390 px.
 - **Copy** in the user's words: "Send back to requester", not "Update status".
 
+## Importing an uploaded HTML page
+
+When the user uploaded their app as an `.html` file, it is the prototype. Do not redraw it.
+
+1. `proto_import("<file name>")`. The page's styles, scripts and markup become `imported/styles.css`,
+   `imported/script-NN.js` and `body.html`, unchanged, plus a starter `manifest.json` with
+   `"source": "imported"`. Fonts and allowed libraries move to the manifest.
+2. Read how the page navigates (`proto_find` for its nav items, its render function, its persona
+   or role state). Fill `manifest.json`: `screens` (ids and titles from its nav sections; record pages
+   with `record`; sign-in, tours and fake integrations with `"only": "prototype"`), `roles` from its
+   personas.
+3. Write one small part, `zas-bridge.js`, that connects the page to the preview:
+
+   ```js
+   ZAS.ready({go(screen, {role, record}) {
+     // use the page's own state and render function, e.g.:
+     if (role) S.who = role; secn = screen; render();
+   }});
+   // after the page's own navigation, report where the user is:
+   // ZAS.at(secn, {role: S.who})
+   ```
+
+   Patch the page only where needed to call `ZAS.at` after it navigates (one line in its router).
+4. Write the YAML from what the page shows: personas → roles, its records → entities and fields,
+   its stages and approve/send back/decline → workflow transitions with role policies, uploads →
+   file fields, automation it fakes → custom requirements.
+
+The page keeps its own look. Imported parts may be up to 1 MB each.
+
 See `references/example/` for a complete small prototype in this format (a fictional lab).

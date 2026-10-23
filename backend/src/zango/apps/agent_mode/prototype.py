@@ -27,6 +27,9 @@ from pathlib import Path
 
 
 MAX_PART_BYTES = 150_000
+# Parts copied from an uploaded HTML file (imported/*, body.html) keep the file's own
+# scripts whole: a script cannot be split into separately parsed parts.
+MAX_IMPORTED_PART_BYTES = 1_000_000
 MAX_TOTAL_BYTES = 2_000_000
 MAX_READ_LINES = 400
 MAX_FIND_HITS = 20
@@ -34,6 +37,8 @@ MAX_FIND_HITS = 20
 PART_RE = re.compile(
     r"^[a-z0-9][a-z0-9_.-]*(/[a-z0-9][a-z0-9_.-]*){0,2}\.(css|js|json)$"
 )
+# The markup of an imported page's body; the only HTML part.
+BODY_PART = "body.html"
 LIBRARY_HOSTS = (
     "https://cdnjs.cloudflare.com/",
     "https://cdn.jsdelivr.net/npm/",
@@ -172,14 +177,35 @@ def is_drafting(parts: dict) -> bool:
     if not parts:
         return True
     manifest, _ = manifest_of(parts)
+    if is_imported(manifest):
+        return False
     return any(screen_part(s["id"]) not in parts for s in manifest.get("screens", []))
+
+
+def is_imported(manifest: dict) -> bool:
+    """An uploaded page: its screens are drawn by its own code, not screens/<id>.js."""
+    return manifest.get("source") == "imported"
+
+
+def part_limit(path: str) -> int:
+    return (
+        MAX_IMPORTED_PART_BYTES
+        if path == BODY_PART or path.startswith("imported/")
+        else MAX_PART_BYTES
+    )
 
 
 def static_problems(parts: dict) -> list[str]:
     """Everything assembly can tell without running the page."""
     manifest, problems = manifest_of(parts)
     ids = [s["id"] for s in manifest.get("screens", [])]
-    if manifest:
+    if manifest and is_imported(manifest):
+        if "ZAS.ready" not in "".join(t for p, t in parts.items() if p.endswith(".js")):
+            problems.append(
+                "Imported page: no part calls ZAS.ready({go}) yet, so the preview cannot open "
+                "its screens or report where the user is (see the zango-prototype skill)."
+            )
+    elif manifest:
         missing = [i for i in ids if screen_part(i) not in parts]
         if missing:
             problems.append(
@@ -300,7 +326,10 @@ def assemble(parts: dict) -> str:
     for path in css:
         body = (parts[path] or "").replace("</style", "<\\/style")
         out.append(f'<style data-part="{_esc_attr(path)}">\n{body}\n</style>')
-    out.append('</head><body><div id="zas-app"></div>')
+    out.append("</head><body>")
+    if parts.get(BODY_PART):
+        out.append(parts[BODY_PART].replace("</body", "<\\/body"))
+    out.append('<div id="zas-app"></div>')
     manifest_json = json.dumps(manifest, ensure_ascii=False).replace("</", "<\\/")
     out.append(
         f'<script type="application/json" id="zas-proto">{manifest_json}</script>'
@@ -322,6 +351,97 @@ def assemble(parts: dict) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Importing an uploaded HTML page
+# ---------------------------------------------------------------------------
+
+# Script and style elements in document order. finditer never looks inside a match, so a
+# "<style" written in a script's string is part of that script, as the browser parses it.
+_ELEMENT_RE = re.compile(r"<(script|style)\b([^>]*)>(.*?)</\1\s*>", re.I | re.S)
+_ATTR_RE = re.compile(r'([a-zA-Z-]+)\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^\s>]+))')
+_JS_TYPES = ("", "text/javascript", "application/javascript", "module")
+
+
+def _attrs(raw: str) -> dict:
+    return {
+        m.group(1).lower(): next(g for g in m.groups()[1:] if g is not None)
+        for m in _ATTR_RE.finditer(raw or "")
+    }
+
+
+def import_html(html: str) -> tuple[dict, list[str]]:
+    """An uploaded page as prototype parts, kept as it is, and notes on what changed.
+
+    Styles go to imported/styles.css, each inline script to imported/script-NN.js (in
+    order), allowed library scripts and Google Fonts to the manifest, and the rest of the
+    markup to body.html. A starter manifest marks the prototype as imported.
+    """
+    notes: list[str] = []
+    styles: list[str] = []
+    scripts: list[str] = []
+    libraries: list[str] = []
+    kept: list[
+        str
+    ] = []  # non-JS script elements (JSON data, templates) stay in the body
+    for m in _ELEMENT_RE.finditer(html):
+        tag, attrs, body = m.group(1).lower(), _attrs(m.group(2)), m.group(3)
+        if tag == "style":
+            styles.append(body)
+            continue
+        kind = attrs.get("type", "").strip().lower()
+        if attrs.get("src"):
+            src = attrs["src"]
+            if src.startswith(LIBRARY_HOSTS):
+                libraries.append(src)
+            else:
+                notes.append(
+                    f"Dropped a script from a host the preview does not allow: {src}"
+                )
+        elif kind in _JS_TYPES:
+            if kind == "module":
+                notes.append(
+                    "A module script now runs as a classic script; check it still works."
+                )
+            scripts.append(body)
+        else:
+            kept.append(m.group(0))
+    rest = _ELEMENT_RE.sub("", html)
+    fonts = [
+        _attrs(m.group(1)).get("href", "")
+        for m in re.finditer(r"<link\b([^>]*)>", rest, re.I)
+        if _attrs(m.group(1)).get("href", "").startswith(FONT_HOST)
+    ]
+    title_m = re.search(r"<title[^>]*>(.*?)</title>", rest, re.I | re.S)
+    title = re.sub(r"\s+", " ", title_m.group(1)).strip() if title_m else "Prototype"
+    body_m = re.search(r"<body\b[^>]*>(.*)</body\s*>", rest, re.I | re.S)
+    body = body_m.group(1) if body_m else rest
+    # What the page shell already provides, or the preview does not allow.
+    body = re.sub(
+        r"<!doctype[^>]*>|</?(html|head|body)\b[^>]*>|<meta\b[^>]*>|<link\b[^>]*>"
+        r"|<title[^>]*>.*?</title>|<base\b[^>]*>",
+        "",
+        body,
+        flags=re.I | re.S,
+    ).strip()
+    body = "\n".join([*kept, body]).strip()
+    manifest = {
+        "title": title,
+        "source": "imported",
+        "fonts": fonts,
+        "libraries": libraries,
+        "roles": {},
+        "screens": [],
+    }
+    parts = {"manifest.json": json.dumps(manifest, indent=2, ensure_ascii=False)}
+    if styles:
+        parts["imported/styles.css"] = "\n\n".join(styles)
+    for i, script in enumerate(scripts, 1):
+        parts[f"imported/script-{i:02d}.js"] = script
+    if body:
+        parts[BODY_PART] = body
+    return parts, notes
+
+
+# ---------------------------------------------------------------------------
 # The workbench the tools edit
 # ---------------------------------------------------------------------------
 
@@ -329,8 +449,10 @@ def assemble(parts: dict) -> str:
 class PrototypeBench:
     """The prototype's parts for this turn, and every write applied to them."""
 
-    def __init__(self, parts: dict | None, emit):
+    def __init__(self, parts: dict | None, emit, documents: dict | None = None):
         self.parts: dict = {str(k): str(v or "") for k, v in (parts or {}).items()}
+        # Uploaded HTML files by name ({name: html}), for proto_import.
+        self.documents: dict = dict(documents or {})
         self.emit = emit
         self.writes = 0
         self.written: list[str] = []
@@ -348,7 +470,7 @@ class PrototypeBench:
         part = (part or "").strip().lstrip("/")
         if part.startswith("proto/"):
             part = part[6:]
-        if not PART_RE.match(part):
+        if part != BODY_PART and not PART_RE.match(part):
             raise ProtoRefused(
                 f"`{part}` is not a valid part path: lower-case a-z 0-9 . _ -, at most two folders, "
                 "ending .css, .js or .json (e.g. screens/request.view.js)."
@@ -357,10 +479,11 @@ class PrototypeBench:
 
     def _commit(self, new_parts: dict, touched: list[str], verb: str) -> str:
         for path in touched:
-            if path in new_parts and len(new_parts[path].encode()) > MAX_PART_BYTES:
+            limit = part_limit(path)
+            if path in new_parts and len(new_parts[path].encode()) > limit:
                 raise ProtoRefused(
                     f"Not written: {path} would be {len(new_parts[path].encode()) // 1000} KB; the "
-                    f"limit is {MAX_PART_BYTES // 1000} KB per part. Split it (e.g. a screen's "
+                    f"limit is {limit // 1000} KB per part. Split it (e.g. a screen's "
                     "helpers into screens/<id>.parts.js or shared code into lib/*.js)."
                 )
         if total_bytes(new_parts) > MAX_TOTAL_BYTES:
@@ -506,6 +629,39 @@ class PrototypeBench:
         new[to] = new.pop(part)
         return self._commit(new, [to], f"Renamed {part} →")
 
+    def import_document(self, document: str) -> str:
+        name = (document or "").strip()
+        match = next(
+            (n for n in self.documents if n.lower() == name.lower()),
+            next((n for n in self.documents if name.lower() in n.lower()), None)
+            if name
+            else None,
+        )
+        if match is None:
+            known = ", ".join(self.documents) or "none"
+            raise ProtoRefused(f"No uploaded HTML file `{name}`. HTML files: {known}.")
+        imported, notes = import_html(self.documents[match])
+        # The page replaces any earlier import; parts the analyst added stay.
+        new = {
+            p: t
+            for p, t in self.parts.items()
+            if not (p.startswith("imported/") or p == BODY_PART)
+        }
+        if "manifest.json" in new:
+            imported.pop("manifest.json")
+        new.update(imported)
+        out = self._commit(new, sorted(imported), f"Imported {match} as")
+        return (
+            out
+            + ("\nNotes:\n" + "\n".join(f"- {n}" for n in notes) if notes else "")
+            + (
+                "\nNext: fill manifest.json (screens with ids, roles) from the page's own navigation "
+                "and personas, then write a small part (e.g. zas-bridge.js) that calls "
+                "ZAS.ready({go(screen, {role, record}) {...}}) using the page's own router, and "
+                "ZAS.at(screen, {role}) after it navigates. Do not rewrite the page."
+            )
+        )
+
 
 # ---------------------------------------------------------------------------
 # Tools
@@ -519,6 +675,7 @@ PROTO_TOOL_NAMES = (
     "proto_find",
     "proto_remove",
     "proto_rename",
+    "proto_import",
 )
 # What a screen writer may call: its own screen's parts, nothing in the YAML.
 WRITER_TOOL_NAMES = (
@@ -637,6 +794,23 @@ def proto_tool_specs(pb: PrototypeBench) -> list:
             "Rename a part (e.g. when a screen id changes; update manifest.json too).",
             _schema({"part": _PART, "to": _PART}, ["part", "to"]),
             guarded(lambda a: pb.rename(a.get("part", ""), a.get("to", ""))),
+        ),
+        (
+            "proto_import",
+            "Make an uploaded HTML file the prototype, as it is: its styles, scripts and markup "
+            "become parts (imported/*, body.html) and a starter manifest.json. Use it whenever "
+            "the user uploaded their app as HTML, instead of redrawing it. Then complete the "
+            "manifest (screens, roles) and add a small part that calls ZAS.ready({go}).",
+            _schema(
+                {
+                    "document": {
+                        "type": "string",
+                        "description": "The uploaded file's name, as in the documents INDEX.md.",
+                    }
+                },
+                ["document"],
+            ),
+            guarded(lambda a: pb.import_document(a.get("document", ""))),
         ),
     ]
 

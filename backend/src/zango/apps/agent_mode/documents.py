@@ -35,6 +35,10 @@ KINDS = {
     ".csv": "text/csv",
     ".txt": "text/plain",
     ".md": "text/markdown",
+    # An HTML prototype of the app. In Free design it is imported as the prototype
+    # (prototype.import_html); the text extract is only an outline of it.
+    ".html": "text/html",
+    ".htm": "text/html",
 }
 
 
@@ -158,13 +162,52 @@ def _text(data: bytes) -> str:
     raise DocumentError("The text file's encoding could not be read.")
 
 
+def _html_outline(html: str) -> str:
+    """What an HTML prototype shows, in short: title, headings, actions, columns, fields."""
+    import html as htmllib
+
+    if not re.search(r"<(html|body|div|main|section|script|style)\b", html, re.I):
+        raise DocumentError("The file is not an HTML page.")
+
+    def texts(pattern, limit):
+        seen, out = set(), []
+        for raw in re.findall(pattern, html, re.I | re.S):
+            t = htmllib.unescape(re.sub(r"<[^>]+>|\s+", " ", raw)).strip()
+            if t and len(t) < 120 and t not in seen:
+                seen.add(t)
+                out.append(t)
+            if len(out) >= limit:
+                break
+        return out
+
+    title = texts(r"<title[^>]*>(.*?)</title>", 1)
+    parts = [
+        "HTML prototype of the app (outline only; the page itself is kept as uploaded).",
+        f"Size: {len(html) // 1000} KB, {len(re.findall(r'<script', html, re.I))} scripts, "
+        f"{len(re.findall(r'<style', html, re.I))} style blocks.",
+        "In Free design, import it with proto_import rather than redrawing it.",
+        "",
+        f"Title: {title[0] if title else '-'}",
+    ]
+    for label, pattern, limit in (
+        ("Headings", r"<h[1-3][^>]*>(.*?)</h[1-3]>", 80),
+        ("Buttons and links", r"<(?:button|a)\b[^>]*>(.*?)</(?:button|a)>", 120),
+        ("Table columns", r"<th\b[^>]*>(.*?)</th>", 120),
+        ("Form labels", r"<label\b[^>]*>(.*?)</label>", 80),
+    ):
+        found = texts(pattern, limit)
+        if found:
+            parts.append(f"{label}: " + " · ".join(found))
+    return "\n".join(parts)
+
+
 def extract(name: str, data: bytes) -> Extracted:
     """Check one upload and extract its text."""
     name = _safe_name(name)
     ext = os.path.splitext(name)[1].lower()
     if ext not in KINDS:
         raise DocumentError(
-            f"{name}: only PDF, Word (.docx), Excel (.xlsx), CSV, text and Markdown files can be read."
+            f"{name}: only PDF, Word (.docx), Excel (.xlsx), CSV, text, Markdown and HTML files can be read."
         )
     if not data:
         raise DocumentError(f"{name} is empty.")
@@ -183,6 +226,8 @@ def extract(name: str, data: bytes) -> Extracted:
             text = "\n".join(
                 "| " + " | ".join(r) + " |" for r in rows[: MAX_SHEET_ROWS * 4]
             )
+        elif ext in (".html", ".htm"):
+            text = _html_outline(_text(data))
         else:
             text = _text(data)
     except DocumentError as exc:
@@ -245,7 +290,7 @@ def write_docs_dir(tenant_name: str, requirement) -> Path | None:
     index = ["# Documents the user provided", ""]
     for i, row in enumerate(rows, 1):
         stem = f"{i:02d}-{row.name}"
-        if row.content_type == KINDS[".pdf"]:
+        if row.content_type in (KINDS[".pdf"], KINDS[".html"]):
             (root / stem).write_bytes(bytes(row.data))
         text_name = f"{stem}.txt"
         (root / text_name).write_text(row.extracted_text or "", encoding="utf-8")
@@ -257,7 +302,12 @@ def write_docs_dir(tenant_name: str, requirement) -> Path | None:
         original = (
             f"`{stem}` (read it directly) and "
             if row.content_type == KINDS[".pdf"]
-            else ""
+            else (
+                f'an HTML prototype: in Free design call proto_import("{row.name}") to make it '
+                f"the prototype; source `{stem}`, outline "
+                if row.content_type == KINDS[".html"]
+                else ""
+            )
         )
         index.append(
             f"- **{row.name}** — {row.content_type.split('/')[-1]}, {row.size // 1024} KB{', ' + detail if detail else ''}: "
