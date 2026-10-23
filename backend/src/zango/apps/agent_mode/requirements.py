@@ -18,6 +18,7 @@ from .prompt import PLUGIN_NAME
 
 
 ANALYST_SKILL = f"{PLUGIN_NAME}:zango-requirements-analyst"
+PROTOTYPE_SKILL = f"{PLUGIN_NAME}:zango-prototype"
 
 # The analyst signals "ready for review" by emitting the spec in this fence.
 _SPEC_FENCE = re.compile(r"```zango-spec[ \t]*\n(.*?)```", re.DOTALL | re.IGNORECASE)
@@ -540,6 +541,32 @@ _PREVIEW_TOOLS_APPEND = (
 )
 
 
+_OPEN_PROTOTYPE_APPEND = (
+    '\n\nOPEN PROTOTYPE MODE. The user turned on "Free design": next to the YAML you '
+    "write a working HTML prototype of their app, in any look, and that prototype is the "
+    "preview they see. Load the zango-prototype skill before your first prototype write "
+    "and follow it.\n"
+    "- Write the prototype in parts with the mcp__spec__proto_* tools, never as one big "
+    "file; change it later with proto_patch. Call proto_outline first in any turn that "
+    "touches it.\n"
+    "- First draft: as soon as the interview tells you who uses the app, what moves "
+    "through it and who decides, write manifest.json, tokens.css, app.css, data.js, "
+    "shell.js and the home screen yourself, so the user sees their app within minutes. "
+    "Then hand every other screen to the screen-writer agent (Agent tool, subagent_type "
+    '"screen-writer"), several in ONE message so they run in parallel, each with a '
+    "brief: screen id, purpose, personas, records and fields, actions and their outcomes, "
+    "states to show. Review what they report and fix shared parts yourself.\n"
+    "- Keep the YAML in step in the same turn: every persona is a role, every screen maps "
+    'to a page (or is marked "only": "prototype" in the manifest, like a sign-in '
+    "screen), every action is a transition or a custom requirement.\n"
+    "- The look is free in this mode: the template's theme/ui limits and its \"fonts and "
+    'layouts are not offered" rule do not apply. Custom pages need no `preview` sketch; '
+    "their screen in the prototype is the sketch. Contracts (data, acceptance) still apply.\n"
+    "- A [Preview: …] note names the screen and persona the user was on; locate the text "
+    "with proto_find, then patch only what they asked for."
+)
+
+
 def build_analyst_options(
     *, ctx, creds, requirement, spec_server=None, docs_dir="", preview=False
 ):
@@ -629,6 +656,24 @@ def build_analyst_options(
             "append": kwargs["system_prompt"]["append"]
             + _SPEC_TOOLS_APPEND
             + (_PREVIEW_TOOLS_APPEND if preview else ""),
+        }
+    if spec_server is not None and getattr(requirement, "preview_mode", "") == "open":
+        from .prototype import screen_writer_agent
+
+        kwargs["allowed_tools"] = [*kwargs["allowed_tools"], "Agent", "Task"]
+        kwargs["skills"] = [*kwargs["skills"], PROTOTYPE_SKILL]
+        kwargs["agents"] = {"screen-writer": screen_writer_agent()}
+        if not requirement.prototype_parts:
+            # The first draft writes the whole app: many tool calls, and the
+            # screen writers' cost counts towards this turn's budget.
+            kwargs["max_turns"] = max(kwargs["max_turns"], 250)
+            kwargs["max_budget_usd"] = float(
+                getattr(dj, "AGENT_MODE_ANALYST_PROTO_BUDGET_USD", 0)
+                or max(kwargs["max_budget_usd"], 15.0)
+            )
+        kwargs["system_prompt"] = {
+            **kwargs["system_prompt"],
+            "append": kwargs["system_prompt"]["append"] + _OPEN_PROTOTYPE_APPEND,
         }
     if cfg.analyst_model:
         kwargs["model"] = cfg.analyst_model

@@ -114,7 +114,13 @@ def approval_problem(requirement):
             "message": "Fix the problems in the spec before approving it.",
             "issues": [i for i in issues if i["level"] == "error"],
         }
-    unfinished = unfinished_custom_work(requirement.spec_markdown)
+    is_open = getattr(requirement, "preview_mode", "") == "open"
+    if is_open and not requirement.prototype_parts:
+        return 409, {
+            "message": "There is no prototype yet. Ask the agent to draw the app first."
+        }
+    # In open mode custom screens are drawn in the prototype, not as sketches.
+    unfinished = unfinished_custom_work(requirement.spec_markdown, sketches=not is_open)
     if unfinished:
         return 409, {
             "message": "Some custom parts are not finished. Ask the agent to finish them before building.",
@@ -123,7 +129,7 @@ def approval_problem(requirement):
     return None
 
 
-def unfinished_custom_work(spec_text) -> list:
+def unfinished_custom_work(spec_text, sketches: bool = True) -> list:
     """What spec_mark_ready would refuse in the custom work, as issues: a screen with no sketch
     (the user approved a placeholder) or a custom part with no contract (the build cannot test it).
 
@@ -148,7 +154,7 @@ def unfinished_custom_work(spec_text) -> list:
             "message": "Custom screen with no preview sketch: the user has only seen a placeholder.",
         }
         for path, node in custom_screens(doc).items()
-        if not is_sketched(node)
+        if sketches and not is_sketched(node)
     ]
     out += [
         {"level": "error", "path": path, "message": f"Missing {what}"}

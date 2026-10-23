@@ -1,0 +1,159 @@
+---
+name: zango-prototype
+description: Open prototype mode of Agent Mode ("Free design"). How to write the app's working HTML prototype in parts with the mcp__spec__proto_* tools - the parts layout, the manifest, the ZAS runtime (router, personas, store, actions, helpers), the first-draft order, screen briefs for the screen-writer agent, and the design bar - and how to keep it in step with the YAML spec.
+version: 1.0.0
+---
+
+# Open prototype
+
+In open mode the preview the user sees is a working prototype **you write**, in any look.
+It must feel like the real product a senior product designer would ship for this business:
+personas with their own home, real-looking records, working actions, every state drawn.
+The YAML spec still says what gets built; the prototype says how it looks and flows.
+
+You never write the prototype as one file. You write **parts**; the server assembles them
+into one page and the preview reloads after every write.
+
+## Parts
+
+| Part | Holds | Who writes it |
+|---|---|---|
+| `manifest.json` | title, screens, roles, personas, fonts, libraries | you, first |
+| `tokens.css` | the palette, type, radii, shadows, spacing as CSS variables | you |
+| `app.css` | layout and shared components (shell, cards, tables, forms, badges) | you |
+| `data.js` | sample records: `ZAS.seed({collection: [...]})` | you |
+| `shell.js` | nav, header, user menu: `ZAS.shell(...)` | you |
+| `screens/<id>.js` | one screen: `ZAS.screen('<id>', ...)` and its actions | you or a screen writer |
+| `screens/<id>.css` | rules only this screen needs (optional) | same as its screen |
+| `lib/*.js` | shared helpers several screens use (optional) | you |
+
+Limits: 150 KB per part, 2 MB in all. JS parts must parse and `manifest.json` must be valid JSON,
+or the write is refused. Paths are lower-case: `screens/request.view.js`.
+
+## manifest.json
+
+```json
+{
+  "title": "Lab Sample Tracker",
+  "currency": "USD",
+  "fonts": ["https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"],
+  "libraries": ["https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"],
+  "roles": {"tech": "Lab technician", "lead": "Lab lead", "qa": "Quality"},
+  "personas": {"tech": {"name": "Priya Raman"}, "lead": {"name": "Tomás Ortega"}, "qa": {"name": "Hanna Berg"}},
+  "default_role": "tech",
+  "home": {"tech": "bench", "lead": "overview"},
+  "screens": [
+    {"id": "overview", "title": "Overview", "icon": "layout-dashboard", "roles": ["lead", "qa"]},
+    {"id": "bench", "title": "My bench", "icon": "flask-conical", "roles": ["tech"]},
+    {"id": "samples", "title": "Samples", "icon": "test-tubes", "group": "Work"},
+    {"id": "sample", "title": "Sample", "record": "samples", "parent": "samples"},
+    {"id": "signin", "title": "Sign in", "only": "prototype", "nav": false}
+  ]
+}
+```
+
+- `screens[]`: `id` (its part is `screens/<id>.js`), `title`, optional `icon` (a Lucide name),
+  `group` (nav section), `roles` (who can open it; all when absent), `record` (a record page:
+  opened with a record id, kept out of the nav), `parent` (highlights its list in the nav),
+  `nav: false`, and `only: "prototype"` for screens the real app will not have (sign-in,
+  onboarding tours, fake integrations).
+- `fonts`: Google Fonts CSS URLs only. `libraries`: scripts from cdnjs, cdn.jsdelivr.net/npm or
+  unpkg, with an exact version. Nothing else loads: no other hosts, no fetch to APIs, no images
+  by URL (use inline SVG, CSS, or `data:` URIs).
+- Lucide icons are already loaded: `ZAS.I('name', size)`.
+
+## The ZAS runtime (already on every page)
+
+```js
+ZAS.seed({samples: [...], batches: [...]})          // data.js
+ZAS.shell({render(ctx, body) { return `...${body}...` }, mount(root, ctx) {}})
+ZAS.screen('samples', {
+  render(ctx) { return `<h1>...</h1>` + ctx.table({...}) },   // returns HTML
+  mount(el, ctx) {}                                          // optional: charts, focus
+})
+ZAS.on('approve', (data, el, event, ctx) => { ... })        // data-act="approve" data-id="S-12"
+```
+
+- **ctx**: `screen`, `role`, `roleLabel`, `persona` ({code, label, name…}), `roles`, `record` (id or
+  null), `params`, `nav` ([{id, title, icon, group, on}] for this role), `meta` (this screen's
+  manifest entry), `M` (manifest), `store`, `files`, `go`, `back`, `toast`, and helpers
+  `h` (escape every value you interpolate), `I`, `fmt` (`num`, `money`, `date`, `rel`), `pill(text,
+  tone)` (tones ok/warn/bad/info), `table({columns:[{label, key | render, align}], rows, rowAct,
+  empty})`, `tabs(items, active, act)`, `field(label, inputHtml, hint)`, `initials(name)`.
+- **Store** (in memory, reset on reload): `list(c, filterFn)`, `get(c, id)`, `put(c, doc)`,
+  `patch(c, id, fields)`, `remove(c, id)`. Every change re-renders the page.
+- **Files**: `ZAS.files.add(file)` → `{id, name, url…}` for uploads in the preview;
+  `fetch('/_blob/<id>')` works.
+- **Navigation**: `ZAS.go('sample', {record: 'S-12'})`, `ZAS.back()`; in markup
+  `data-act="go" data-go="samples"` (plus `data-record`). Persona switch: `ZAS.go(home, {role})`;
+  a "Viewing as" switcher is drawn for you (turn it off with `"persona_bar": false` when the shell
+  draws its own).
+- **Actions**: any element with `data-act` calls its `ZAS.on` handler with its `data-*` values;
+  inputs and selects with `data-act` fire on change (`data.value`), and `<form data-act>` on
+  submit (`data.form`). Overlays: `ZAS.drawer(html)`, `ZAS.modal(html)`, `false` closes;
+  `data-act="zas-close"` closes too. `ZAS.toast('Approved', 'ok')`.
+- Each screen's HTML is wrapped in `<div data-zas-screen="<id>">`. The runtime's `z-` classes are
+  plain on purpose: restyle them in `app.css`.
+- You may skip all of this and write your own app, as long as the manifest is right and the page
+  calls `ZAS.ready({go(screen, {role, record}) {...}})` and reports `ZAS.at(screen, {role, record})`
+  after each navigation.
+
+## The first draft
+
+1. **Direction.** From the subject, decide the look before writing: a palette of 5-7 tokens with
+   a deliberate hue for the brand and tinted neutrals, a type pairing (display + text, plus mono
+   for IDs and figures), radius, density, one signature treatment (a status rail, a stage stepper,
+   a ledger-style table). Write it into `tokens.css`. Never a gray page with one blue accent.
+2. **Write the frame yourself**, in this order: `manifest.json` → `tokens.css` → `app.css` →
+   `data.js` → `shell.js` → the home screen of the main persona. The user should see their app
+   within a few minutes.
+3. **Hand out the other screens** to the screen-writer agent (Agent tool, `subagent_type:
+   "screen-writer"`), several in ONE message so they run in parallel. Write each brief like this:
+
+   ```
+   Screen `samples` (screens/samples.js), title "Samples". Personas: tech, lead, qa.
+   Purpose: every sample in the lab, filtered by stage; the queue for the tech.
+   Records: store `samples` (id, label, matrix, batch, received, due, stage, assignee, flags).
+   Show: stage chips with counts (Received, In prep, On instrument, Review, Released, Rejected),
+   a table (ID mono, label, matrix, batch, due with overdue in red, stage pill, assignee avatar),
+   rows open `sample`. Lead sees a "Reassign" action per row.
+   Actions: data-act="stage-filter" (chip), "open" (row) → ZAS.go('sample', {record: id}).
+   States: empty filter result; overdue; the tech sees only their own by default.
+   Use: classes .page-head, .chips, .card, .tbl from app.css; tokens --brand, --ok, --warn, --bad.
+   ```
+4. **Review** what the writers report. Fix shared parts yourself (they must not edit them),
+   check the manifest has every screen, then look at the result once.
+5. **Write the YAML in the same turn** (spec tools): roles = personas, entities = the store's
+   collections and their fields, pages = screens (record screens map to the entity's detail view),
+   workflow = the stages and the actions that move them, custom requirements = automation the
+   prototype only fakes (AI review, reminders, integrations).
+
+## Later turns
+
+- `proto_outline` first, then `proto_find` the text the user means (a `[Preview: …]` note names
+  the screen and persona), `proto_read` around it, and `proto_patch` the smallest change.
+- A new screen: add it to `manifest.json` (patch), then write `screens/<id>.js` (yourself, or a
+  writer when there are several).
+- Rewrite a whole part only when most of it changes.
+- Change the YAML with it whenever the change is not purely visual.
+
+## The bar
+
+- **Personas, not a menu.** Each role lands on its own home: "your work" first, counts that
+  matter to that role, what is waiting on them.
+- **Real content.** Names, places, amounts, dates and IDs in the business's own conventions,
+  10-30 records per main collection, spread across every stage, some overdue, one or two odd
+  cases. Dates relative to today (`new Date(Date.now() - 3*864e5)`). Never lorem ipsum, "Test 1",
+  or round numbers everywhere.
+- **Every state.** Empty lists with a next step, pending/approved/rejected/sent back, overdue,
+  read-only for roles that cannot act, a confirmation for destructive actions, a toast after each
+  action.
+- **Working flows.** Every button the brief names does something in the store, so the user can
+  walk the process end to end as each persona.
+- **Information design.** Summary before detail; state shown as pills, rails and steppers, not
+  only words; mono and tabular figures for IDs and amounts; one primary action per screen.
+- **Craft.** Consistent spacing scale, aligned edges, hover and focus states, no horizontal page
+  scroll at 1280 px, readable at 390 px.
+- **Copy** in the user's words: "Send back to requester", not "Update status".
+
+See `references/example/` for a complete small prototype in this format (a fictional lab).

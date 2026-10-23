@@ -1,0 +1,12 @@
+/* Direction: a calm instrument-room look. Deep teal brand, warm amber for "needs you",
+   cool tinted neutrals, Manrope for text, Plex Mono for sample IDs and figures. */
+:root{
+  --brand:#0F6E6A; --brand-strong:#0A4F4C; --brand-soft:#E3F1EF; --accent:#C7820E; --accent-soft:#FBF0DC;
+  --page:#F4F6F6; --card:#FFFFFF; --sunk:#EBEFEF; --line:#DDE3E2; --line-strong:#C3CCCB;
+  --ink:#122423; --ink-2:#435654; --ink-3:#71817F;
+  --ok:#2E6B3E; --ok-bg:#E6F2E8; --warn:#8C5A06; --warn-bg:#FBF0DC; --bad:#A3232F; --bad-bg:#FBEBEC; --info:#2F4FA8; --info-bg:#E9EEFB;
+  --font:'Manrope',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,monospace;
+  --r:10px; --r-sm:6px; --shadow:0 1px 2px rgba(18,36,35,.06),0 4px 14px -6px rgba(18,36,35,.12);
+  --z-line:var(--line); --z-ok:var(--ok); --z-ok-bg:var(--ok-bg); --z-warn:var(--warn); --z-warn-bg:var(--warn-bg);
+  --z-bad:var(--bad); --z-bad-bg:var(--bad-bg); --z-info:var(--info); --z-info-bg:var(--info-bg); --z-surface:var(--card);
+}

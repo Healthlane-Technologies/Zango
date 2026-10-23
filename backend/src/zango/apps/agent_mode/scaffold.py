@@ -53,9 +53,7 @@ def _init_task_outcome(task_id: str) -> tuple[str, str]:
         from django_celery_results.models import TaskResult
 
         row = (
-            TaskResult.objects.filter(task_id=task_id)
-            .only("status", "result")
-            .first()
+            TaskResult.objects.filter(task_id=task_id).only("status", "result").first()
         )
     except Exception:  # noqa: BLE001 - a missing result is just "pending"
         logger.exception("agent_mode: could not read the workspace init result")
@@ -244,7 +242,9 @@ def handoff_requirement(scaffold):
         version = scaffold.template_version
         template = get_template(version.template.slug, version_uuid=version.object_uuid)
         if template is None:
-            raise RuntimeError("The template this app was started from no longer loads.")
+            raise RuntimeError(
+                "The template this app was started from no longer loads."
+            )
 
     from .documents import wants_draft
     from .models import AgentRequirementDocument
@@ -259,11 +259,14 @@ def handoff_requirement(scaffold):
             title=(template.name if template else scaffold.prompt)[:80],
             created_by_label=scaffold.created_by_label,
             is_thinking=True,
+            preview_mode=getattr(scaffold, "preview_mode", "") or "kit",
         )
         if template:
             seed_template_requirement(requirement, template)
             requirement.reference_id = scaffold.reference_id
-            requirement.mode = "draft" if wants_draft(scaffold.prompt, len(documents)) else "interview"
+            requirement.mode = (
+                "draft" if wants_draft(scaffold.prompt, len(documents)) else "interview"
+            )
         requirement.save()
         for doc in documents:
             AgentRequirementDocument.objects.create(

@@ -1537,6 +1537,15 @@ def agent_requirement_turn(self, requirement_uuid: str, tenant_name: str) -> dic
             from .preview_probe import probe_for
             from .spec_tools import SpecWorkbench, build_spec_server
 
+            proto = None
+            if req.preview_mode == "open":
+                from .prototype import PrototypeBench
+
+                # Open mode: the analyst writes the prototype itself; the template's
+                # kit preview and its sketch probe do not apply.
+                proto = PrototypeBench(
+                    req.prototype_parts, emit=lambda edit: stream.push("spec", edit)
+                )
             bench = SpecWorkbench(
                 req.spec_markdown,
                 template,
@@ -1544,8 +1553,9 @@ def agent_requirement_turn(self, requirement_uuid: str, tenant_name: str) -> dic
                 flags=req.spec_flags,
                 open_decisions=req.open_decisions,
                 workflows=req.workflows,
-                probe=probe_for(template),
+                probe=None if proto is not None else probe_for(template),
                 sketch_looks=req.sketch_looks,
+                proto=proto,
             )
             spec_server = build_spec_server(bench)
         stream.options = build_analyst_options(
@@ -1645,6 +1655,11 @@ def _record_spec_edit(req, edit: dict) -> None:
     if "sketch_looks" in edit:
         req.sketch_looks = dict(edit["sketch_looks"] or {})
         fields.append("sketch_looks")
+    if "prototype_parts" in edit:
+        req.prototype_parts = dict(edit["prototype_parts"] or {})
+        req.prototype_hash = edit.get("prototype_hash") or ""
+        req.prototype_revision += 1
+        fields += ["prototype_parts", "prototype_hash", "prototype_revision"]
     if len(fields) > 1:
         req.save(update_fields=fields)
 

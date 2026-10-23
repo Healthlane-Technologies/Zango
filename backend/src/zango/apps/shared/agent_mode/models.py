@@ -145,6 +145,8 @@ class AgentAppScaffold(FullAuditMixin):
 
     # The reference journey the user asked to start from ("" = agent's choice).
     reference_id = models.CharField(max_length=64, blank=True, default="")
+    # "open" starts the app's requirement with a free HTML prototype.
+    preview_mode = models.CharField(max_length=8, blank=True, default="kit")
 
     # The template the user started from, pinned at creation; null for a
     # from-scratch app.

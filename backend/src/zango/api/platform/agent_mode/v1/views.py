@@ -108,6 +108,11 @@ class AgentModeAvailabilityView(ZangoGenericPlatformAPIView, TenantMixin):
                 if in_flight
                 else None
             )
+            from django.conf import settings as dj
+
+            payload["open_prototype"] = bool(
+                getattr(dj, "AGENT_MODE_OPEN_PROTOTYPE", True)
+            )
             last = AgentRun.objects.order_by("-queued_at").first()
             payload["last_run"] = (
                 {
@@ -826,12 +831,17 @@ def _dispatch_turn(requirement, tenant):
 
     from zango.apps.agent_mode.tasks import agent_requirement_turn
 
+    seconds = 600
+    if requirement.preview_mode == "open" and not requirement.prototype_parts:
+        # An open prototype's first draft writes the whole app in one turn.
+        seconds = int(getattr(dj, "AGENT_MODE_OPEN_FIRST_TURN_SECONDS", 1500) or 1500)
+
     def _go():
         result = agent_requirement_turn.apply_async(
             args=[str(requirement.object_uuid), tenant.name],
             queue=getattr(dj, "AGENT_MODE_QUEUE", "") or None,
-            soft_time_limit=600,
-            time_limit=660,
+            soft_time_limit=seconds,
+            time_limit=seconds + 60,
         )
         with _in_tenant(tenant):
             AgentRequirement.objects.filter(pk=requirement.pk).update(
@@ -839,6 +849,33 @@ def _dispatch_turn(requirement, tenant):
             )
 
     transaction.on_commit(_go)
+
+
+def _seed_preview_mode(requirement, asked) -> None:
+    """Open prototype or kit preview for a new (template) requirement.
+
+    An explicit choice wins; otherwise a change keeps the mode of the app's last
+    approved requirement, and starts from its prototype.
+    """
+    from django.conf import settings as dj
+
+    from zango.apps.agent_mode.models import RequirementStatus
+
+    if not getattr(dj, "AGENT_MODE_OPEN_PROTOTYPE", True):
+        return
+    previous = (
+        AgentRequirement.objects.filter(status=RequirementStatus.APPROVED)
+        .order_by("-approved_at", "-created_at")
+        .only("preview_mode", "prototype_parts", "prototype_hash")
+        .first()
+    )
+    asked = (asked or "").strip().lower()
+    if asked not in ("open", "kit"):
+        asked = previous.preview_mode if previous and previous.preview_mode else "kit"
+    requirement.preview_mode = asked
+    if asked == "open" and previous and previous.prototype_parts:
+        requirement.prototype_parts = dict(previous.prototype_parts)
+        requirement.prototype_hash = previous.prototype_hash
 
 
 def _append_user_message(requirement, content: str, focus=None):
@@ -954,6 +991,7 @@ class AgentRequirementListCreateView(
                     requirement.mode = (
                         "draft" if wants_draft(prompt, len(documents)) else "interview"
                     )
+                    _seed_preview_mode(requirement, request.data.get("preview_mode"))
                 requirement.save()
                 for doc in documents:
                     AgentRequirementDocument.objects.create(
@@ -1288,6 +1326,58 @@ class AgentRequirementDocumentFileView(ZangoGenericPlatformAPIView, TenantMixin)
             return response
         except Exception as exc:  # noqa: BLE001
             log.exception("agent_mode: document download failed")
+            return get_api_response(False, {"message": str(exc)}, 500)
+
+
+@method_decorator(set_app_schema_path, name="dispatch")
+class AgentRequirementPrototypeView(ZangoGenericPlatformAPIView, TenantMixin):
+    """GET requirements/{uuid}/prototype/[?v=N]: the open prototype as one HTML page.
+
+    The console shows it in a sandboxed frame (no same-origin); the CSP is in the page
+    and repeated here, so a direct open is as locked down as the frame.
+    """
+
+    def get(self, request, app_uuid, requirement_uuid, *args, **kwargs):
+        from django.http import HttpResponse
+
+        from zango.apps.agent_mode.models import AgentRequirementVersion
+        from zango.apps.agent_mode.prototype import CSP, assemble
+
+        try:
+            _bind_tenant(self, app_uuid)
+            req = AgentRequirement.objects.filter(object_uuid=requirement_uuid).first()
+            if req is None:
+                return get_api_response(False, {"message": "not found"}, 404)
+            parts, digest = req.prototype_parts, req.prototype_hash
+            version = request.GET.get("v")
+            if version:
+                row = AgentRequirementVersion.objects.filter(
+                    requirement=req, version=int(version)
+                ).first()
+                if row is None:
+                    return get_api_response(False, {"message": "not found"}, 404)
+                parts, digest = row.prototype_parts, row.prototype_hash
+            if not parts:
+                return get_api_response(
+                    False, {"message": "There is no prototype yet."}, 404
+                )
+            etag = f'"{digest}"'
+            if request.headers.get("If-None-Match") == etag:
+                return HttpResponse(status=304)
+            response = HttpResponse(
+                assemble(parts), content_type="text/html; charset=utf-8"
+            )
+            response["Content-Security-Policy"] = (
+                CSP + "; sandbox allow-scripts allow-popups allow-forms"
+            )
+            response["X-Content-Type-Options"] = "nosniff"
+            response["ETag"] = etag
+            response["Cache-Control"] = "private, no-cache"
+            return response
+        except (TypeError, ValueError):
+            return get_api_response(False, {"message": "bad version"}, 400)
+        except Exception as exc:  # noqa: BLE001
+            log.exception("agent_mode: prototype failed")
             return get_api_response(False, {"message": str(exc)}, 500)
 
 

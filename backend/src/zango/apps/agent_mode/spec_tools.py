@@ -25,8 +25,11 @@ import threading
 
 from collections.abc import Callable
 
+from .prototype import PROTO_TOOL_NAMES, proto_tool_specs
+
 
 MAX_RESULT_ISSUES = 25
+
 # Template rules that flag a custom page/tab/panel without a preview sketch.
 UNSKETCHED_RULES = {"custom_page_preview", "custom_tab_preview", "custom_panel_preview"}
 
@@ -44,6 +47,7 @@ class SpecWorkbench:
         workflows=None,
         probe=None,
         sketch_looks=None,
+        proto=None,
     ):
         from zango.apps.shared.app_templates.services.spec import yamlio
 
@@ -62,6 +66,9 @@ class SpecWorkbench:
         self.probe = probe
         # {custom screen path: hash of the screen when the analyst last looked at it}
         self.sketch_looks: dict = dict(sketch_looks or {})
+        # The open prototype's parts (prototype.PrototypeBench), or None in kit mode.
+        # In open mode custom screens are drawn there, so sketch rules do not apply.
+        self.proto = proto
         # Screenshots an edit took on its own, sent with that edit's result (make_handler).
         self._pending_images: list = []
         self._lock = threading.Lock()
@@ -94,7 +101,10 @@ class SpecWorkbench:
                     "message": "The draft is not valid YAML.",
                 }
             ]
-        return validate_doc(self._plain(doc), self.template, strict=strict)
+        issues = validate_doc(self._plain(doc), self.template, strict=strict)
+        if self.proto is not None:
+            issues = [i for i in issues if i.get("rule") not in UNSKETCHED_RULES]
+        return issues
 
     def _commit(self, new_doc, changed: list[str]) -> str:
         """Apply ``new_doc`` unless it adds a structural error; return a result text."""
@@ -802,6 +812,7 @@ TOOL_NAMES = (
     "spec_mark_ready",
     "preview_check",
     "preview_look",
+    *PROTO_TOOL_NAMES,
 )
 ALLOWED_TOOL_NAMES = tuple(f"mcp__{SERVER_NAME}__{name}" for name in TOOL_NAMES)
 
@@ -857,215 +868,227 @@ def tool_specs(bench: SpecWorkbench) -> list:
     any_value = {
         "description": "Any JSON value: string, number, boolean, list or object."
     }
-    return [
-        (
-            "spec_outline",
-            "Every section of the journey with how full it is and its problems. Call it first each turn.",
-            _schema({}, []),
-            lambda a: bench.outline(),
-        ),
-        (
-            "spec_get",
-            "Read part of the journey (or all of it, with no path) as YAML.",
-            _schema({"path": path}, []),
-            lambda a: bench.get(a.get("path", "")),
-        ),
-        (
-            "spec_set",
-            "Set or replace the value at a path (creates missing map keys).",
-            _schema({"path": path, "value": any_value}, ["path", "value"]),
-            lambda a: bench.set(a["path"], a["value"]),
-        ),
-        (
-            "spec_add",
-            "Append to a list (or insert at index), or add a new key to a map.",
-            _schema(
-                {"path": path, "value": any_value, "index": {"type": "integer"}},
-                ["path", "value"],
-            ),
-            lambda a: bench.add(a["path"], a["value"], a.get("index")),
-        ),
-        (
-            "spec_remove",
-            "Remove the value at a path.",
-            _schema({"path": path}, ["path"]),
-            lambda a: bench.remove(a["path"]),
-        ),
-        (
-            "spec_move",
-            "Move a value to another list (at index) or map key.",
-            _schema(
-                {"from": path, "to": path, "index": {"type": "integer"}}, ["from", "to"]
-            ),
-            lambda a: bench.move(a["from"], a["to"], a.get("index")),
-        ),
-        (
-            "spec_replace_section",
+    return (
+        [
             (
-                "Replace everything at a path with YAML you write — for large rewrites of one section. "
-                'Path "" replaces the whole journey.'
+                "spec_outline",
+                "Every section of the journey with how full it is and its problems. Call it first each turn.",
+                _schema({}, []),
+                lambda a: bench.outline(),
             ),
-            _schema({"path": path, "yaml": {"type": "string"}}, ["path", "yaml"]),
-            lambda a: bench.replace_section(a["path"], a["yaml"]),
-        ),
-        (
-            "spec_validate",
-            "Every problem in the journey right now.",
-            _schema({}, []),
-            lambda a: bench.validate(),
-        ),
-        (
-            "spec_flag",
             (
-                "Record that a value was not stated in the user's material: inferred (cite the passage), "
-                "reference (kept from the reference journey), default (template default) or missing."
+                "spec_get",
+                "Read part of the journey (or all of it, with no path) as YAML.",
+                _schema({"path": path}, []),
+                lambda a: bench.get(a.get("path", "")),
             ),
-            _schema(
-                {
-                    "path": path,
-                    "kind": {"type": "string", "enum": list(SpecWorkbench.FLAG_KINDS)},
-                    "note": {
-                        "type": "string",
-                        "description": "What you assumed, in plain words.",
-                    },
-                    "source": {
-                        "type": "object",
-                        "properties": {
-                            "document": {"type": "string"},
-                            "locator": {
-                                "type": "string",
-                                "description": "e.g. p. 4, sheet Orders",
-                            },
-                            "quote": {"type": "string"},
+            (
+                "spec_set",
+                "Set or replace the value at a path (creates missing map keys).",
+                _schema({"path": path, "value": any_value}, ["path", "value"]),
+                lambda a: bench.set(a["path"], a["value"]),
+            ),
+            (
+                "spec_add",
+                "Append to a list (or insert at index), or add a new key to a map.",
+                _schema(
+                    {"path": path, "value": any_value, "index": {"type": "integer"}},
+                    ["path", "value"],
+                ),
+                lambda a: bench.add(a["path"], a["value"], a.get("index")),
+            ),
+            (
+                "spec_remove",
+                "Remove the value at a path.",
+                _schema({"path": path}, ["path"]),
+                lambda a: bench.remove(a["path"]),
+            ),
+            (
+                "spec_move",
+                "Move a value to another list (at index) or map key.",
+                _schema(
+                    {"from": path, "to": path, "index": {"type": "integer"}},
+                    ["from", "to"],
+                ),
+                lambda a: bench.move(a["from"], a["to"], a.get("index")),
+            ),
+            (
+                "spec_replace_section",
+                (
+                    "Replace everything at a path with YAML you write — for large rewrites of one section. "
+                    'Path "" replaces the whole journey.'
+                ),
+                _schema({"path": path, "yaml": {"type": "string"}}, ["path", "yaml"]),
+                lambda a: bench.replace_section(a["path"], a["yaml"]),
+            ),
+            (
+                "spec_validate",
+                "Every problem in the journey right now.",
+                _schema({}, []),
+                lambda a: bench.validate(),
+            ),
+            (
+                "spec_flag",
+                (
+                    "Record that a value was not stated in the user's material: inferred (cite the passage), "
+                    "reference (kept from the reference journey), default (template default) or missing."
+                ),
+                _schema(
+                    {
+                        "path": path,
+                        "kind": {
+                            "type": "string",
+                            "enum": list(SpecWorkbench.FLAG_KINDS),
                         },
-                    },
-                },
-                ["path", "kind", "note"],
-            ),
-            lambda a: bench.flag(
-                a["path"], a["kind"], a.get("note", ""), a.get("source")
-            ),
-        ),
-        (
-            "spec_unflag",
-            "Remove the flag on a path (the user confirmed it, or you now have it from their material).",
-            _schema({"path": path}, ["path"]),
-            lambda a: bench.unflag(a["path"]),
-        ),
-        (
-            "spec_open_decisions",
-            "Replace the list of questions only the user can answer (at most 8). Empty list when none.",
-            _schema(
-                {
-                    "items": {
-                        "type": "array",
-                        "items": {
+                        "note": {
+                            "type": "string",
+                            "description": "What you assumed, in plain words.",
+                        },
+                        "source": {
                             "type": "object",
                             "properties": {
-                                "id": {"type": "string"},
-                                "path": {"type": "string"},
-                                "question": {"type": "string"},
-                                "options": {
-                                    "type": "array",
-                                    "items": {"type": "string"},
-                                },
-                                "recommended": {"type": "string"},
-                                "why": {"type": "string"},
-                            },
-                            "required": ["question"],
-                        },
-                    }
-                },
-                ["items"],
-            ),
-            lambda a: bench.set_open_decisions(a.get("items") or []),
-        ),
-        (
-            "spec_set_workflows",
-            (
-                "Replace the user journeys shown to the user as swimlane diagrams: what each role does, "
-                "step by step, to get something done in the app (sign in, open a tab, act, who gets "
-                "notified). Not the lifecycles — the panel draws those from the journey itself."
-            ),
-            _schema(
-                {
-                    "processes": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "id": {"type": "string"},
-                                "title": {
+                                "document": {"type": "string"},
+                                "locator": {
                                     "type": "string",
-                                    "description": "e.g. 3.b To upload trainings",
+                                    "description": "e.g. p. 4, sheet Orders",
                                 },
-                                "group": {"type": "string"},
-                                "lanes": {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "object",
-                                        "properties": {
-                                            "id": {"type": "string"},
-                                            "role": {"type": "string"},
-                                        },
-                                        "required": ["role"],
-                                    },
-                                },
-                                "nodes": {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "object",
-                                        "properties": {
-                                            "id": {"type": "string"},
-                                            "lane": {
-                                                "type": "string",
-                                                "description": "A lane id (or role).",
-                                            },
-                                            "kind": {
-                                                "type": "string",
-                                                "enum": list(SpecWorkbench.NODE_KINDS),
-                                            },
-                                            "label": {"type": "string"},
-                                            "note": {
-                                                "type": "string",
-                                                "description": "A short annotation under the node.",
-                                            },
-                                        },
-                                        "required": ["id", "lane", "kind"],
-                                    },
-                                },
-                                "flows": {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "object",
-                                        "properties": {
-                                            "from": {"type": "string"},
-                                            "to": {"type": "string"},
-                                            "kind": {
-                                                "type": "string",
-                                                "enum": list(SpecWorkbench.FLOW_KINDS),
-                                            },
-                                            "label": {"type": "string"},
-                                        },
-                                        "required": ["from", "to"],
-                                    },
-                                },
+                                "quote": {"type": "string"},
                             },
-                            "required": ["title", "lanes", "nodes", "flows"],
                         },
-                    }
-                },
-                ["processes"],
+                    },
+                    ["path", "kind", "note"],
+                ),
+                lambda a: bench.flag(
+                    a["path"], a["kind"], a.get("note", ""), a.get("source")
+                ),
             ),
-            lambda a: bench.set_workflows(a.get("processes") or []),
-        ),
-        (
-            "spec_mark_ready",
-            "Declare the journey complete once the interview is done. Refused while it has errors.",
-            _schema({"summary": {"type": "string"}}, ["summary"]),
-            lambda a: bench.mark_ready(a.get("summary", "")),
-        ),
-    ] + (_preview_tools(bench) if bench.probe is not None else [])
+            (
+                "spec_unflag",
+                "Remove the flag on a path (the user confirmed it, or you now have it from their material).",
+                _schema({"path": path}, ["path"]),
+                lambda a: bench.unflag(a["path"]),
+            ),
+            (
+                "spec_open_decisions",
+                "Replace the list of questions only the user can answer (at most 8). Empty list when none.",
+                _schema(
+                    {
+                        "items": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "id": {"type": "string"},
+                                    "path": {"type": "string"},
+                                    "question": {"type": "string"},
+                                    "options": {
+                                        "type": "array",
+                                        "items": {"type": "string"},
+                                    },
+                                    "recommended": {"type": "string"},
+                                    "why": {"type": "string"},
+                                },
+                                "required": ["question"],
+                            },
+                        }
+                    },
+                    ["items"],
+                ),
+                lambda a: bench.set_open_decisions(a.get("items") or []),
+            ),
+            (
+                "spec_set_workflows",
+                (
+                    "Replace the user journeys shown to the user as swimlane diagrams: what each role does, "
+                    "step by step, to get something done in the app (sign in, open a tab, act, who gets "
+                    "notified). Not the lifecycles — the panel draws those from the journey itself."
+                ),
+                _schema(
+                    {
+                        "processes": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "id": {"type": "string"},
+                                    "title": {
+                                        "type": "string",
+                                        "description": "e.g. 3.b To upload trainings",
+                                    },
+                                    "group": {"type": "string"},
+                                    "lanes": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "id": {"type": "string"},
+                                                "role": {"type": "string"},
+                                            },
+                                            "required": ["role"],
+                                        },
+                                    },
+                                    "nodes": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "id": {"type": "string"},
+                                                "lane": {
+                                                    "type": "string",
+                                                    "description": "A lane id (or role).",
+                                                },
+                                                "kind": {
+                                                    "type": "string",
+                                                    "enum": list(
+                                                        SpecWorkbench.NODE_KINDS
+                                                    ),
+                                                },
+                                                "label": {"type": "string"},
+                                                "note": {
+                                                    "type": "string",
+                                                    "description": "A short annotation under the node.",
+                                                },
+                                            },
+                                            "required": ["id", "lane", "kind"],
+                                        },
+                                    },
+                                    "flows": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "from": {"type": "string"},
+                                                "to": {"type": "string"},
+                                                "kind": {
+                                                    "type": "string",
+                                                    "enum": list(
+                                                        SpecWorkbench.FLOW_KINDS
+                                                    ),
+                                                },
+                                                "label": {"type": "string"},
+                                            },
+                                            "required": ["from", "to"],
+                                        },
+                                    },
+                                },
+                                "required": ["title", "lanes", "nodes", "flows"],
+                            },
+                        }
+                    },
+                    ["processes"],
+                ),
+                lambda a: bench.set_workflows(a.get("processes") or []),
+            ),
+            (
+                "spec_mark_ready",
+                "Declare the journey complete once the interview is done. Refused while it has errors.",
+                _schema({"summary": {"type": "string"}}, ["summary"]),
+                lambda a: bench.mark_ready(a.get("summary", "")),
+            ),
+        ]
+        + (_preview_tools(bench) if bench.probe is not None else [])
+        + (proto_tool_specs(bench.proto) if bench.proto is not None else [])
+    )
 
 
 def _preview_tools(bench: SpecWorkbench) -> list:

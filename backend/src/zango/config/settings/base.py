@@ -470,6 +470,10 @@ def setup_settings(settings, BASE_DIR):
         # App Panel API, and how many times failing checks go back to the agent.
         AGENT_MODE_PLATFORM_URL=(str, "http://localhost:8000"),
         AGENT_MODE_STUDIO_FIX_ROUNDS=(int, 2),
+        # Open prototype ("Free design"): the analyst writes a free HTML prototype.
+        AGENT_MODE_OPEN_PROTOTYPE=(bool, True),
+        AGENT_MODE_OPEN_FIRST_TURN_SECONDS=(int, 1500),
+        AGENT_MODE_ANALYST_PROTO_BUDGET_USD=(float, 15.0),
         AGENT_MODE_STUDIO_LOOK_ROUNDS=(int, 2),
         AGENT_MODE_SNAPSHOT_RETENTION=(int, 5),
         AGENT_MODE_SNAPSHOT_MAX_BYTES=(int, 536870912),
@@ -505,6 +509,13 @@ def setup_settings(settings, BASE_DIR):
     settings.AGENT_MODE_APP_BASE_URL = env("AGENT_MODE_APP_BASE_URL")
     settings.AGENT_MODE_PLATFORM_URL = env("AGENT_MODE_PLATFORM_URL")
     settings.AGENT_MODE_STUDIO_FIX_ROUNDS = env("AGENT_MODE_STUDIO_FIX_ROUNDS")
+    settings.AGENT_MODE_OPEN_PROTOTYPE = env("AGENT_MODE_OPEN_PROTOTYPE")
+    settings.AGENT_MODE_OPEN_FIRST_TURN_SECONDS = env(
+        "AGENT_MODE_OPEN_FIRST_TURN_SECONDS"
+    )
+    settings.AGENT_MODE_ANALYST_PROTO_BUDGET_USD = env(
+        "AGENT_MODE_ANALYST_PROTO_BUDGET_USD"
+    )
     settings.AGENT_MODE_STUDIO_LOOK_ROUNDS = env("AGENT_MODE_STUDIO_LOOK_ROUNDS")
     settings.AGENT_MODE_SNAPSHOT_RETENTION = env("AGENT_MODE_SNAPSHOT_RETENTION")
     settings.AGENT_MODE_SNAPSHOT_MAX_BYTES = env("AGENT_MODE_SNAPSHOT_MAX_BYTES")
