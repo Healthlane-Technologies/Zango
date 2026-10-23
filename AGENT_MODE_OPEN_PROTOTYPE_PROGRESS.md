@@ -236,4 +236,36 @@ cd backend/test_project
    `shot.<role>.png` (agent look + pixel-diff score in the report). Marker parity (`data-zas-ref`/`-action`
    sets) after P2.
 
-Recommended first move next session: S0 + B1 on the two test apps above (both kinds), then B2.
+### Guards: runtime first, custom only when nothing declarative fits (user, 2026-10-23)
+The build already follows this in kit mode: only `type: custom` pages, custom tabs/panels and
+`custom_requirements` become holes; everything else is thin declarative code on the runtime (`ZasTable`,
+`RecordDrawer`, `Detail360`, crud endpoints, crud `FormRenderer` for forms). Open mode must not erode it,
+because a free-design prototype makes every screen look custom.
+1. **Requirement side (open mode), to add in S0:** every prototype screen that shows records maps to a crud
+   page, a detail/360 page or a declared view/dashboard, however custom it looks. A `type: custom` page needs
+   a stated reason (what no declared page can do) and its contract. Enforce in `_OPEN_PROTOTYPE_APPEND`,
+   the zango-prototype skill and a `spec_mark_ready` check that lists custom pages created in open mode with
+   their reasons. Once P2 lands, `prototype.screens[].maps` must point at the page.
+2. **Build side (B4):** "rebuild as a custom page" is allowed only for (a) screens the spec already marks
+   custom, or (b) a crud/detail page whose prototype layout the runtime cannot reach even with tokens and
+   screen-level styling. Each rebuild needs a one-line reason in the bundle's `index.md` and in the build
+   report. Default for every mapped crud/detail/dashboard page: the runtime component + `app.design` tokens
+   + an optional token-only screen stylesheet. `spec_check.py` computes the class; the agent may not upgrade
+   a page to custom on its own.
+
+Checked on the imported sponsorship app (2026-10-23): the ladder held. Pages: `home` dashboard; 12 crud
+pages (sponsorships with table + kanban views, organisers, agreements, evidence, payments, templates,
+evidence requirements, policy settings, cost centres, agents, integrations); `sponsorship_detail` and
+`organiser_detail` as detail pages on `sponsorship_360` / `organiser_360`. **No `type: custom` page.** The
+15 manifest screens have no `maps` yet (P2).
+
+### Bug found: specs PyYAML can't read
+The imported app's spec has flow mappings with an unquoted `?` inside a value (lines 554, 582, 815, e.g.
+`- {name: submit, label: Submit, … Sponsorship Office?, on_done: …}`). The platform loader (ruamel,
+`yamlio`) accepts them, so the console shows 0 errors, but PyYAML raises `ParserError`. `spec_check.py`
+(the build) reads specs with PyYAML (`yaml.safe_load`), so this spec would break the build. Fix before or in
+S0: have the spec tools re-emit risky scalars quoted (or block style) when they write, and make validation
+fail on a spec PyYAML can't parse. This is not specific to open mode.
+
+Recommended first move next session: the YAML bug, then S0 (with guard 1) + B1 on the two test apps above
+(both kinds), then B2.
