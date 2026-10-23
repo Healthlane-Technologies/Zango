@@ -1,5 +1,8 @@
 # Agent Mode: Open Prototype ("Free design"), implementation progress
 
+> **Next session: start Stage 2 (build agent follows the prototype).** Read "Stage 2 handoff" at the
+> end of this file first. Plan: https://claude.ai/artifact/1x8D2VWgxjKYG6N68BhnJC §10 (v5).
+
 Plan: https://claude.ai/artifact/1x8D2VWgxjKYG6N68BhnJC ("Open Prototype Plan", v4).
 Branch: `feat/agent-mode-open-prototype` (from `feat/agent-mode-app-studio-skill`). Started 2026-10-23.
 
@@ -22,7 +25,10 @@ never be added (user decision).
 | P1.7 | Skill `zango-prototype` + worked example | **done** |
 | P1.8 | Console: toggle, `PrototypeFrame`, mode switch | **done** (type-checks; not yet clicked through live) |
 | P1.9 | Tests | backend **done** (11 in `test_prototype.py`); API test todo |
-| Done-when | 3 chat-only runs measured | todo |
+| Done-when | 3 chat-only runs measured | partly: 1 existing-app run (15 screens, ~$3.8) and 1 HTML import run; no brand-new chat-only app yet |
+| U (slice) | Upload an HTML page on new app / change, `proto_import` | **done**, checked in Chrome |
+| P2 | Map contract (`data-zas-*` markers, map check, gates) | **not started** |
+| P3 | Probe/look/Point for open mode | **not started** (only location focus works) |
 
 ## Backend changes
 
@@ -166,3 +172,68 @@ cd backend/test_project
 - Sub-agents can run in the background; `background=False` keeps the turn open until they finish.
 - Screen writers are told (prompt only) to touch just `screens/<id>.*`; not enforced in code yet.
 - `window.claude.use` compatibility (for imported Claude artifacts) is left for the upload phase (U).
+
+
+## Stage 2 handoff (written 2026-10-23, for the next session)
+
+### Where things stand
+- Branch `feat/agent-mode-open-prototype`, commits b3a67f87 … e3267964, all committed (only the unrelated
+  `frontend/yarn.lock` is modified). Not pushed.
+- Requirement side works for two kinds of prototype:
+  1. **Generated**: parts written by the agent; screens are `ZAS.screen('<id>', …)` in `screens/<id>.js`,
+     shared look in `tokens.css` / `app.css`, data in `data.js`.
+  2. **Imported**: an uploaded page kept as it is (`imported/styles.css`, `imported/script-NN.js`,
+     `body.html`) with `manifest.source = "imported"` and a small `zas-bridge.js` calling `ZAS.ready({go})`.
+     Its screens are drawn by its own code: there are no per-screen parts.
+- Both run in the console frame, and `ZAS.go(screen, {role, record})` opens any manifest screen in both, so
+  a headless browser can visit every screen x role.
+- Live test apps (local dev DB):
+  - `diagnostic_test_voucher` (app 3843f5db-00f2-470b-ac8a-085e4993fa94), requirement
+    feb6e6f8-d819-4049-8492-50ab92f3d775: generated, 15 screens, not approved.
+  - `sponsorship_management_hcp` (app b056ed46-71d6-4f4f-b540-9ea46f45f6f9): imported from the
+    capability-bar HTML, spec 0 errors / 9 warnings, 7 open decisions, not approved.
+- **Not done on the requirement side, and it matters for Stage 2:**
+  - P2 map contract: prototypes carry no `data-zas-ref` / `data-zas-action` markers and nothing checks
+    prototype ↔ YAML coverage. Stage 2 parity by markers (B6) depends on it.
+  - `app.design` (free tokens + fonts) is not in `schema.json` yet. B2 needs it.
+  - The approval bundle (`approval_bundle.write_bundle`, called from `studio_build.py` L748/781) knows
+    nothing about the prototype yet.
+  - Approval gate in open mode only checks that a prototype exists (`template_spec.approval_problem`).
+
+### Decisions already made (user)
+- Hybrid build: prototype tokens + its shell everywhere; standard runtime screens themed; screens whose
+  layout differs are rebuilt as custom pages from the prototype.
+- Any pinned library from cdnjs / jsdelivr / unpkg may be used by prototypes; the build ports or replaces it.
+- The capability-bar HTML must never enter the repo (memory: sponsorships-html-capability-bar).
+- Verify live in Claude in Chrome; the user restarts the Celery worker after backend changes
+  (memory: verify-agent-mode-in-chrome).
+
+### Stage 2 order (revised from the plan with what P1 taught us)
+0. **S0 — design tokens into the spec** (half a day): `app.design {source: prototype, fonts, tokens}` in
+   `packs/zango_app/schema.json` + SCHEMA.md; the analyst writes it from `tokens.css` (generated) or the
+   `:root` variables in `imported/styles.css` (imported). A helper `prototype.design_tokens(parts)` can
+   pre-fill it.
+1. **B1 — bundle** (`approval_bundle.py`): for open requirements write `.zas/bundle/prototype/`:
+   `prototype.html` (assembled), `manifest.json`, `design.json`, `libraries.json`, and per screen x role
+   `screens/<id>/dom.<role>.html` (rendered DOM after `ZAS.go`, scripts stripped), `shot.<role>.png`
+   (1280 px), `css.used.css` (rules matching the snapshot). Reuse the probe worker
+   (`preview_probe_worker.py`): add an open-mode runner that loads the assembled page and calls `ZAS.go`;
+   allow the CDN hosts there (`FONT_HOSTS` → `PROTO_HOSTS`). Imported pages are one big script: the build
+   must port from the DOM snapshot + screenshot, never from the page's code.
+2. **B2 — tokens in the runtime** (`assets/frontend/zas/tokens.css`, `config.ts applyTheme`): map
+   `app.design.tokens` onto the `--z-*` tokens (ground, card, text levels, borders, brand ramp, semantic
+   colours, radii, shadows, fonts) via a generated `tokens.app.css`; load fonts in index.html. Gallery gets
+   one themed shot.
+3. **B3 — shell**: open mode builds `src/custom/Shell.tsx` from the shell snapshot (look only; menus and
+   permissions still from `roles[].menu`); the runtime takes a `shell` slot.
+4. **B4 — screens, theme or rebuild**: `spec_check.py` classifies each mapped screen (theme when a standard
+   crud/detail/form fits, rebuild otherwise or when forced) and writes the hole text "Approved look:
+   .zas/bundle/prototype/screens/<id>/" (extend the existing Approved-look path, `spec_check.py` ~L2095,
+   `references/custom-code.md` §Porting a sketch). Libraries: npm twin or zas/SVG, listed in the report.
+5. **B5 — lint** (`scripts/zas_test/design.py`): in open mode colour literals only in the generated token
+   file; fonts from `app.design.fonts`; every mapped screen counts as Approved look.
+6. **B6 — parity**: until P2 lands, parity = every screen x role opens and one look per screen against
+   `shot.<role>.png` (agent look + pixel-diff score in the report). Marker parity (`data-zas-ref`/`-action`
+   sets) after P2.
+
+Recommended first move next session: S0 + B1 on the two test apps above (both kinds), then B2.
