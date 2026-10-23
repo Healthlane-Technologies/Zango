@@ -85,6 +85,50 @@
               ]
             }
           }
+        },
+        "design": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Open mode (Free design): the prototype's look, for the build to theme the app with (SCHEMA.md, app.design).",
+          "properties": {
+            "source": {
+              "type": "string",
+              "enum": [
+                "prototype"
+              ]
+            },
+            "fonts": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "body": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "display": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "mono": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "tokens": {
+              "type": "object",
+              "maxProperties": 150,
+              "propertyNames": {
+                "pattern": "^[a-z][a-z0-9-]*$"
+              },
+              "additionalProperties": {
+                "type": [
+                  "string",
+                  "number"
+                ]
+              }
+            }
+          }
         }
       }
     },
@@ -1339,6 +1383,11 @@
         },
         "refs": {
           "$ref": "#/$defs/refs"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Custom pages in open mode: what no crud, detail or dashboard page can show here."
         }
       },
       "allOf": [
@@ -1400,6 +1449,25 @@
             "not": {
               "required": [
                 "blocks"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "custom"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "reason"
               ]
             }
           }

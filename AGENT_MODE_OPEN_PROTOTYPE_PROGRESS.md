@@ -273,5 +273,29 @@ PyYAML-readable; `yamlio.pyyaml_problem(text)` backs a `yaml_compat` error in `v
 approval) and in `SpecWorkbench.issues()` (agent's validate / mark ready). Tests in `test_spec_engine.py`.
 The sponsorship spec in the local DB was rewritten once (data identical, lines 554/582/815 quoted).
 
+**S0 done (2026-10-23, checked live in Chrome on both test apps):**
+- `schema.json` (pack **1.1.19**): `app.design {source: prototype, fonts {body, display, mono}, tokens}`
+  (free tokens, lowercase names, ≤150) and page `reason` (only on `type: custom`). SCHEMA.md documents both,
+  with the canonical token names B2 maps: brand, brand-strong, brand-soft, accent, accent-soft, page, card,
+  sunk, nav, text-strong, text, text-2, text-3, text-faint, border-faint, border, border-strong, ok/warn/bad/
+  info (+ `-bg`), radius-sm/radius/radius-lg, shadow-sm/shadow/shadow-lg.
+- `prototype.design_tokens(parts)`: top-level `:root` custom properties (generated: `tokens.css`; imported:
+  every css part; `@media` skipped, later rules win), `var()` resolved, aliases → canonical names, others
+  kept; fonts from `--font`/`--display`/`--mono`.
+- Tool `proto_design` (spec server, open mode): sets `/app/design`; refuses clearly on a template version
+  without `app.design`.
+- Guard 1: `spec_mark_ready` in open mode refuses when `app.design` is missing or has drifted from the
+  prototype, and refuses a custom page without `reason`; on success it lists custom pages + reasons.
+  Same rule in `_OPEN_PROTOTYPE_APPEND` and the zango-prototype skill ("Runtime first: how screens map").
+- Live: voucher → brand #0F766E, Plus Jakarta Sans / JetBrains Mono, 28 tokens. Sponsorship → brand
+  #234635 (the page's later client-palette override), Inter / JetBrains Mono, 50 tokens; the analyst also
+  set `theme.primary` to the brand as the tool asks. Both specs still PyYAML-clean.
+- **Gotcha:** requirements pin their template version. The live pack had to be bumped to 1.1.19 and
+  imported (`manage.py app_templates import <pack dir> --publish`), and the two test requirements re-pinned
+  with `adopt_template(slug)`. Older open requirements stay on their version; the ready gate skips the
+  design check for them. There is no UI to move a requirement to a newer template version.
+- Found by the guard: the pack's own `example.yaml` has a custom `dashboard` page with no `reason` (fine in
+  kit mode; an open-mode spec copied from it would be refused at ready).
+
 Recommended first move next session: the YAML bug, then S0 (with guard 1) + B1 on the two test apps above
 (both kinds), then B2.

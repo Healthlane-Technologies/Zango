@@ -559,6 +559,14 @@ _OPEN_PROTOTYPE_APPEND = (
     "- Keep the YAML in step in the same turn: every persona is a role, every screen maps "
     'to a page (or is marked "only": "prototype" in the manifest, like a sign-in '
     "screen), every action is a transition or a custom requirement.\n"
+    "- Runtime first, however custom a screen looks: the build draws record screens with the "
+    "standard runtime and themes them with the prototype's tokens. So every screen that shows "
+    "records maps to a crud page (lists, boards, filters, forms), a detail_views page (record "
+    "pages, tabs) or a dashboard. Use type: custom only for what none of those can show, and "
+    "give it a `reason` saying what (spec_mark_ready refuses a custom page without one and "
+    "lists the rest for the user).\n"
+    "- Once tokens.css (or the imported stylesheet) is settled, call proto_design to record the "
+    "look in app.design; call it again whenever the tokens change.\n"
     "- The look is free in this mode: the template's theme/ui limits and its \"fonts and "
     'layouts are not offered" rule do not apply. Custom pages need no `preview` sketch; '
     "their screen in the prototype is the sketch. Contracts (data, acceptance) still apply.\n"

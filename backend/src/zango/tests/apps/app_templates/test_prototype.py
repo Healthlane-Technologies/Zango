@@ -327,3 +327,33 @@ class RuntimeTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DesignTokenTests(unittest.TestCase):
+    def test_generated_tokens_map_to_canonical_names(self):
+        parts = {p.name: p.read_text() for p in EXAMPLE.glob("*.css")}
+        parts["manifest.json"] = (EXAMPLE / "manifest.json").read_text()
+        design = P.design_tokens(parts)
+        self.assertEqual(design["source"], "prototype")
+        self.assertTrue(design["tokens"]["brand"].startswith("#"))
+        self.assertNotIn("var(", json.dumps(design))
+
+    def test_imported_page_reads_top_level_root_rules_in_order(self):
+        css = (
+            ":root{color-scheme:light}"  # the artifact wrapper's own rule
+            ":root{--green-500:#458261;--brand:var(--green-500);--ink:#111;--r-sm:6px;"
+            "--font:'Inter',system-ui,sans-serif;--mono:'JetBrains Mono',monospace}"
+            "@media (prefers-color-scheme:dark){:root{--ink:#eee}}"
+            ".card{color:var(--ink)}"
+            "/* client palette */ :root{--brand:#234635}"
+        )
+        parts = {
+            "manifest.json": json.dumps({"source": "imported", "screens": []}),
+            "imported/styles.css": css,
+        }
+        design = P.design_tokens(parts)
+        self.assertEqual(design["fonts"], {"body": "Inter", "mono": "JetBrains Mono"})
+        self.assertEqual(design["tokens"]["brand"], "#234635")
+        self.assertEqual(design["tokens"]["text"], "#111")
+        self.assertEqual(design["tokens"]["radius-sm"], "6px")
+        self.assertEqual(design["tokens"]["green-500"], "#458261")

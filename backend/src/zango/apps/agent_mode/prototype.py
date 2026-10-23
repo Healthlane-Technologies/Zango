@@ -664,6 +664,152 @@ class PrototypeBench:
 
 
 # ---------------------------------------------------------------------------
+# Design tokens (app.design in the spec)
+# ---------------------------------------------------------------------------
+# The build themes the zas runtime from app.design.tokens (Stage 2, B2), so the
+# canonical names below are what it maps onto --z-*. A prototype's own names are
+# matched through _TOKEN_ALIASES; tokens with no alias keep their own name.
+
+DESIGN_TOKENS = (
+    "brand", "brand-strong", "brand-soft", "accent", "accent-soft",
+    "page", "card", "sunk", "nav",
+    "text-strong", "text", "text-2", "text-3", "text-faint",
+    "border-faint", "border", "border-strong",
+    "ok", "ok-bg", "warn", "warn-bg", "bad", "bad-bg", "info", "info-bg",
+    "radius-sm", "radius", "radius-lg",
+    "shadow-sm", "shadow", "shadow-lg",
+)  # fmt: skip
+_TOKEN_ALIASES = {
+    "page": ("surface-page", "bg", "background", "surface-bg"),
+    "card": ("surface-card", "surface", "panel"),
+    "sunk": ("surface-sunken", "sunken", "surface-sunk", "muted-bg"),
+    "nav": ("surface-nav", "sidebar"),
+    "text": ("ink", "fg", "foreground", "text-body"),
+    "text-2": ("ink-2", "text-sub", "text-secondary"),
+    "text-3": ("ink-3", "text-muted", "muted"),
+    "text-faint": ("ink-4",),
+    "border": ("line", "rule"),
+    "border-strong": ("line-strong", "rule-2"),
+    "border-faint": ("line-faint",),
+    "radius": ("r", "r-md", "radius-md"),
+    "radius-sm": ("r-sm",),
+    "radius-lg": ("r-lg",),
+    "shadow": ("shadow-md",),
+    "brand-strong": ("brand-dark", "brand-700"),
+    "brand-soft": ("brand-light", "brand-50"),
+    "ok": ("success",),
+    "ok-bg": ("success-bg",),
+    "warn": ("warning",),
+    "warn-bg": ("warning-bg",),
+    "bad": ("danger", "error"),
+    "bad-bg": ("danger-bg", "error-bg"),
+}
+_FONT_VARS = {
+    "body": ("font", "font-body", "font-sans", "sans", "body-font"),
+    "display": ("display", "font-display", "font-heading", "heading-font"),
+    "mono": ("mono", "font-mono", "code-font"),
+}
+_DECL_RE = re.compile(r"--([a-zA-Z0-9_-]+)\s*:\s*([^;]+?)\s*(?:;|$)", re.S)
+_VAR_RE = re.compile(r"var\(\s*--([a-zA-Z0-9_-]+)\s*(?:,\s*([^()]*))?\)")
+
+
+def _root_vars(css: str) -> dict:
+    """Custom properties on top-level ``:root`` rules (not inside @media), later rules winning."""
+    css = re.sub(r"/\*.*?\*/", "", css, flags=re.S)
+    found: dict = {}
+    depth, start = 0, 0
+    for i, ch in enumerate(css):
+        if ch == "{":
+            if depth == 0:
+                selector, start = css[start:i].strip(), i + 1
+                is_root = selector.rsplit("}", 1)[-1].strip() == ":root"
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                if is_root:
+                    for name, value in _DECL_RE.findall(css[start:i]):
+                        found[name.lower()] = " ".join(value.split())
+                start = i + 1
+            depth = max(depth, 0)
+    return found
+
+
+def _resolve(value: str, env: dict, depth: int = 0) -> str:
+    if depth > 8 or "var(" not in value:
+        return value
+
+    def sub(m):
+        name, fallback = m.group(1).lower(), m.group(2)
+        if name in env:
+            return _resolve(env[name], env, depth + 1)
+        return fallback.strip() if fallback else m.group(0)
+
+    return _VAR_RE.sub(sub, value)
+
+
+def _family(value: str) -> str:
+    first = value.split(",")[0].strip().strip("'\"")
+    generic = {
+        "system-ui",
+        "sans-serif",
+        "serif",
+        "monospace",
+        "-apple-system",
+        "ui-monospace",
+    }
+    return "" if first in generic or first.startswith("var(") else first
+
+
+def design_tokens(parts: dict) -> dict:
+    """``app.design`` pre-filled from the prototype's ``:root`` tokens.
+
+    Generated prototypes keep their tokens in ``tokens.css``; an imported page's
+    are wherever it declared them, so every stylesheet part is read. ``var()``
+    chains are resolved so each token is a concrete value.
+    """
+    manifest, _ = manifest_of(parts)
+    if not is_imported(manifest) and "tokens.css" in parts:
+        sources = ["tokens.css"]
+    else:
+        sources = [p for p in parts if p.endswith(".css")]
+    env: dict = {}
+    for path in sources:
+        env.update(_root_vars(parts.get(path) or ""))
+    if not env:
+        return {}
+    values = {name: _resolve(value, env) for name, value in env.items()}
+
+    fonts: dict = {}
+    for role, names in _FONT_VARS.items():
+        for name in names:
+            family = _family(values.get(name, ""))
+            if family:
+                fonts[role] = family
+                break
+
+    tokens: dict = {}
+    taken: set = set()
+    for canon in DESIGN_TOKENS:
+        for name in (canon, *_TOKEN_ALIASES.get(canon, ())):
+            if name in values:
+                tokens[canon] = values[name]
+                taken.add(name)
+                break
+    font_names = {n for names in _FONT_VARS.values() for n in names}
+    for name, value in values.items():
+        if name in taken or name in font_names or name.startswith("z-"):
+            continue
+        tokens.setdefault(name, value)
+
+    design: dict = {"source": "prototype"}
+    if fonts:
+        design["fonts"] = fonts
+    design["tokens"] = tokens
+    return design
+
+
+# ---------------------------------------------------------------------------
 # Tools
 # ---------------------------------------------------------------------------
 

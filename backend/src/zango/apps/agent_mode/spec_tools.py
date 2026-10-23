@@ -726,8 +726,107 @@ class SpecWorkbench:
                 + "\n".join(f"- {path}: {what}" for path, what in gaps)
             )
         self._check_screens_ready()
+        custom_note = self._check_open_mode_ready() if self.proto is not None else ""
         self.ready_summary = (summary or "").strip() or "The spec is complete."
-        return "Marked ready. Tell the user the spec is ready for them to review and approve."
+        return (
+            "Marked ready. Tell the user the spec is ready for them to review and approve."
+            + custom_note
+        )
+
+    def _check_open_mode_ready(self) -> str:
+        """Open mode: app.design follows the prototype; custom pages say why they are custom.
+
+        A free-design prototype makes every screen look custom, but the build draws record
+        screens with the runtime (crud, detail/360, dashboards) and themes them. A custom
+        page is for what none of those can show. Returns the custom pages, for the user.
+        """
+        from .prototype import design_tokens
+
+        doc = self._plain(self.doc)
+        proposed = (
+            design_tokens(self.proto.parts) if self._template_has_design() else {}
+        )
+        design = (doc.get("app") or {}).get("design")
+        if proposed and not isinstance(design, dict):
+            raise ToolRefused(
+                "Not ready — the spec has no app.design yet. Call proto_design to record the "
+                "prototype's fonts and tokens for the build."
+            )
+        if proposed and isinstance(design, dict):
+            have = {
+                **(design.get("tokens") or {}),
+                **{f"font:{k}": v for k, v in (design.get("fonts") or {}).items()},
+            }
+            want = {
+                **proposed.get("tokens", {}),
+                **{f"font:{k}": v for k, v in (proposed.get("fonts") or {}).items()},
+            }
+            drift = sorted(k for k, v in want.items() if str(have.get(k)) != str(v))
+            if drift:
+                raise ToolRefused(
+                    "Not ready — app.design no longer matches the prototype ("
+                    + ", ".join(drift[:8])
+                    + (" …" if len(drift) > 8 else "")
+                    + "). Call proto_design again."
+                )
+        custom = [
+            p
+            for p in doc.get("pages") or []
+            if isinstance(p, dict) and p.get("type") == "custom"
+        ]
+        missing = [
+            p.get("code", "?") for p in custom if not str(p.get("reason") or "").strip()
+        ]
+        if missing:
+            raise ToolRefused(
+                "Not ready — in Free design every screen that shows records maps to a crud page, "
+                "a detail_views page or a dashboard, however custom it looks; the build themes "
+                "those. Either remap these custom pages to one of those, or give each a `reason` "
+                "(what no declared page can show):\n"
+                + "\n".join(f"- /pages/@{code}" for code in missing)
+            )
+        if not custom:
+            return " Every screen is built on standard pages (no custom page)."
+        return " Custom pages, built by hand (tell the user, with why):\n" + "\n".join(
+            f"- {p['code']}: {p['reason']}" for p in custom
+        )
+
+    def _template_has_design(self) -> bool:
+        """Whether this requirement's template version knows app.design (pack 1.1.19+)."""
+        schema = getattr(self.template, "json_schema", None) or {}
+        app = (schema.get("properties") or {}).get("app") or {}
+        return "design" in (app.get("properties") or {})
+
+    def apply_design(self) -> str:
+        """Set app.design from the prototype's tokens (open mode)."""
+        import json
+
+        from .prototype import design_tokens
+
+        self._need_doc()
+        if not self._template_has_design():
+            raise ToolRefused(
+                "This requirement's template version has no app.design, so the look can't be "
+                "recorded in the spec; the build reads it from the prototype instead. Don't retry."
+            )
+        design = design_tokens(self.proto.parts)
+        if not design:
+            raise ToolRefused(
+                "The prototype declares no :root tokens yet (tokens.css, or the imported "
+                "page's stylesheet). Write them first."
+            )
+        result = self.set("/app/design", design)
+        brand = design["tokens"].get("brand")
+        return (
+            result
+            + "\napp.design = "
+            + json.dumps(design)[:1500]
+            + (
+                f"\nKeep app.theme.primary equal to the brand colour {brand}."
+                if brand and str(brand).startswith("#") and len(str(brand)) == 7
+                else ""
+            )
+        )
 
     def _check_screens_ready(self) -> None:
         """Custom screens gate ``spec_mark_ready``: each draws without error, and was looked at.
@@ -828,6 +927,7 @@ TOOL_NAMES = (
     "preview_check",
     "preview_look",
     *PROTO_TOOL_NAMES,
+    "proto_design",
 )
 ALLOWED_TOOL_NAMES = tuple(f"mcp__{SERVER_NAME}__{name}" for name in TOOL_NAMES)
 
@@ -1103,6 +1203,21 @@ def tool_specs(bench: SpecWorkbench) -> list:
         ]
         + (_preview_tools(bench) if bench.probe is not None else [])
         + (proto_tool_specs(bench.proto) if bench.proto is not None else [])
+        + (
+            [
+                (
+                    "proto_design",
+                    "Record the prototype's look in the spec: sets app.design (fonts and "
+                    "tokens, from the :root variables of tokens.css or the imported "
+                    "stylesheet), which the build themes the app with. Call it after the "
+                    "first draft and whenever the tokens change; spec_mark_ready checks it.",
+                    _schema({}, []),
+                    lambda a: bench.apply_design(),
+                )
+            ]
+            if bench.proto is not None
+            else []
+        )
     )
 
 

@@ -127,6 +127,26 @@ ZAS.on('approve', (data, el, event, ctx) => { ... })        // data-act="approve
    collections and their fields, pages = screens (record screens map to the entity's detail view),
    workflow = the stages and the actions that move them, custom requirements = automation the
    prototype only fakes (AI review, reminders, integrations).
+6. **Record the look**: `proto_design` sets `app.design` (fonts + tokens) from `tokens.css`. Name
+   tokens the canonical way where you can (`--brand`, `--accent`, `--page`, `--card`, `--text`,
+   `--text-2`, `--border`, `--ok`/`--ok-bg`…, `--radius`, `--shadow`; full list in SCHEMA.md,
+   app.design) so the build maps them without guessing.
+
+## Runtime first: how screens map
+
+The prototype may look like anything, but the build draws record screens with the standard
+runtime (crud lists, boards, forms; detail/360 record pages; dashboards) and themes them with
+your tokens. So, however custom a screen looks:
+
+- a list, queue, board or table of records → a **crud page** on that entity (views for kanban,
+  filters, chips);
+- a record page, with tabs or side panels → a **`detail_views`** page;
+- a home with KPIs, charts and "your work" lists → a **dashboard** page;
+- a create/edit form → the entity's form on its crud page.
+
+Only what none of these can show (a map, a planner, a drag-and-drop canvas) becomes a
+`type: custom` page, with a `reason` naming what the declared pages can't do, and its contract.
+`spec_mark_ready` refuses a custom page without a reason and lists the others for the user.
 
 ## Later turns
 
@@ -181,7 +201,8 @@ When the user uploaded their app as an `.html` file, it is the prototype. Do not
    Patch the page only where needed to call `ZAS.at` after it navigates (one line in its router).
 4. Write the YAML from what the page shows: personas → roles, its records → entities and fields,
    its stages and approve/send back/decline → workflow transitions with role policies, uploads →
-   file fields, automation it fakes → custom requirements.
+   file fields, automation it fakes → custom requirements. Map its screens the runtime-first way
+   (above), then call `proto_design`: it reads the page's own `:root` variables.
 
 The page keeps its own look. Imported parts may be up to 1 MB each.
 

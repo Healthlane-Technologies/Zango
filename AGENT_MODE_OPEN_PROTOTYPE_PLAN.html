@@ -660,6 +660,7 @@ a{color:var(--blue)}
       <li><code>prototype.design_tokens(parts)</code> pre-fills it: from <code>tokens.css</code> (generated) or the <code>:root</code> variables in <code>imported/styles.css</code> (imported). The analyst confirms and names them.</li>
     </ul>
     <p class="done"><b>Done when</b> both test apps (the generated voucher app and the imported sponsorship app) carry <code>app.design</code> with their palette, fonts, radii and shadows.</p>
+    <p class="done"><span class="pill ok">done 23 Oct</span> Pack 1.1.19 has <code>app.design</code> and a page <code>reason</code>. A new <code>proto_design</code> tool fills <code>app.design</code> from the prototype's <code>:root</code> tokens, resolved and mapped to canonical names. <code>spec_mark_ready</code> refuses when the design is missing or stale, or when a custom page has no reason. Checked in Chrome: voucher (brand <code>#0F766E</code>, Plus Jakarta Sans, 28 tokens) and sponsorship (brand <code>#234635</code>, Inter, 50 tokens). Requirements pin their template version, so older ones skip the design check.</p>
   </div></div>
 
   <div class="phase"><div class="id">B1</div><div>

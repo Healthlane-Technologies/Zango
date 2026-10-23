@@ -125,6 +125,34 @@ built app make the same way: `radius` sharp · rounded (default) · soft and
 more (fonts, layouts) is not offered: say so rather than writing it as a
 custom requirement.
 
+**Open mode ("Free design") only: `app.design`.** The look lives in the
+prototype, and `app.design` records it for the build, which themes the
+standard screens with it:
+
+```yaml
+app:
+  design:
+    source: prototype
+    fonts: { body: Inter, display: Inter, mono: JetBrains Mono }   # Google Fonts families
+    tokens:              # concrete values, no var(); canonical names first
+      brand: "#458261"
+      accent: "#B58812"
+      page: "#F7F7FA"
+      card: "#FFFFFF"
+      text: "#14171F"
+      border: "#E2E4E9"
+      radius: 10px
+      shadow: "0 2px 4px rgba(16,18,30,.04)"
+```
+
+Don't type it by hand: `proto_design` fills it from the prototype's `:root`
+tokens. Canonical names (what the build maps): brand, brand-strong,
+brand-soft, accent, accent-soft, page, card, sunk, nav, text-strong, text,
+text-2, text-3, text-faint, border-faint, border, border-strong, ok, ok-bg,
+warn, warn-bg, bad, bad-bg, info, info-bg, radius-sm, radius, radius-lg,
+shadow-sm, shadow, shadow-lg. Other tokens keep their own names. Keep
+`theme.primary` equal to `tokens.brand`.
+
 ## `choice_sets`
 
 Shared option lists keyed by code. Each option is `{id, label, color?}`;
@@ -284,6 +312,24 @@ Every count, sum and list is scoped to the signed-in role's rows, as on list
 pages. Rows open `go` (a 360 page gets the row's id) or else the record's own
 360 page. What the blocks cannot say — "this month", trends by month, numbers
 from two entities combined — is a `custom` page.
+
+### Custom pages in open mode: `reason`
+
+A free-design prototype makes every screen look custom; the build still
+draws record screens with the runtime and themes them. So every prototype
+screen that shows records maps to a crud page, a `detail_views` page or a
+dashboard, however it looks. A `type: custom` page is for what none of those
+can show, and says why:
+
+```yaml
+  - code: territory_map
+    type: custom
+    reason: A map of HCP visits by territory; no list, record page or dashboard block draws a map.
+    acceptance: [...]
+```
+
+`spec_mark_ready` lists every custom page with its reason in open mode, and
+refuses a custom page without one.
 
 ### Contracts for custom work
 
