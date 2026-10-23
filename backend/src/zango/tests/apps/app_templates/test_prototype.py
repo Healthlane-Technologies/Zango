@@ -357,3 +357,90 @@ class DesignTokenTests(unittest.TestCase):
         self.assertEqual(design["tokens"]["text"], "#111")
         self.assertEqual(design["tokens"]["radius-sm"], "6px")
         self.assertEqual(design["tokens"]["green-500"], "#458261")
+
+
+@unittest.skipUnless(playwright_available(), "Playwright is not installed")
+class PrototypeBundleTests(unittest.TestCase):
+    def test_every_screen_and_role_gets_a_snapshot(self):
+        import tempfile
+
+        from zango.apps.agent_mode.approval_bundle import write_prototype_bundle
+
+        parts = {
+            str(p.relative_to(EXAMPLE)): p.read_text()
+            for p in EXAMPLE.rglob("*")
+            if p.is_file() and p.suffix in (".css", ".js", ".json")
+        }
+        manifest = json.loads(parts["manifest.json"])
+        with tempfile.TemporaryDirectory() as tmp:
+            capture = write_prototype_bundle(parts, tmp, design={"tokens": {"brand": "#123456"}})
+            self.assertEqual(capture["probe"], "ok")
+            self.assertEqual(
+                [s["id"] for s in capture["screens"]], [s["id"] for s in manifest["screens"]]
+            )
+            out = Path(tmp)
+            for name in ("prototype.html", "manifest.json", "design.json", "libraries.json", "index.md"):
+                self.assertTrue((out / name).is_file(), name)
+            for screen in capture["screens"]:
+                for r in screen["roles"]:
+                    self.assertFalse(r.get("error") or r.get("errors"), (screen["id"], r))
+                    if r.get("files"):
+                        dom = (out / "screens" / screen["id"] / f"dom.{r['role']}.html").read_text()
+                        self.assertNotIn("<script", dom)
+                        self.assertTrue((out / "screens" / screen["id"] / f"shot.{r['role']}.png").is_file())
+                    else:
+                        self.assertIn("same_as", r)
+                self.assertTrue((out / "screens" / screen["id"] / "css.used.css").is_file())
+            record = next(s for s in capture["screens"] if s.get("record"))
+            self.assertTrue(any(r.get("record") for r in record["roles"]))
+            self.assertIn("brand #123456", (out / "index.md").read_text())
+
+
+@unittest.skipUnless(playwright_available(), "Playwright is not installed")
+class PrototypeBundleTests(unittest.TestCase):
+    def test_every_screen_and_role_gets_a_snapshot(self):
+        import tempfile
+
+        from zango.apps.agent_mode.approval_bundle import write_prototype_bundle
+
+        parts = {
+            str(p.relative_to(EXAMPLE)): p.read_text()
+            for p in EXAMPLE.rglob("*")
+            if p.is_file() and p.suffix in (".css", ".js", ".json")
+        }
+        manifest = json.loads(parts["manifest.json"])
+        with tempfile.TemporaryDirectory() as tmp:
+            capture = write_prototype_bundle(parts, tmp, design={"tokens": {"brand": "#123456"}})
+            self.assertEqual(capture["probe"], "ok")
+            self.assertEqual(
+                [s["id"] for s in capture["screens"]], [s["id"] for s in manifest["screens"]]
+            )
+            out = Path(tmp)
+            for name in ("prototype.html", "manifest.json", "design.json", "libraries.json", "index.md"):
+                self.assertTrue((out / name).is_file(), name)
+            for screen in capture["screens"]:
+                folder = out / "screens" / screen["id"]
+                for r in screen["roles"]:
+                    self.assertFalse(r.get("error") or r.get("errors"), (screen["id"], r))
+                    if r.get("files"):
+                        dom = (folder / f"dom.{r['role']}.html").read_text()
+                        self.assertNotIn("<script", dom)
+                        self.assertNotIn("z-persona", dom)
+                        self.assertTrue((folder / f"shot.{r['role']}.png").is_file())
+                    else:
+                        self.assertIn("same_as", r)
+                css = (folder / "css.used.css").read_text()
+                self.assertNotIn("display:none!important", css.replace(" ", ""))
+            record = next(s for s in capture["screens"] if s.get("record"))
+            self.assertTrue(any(r.get("record") for r in record["roles"]))
+            self.assertIn("brand #123456", (out / "index.md").read_text())
+
+    def test_imported_record_screens_need_a_sample(self):
+        parts = {
+            "manifest.json": json.dumps(
+                {"source": "imported", "roles": {"a": "A"},
+                 "screens": [{"id": "list"}, {"id": "item", "record": "items"}]}
+            ),
+            "zas-bridge.js": "ZAS.ready({go: function () {}});",
+        }
+        self.assertTrue(any("item" in p and "sample" in p for p in P.static_problems(parts)))

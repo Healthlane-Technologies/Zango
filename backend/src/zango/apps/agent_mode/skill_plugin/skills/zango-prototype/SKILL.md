@@ -54,7 +54,9 @@ or the write is refused. Paths are lower-case: `screens/request.view.js`.
 
 - `screens[]`: `id` (its part is `screens/<id>.js`), `title`, optional `icon` (a Lucide name),
   `group` (nav section), `roles` (who can open it; all when absent), `record` (a record page:
-  opened with a record id, kept out of the nav), `parent` (highlights its list in the nav),
+  opened with a record id, kept out of the nav; `sample` names the id of a typical record, which
+  the build's snapshots open it with: required on imported pages, else the first row of the
+  `record` collection is used), `parent` (highlights its list in the nav),
   `nav: false`, and `only: "prototype"` for screens the real app will not have (sign-in,
   onboarding tours, fake integrations).
 - `fonts`: Google Fonts CSS URLs only. `libraries`: scripts from cdnjs, cdn.jsdelivr.net/npm or
@@ -185,7 +187,7 @@ When the user uploaded their app as an `.html` file, it is the prototype. Do not
    `"source": "imported"`. Fonts and allowed libraries move to the manifest.
 2. Read how the page navigates (`proto_find` for its nav items, its render function, its persona
    or role state). Fill `manifest.json`: `screens` (ids and titles from its nav sections; record pages
-   with `record`; sign-in, tours and fake integrations with `"only": "prototype"`), `roles` from its
+   with `record` and a `sample` id of a real record in its data; sign-in, tours and fake integrations with `"only": "prototype"`), `roles` from its
    personas.
 3. Write one small part, `zas-bridge.js`, that connects the page to the preview:
 

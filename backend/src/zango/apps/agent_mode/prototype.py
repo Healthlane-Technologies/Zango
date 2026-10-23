@@ -205,6 +205,16 @@ def static_problems(parts: dict) -> list[str]:
                 "Imported page: no part calls ZAS.ready({go}) yet, so the preview cannot open "
                 "its screens or report where the user is (see the zango-prototype skill)."
             )
+        unsampled = [
+            s["id"]
+            for s in manifest.get("screens", [])
+            if s.get("record") and not s.get("sample")
+        ]
+        if unsampled:
+            problems.append(
+                'Imported page: record screens with no "sample" record id in manifest.json '
+                "(the build's snapshots open them with it): " + ", ".join(unsampled)
+            )
     elif manifest:
         missing = [i for i in ids if screen_part(i) not in parts]
         if missing:

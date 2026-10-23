@@ -729,7 +729,7 @@ class StudioBuild:
 
     # -- before the agent ------------------------------------------------
 
-    def prepare(self, emit=None, template=None) -> None:
+    def prepare(self, emit=None, template=None, prototype=None) -> None:
         """Phases 0-2 and the frontend prep of Phase 6. Raises StudioError.
 
         ``template``: the requirement's App Studio template; with it the approval bundle (what the
@@ -745,7 +745,7 @@ class StudioBuild:
         self.check_spec = self._write_check_spec()
         if template is not None:
             # Before spec_check: it points each custom screen's hole at its bundle folder.
-            self.write_bundle(template, emit)
+            self.write_bundle(template, emit, prototype=prototype)
         checked = self.script(
             "spec_check",
             "spec_check.py",
@@ -761,7 +761,7 @@ class StudioBuild:
         self.prepare_frontend(emit)
         self.prepare_views(emit)
 
-    def write_bundle(self, template, emit=None) -> dict | None:
+    def write_bundle(self, template, emit=None, prototype=None) -> dict | None:
         """.zas/bundle/ (approval_bundle.py): each custom screen's sketch, contract, kit trees and
         screenshots, from the approved spec in the same preview the user saw. Never fails the build:
         without it the agent builds from the hole text, as before."""
@@ -819,7 +819,59 @@ class StudioBuild:
                 f"(list views, shell), {shots} screenshot(s).",
                 level="sys",
             )
+        if prototype:
+            self.write_prototype_bundle(prototype, out / "prototype", emit)
         return manifest
+
+    def write_prototype_bundle(self, parts: dict, out: Path, emit=None) -> dict | None:
+        """.zas/bundle/prototype/ (open mode): the approved prototype, per screen x role. Never fails
+        the build."""
+        import time
+
+        from zango.apps.shared.app_templates.services.spec import yamlio
+
+        from .approval_bundle import write_prototype_bundle
+
+        started = time.monotonic()
+        try:
+            doc = yamlio.load(Path(self.spec_path).read_text(encoding="utf-8")) or {}
+            design = (
+                (doc.get("app") or {}).get("design") if isinstance(doc, dict) else None
+            )
+            capture = write_prototype_bundle(parts, out, design=design)
+        except Exception as exc:  # noqa: BLE001 - the bundle is an aid, not a gate
+            logger.warning("agent_mode: prototype bundle failed: %s", exc)
+            self.steps.append(
+                StepResult(
+                    step=STEP_PREFIX + "prototype_bundle",
+                    duration_ms=int((time.monotonic() - started) * 1000),
+                    skipped_reason=f"prototype bundle failed: {exc}"[:300],
+                )
+            )
+            return None
+        screens = capture.get("screens") or []
+        shots = sum(1 for s in screens for r in s.get("roles") or [] if r.get("files"))
+        broken = sum(
+            1
+            for s in screens
+            for r in s.get("roles") or []
+            if r.get("error") or r.get("errors") or r.get("blank")
+        )
+        summary = (
+            f"{len(screens)} prototype screens, {shots} snapshots"
+            + (f", {broken} with problems" if broken else "")
+            + f"; probe: {capture.get('probe')}"
+        )
+        self.steps.append(
+            StepResult(
+                step=STEP_PREFIX + "prototype_bundle",
+                duration_ms=int((time.monotonic() - started) * 1000),
+                stdout_tail=summary,
+            )
+        )
+        if emit:
+            emit("sys", f"Prototype bundle: {summary}.", level="sys")
+        return capture
 
     def _write_check_spec(self) -> str:
         """The approved spec as plain YAML the skill's PyYAML reads exactly as the platform did.

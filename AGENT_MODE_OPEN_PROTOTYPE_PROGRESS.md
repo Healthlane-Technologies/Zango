@@ -297,5 +297,26 @@ The sponsorship spec in the local DB was rewritten once (data identical, lines 5
 - Found by the guard: the pack's own `example.yaml` has a custom `dashboard` page with no `reason` (fine in
   kit mode; an open-mode spec copied from it would be refused at ready).
 
+**B1 done (2026-10-23):** `.zas/bundle/prototype/` for open requirements.
+- `preview_probe_worker.py --open <prototype.html> <out>` (one batch, killable process group, 600 s cap in
+  the parent): allows `PROTO_HOSTS` (fonts + cdnjs/jsdelivr/unpkg), visits every manifest screen x role via
+  `ZAS.go` (record screens: manifest `sample`, else the first row of `ZAS.store.list(record)`), removes the
+  persona bar/toasts, and writes `screens/<id>/dom.<role>.html` (scripts stripped), `shot.<role>.png`
+  (1280 px wide, height ≤ 2400), `css.used.css` (matching rules in sheet order, group rules pruned).
+  A role whose DOM equals another's is written once (`same_as`). Errors / blank screens per role.
+- `approval_bundle.write_prototype_bundle(parts, out, design=)`: `prototype.html`, `manifest.json`,
+  `design.json` (app.design), `libraries.json` (manifest + CDN URLs in any part), `capture.json`, `index.md`
+  (screen, title, prototype-only, roles, sample record, files, problems). Called from
+  `StudioBuild.write_bundle(…, prototype=parts)`; `tasks.py` passes `requirement.prototype_parts` for
+  `preview_mode == "open"`. Never fails the build (step `prototype_bundle` in post_steps).
+- Manifest `sample` on record screens: imported pages get a static warning without it (the page keeps its
+  own store, so there is no other way to open a real record); skill updated. The sponsorship analyst
+  added `req: SP-2026-0058`, `org: pof` live in chat.
+- Run on the DB parts of both test apps: voucher 15 screens / 26 snapshots / 12 s / 3.4 MB; sponsorship
+  15 screens / 94 snapshots (signin shared by all 7 roles) / 35 s / 21 MB. No errors, no blank screens,
+  no blocked requests. Screenshots checked by eye (voucher record page, sponsorship request page).
+- Not in B1: `maps` per screen (P2) and the theme/rebuild class (B4) are not in `index.md` yet.
+- `test_skill_plugin` has 7 failures + 1 error that predate this branch's Stage 2 work (checked on a stash).
+
 Recommended first move next session: the YAML bug, then S0 (with guard 1) + B1 on the two test apps above
 (both kinds), then B2.

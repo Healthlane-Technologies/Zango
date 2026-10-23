@@ -19,6 +19,14 @@ Chromium, then answers JSON requests, one per stdin line, with one JSON line on 
       (the approval bundle's standard screens: a list page in one of its declared views, or the app
       shell on a role's landing page, shot with the shell around it at 1440px)
 
+Open mode (Free design), one batch instead of requests:
+``python preview_probe_worker.py --open <prototype.html> <out_dir>`` opens the assembled prototype,
+visits every manifest screen for every role through ``ZAS.go`` and writes, per screen,
+``dom.<role>.html`` (the rendered markup, scripts removed), ``shot.<role>.png`` and
+``css.used.css`` (the stylesheet rules that match), then prints one JSON summary line. Roles whose
+screen renders the same markup are written once (``same_as``). Allowed hosts: web fonts and the
+script CDNs a prototype may use (PROTO_HOSTS).
+
 The page is sealed: every request is refused except the web fonts it styles text with. Sketch
 code written by the agent runs only against the page's seeded demo data. The parent kills this
 process (and its browser) when a request runs too long.
@@ -34,6 +42,10 @@ from urllib.parse import urlparse
 
 
 FONT_HOSTS = {"fonts.googleapis.com", "fonts.gstatic.com"}
+# A prototype may also load pinned scripts from these (prototype.LIBRARY_HOSTS).
+PROTO_HOSTS = FONT_HOSTS | {"cdnjs.cloudflare.com", "cdn.jsdelivr.net", "unpkg.com"}
+OPEN_WIDTH = 1280
+OPEN_MAX_HEIGHT = 2400
 MAX_SHOT_HEIGHT = 2000
 APP_WIDTH = 1440  # the app frame's width in a layout shot (the preview's "1440" frame)
 
@@ -355,5 +367,187 @@ def main(html_path: str) -> int:
     return 0
 
 
+# The rendered markup of the page, without scripts, the persona bar or toasts: what the build ports.
+OPEN_DOM_JS = """() => {
+  const body = document.body.cloneNode(true);
+  body.querySelectorAll('script, noscript, .z-persona, .z-toast, template').forEach(n => n.remove());
+  return body.innerHTML.replace(/\\n\\s*\\n+/g, '\\n');
+}"""
+
+# Indexes of the stylesheet rules that match the current DOM (any role so far is unioned in Python).
+OPEN_CSS_JS = """() => {
+  const hits = [];
+  const strip = s => s.replace(/::?(before|after|placeholder|selection|marker|-webkit-[a-z-]+|-moz-[a-z-]+)\\b(\\([^)]*\\))?/g, '')
+                      .replace(/:(hover|focus|focus-visible|focus-within|active|visited|checked|disabled|empty)\\b/g, '');
+  const matches = sel => sel.split(',').some(part => {
+    const s = strip(part).trim() || '*';
+    try { return !!document.querySelector(s); } catch (e) { return false; }
+  });
+  const walk = (rules, path) => {
+    for (let i = 0; i < rules.length; i++) {
+      const r = rules[i], key = path.concat(i).join('.');
+      if (r.type === 1) { if (matches(r.selectorText)) hits.push(key); }
+      else if (r.cssRules && r.type !== 7) walk(r.cssRules, path.concat(i));   // @media, @supports
+      else hits.push(key);                                                     // @font-face, @keyframes, @import
+    }
+  };
+  Array.from(document.styleSheets).forEach((sh, si) => { if (sh.ownerNode && sh.ownerNode.hasAttribute('data-zas-probe')) return; try { walk(sh.cssRules, [si]); } catch (e) {} });
+  return hits;
+}"""
+
+# The rules picked above, in stylesheet order, as text (group rules keep only their matching children).
+OPEN_CSS_TEXT_JS = """(keys) => {
+  const want = new Set(keys), out = [];
+  const emit = (rules, path) => {
+    const parts = [];
+    for (let i = 0; i < rules.length; i++) {
+      const r = rules[i], key = path.concat(i).join('.');
+      if (r.type === 1 || !r.cssRules || r.type === 7) { if (want.has(key)) parts.push(r.cssText); }
+      else {
+        const inner = emit(r.cssRules, path.concat(i));
+        if (inner.length) parts.push(r.cssText.slice(0, r.cssText.indexOf('{') + 1) + '\\n' + inner.join('\\n') + '\\n}');
+      }
+    }
+    return parts;
+  };
+  Array.from(document.styleSheets).forEach((sh, si) => { if (sh.ownerNode && sh.ownerNode.hasAttribute('data-zas-probe')) return; try { out.push(...emit(sh.cssRules, [si])); } catch (e) {} });
+  return out.join('\\n');
+}"""
+
+OPEN_GO_JS = """async ([screen, role]) => {
+  const M = ZAS.M || {};
+  const meta = (M.screens || []).find(s => s.id === screen) || {};
+  let record = meta.sample == null ? null : meta.sample;
+  if (record == null && meta.record && ZAS.store && ZAS.store.list) {
+    const rows = ZAS.store.list(meta.record) || [];
+    if (rows.length) record = rows[0].id;
+  }
+  const before = (ZAS.errors || []).length;
+  ZAS.go(screen, { role, record, replace: true });
+  await new Promise(r => setTimeout(r, 250));
+  try { await document.fonts.ready; } catch (e) {}
+  window.scrollTo(0, 0);
+  document.querySelectorAll('.z-persona, .z-toast').forEach(n => n.remove());
+  const text = (document.body.innerText || '').trim();
+  return {
+    record,
+    errors: (ZAS.errors || []).slice(before).map(e => (e.part ? e.part + ': ' : '') + e.message),
+    blank: text.length < 20,
+    height: Math.max(document.documentElement.scrollHeight, document.body.scrollHeight),
+  };
+}"""
+
+
+def open_capture(html_path: str, out_dir: str) -> int:
+    """Every manifest screen x role of an open-mode prototype, written under out_dir/screens/."""
+    import hashlib
+    import os
+
+    from playwright.sync_api import sync_playwright
+
+    with open(html_path, encoding="utf-8") as fh:
+        html = fh.read()
+    summary: dict = {"ok": True, "screens": [], "load_errors": [], "blocked": []}
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch()
+        context = browser.new_context(
+            viewport={"width": OPEN_WIDTH, "height": 900},
+            device_scale_factor=1,
+            service_workers="block",
+        )
+        page = context.new_page()
+
+        def route(r):
+            host = urlparse(r.request.url).hostname or ""
+            if host in PROTO_HOSTS:
+                r.continue_()
+            else:
+                if len(summary["blocked"]) < 20:
+                    summary["blocked"].append(r.request.url[:200])
+                r.abort()
+
+        page.route("**/*", route)
+        page.on(
+            "pageerror",
+            lambda e: summary["load_errors"].append(str(e)[:300])
+            if len(summary["load_errors"]) < 20
+            else None,
+        )
+        try:
+            page.set_content(html, wait_until="load", timeout=30000)
+        except Exception:  # noqa: BLE001 - a slow CDN still leaves the inline parts running
+            pass
+        if not page.evaluate(
+            "typeof window.ZAS === 'object' && typeof ZAS.go === 'function'"
+        ):
+            _send({"ok": False, "error": "The prototype has no ZAS runtime."})
+            return 2
+        # The persona switcher and toasts are the prototype's own tooling, not the app.
+        page.add_style_tag(
+            content=".z-persona,.z-toast{display:none!important}"
+        ).evaluate("n => n.setAttribute('data-zas-probe', '')")
+        manifest = page.evaluate("ZAS.M")
+        roles = list((manifest.get("roles") or {}).keys())
+        for screen in manifest.get("screens") or []:
+            sid = screen.get("id")
+            if not sid:
+                continue
+            folder = os.path.join(out_dir, "screens", sid)
+            os.makedirs(folder, exist_ok=True)
+            entry = {"id": sid, "title": screen.get("title") or sid, "roles": []}
+            for key in ("record", "only", "parent", "group"):
+                if screen.get(key):
+                    entry[key] = screen[key]
+            seen: dict = {}
+            css_keys: list = []
+            for role in screen.get("roles") or roles:
+                try:
+                    state = page.evaluate(OPEN_GO_JS, [sid, role])
+                    dom = page.evaluate(OPEN_DOM_JS)
+                except Exception as exc:  # noqa: BLE001 - one screen must not stop the rest
+                    entry["roles"].append(
+                        {"role": role, "error": f"{type(exc).__name__}: {exc}"[:300]}
+                    )
+                    continue
+                item = {
+                    "role": role,
+                    **{k: v for k, v in state.items() if k != "height" and v},
+                }
+                digest = hashlib.sha1(dom.encode("utf-8")).hexdigest()
+                if digest in seen:
+                    item["same_as"] = seen[digest]
+                    entry["roles"].append(item)
+                    continue
+                seen[digest] = role
+                with open(
+                    os.path.join(folder, f"dom.{role}.html"), "w", encoding="utf-8"
+                ) as fh:
+                    fh.write(dom)
+                height = max(900, min(int(state.get("height") or 900), OPEN_MAX_HEIGHT))
+                page.set_viewport_size({"width": OPEN_WIDTH, "height": height})
+                page.screenshot(
+                    path=os.path.join(folder, f"shot.{role}.png"),
+                    type="png",
+                    timeout=20000,
+                )
+                page.set_viewport_size({"width": OPEN_WIDTH, "height": 900})
+                for k in page.evaluate(OPEN_CSS_JS):
+                    if k not in css_keys:
+                        css_keys.append(k)
+                item["files"] = [f"dom.{role}.html", f"shot.{role}.png"]
+                entry["roles"].append(item)
+            if css_keys:
+                with open(
+                    os.path.join(folder, "css.used.css"), "w", encoding="utf-8"
+                ) as fh:
+                    fh.write(page.evaluate(OPEN_CSS_TEXT_JS, css_keys))
+            summary["screens"].append(entry)
+        browser.close()
+    _send(summary)
+    return 0
+
+
 if __name__ == "__main__":
+    if sys.argv[1:2] == ["--open"]:
+        sys.exit(open_capture(sys.argv[2], sys.argv[3]))
     sys.exit(main(sys.argv[1]))

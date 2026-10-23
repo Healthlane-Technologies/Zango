@@ -456,7 +456,18 @@ def _execute(run, tenant, creds, ws_root, build_app_context) -> dict:
             with service_account(tenant, emit=_studio_emit):
                 pass
             try:
-                studio.prepare(emit=_studio_emit, template=template_build.template)
+                requirement = getattr(run, "requirement", None)
+                studio.prepare(
+                    emit=_studio_emit,
+                    template=template_build.template,
+                    # Open mode: the approved prototype, for .zas/bundle/prototype/.
+                    prototype=(
+                        dict(requirement.prototype_parts or {})
+                        if requirement is not None
+                        and requirement.preview_mode == "open"
+                        else None
+                    ),
+                )
             finally:
                 run.post_steps = [r.to_dict() for r in studio.steps]
                 run.save(update_fields=["post_steps", "modified_at"])
