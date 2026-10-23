@@ -1,12 +1,16 @@
 import { Menu, Transition } from '@headlessui/react';
 import { Fragment, useState } from 'react';
 import { usePopper } from 'react-popper';
+import { useSelector } from 'react-redux';
 import { NavLink, useLocation } from 'react-router-dom';
+import { selectAppPanelInitialData } from '../../../pages/platform/slice';
 import { ReactComponent as NavSearchDownArrowIcon } from '../../../assets/images/svg/nav-select-down-arrow.svg';
 import { ReactComponent as SelectDynamicCheckIcon } from '../../../assets/images/svg/select-dynamic-check-icon.svg';
 
 export default function SelectField() {
 	const location = useLocation();
+	const appPanelInitialData = useSelector(selectAppPanelInitialData);
+	const isSuperAdmin = !!appPanelInitialData?.user_logged_in?.is_superadmin;
 	const [referenceElement, setReferenceElement] = useState(null);
 	const [popperElement, setPopperElement] = useState(null);
 	const { styles, attributes } = usePopper(referenceElement, popperElement, {
@@ -111,46 +115,48 @@ export default function SelectField() {
 									/>
 								)}
 							</Menu.Item>
-							<Menu.Item>
-								{({ active }) => (
-									<NavLink
-										exact="true"
-										to={`/platform/user-managements`}
-										className="relative flex items-center px-[16px] py-[4px]"
-										children={({ isActive }) => {
-											return (
-												<div
-													className={`${
-														active ? '' : ''
-													} relative flex w-full flex-col rounded-[2px]`}
-												>
-													<div className="flex gap-[12px]">
-														<div className="min-w-[12px]">
-															<SelectDynamicCheckIcon
-																className={`${
-																	isActive ? 'text-[#FFFFFF]' : 'text-[#495057]'
+							{isSuperAdmin && (
+								<Menu.Item>
+									{({ active }) => (
+										<NavLink
+											exact="true"
+											to={`/platform/user-managements`}
+											className="relative flex items-center px-[16px] py-[4px]"
+											children={({ isActive }) => {
+												return (
+													<div
+														className={`${
+															active ? '' : ''
+														} relative flex w-full flex-col rounded-[2px]`}
+													>
+														<div className="flex gap-[12px]">
+															<div className="min-w-[12px]">
+																<SelectDynamicCheckIcon
+																	className={`${
+																		isActive ? 'text-[#FFFFFF]' : 'text-[#495057]'
+																	}`}
+																/>
+															</div>
+															<span
+																className={`block font-lato text-[#FFFFFF] ${
+																	isActive ? 'font-bold' : ''
 																}`}
-															/>
+															>
+																User Management
+															</span>
 														</div>
 														<span
 															className={`block font-lato text-[#FFFFFF] ${
 																isActive ? 'font-bold' : ''
 															}`}
-														>
-															User Management
-														</span>
+														></span>
 													</div>
-													<span
-														className={`block font-lato text-[#FFFFFF] ${
-															isActive ? 'font-bold' : ''
-														}`}
-													></span>
-												</div>
-											);
-										}}
-									/>
-								)}
-							</Menu.Item>
+												);
+											}}
+										/>
+									)}
+								</Menu.Item>
+							)}
 							<Menu.Item>
 								{({ active }) => (
 									<NavLink

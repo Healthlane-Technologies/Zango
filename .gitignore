@@ -135,3 +135,7 @@ package-lock.json
 
 # Local planning / scratch docs (kept out of git)
 .claude/plans/
+
+
+/_gitignore
+/zango-dev
