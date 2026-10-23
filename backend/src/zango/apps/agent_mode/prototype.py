@@ -164,6 +164,17 @@ def screen_part(screen_id: str) -> str:
     return f"screens/{screen_id}.js"
 
 
+def is_drafting(parts: dict) -> bool:
+    """Whether the prototype is still being drawn: no parts yet, or screens with no part.
+
+    Such a turn writes many screens, so it gets the first draft's time and budget.
+    """
+    if not parts:
+        return True
+    manifest, _ = manifest_of(parts)
+    return any(screen_part(s["id"]) not in parts for s in manifest.get("screens", []))
+
+
 def static_problems(parts: dict) -> list[str]:
     """Everything assembly can tell without running the page."""
     manifest, problems = manifest_of(parts)

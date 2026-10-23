@@ -88,6 +88,21 @@ cd backend/test_project
 ../../../zango_venv/bin/python manage.py test --noinput zango.tests.apps.app_templates.test_prototype
 ```
 
+## Live run 1 (2026-10-23, diagnostic_test_voucher, Sonnet 5.5, subscription)
+
+- Prompt: free design of the existing app, every persona's home, lists, voucher record page, issue/redeem/
+  report upload/invoice review flows, no questions.
+- Result: 165 s, $1.11. The analyst wrote manifest (15 screens), tokens, app.css, data.js, shell.js and
+  `screens/psp_home.js` (28 KB, first visible part at 30 s), then launched 5 screen writers in one
+  message. **The writers died**: the CLI starts sub-agents as "Async agent launched", the analyst's turn
+  ended, the stream closed the client and killed them. `AgentDefinition(background=False)` had no effect.
+- Fix: open mode sets `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1` in the analyst env. Verified with the spike:
+  `Agent` calls then return the writer's final answer, and two writers still run in parallel.
+- Needs a worker restart, then a new run.
+- Console 500s seen during the run were not from this work: the browser held an app-user session cookie
+  for `localhost` (AppUserModelBackend), which the public-schema console can't resolve. Clear the cookies
+  and sign in again.
+
 ## Notes / gotchas
 
 - The SDK's sub-agent tool is named `Agent` in this CLI (allowed both `Agent` and `Task`).

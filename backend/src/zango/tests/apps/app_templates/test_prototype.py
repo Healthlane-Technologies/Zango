@@ -117,6 +117,14 @@ class BenchTests(unittest.TestCase):
                 self.pb.write("screens/bad.js", "function (")
         self.assertNotIn("screens/bad.js", self.pb.parts)
 
+    def test_drafting_until_every_screen_has_a_part(self):
+        self.assertTrue(P.is_drafting({}))
+        self.pb.write("manifest.json", MANIFEST)
+        self.pb.write("screens/home.js", "1")
+        self.assertTrue(P.is_drafting(self.pb.parts))
+        self.pb.write("screens/list.js", "2")
+        self.assertFalse(P.is_drafting(self.pb.parts))
+
     def test_rename_and_remove(self):
         self.pb.write("screens/a.js", "1")
         self.pb.rename("screens/a.js", "screens/b.js")

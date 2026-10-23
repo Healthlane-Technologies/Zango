@@ -658,13 +658,18 @@ def build_analyst_options(
             + (_PREVIEW_TOOLS_APPEND if preview else ""),
         }
     if spec_server is not None and getattr(requirement, "preview_mode", "") == "open":
-        from .prototype import screen_writer_agent
+        from .prototype import is_drafting, screen_writer_agent
 
         kwargs["allowed_tools"] = [*kwargs["allowed_tools"], "Agent", "Task"]
         kwargs["skills"] = [*kwargs["skills"], PROTOTYPE_SKILL]
         kwargs["agents"] = {"screen-writer": screen_writer_agent()}
-        if not requirement.prototype_parts:
-            # The first draft writes the whole app: many tool calls, and the
+        # The CLI starts sub-agents in the background by default, and the turn ends (and
+        # kills them) as soon as the analyst stops. Run them in the foreground: an Agent
+        # call then returns only once its screen is written. AgentDefinition(background=
+        # False) alone did not do this (CLI 0.2.152).
+        kwargs["env"] = {**kwargs["env"], "CLAUDE_CODE_DISABLE_BACKGROUND_TASKS": "1"}
+        if is_drafting(requirement.prototype_parts):
+            # The first draft (or one that left screens unwritten) writes the whole app: many tool calls, and the
             # screen writers' cost counts towards this turn's budget.
             kwargs["max_turns"] = max(kwargs["max_turns"], 250)
             kwargs["max_budget_usd"] = float(

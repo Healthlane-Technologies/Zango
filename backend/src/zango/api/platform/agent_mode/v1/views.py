@@ -829,11 +829,12 @@ def _dispatch_turn(requirement, tenant):
     """Queue one analyst turn after the outer transaction commits."""
     from django.conf import settings as dj
 
+    from zango.apps.agent_mode.prototype import is_drafting
     from zango.apps.agent_mode.tasks import agent_requirement_turn
 
     seconds = 600
-    if requirement.preview_mode == "open" and not requirement.prototype_parts:
-        # An open prototype's first draft writes the whole app in one turn.
+    if requirement.preview_mode == "open" and is_drafting(requirement.prototype_parts):
+        # An open prototype's first draft (or the rest of it) writes many screens in one turn.
         seconds = int(getattr(dj, "AGENT_MODE_OPEN_FIRST_TURN_SECONDS", 1500) or 1500)
 
     def _go():
