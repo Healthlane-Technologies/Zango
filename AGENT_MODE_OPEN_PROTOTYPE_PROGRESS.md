@@ -20,7 +20,7 @@ never be added (user decision).
 | P1.5 | Turn limits for open mode | **done** |
 | P1.6 | Runtime + starter (`prototype_assets/`) | **done** |
 | P1.7 | Skill `zango-prototype` + worked example | **done** |
-| P1.8 | Console: toggle, `PrototypeFrame`, mode switch | todo |
+| P1.8 | Console: toggle, `PrototypeFrame`, mode switch | **done** (type-checks; not yet clicked through live) |
 | P1.9 | Tests | backend **done** (11 in `test_prototype.py`); API test todo |
 | Done-when | 3 chat-only runs measured | todo |
 
@@ -64,6 +64,22 @@ never be added (user decision).
   `AGENT_MODE_ANALYST_PROTO_BUDGET_USD` (15.0).
 - Skill `skill_plugin/skills/zango-prototype/SKILL.md` + `references/example/` (fictional lab sample
   tracker, 8 parts, 13.5 KB): parts, manifest, runtime API, first-draft order, screen brief template, bar.
+
+## Console changes
+
+- `api/agentMode.ts`: `preview_mode`, `prototype_revision`, `prototype_hash` on the requirement;
+  `open_prototype` on availability; `preview_mode` on `NewRoundInput`; `prototypeUrl`, `usePrototypeHtml`
+  (keyed by revision, keeps the previous page while the next loads).
+- `api/scaffolds.ts`: `preview_mode` on `createScaffold`.
+- `pages/new/NewAppForm.tsx`: section 3 "Design" with a "Free design" switch (also `?design=free`), and a
+  Design row in the summary. A change on an existing app inherits the mode server-side.
+- `builder/PrototypeFrame.tsx` (new): srcdoc iframe, `sandbox="allow-scripts allow-popups allow-forms"`;
+  listens for `zas-proto` ready/location/error; sends `goto` on reload so the user stays on their screen;
+  location → `PreviewFocus` {role label, page = screen id, title "Title (screens/<id>.js)", record}.
+- `TemplateBuilderPanel.tsx`: open mode uses `PrototypeFrame`, no "edit in builder", and the generating
+  cover shows only until the first prototype revision.
+- `PreviewTabPage.tsx`: open mode renders `PrototypeFrame` (opens at the hash's `page`).
+- `tsc -b`: no new errors (the 4 existing ones are the known missing `logs/` sources and vite node types).
 
 ## How to test
 

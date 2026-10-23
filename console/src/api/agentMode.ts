@@ -122,6 +122,11 @@ export interface Requirement {
 	spec_is_draft?: boolean;
 	/** The last validation result for a template spec. */
 	validation_issues?: SpecIssue[];
+	/** 'open': the agent writes a free HTML prototype (Free design); 'kit': the template draws it. */
+	preview_mode?: 'open' | 'kit';
+	/** Bumped on every prototype write; the frame reloads when it changes. */
+	prototype_revision?: number;
+	prototype_hash?: string;
 }
 
 /** One validation finding on a template spec. `path` is an RFC 6901 pointer into the YAML. */
@@ -281,6 +286,8 @@ export interface Availability {
 		ended_at: string | null;
 		requires_restart: boolean;
 	} | null;
+	/** Free design (open prototypes) is switched on for this platform. */
+	open_prototype?: boolean;
 }
 
 interface Paginated<T> {
@@ -355,7 +362,13 @@ export function useRequirement(appId: string, reqId: string | undefined) {
  */
 export type NewRoundInput =
 	| string
-	| { prompt?: string; reference?: string; documents?: File[]; focus?: PreviewFocus | null };
+	| {
+			prompt?: string;
+			reference?: string;
+			documents?: File[];
+			focus?: PreviewFocus | null;
+			preview_mode?: 'open' | 'kit';
+	  };
 
 export function useCreateRequirement(appId: string, onCreated: (uuid: string) => void) {
 	return useApiMutation({
@@ -367,6 +380,7 @@ export function useCreateRequirement(appId: string, onCreated: (uuid: string) =>
 			if (input.prompt) body.append('prompt', input.prompt);
 			if (input.reference) body.append('reference', input.reference);
 			if (input.focus) body.append('focus', JSON.stringify(input.focus));
+			if (input.preview_mode) body.append('preview_mode', input.preview_mode);
 			for (const file of input.documents ?? []) body.append('documents', file, file.name);
 			return api<{ uuid: string; status: RequirementStatus }>(url, 'POST', body);
 		},
@@ -506,6 +520,27 @@ export function specErrorBody(err: unknown): { current?: RequirementSpec; issues
  * A template's own builder page (e.g. Journey Studio), composed by the server with the
  * platform adapter already injected. Immutable per template version.
  */
+/** The open prototype, assembled into one page; `version` pins an approved version. */
+export const prototypeUrl = (appId: string, reqId: string, version?: number) =>
+	`${base(appId)}/requirements/${reqId}/prototype/${version ? `?v=${version}` : ''}`;
+
+/** The prototype page at a revision: refetched when the agent writes a part. */
+export function usePrototypeHtml(appId: string, reqId: string, revision: number | undefined) {
+	return useQuery({
+		queryKey: ['agent-prototype', appId, reqId, revision ?? 0],
+		queryFn: async () => {
+			const res = await fetch(prototypeUrl(appId, reqId), { credentials: 'same-origin' });
+			if (res.status === 404) return null;
+			if (!res.ok) throw new Error(`The prototype could not be loaded (${res.status}).`);
+			return res.text();
+		},
+		enabled: !!revision,
+		staleTime: Infinity,
+		placeholderData: keepPreviousData,
+		retry: 1,
+	});
+}
+
 export function useBuilderHtml(url: string | null | undefined) {
 	return useQuery({
 		queryKey: ['template-builder-html', url ?? ''],
