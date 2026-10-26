@@ -2412,13 +2412,15 @@ def must_show(screen_dir, not_built=None):
 
 def soon_items(rows, manifest):
     """makeShell's `soon` entries: not-built screens kept in the menu (prototype.screens[].menu),
-    each new group placed after the group the prototype shows before it."""
+    in the prototype's order, each new group placed after the group the prototype shows before it."""
     order = []
     for sc in manifest.get("screens") or []:
         g = (sc or {}).get("group")
         if g and g not in order:
             order.append(g)
     titles = {sc.get("id"): sc.get("title") for sc in manifest.get("screens") or [] if isinstance(sc, dict)}
+    # in the prototype's order, whatever order the spec lists its screens in
+    rank = {sc.get("id"): i for i, sc in enumerate(manifest.get("screens") or []) if isinstance(sc, dict)}
     out = []
     for r in rows:
         m = r.get("menu")
@@ -2431,8 +2433,8 @@ def soon_items(rows, manifest):
         g = m.get("group")
         if g in order and order.index(g) > 0:
             item["after"] = order[order.index(g) - 1]
-        out.append(item)
-    return out
+        out.append((rank.get(r["id"], len(rank)), item))
+    return [item for _, item in sorted(out, key=lambda x: x[0])]
 
 
 def soon_md(rows, manifest):

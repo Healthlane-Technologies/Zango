@@ -231,6 +231,20 @@ class CoverageTests(unittest.TestCase):
         self.assertEqual(pc._role_menu_gaps("Lab lead", nav, have, PL.norm), [])
 
 
+    def test_not_built_items_follow_the_prototype_not_the_spec_order(self):
+        nav = [(None, "Home"), ("Lab", "Samples"), ("Help", "Tour"), ("Help", "Contact")]
+        manifest = {**MANIFEST, "screens": MANIFEST["screens"] + [{"id": "contact", "title": "Contact", "group": "Help"}]}
+        doc = spec()
+        doc["prototype"]["screens"].insert(
+            0, {"id": "contact", "only": "prototype", "why": "later", "menu": {"group": "Help", "label": "Contact"}})
+        role = {"name": "Lab lead", "menu": [{"page": "home", "label": "Home"},
+                                            {"group": "Lab", "items": [{"page": "samples", "label": "Samples"}]}]}
+        self.assertEqual(pc._menu_labels(doc, role, doc["prototype"]["screens"], manifest, PL.norm, nav), nav)
+        rows = [{"id": "contact", "cls": "prototype-only", "menu": {"group": "Help", "label": "Contact"}},
+                {"id": "tour", "cls": "prototype-only", "menu": {"group": "Help", "label": "Tour"}}]
+        self.assertEqual([i["label"] for i in spec_check.soon_items(rows, manifest)], ["Tour", "Contact"])
+
+
 class RowTargetTests(unittest.TestCase):
     """Where a list row goes in the prototype (capture row_opens) against table.row_click."""
 

@@ -221,7 +221,13 @@ def _menu_labels(
         for s in manifest.get("screens") or []
         if isinstance(s, dict)
     }
-    for sc in screens:
+    rank = {
+        s.get("id"): i
+        for i, s in enumerate(manifest.get("screens") or [])
+        if isinstance(s, dict)
+    }
+    # the shell lists them in the prototype's order (spec_check.soon_items)
+    for sc in sorted(screens, key=lambda s: rank.get(s.get("id"), len(rank))):
         menu = sc.get("menu")
         if not isinstance(menu, dict):
             continue

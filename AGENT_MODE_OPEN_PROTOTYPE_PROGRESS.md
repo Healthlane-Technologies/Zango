@@ -544,3 +544,6 @@ Agreements or Profile; every role had the full menu.
   the order check; a button on more than half of a persona's screens (4+) is shell chrome.
 - Prompt and zango-prototype SKILL.md say the same. 6 new tests (20 in the module). The 5
   TemplateFenceTests errors in test_requirements also fail on HEAD (missing test-DB table).
+- Run 4 (solar-summit): greyed-out items followed the spec's prototype.screens order (Integrations before
+  Getting started), so the shell would draw them out of the prototype's order and the check flagged it.
+  `soon_items` and `_menu_labels` now order them by the manifest's screen order.
