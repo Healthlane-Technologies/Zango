@@ -131,6 +131,52 @@ class OpenScreensLintTests(unittest.TestCase):
             self.assertIn("only for a themed page", design.screen_css_problems(Dx, str(other), "orders.css")[0])
 
 
+class OpenDesignLintTests(unittest.TestCase):
+    """Open mode: src/custom spells the prototype's colours as tokens and its fonts from app.design."""
+
+    M = {"app": {"design": {"fonts": {"body": "Plus Jakarta Sans", "mono": "JetBrains Mono"},
+                            "tokens": {"brand": "#0F766E", "page": "#F3F6F6", "coral": "#E0693F"}}},
+         "pages": {}, "holes": []}
+
+    def lint(self, slot, open_mode=True):
+        import types
+
+        with tempfile.TemporaryDirectory() as tmp:
+            if open_mode:
+                (Path(tmp) / ".zas" / "bundle" / "prototype").mkdir(parents=True)
+                (Path(tmp) / ".zas" / "bundle" / "prototype" / "manifest.json").write_text("{}")
+                (Path(tmp) / "frontend" / "src").mkdir(parents=True)
+                (Path(tmp) / "frontend" / "src" / "App.tsx").write_text("<ZApp customComponents={{ Layout: Shell }} />")
+            custom = Path(tmp) / "frontend" / "src" / "custom"
+            (custom / "slots").mkdir(parents=True)
+            (custom / "Shell.tsx").write_text("export default makeShell({});")
+            (custom / "slots" / "Home.tsx").write_text(slot)
+            got = {}
+            Dx = types.SimpleNamespace(ws=tmp, M=self.M, check=lambda rid, title, where, fn, *a: got.update(r=fn()))
+            design.g_lint(Dx)
+            return got["r"]
+
+    def test_tokens_and_listed_fonts_pass(self):
+        ok, why = self.lint('<div style={{ color: "var(--z-text)", background: "var(--p-coral)", '
+                            'fontFamily: "Plus Jakarta Sans, sans-serif" }} />')
+        self.assertTrue(ok, why)
+
+    def test_literals_name_their_token_and_fonts_come_from_app_design(self):
+        ok, why = self.lint('<div style={{ color: "#0f766e", background: "#E0693F", borderColor: c, '
+                            'fontFamily: "Comic Sans MS" }}>{"#123456"}</div>')
+        self.assertFalse(ok)
+        self.assertIn("app.design's `brand`, write var(--brand)", why)
+        self.assertIn("app.design's `coral`, write var(--p-coral)", why)
+        self.assertIn("colour `#123456` (use a token", why)
+        self.assertIn("inline `borderColor` must be a token", why)
+        self.assertIn("font `Comic Sans MS` is not in app.design.fonts", why)
+
+    def test_kit_mode_is_unchanged(self):
+        ok, why = self.lint('<div style={{ color: "var(--z-text)" }} />', open_mode=False)
+        self.assertFalse(ok)
+        self.assertIn("inline `color` style", why)
+
+
 class TargetTests(unittest.TestCase):
     def setUp(self):
         self.Dx = type("Dx", (), {})()

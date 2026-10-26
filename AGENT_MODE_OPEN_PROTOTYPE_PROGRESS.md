@@ -395,5 +395,16 @@ The sponsorship spec in the local DB was rewritten once (data identical, lines 5
 - Tests: BuildHearsItTests (classes, holes, ui flags, index table, why/unknown errors),
   OpenModeScreenGateTests, OpenScreensLintTests. Pre-existing failures unchanged.
 
+**B5 done (2026-10-26):** the design lint follows `app.design` in open mode (bundle has `prototype/`).
+- `zas_test/design.py` `OpenDesign`: no colour literals anywhere in `src/custom/` (there is no generated
+  token file to exempt: the tokens live in `spec.ui.json`); a literal equal to an `app.design` token is
+  reported with its variable (canonical names via `spec_check.DESIGN_MAP`, brand → `var(--brand)`, others
+  `var(--p-<name>)`). Inline colour/border/shadow/fill styles only through `var(--…)`. `fontFamily` /
+  `font-family` only `app.design.fonts`, generic families or the font variables. `<style>` stays banned.
+- Every mapped screen gets these rules (sketch palettes are off in open mode); the "Approved look" read
+  gate covers rebuild slots and the shell (B4). Themed screens' look comparison is B6's look round.
+- Kit mode unchanged (test). Docs: open-mode.md §Lint, SKILL critical rules.
+- Tests: `test_preview_parity.OpenDesignLintTests` (g_lint end to end with a stub Dx).
+
 Recommended first move next session: the YAML bug, then S0 (with guard 1) + B1 on the two test apps above
 (both kinds), then B2.

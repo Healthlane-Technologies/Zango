@@ -231,6 +231,7 @@ manual steps) + the HTML path. Rules: `references/report.md`.
   that act on user-supplied ids. Use the scoped queryset.
 - Frontend: compose from `src/zas` only. No hex colours or colour styles in `src/custom/`, except in the
   slot of a screen approved in the preview, which reproduces its sketch (custom-code.md §Porting a sketch).
+  In open mode no literals at all: colours are `app.design` tokens as `var(--…)` (open-mode.md §Lint).
 - Match what the user approved: every screen in `.zas/bundle/index.md` has screenshots, and the platform
   blocks writing its file until you have Read them. Custom screens are ported from their sketch; standard
   screens are arranged with their levers only: the switcher's place (`makeViewsPage(…, { switcher })`,

@@ -103,3 +103,16 @@ screen's `shot.<role>.png` and `dom.<role>.html` (the platform blocks the write 
 **Libraries** (`libraries.json`): use the npm package of the same library (Chart.js → `chart.js`, ECharts →
 `echarts`); when there is none or it doesn't fit, draw it with the zas kit or plain SVG. Name each swap in
 the build report.
+
+## Lint (`zas_test.design --only lint`)
+
+Open mode replaces the kit's sketch palettes with the prototype's tokens, for every mapped screen alike:
+
+- No colour literals anywhere in `src/custom/`. A literal that is an `app.design` token is reported with
+  the variable to write instead (`#0F766E` → `var(--brand)`, `#E0693F` → `var(--p-coral)`).
+- Inline styles may set colours, borders, shadows and fills only through `var(--…)` (or
+  `transparent` / `inherit` / `currentColor` / `none`).
+- Fonts (`fontFamily`, `font-family`) are `app.design.fonts` families, generic families, or
+  `var(--z-font)` / `var(--z-mono)` / `var(--z-display)`.
+- `<style>` tags stay banned; stylesheets only as `src/custom/screens/<page>.css` (§Screens).
+- Plus the shell and themed-page checks above. Kit mode is unchanged.

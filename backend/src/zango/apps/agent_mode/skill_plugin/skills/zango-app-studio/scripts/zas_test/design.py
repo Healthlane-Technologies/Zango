@@ -166,17 +166,88 @@ def screen_css_problems(Dx, path, rel):
         for one in sel.split(","):
             if one.strip() and not one.strip().startswith(scope):
                 probs.append(f"{rel}: selector `{one.strip()[:60]}` is not scoped to {scope}")
+    od = OpenDesign(Dx)
     for m in COLOUR.finditer(css):
-        probs.append(f"{rel}: colour `{m.group(0)}` (use a token: var(--z-*), var(--p-*), var(--t-*))")
+        probs.append(f"{rel}: {od.colour(m.group(0))}")
+    probs += od.css(rel, css)
     if "url(" in css or "@import" in css:
         probs.append(f"{rel}: url() / @import (fonts and images come from app.design)")
     return probs
 
 
+GENERIC_FONTS = {"inherit", "initial", "sans-serif", "serif", "monospace", "system-ui", "ui-monospace",
+                 "ui-sans-serif", "-apple-system"}
+STYLE_PROP = re.compile(r"\b(color|background\w*|border\w*|boxShadow|fill|stroke|outline\w*|fontFamily)\s*:\s*([^,}\n]+)")
+
+
+class OpenDesign:
+    """Open mode's lint rules (an approved prototype in the bundle): the prototype's look reaches the
+    app as app.design tokens (spec.ui.json), so src/custom spells colours as var(--…) and fonts as the
+    families app.design lists. Every mapped screen follows them; there are no sketch palettes."""
+
+    def __init__(self, Dx):
+        design = ((Dx.M or {}).get("app") or {}).get("design") or {}
+        tokens = design.get("tokens") or {}
+        self.vars = {}
+        if COLOUR.fullmatch(str(tokens.get("brand", "")).strip()):
+            self.vars[colour_key(str(tokens["brand"]).strip())] = ("brand", "var(--brand)")
+        scripts = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        if scripts not in sys.path:
+            sys.path.insert(0, scripts)
+        try:  # canonical tokens are the runtime's own variables (spec_check.DESIGN_MAP)
+            from spec_check import DESIGN_MAP
+        except Exception:  # noqa: BLE001 - fall back to the --p-<name> spelling
+            DESIGN_MAP = {}
+        for name, value in tokens.items():
+            if COLOUR.fullmatch(str(value).strip()):
+                target = (DESIGN_MAP.get(name) or [f"--p-{name}"])[0]
+                self.vars.setdefault(colour_key(str(value).strip()), (name, f"var({target})"))
+        self.fonts = {str(f).strip().strip("'\"").lower() for f in (design.get("fonts") or {}).values() if f}
+
+    def colour(self, c):
+        hit = self.vars.get(colour_key(c))
+        return (f"colour `{c}`: it is app.design's `{hit[0]}`, write {hit[1]}" if hit
+                else f"colour `{c}` (use a token: var(--z-*), var(--p-*), var(--t-*))")
+
+    def font(self, value):
+        """A problem with a font-family value, or None."""
+        v = value.strip().strip("'\"`")
+        if "var(--" in v:
+            return None
+        bad = [f.strip().strip("'\"") for f in v.split(",")
+               if f.strip().strip("'\"").lower() not in self.fonts | GENERIC_FONTS]
+        return f"font `{bad[0]}` is not in app.design.fonts (use var(--z-font) / var(--z-mono))" if bad else None
+
+    def tsx(self, rel, code):
+        probs = []
+        for i, line in enumerate(code.splitlines(), 1):
+            for m in COLOUR.finditer(line):
+                probs.append(f"{rel}:{i}: {self.colour(m.group(0))}")
+        for block in re.finditer(r"style=\{\{(.*?)\}\}", code, re.S):
+            line = code[:block.start()].count("\n") + 1
+            for prop, value in STYLE_PROP.findall(block.group(1)):
+                if prop == "fontFamily":
+                    bad = self.font(value)
+                    if bad:
+                        probs.append(f"{rel}:{line}: {bad}")
+                elif not re.search(r"var\(--|^\s*[\"'](transparent|inherit|currentColor|none)[\"']", value) \
+                        and not COLOUR.search(value):  # literals are reported above
+                    probs.append(f"{rel}:{line}: inline `{prop}` must be a token: {value.strip()[:40]}")
+        return probs
+
+    def css(self, rel, css):
+        return [f"{rel}: {bad}" for v in re.findall(r"font-family\s*:\s*([^;}]+)", css) if (bad := self.font(v))]
+
+
+def is_open_mode(ws):
+    return os.path.isfile(os.path.join(ws, ".zas", "bundle", "prototype", "manifest.json"))
+
+
 def g_lint(Dx, b=None):
     root = os.path.join(Dx.ws, "frontend", "src", "custom")
     files = [f for f in glob.glob(os.path.join(root, "**", "*"), recursive=True) if os.path.isfile(f)]
-    palettes = approved_palettes(Dx)
+    open_design = OpenDesign(Dx) if is_open_mode(Dx.ws) else None
+    palettes = {} if open_design else approved_palettes(Dx)
     # a helper a ported slot imports (no marker of its own) may use any approved sketch's colours
     any_approved = set().union(*(p[0] for p in palettes.values())) if palettes else set()
     probs = []
@@ -195,8 +266,12 @@ def g_lint(Dx, b=None):
         approved = palettes.get(os.path.normpath(f))
         if approved is None and any_approved and "zas:hole" not in src:
             approved = (any_approved, "the approved sketches")
+        if open_design:
+            probs += open_design.tsx(rel, code)
         for i, line in enumerate(code.splitlines(), 1):
-            if approved is not None:
+            if open_design:
+                pass  # colours and styles: OpenDesign.tsx above
+            elif approved is not None:
                 for c in COLOUR.findall(line):
                     if colour_key(c) not in approved[0]:
                         probs.append(f"{rel}:{i}: colour `{c}` is not in {approved[1]} "
@@ -205,7 +280,7 @@ def g_lint(Dx, b=None):
                 probs.append(f"{rel}:{i}: colour literal `{COLOR_LIT.search(line).group(0)}`")
             if BAD_IMPORT.search(line):
                 probs.append(f"{rel}:{i}: UI import outside zas: {line.strip()[:80]}")
-        if approved is None:
+        if approved is None and not open_design:
             for m in STYLE_COLOR.finditer(code):
                 probs.append(f"{rel}:{code[:m.start()].count(chr(10)) + 1}: inline `{m.group(1)}` style")
         if "<style" in code:
