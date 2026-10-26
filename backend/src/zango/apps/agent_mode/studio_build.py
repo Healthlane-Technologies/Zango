@@ -1982,6 +1982,8 @@ class StudioBuild:
         pairs = [x for x in looks if x.get("approved") and x.get("built")]
         if not pairs:
             return ""
+        if any(x.get("kind") == "prototype" for x in pairs):
+            return self.prototype_look_digest(pairs, n, total, gaps)
         lines = [
             f"## Look {n} of {total}: your custom screens next to what the user approved",
             "",
@@ -2037,6 +2039,63 @@ class StudioBuild:
             lines.append(
                 f"- `{x['screen']}` as {x['role']}{note}: approved `{x['approved']}`, "
                 f"built `{x['built']}`, sketch `{sketch}`"
+            )
+        return "\n".join(lines) + "\n"
+
+    @staticmethod
+    def prototype_look_digest(pairs, n, total, gaps=()) -> str:
+        """Open mode's look round: every mapped screen next to the approved prototype screen, worst first."""
+        pairs = sorted(pairs, key=lambda x: -(x.get("score") or 0))
+        lines = [
+            f"## Look {n} of {total}: your screens next to the approved prototype",
+            "",
+            "The user approved the prototype; the app has to look like it. For each pair, Read the approved "
+            "screenshot, then the screen you built (shot from your latest build). The score is how different "
+            "they look (0% = the same); the prototype shows demo data, so values never match: compare the look.",
+            "",
+            "1. List every visible part of the approved screen and mark each **matches** or **differs**.",
+            "2. Fix what differs with the lever its class allows (references/open-mode.md):",
+            "   - **theme**: tokens only: `app.design` (re-run spec_check), the shell options, or the page's "
+            "token-only `src/custom/screens/<page>.css`. Never replace the runtime page with custom code.",
+            "   - **rebuild**: the screen's slot, ported from the approved `dom.<role>.html`; colours as "
+            "`var(--…)`.",
+            "   Then type-check, rebuild and deploy as in Phase 6.",
+            "3. If every part already matches, or what is left needs a different class, change nothing and "
+            "say so: the platform stops comparing when a round changes no files.",
+            "",
+        ]
+        lines += (
+            [
+                "After your changes the platform rebuilds, re-shoots and shows you the result again.",
+                "",
+            ]
+            if n < total
+            else [
+                "This is the last look: what still differs goes to the build report as a gap, so name it.",
+                "",
+            ]
+        )
+        if gaps:
+            lines += ["The parity check found these problems; fix each one:", ""]
+            lines += [
+                f"- `{g.get('id')}`: {(g.get('detail') or g.get('title') or '')[:300]}"
+                for g in gaps
+            ]
+            lines.append("")
+        for x in pairs:
+            score = (
+                f"{x['score']:.0%}"
+                if isinstance(x.get("score"), (int, float))
+                else "n/a"
+            )
+            lines.append(
+                f"- `{x['screen']}` as {x['role']} ({x.get('class') or '?'}, difference {score}): "
+                f"approved `{x['approved']}`, built `{x['built']}`"
+                + (
+                    f", snapshot `{x['dom']}`"
+                    if x.get("class") == "rebuild" and x.get("dom")
+                    else ""
+                )
             )
         return "\n".join(lines) + "\n"
 

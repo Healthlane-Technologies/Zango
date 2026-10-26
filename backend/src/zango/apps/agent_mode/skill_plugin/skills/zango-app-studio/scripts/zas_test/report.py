@@ -145,6 +145,35 @@ def app_roles(M):
 
 # ───────────────────────────── markdown ─────────────────────────────
 
+def proto_screens(D):
+    """Open mode: each prototype screen with its class, what it builds as, how its roles opened and the
+    worst look difference (zas_test.design parity), plus the library swaps the build logged."""
+    rows = (D["M"].get("prototype") or {}).get("screens") or []
+    if not rows:
+        return [], []
+    try:
+        looks = load_json(D["ws"], "parity_looks.json")
+    except (OSError, ValueError):
+        looks = []
+    out = []
+    for r in rows:
+        res = [x for x in D["results"] if x["id"].startswith(f"design.parity.proto.{r['id']}.")]
+        scores = [x["score"] for x in looks
+                  if x.get("screen") == f"prototype/{r['id']}" and isinstance(x.get("score"), (int, float))]
+        out.append({**r, "checked": len(res), "passed": sum(x["status"] == "pass" for x in res),
+                    "problems": [f"{x.get('role') or ''}: {x['detail'][:160]}" for x in res if x["status"] == "fail"],
+                    "score": max(scores) if scores else None,
+                    "builds": (f"slot {r['slot']}" if r.get("slot") else "-" if r.get("cls") == "prototype-only"
+                               else f"page {r.get('page')}" if r.get("kind") == "page" else f"360 {r.get('code')}")})
+    libs = [f"{s['step'].split(':', 1)[-1].strip()}: {s.get('detail') or s['status']}"
+            for s in D["steps"] if str(s.get("step", "")).lower().startswith("library")]
+    return out, libs
+
+
+def pct(v):
+    return f"{v:.0%}" if isinstance(v, (int, float)) else "-"
+
+
 def to_md(D):
     M, results = D["M"], D["results"]
     out = [f"# {M['app']['name']}: build report", "", f"**Verdict: {D['verdict']}**", ""]
@@ -169,6 +198,15 @@ def to_md(D):
             if r["status"] != "pass":
                 who = f" [{r['role']}]" if r.get("role") else ""
                 out.append(f"  - {r['status'].upper()} `{r['id']}`{who}: {r['title']}. {r['detail'][:240]} (`{r['spec_path']}`)")
+    screens, libs = proto_screens(D)
+    if screens:
+        out += ["", "## Prototype screens", "", "| Screen | Class | Builds as | Opens | Look difference | Reason |",
+                "|---|---|---|---|---|---|"]
+        for r in screens:
+            opens = f"{r['passed']}/{r['checked']} roles" if r["checked"] else "-"
+            out.append(f"| `{r['id']}` | {r['cls']} | {r['builds']} | {opens} | {pct(r['score'])} | "
+                       f"{str(r.get('reason', '')).replace('|', '/')} |")
+        out += ["", "Libraries: " + ("; ".join(libs) if libs else "none swapped.")]
     out += ["", "## Spec review", ""]
     out += [f"- **{i['level']}** `{i['where']}`: {i['msg']}" + (f" Fix: {i['fix']}" if i.get("fix") else "") for i in D["findings"]] or ["None."]
     out += ["", "## Plain-language items", "", "| ID | Status | Text | Where |", "|---|---|---|---|"]
@@ -473,15 +511,40 @@ def s_next(D):
 <h2 class="mt">Re-running</h2><div class="card pad"><p>Edit the YAML, then run <code>spec_check.py &lt;spec&gt; --workspace &lt;ws&gt;</code> and the build from Phase 2. Hand-written hooks, slots, fixtures and scenarios are kept; <code>--audit-holes</code> shows what changed.</p></div></section>"""
 
 
+def s_proto(D):
+    screens, libs = proto_screens(D)
+    if not screens:
+        return ""
+    trs = ""
+    for r in screens:
+        tone = {"theme": "blue", "rebuild": "amber"}.get(r["cls"], "gray")
+        opens = (pill(f"{r['passed']}/{r['checked']} roles", "green" if r["passed"] == r["checked"] else "red")
+                 if r["checked"] else '<span class="muted">not checked</span>')
+        probs = "".join(f"<div class='muted small'>{E_(p)}</div>" for p in r["problems"][:3])
+        trs += (f"<tr><td><b>{E_(r['id'])}</b><div class='muted small'>{E_(r.get('maps') or '')}</div></td>"
+                f"<td>{pill(r['cls'], tone)}</td><td><code>{E_(r['builds'])}</code></td><td>{opens}{probs}</td>"
+                f"<td>{pct(r['score'])}</td><td class='small'>{E_(str(r.get('reason', '')))}</td></tr>")
+    lib = "".join(f"<li>{E_(x)}</li>" for x in libs) or "<li class='muted'>No library swapped.</li>"
+    return (f'<section id="prototype"><h2>Prototype screens</h2><p class="lead">Each screen of the approved prototype: '
+            f'themed (the standard page in its tokens) or rebuilt (ported onto a slot), whether every role opened it '
+            f'without errors, and how different it looks from the approved screenshot (worst role; demo data never '
+            f'matches, so 0% is not expected).</p><div class="card"><table><thead><tr><th>Screen</th><th>Class</th>'
+            f'<th>Builds as</th><th>Opens</th><th>Look difference</th><th>Reason</th></tr></thead><tbody>{trs}</tbody>'
+            f'</table></div><h3>Libraries</h3><div class="card pad"><ul class="checks">{lib}</ul></div></section>')
+
+
 def to_html(D):
     M, app = D["M"], D["M"]["app"]
     by_layer = {layer: [r for r in D["results"] if r["layer"] == layer] for layer in LAYERS}
     screens = s_screens(D)
     body = (s_hero(D, by_layer) + s_open(D) + s_tests(D, by_layer) + s_access(D) + s_items(D, by_layer)
-            + s_review(D) + s_built(D) + screens + s_next(D))
+            + s_review(D) + s_built(D) + s_proto(D) + screens + s_next(D))
     links = [("open", "Open the app"), ("tests", "Tests"), ("access", "Access by role"), ("items", "Plain-language items"),
-             ("review", "Spec review"), ("built", "What was built"), ("screens", "Screens"), ("next", "Next steps")]
-    nav = "".join(f'<a href="#{i}">{t}</a>' for i, t in links if i != "screens" or screens)
+             ("review", "Spec review"), ("built", "What was built"), ("prototype", "Prototype screens"),
+             ("screens", "Screens"), ("next", "Next steps")]
+    has_proto = bool((M.get("prototype") or {}).get("screens"))
+    nav = "".join(f'<a href="#{i}">{t}</a>' for i, t in links
+                  if (i != "screens" or screens) and (i != "prototype" or has_proto))
     brand = (app.get("theme") or {}).get("primary") or "#4F46E5"
     return (f'<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
             f'<title>{E_(app["name"])} · Build report</title><style>{CSS.replace("__BRAND__", brand)}</style></head>'

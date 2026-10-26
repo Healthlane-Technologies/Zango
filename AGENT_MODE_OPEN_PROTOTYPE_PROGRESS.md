@@ -406,5 +406,24 @@ The sponsorship spec in the local DB was rewritten once (data identical, lines 5
 - Kit mode unchanged (test). Docs: open-mode.md §Lint, SKILL critical rules.
 - Tests: `test_preview_parity.OpenDesignLintTests` (g_lint end to end with a stub Dx).
 
+**B6 first part done (2026-10-26); marker parity waits for P2:** parity against the prototype.
+- `zas_test.design` parity in open mode (`open_parity`): for every mapped screen x persona in the
+  bundle's capture, log in as the spec role whose name is the manifest's role label, open the page (record
+  screens: a visible record from `test_records.json`), fail on console/page errors, 5xx, or an
+  error / no-access state; shoot full-page at 1280 and score `look_score` (top 900 px, grey, 320 px wide,
+  mean difference 0..1) against `shot.<role>.png`. One login per role; a failed login is not retried
+  (it locked the machine once, see below). Pairs → `parity_looks.json` (kind `prototype`, class, score,
+  dom). Non-blocking, like kit parity.
+- Look round (`StudioBuild.prototype_look_digest`): open-mode wording, worst score first; theme → tokens /
+  shell options / token-only screen css only, never custom code; rebuild → the slot from `dom.<role>.html`.
+- Build report: "Prototype screens" section (md + html): class, builds as, roles that opened, worst look
+  difference, reason; library swaps from build_log steps `library: <name>` (open-mode.md §Parity).
+- Checked against the deployed voucher app (old kit build, so ~17-18% everywhere: white vs teal sidebar):
+  10/10 pass for Lab User + Finance across a custom page, 4 list pages and 3 360s; report section rendered.
+- **Found:** the voucher workspace's stored PSP Executive test password is rejected (HTTP 400, "email
+  and/or password not correct"); the first run retried it per check and tripped the 2-minute machine
+  lockout. Fixed in open_parity (no retry). The password itself is for the user to reset (not read).
+- Tests: `OpenParityTests` (score, look round, report).
+
 Recommended first move next session: the YAML bug, then S0 (with guard 1) + B1 on the two test apps above
 (both kinds), then B2.

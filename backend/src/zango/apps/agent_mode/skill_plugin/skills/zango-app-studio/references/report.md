@@ -11,7 +11,8 @@ with a pass/skip/fail bar; **Needs attention** lists blocking failures, then ski
 failures folded per kind; every check grouped and expandable) · Access by role (entity × role matrix of
 actions and row scope; a red cell has a failing check) · Plain-language items (status, kind, spec text,
 target, the `zas:note`, and the scenarios that prove it) · Spec review (errors, intent findings, warnings,
-each with the fix) · What was built (modules, entities, endpoints, workflow sizes, pages) · Screens (per
+each with the fix) · What was built (modules, entities, endpoints, workflow sizes, pages) · Prototype screens
+(open mode: class, builds as, roles that opened, look difference, library swaps) · Screens (per
 role) · Manual steps, build timeline, re-running. Put the Markdown summary in your
 final message and give the path to the HTML.
 

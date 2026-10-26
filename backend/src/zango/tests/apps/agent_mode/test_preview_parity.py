@@ -249,3 +249,49 @@ class OneLookTests(unittest.TestCase):
         self.assertEqual(set(studio_build.NON_FAILING), set(report.NON_BLOCKING))
         gallery = LayerResult(name="design", status="fail", failures=[{"id": "design.gallery.badges"}])
         self.assertFalse(studio_build.blocking({"design": gallery}))
+
+
+class OpenParityTests(unittest.TestCase):
+    """Open mode parity before P2 (plan B6): a look score per screen, the look round, the report."""
+
+    def test_the_look_score_grows_with_the_difference(self):
+        from PIL import Image
+
+        with tempfile.TemporaryDirectory() as tmp:
+            a, same, other = (str(Path(tmp) / n) for n in ("a.png", "same.png", "other.png"))
+            Image.new("RGB", (1280, 1200), "white").save(a)
+            Image.new("RGB", (1280, 1200), "white").save(same)
+            im = Image.new("RGB", (640, 500), "white")  # another size: scaled to 1280 wide first
+            im.paste((11, 79, 74), (0, 0, 120, 500))  # a dark sidebar
+            im.save(other)
+            self.assertEqual(design.look_score(a, same), 0)
+            self.assertGreater(design.look_score(a, other), 0.1)
+
+    def test_the_look_round_speaks_open_mode(self):
+        pairs = [{"screen": "prototype/tests", "role": "Admin", "kind": "prototype", "class": "theme", "score": 0.1,
+                  "approved": "a.png", "built": "b.png"},
+                 {"screen": "prototype/home", "role": "Admin", "kind": "prototype", "class": "rebuild", "score": 0.3,
+                  "approved": "c.png", "built": "d.png", "dom": "c.html"}]
+        text = StudioBuild.prototype_look_digest(pairs, 1, 2)
+        self.assertIn("next to the approved prototype", text)
+        self.assertNotIn("sketch.js", text)
+        self.assertLess(text.index("prototype/home"), text.index("prototype/tests"))  # worst first
+        self.assertIn("snapshot `c.html`", text)
+        self.assertIn("Never replace the runtime page with custom code", text)
+
+    def test_the_report_lists_each_screen(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / ".zas").mkdir()
+            (Path(tmp) / ".zas" / "parity_looks.json").write_text(json.dumps(
+                [{"screen": "prototype/tests", "score": 0.2}, {"screen": "prototype/tests", "score": 0.4}]))
+            D = {"ws": tmp, "M": {"prototype": {"screens": [
+                     {"id": "tests", "cls": "theme", "kind": "page", "page": "tests", "maps": "/pages/@tests"},
+                     {"id": "signin", "cls": "prototype-only", "reason": "platform sign-in"}]}},
+                 "results": [{"id": "design.parity.proto.tests.admin", "status": "pass", "role": "Admin", "detail": ""},
+                             {"id": "design.parity.proto.tests.lab", "status": "fail", "role": "Lab", "detail": "HTTP 500 /x"}],
+                 "steps": [{"phase": 6, "step": "library: Chart.js", "status": "ok", "detail": "npm chart.js"}]}
+            rows, libs = report.proto_screens(D)
+            self.assertEqual((rows[0]["passed"], rows[0]["checked"], rows[0]["score"]), (1, 2, 0.4))
+            self.assertEqual(rows[1]["builds"], "-")
+            self.assertEqual(libs, ["Chart.js: npm chart.js"])
+            self.assertIn("Prototype screens", report.s_proto(D))

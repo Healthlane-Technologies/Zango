@@ -116,3 +116,18 @@ Open mode replaces the kit's sketch palettes with the prototype's tokens, for ev
   `var(--z-font)` / `var(--z-mono)` / `var(--z-display)`.
 - `<style>` tags stay banned; stylesheets only as `src/custom/screens/<page>.css` (§Screens).
 - Plus the shell and themed-page checks above. Kit mode is unchanged.
+
+## Parity (`zas_test.design --only parity`)
+
+Until the prototype carries field and action markers (P2), parity in open mode is:
+
+- **Every mapped screen opens as each of its roles** (prototype personas are matched to spec roles by
+  the manifest's role label): no console or page errors, no 5xx, no error or no-access state. A record
+  screen opens a record from `test_records.json` the role can see.
+- **One look per screen**: the built page, shot full-page at 1280 px, next to the approved
+  `shot.<role>.png`, with a look-difference score (0% = the same; demo data never matches). The pairs
+  go to the look rounds (worst first); the score goes to the build report only, never to the verdict.
+
+Log each library swap so the report lists it:
+`python -m zas_test.log --workspace <ws> --phase 6 --step "library: Chart.js" --status ok --detail "npm chart.js 4.4"`
+(or `--detail "redrawn with zas Bars"`).

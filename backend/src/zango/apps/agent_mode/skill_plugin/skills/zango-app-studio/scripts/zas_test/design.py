@@ -650,7 +650,131 @@ def parity_target(Dx, hole):
     return None, (m.group(1) if m else None), f'[data-zas="panel"][data-zas-key="{key}"]', V.get("hero")
 
 
+def look_score(built, approved, width=1280, height=900):
+    """How different two screenshots look, 0 (same) to 1, or None without PIL: the top `height` px at
+    `width`, both scaled down to 320 px and compared in grey. A report figure, not a gate: the prototype
+    shows demo data, so the score never reaches 0."""
+    try:
+        from PIL import Image, ImageChops, ImageStat
+    except ImportError:
+        return None
+    out = []
+    for path in (built, approved):
+        im = Image.open(path).convert("L")
+        if im.width != width:
+            im = im.resize((width, round(im.height * width / im.width)))
+        out.append(im.crop((0, 0, width, min(height, im.height))))
+    h = min(out[0].height, out[1].height)
+    a, c = (im.crop((0, 0, width, h)).resize((320, max(1, h // 4))) for im in out)
+    return round(ImageStat.Stat(ImageChops.difference(a, c)).mean[0] / 255, 3)
+
+
+def open_parity(Dx, b):
+    """Open mode, before P2's markers (plan B6): every mapped screen opens as each of its roles without
+    errors, and its built screenshot is scored against the approved shot.<role>.png. The pairs go to the
+    look rounds; the score goes to the report only."""
+    proto = os.path.join(Dx.ws, ".zas", "bundle", "prototype")
+    try:
+        with open(os.path.join(proto, "manifest.json"), encoding="utf-8") as f:
+            manifest = json.load(f)
+        with open(os.path.join(proto, "capture.json"), encoding="utf-8") as f:
+            capture = {sc["id"]: sc for sc in json.load(f).get("screens") or []}
+    except (OSError, ValueError):
+        Dx.add("design.parity", "screens match the approved prototype", "", "skip",
+               "the prototype bundle has no capture (.zas/bundle/prototype/capture.json)")
+        return
+    rows = ((Dx.M.get("prototype") or {}).get("screens")) or []
+    if not rows:
+        Dx.add("design.parity", "screens match the approved prototype", "prototype", "skip",
+               "the spec has no prototype.screens, so no screen is mapped to a page")
+        return
+    spec_roles = {r.lower(): r for r in (Dx.M.get("roles") or {})}
+    persona_role = {k: spec_roles.get(str(v).lower()) or spec_roles.get(str(k).lower())
+                    for k, v in (manifest.get("roles") or {}).items()}
+    try:
+        records = load_json(Dx.ws, "test_records.json")
+    except (OSError, ValueError):
+        records = {}
+    target = auth.load_users(Dx.ws)["target"]
+    looks = []
+    sessions, failed = {}, {}  # one login per role; one bad password must not lock every role out
+
+    def login(role):
+        if role in failed:
+            raise auth.AuthError(f"login failed earlier in this run, not retried: {failed[role]}")
+        if role not in sessions:
+            try:
+                sessions[role] = auth.login(Dx.ws, role)
+            except auth.AuthError as e:
+                failed[role] = str(e)[:200]
+                raise
+        return sessions[role]
+
+    for r in rows:
+        if r.get("cls") == "prototype-only" or r["id"] not in capture:
+            continue
+        where = f"pages.{r['page']}" if r.get("kind") == "page" else f"detail_views.{r['code']}"
+        for pr in capture[r["id"]].get("roles") or []:
+            persona = pr["role"]
+            shot_of = pr.get("same_as") or persona
+            approved = os.path.join(proto, "screens", r["id"], f"shot.{shot_of}.png")
+            role = persona_role.get(persona)
+            slug = re.sub(r"[^a-z0-9]+", "_", (role or persona).lower())
+            rid = f"design.parity.proto.{r['id']}.{slug}"
+            title = f"prototype screen {r['id']} opens and looks like the approved one"
+
+            def t(r=r, role=role, persona=persona, approved=approved, slug=slug, where=where):
+                if not role:
+                    return None, f"persona {persona!r} is no spec role (manifest roles label = role name)"
+                if r.get("kind") == "view":
+                    hero = (Dx.M["detail_views"].get(r["code"]) or {}).get("hero")
+                    uids = records.get(hero) or []
+                    if not uids:
+                        return None, "no record to open: run zas_test.api first"
+                    sess = login(role)
+                    path = browser.detail_path(Dx.M, hero, browser.visible_uid(Dx.M, hero, sess, uids))
+                else:
+                    sess = login(role)
+                    path = (Dx.M["pages"].get(r.get("page")) or {}).get("route")
+                if not path:
+                    return None, "no route for this screen"
+                rp = browser.RolePage(b, target, sess, viewport={"width": 1280, "height": 900})
+                try:
+                    rp.open(path, wait='[data-zas="page"], [data-zas="header"], [data-zas="empty"]')
+                    try:
+                        rp.page.wait_for_function(
+                            "() => !document.querySelector('[aria-busy=\"true\"], .zas-skel')", timeout=15000)
+                    except Exception:  # noqa: BLE001 - shoot what is there
+                        pass
+                    probs = list(rp.errors)
+                    state = rp.page.query_selector('[data-zas="empty"][data-zas-key="error"], '
+                                                   '[data-zas="empty"][data-zas-key="no_access"]')
+                    if state:
+                        probs.append(f"the page shows {state.get_attribute('data-zas-key')}: "
+                                     f"{(state.inner_text() or '')[:120]}")
+                    shot_dir = os.path.join(Dx.ws, ".zas", "screens", "parity")
+                    os.makedirs(shot_dir, exist_ok=True)
+                    built = os.path.join(shot_dir, f"proto.{r['id']}.{slug}.png")
+                    rp.page.screenshot(path=built, full_page=True)
+                    score = look_score(built, approved) if os.path.isfile(approved) else None
+                    looks.append({"screen": f"prototype/{r['id']}", "where": where, "role": role, "kind": "prototype",
+                                  "class": r.get("cls"), "score": score,
+                                  "approved": os.path.relpath(approved, Dx.ws) if os.path.isfile(approved) else None,
+                                  "dom": os.path.relpath(approved.replace("/shot.", "/dom.").replace(".png", ".html"), Dx.ws),
+                                  "built": os.path.relpath(built, Dx.ws), "hand_written": False})
+                    look = f"look difference {score:.0%}" if score is not None else "no score (PIL missing)"
+                    return not probs, ("; ".join(probs[:5]) + ". " if probs else "") + f"{r.get('cls')}, {look}."
+                finally:
+                    rp.close()
+            Dx.check(rid, title, where, t, role)
+    with open(os.path.join(Dx.ws, ".zas", "parity_looks.json"), "w", encoding="utf-8") as f:
+        json.dump(looks, f, indent=1)
+
+
 def g_parity(Dx, b):
+    if is_open_mode(Dx.ws):
+        open_parity(Dx, b)
+        return
     bundle = os.path.join(Dx.ws, ".zas", "bundle")
     try:
         with open(os.path.join(bundle, "manifest.json"), encoding="utf-8") as f:
