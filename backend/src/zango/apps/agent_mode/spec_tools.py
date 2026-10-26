@@ -785,10 +785,53 @@ class SpecWorkbench:
                 "(what no declared page can show):\n"
                 + "\n".join(f"- /pages/@{code}" for code in missing)
             )
+        note = self._check_prototype_coverage(doc, design)
         if not custom:
-            return " Every screen is built on standard pages (no custom page)."
-        return " Custom pages, built by hand (tell the user, with why):\n" + "\n".join(
-            f"- {p['code']}: {p['reason']}" for p in custom
+            return " Every screen is built on standard pages (no custom page)." + note
+        return (
+            " Custom pages, built by hand (tell the user, with why):\n"
+            + "\n".join(f"- {p['code']}: {p['reason']}" for p in custom)
+            + note
+        )
+
+    def _check_prototype_coverage(self, doc: dict, design) -> str:
+        """The YAML says everything the prototype shows (prototype_coverage.py), or says why not.
+
+        Skipped, with a note, when the prototype can't be rendered here (no Playwright)."""
+        from .prototype_coverage import coverage, ensure_capture, format_gaps
+
+        try:
+            bundle, why = ensure_capture(self.proto.parts, design=design)
+        except Exception as exc:  # noqa: BLE001 - the user still reviews the preview
+            bundle, why = None, str(exc)
+        if bundle is None:
+            return f"\n(Prototype coverage not checked: {why}.)"
+        result = coverage(doc, bundle)
+        if result["menu"] or result["screens"]:
+            raise ToolRefused(
+                "Not ready — the YAML leaves out what the approved prototype shows, so the build "
+                "would drop it. Put each where it belongs in the YAML, with the prototype's own "
+                "words: menu items, labels, groups and order → roles[].menu (a screen that is not "
+                "built → its prototype.screens entry's `menu`); page titles → pages[].title; "
+                "columns → table.columns; status tabs and filter chips → table.quick_filters; "
+                "360 tabs → detail_views[].tabs; section and panel titles → summary sections, "
+                "sidebar or dashboard blocks; buttons → header.actions.buttons, row_actions, "
+                "add_button or a transition's label; field labels → the field's label. If the "
+                "YAML can't say it, set `rebuild: true` with a why on that screen's "
+                "prototype.screens entry. If it won't be built, list it under that entry's "
+                "`not_built` as {text, why}; the user sees those.\n"
+                + format_gaps(result)
+            )
+        dropped = [
+            f"- {sc['id']}: {x.get('text')} ({x.get('why')})"
+            for sc in _proto_entries(doc)
+            for x in sc.get("not_built") or []
+            if isinstance(x, dict)
+        ]
+        return "\nThe YAML covers every prototype screen." + (
+            " Not built from the prototype (tell the user):\n" + "\n".join(dropped)
+            if dropped
+            else ""
         )
 
     def _template_has_design(self) -> bool:
@@ -895,6 +938,12 @@ def _slug(value) -> str:
 
 class ToolRefused(Exception):
     """A tool call the model should correct; its message is shown to it."""
+
+
+def _proto_entries(doc: dict) -> list:
+    """The spec's ``prototype.screens`` entries (open mode)."""
+    screens = ((doc or {}).get("prototype") or {}).get("screens") or []
+    return [s for s in screens if isinstance(s, dict)]
 
 
 def _format_issues(issues) -> str:

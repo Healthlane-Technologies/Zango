@@ -136,8 +136,10 @@ ZAS.on('approve', (data, el, event, ctx) => { ... })        // data-act="approve
 7. **Record the mapping** in the YAML's `prototype.screens`, one entry per manifest screen:
    `{id: requests, maps: /pages/@requests}`, `{id: request, maps: /detail_views/@request_360}`, or
    `{id: signin, only: prototype, why: "…"}`. The build themes standard pages and rebuilds custom pages
-   from their screen. `rebuild: true` with a `why` rebuilds a standard page too: only when the user
-   insists on that exact layout.
+   from their screen. `rebuild: true` with a `why` rebuilds a standard page too: when it shows what
+   the YAML can't say.
+8. **Cover every screen** (below, "The YAML covers the prototype"). `spec_mark_ready` renders the
+   prototype for every persona and refuses while the YAML leaves anything out.
 
 ## Runtime first: how screens map
 
@@ -154,6 +156,26 @@ your tokens. So, however custom a screen looks:
 Only what none of these can show (a map, a planner, a drag-and-drop canvas) becomes a
 `type: custom` page, with a `reason` naming what the declared pages can't do, and its contract.
 `spec_mark_ready` refuses a custom page without a reason and lists the others for the user.
+
+## The YAML covers the prototype
+
+The build follows the YAML, never the prototype's code, so whatever the YAML leaves out is lost.
+For every screen, say in the YAML, with the prototype's own words:
+
+| The prototype shows | The YAML says it in |
+|---|---|
+| menu items, their labels, groups and order | `roles[].menu` (each role's, in the prototype's order) |
+| a menu item for a screen not built | that screen's `prototype.screens` entry: `menu: {group, label, icon}` (shown greyed out) |
+| a page heading | `pages[].title` |
+| list columns, status tabs or filter chips | `table.columns`, `table.quick_filters` |
+| 360 tabs, sections, side panels, header buttons, banners | `detail_views[]`: `tabs`, summary `sections`, `sidebar`, `header.actions.buttons`, `banners` |
+| home cards, "your work" lists, charts | dashboard `blocks`: `kpis`, `table`, `bars` |
+| buttons | `add_button`, `row_actions`, `header.actions.buttons`, or the transition's label |
+| field labels | the field's `label` |
+
+Where the YAML can't say it (a stage tracker, a custom list row), mark the screen `rebuild: true`
+with a `why` naming it; the build ports it from the screen. Only what the first version won't have
+goes in that entry's `not_built: [{text, why}]`: the user sees the list before approving.
 
 ## Later turns
 
@@ -210,7 +232,8 @@ When the user uploaded their app as an `.html` file, it is the prototype. Do not
    its stages and approve/send back/decline → workflow transitions with role policies, uploads →
    file fields, automation it fakes → custom requirements. Map its screens the runtime-first way
    (above) and record them in `prototype.screens`, then call `proto_design`: it reads the page's own
-   `:root` variables.
+   `:root` variables. Then cover every screen ("The YAML covers the prototype"): its menu, columns,
+   tabs, sections and buttons, in the page's own words.
 
 The page keeps its own look. Imported parts may be up to 1 MB each.
 

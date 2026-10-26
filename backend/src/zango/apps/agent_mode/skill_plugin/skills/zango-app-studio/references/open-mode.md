@@ -53,7 +53,9 @@ Rules:
 - **The menu is the spec's.** `makeShell` draws the platform's menu for the signed-in role
   (`roles[].menu`, saved by `zango_platform.py appbuilder`). A group in the prototype is a menu `group`
   in the spec; a label it shows per role is that role's menu `label`. If the prototype's menu differs
-  from the spec's, report it as a spec problem. Do not hard-code menu items in `Shell.tsx`.
+  from the spec's, report it as a spec problem. Do not hard-code menu items in `Shell.tsx`, except
+  the screens not built in this version: `.zas/bundle/prototype/index.md` ("Shell: screens kept in
+  the menu, greyed out") lists them, and they go to `makeShell` as `soon`, exactly as written.
 - **The user menu is the platform's.** The prototype's persona or role switcher becomes the user card:
   it opens appbuilder's profile drawer (role switch, sessions, password) and logs out through
   `/app/logout`. Trial-account sign-in or persona pickers are prototype-only: do not build them.
@@ -93,6 +95,8 @@ The runtime routes stay as they are: `makeListPage` renders a `rebuild_page` slo
 the 360 renders a `rebuild_view` slot after its access checks. Before writing a rebuild slot, Read the
 screen's `shot.<role>.png` and `dom.<role>.html` (the platform blocks the write until you have). Then:
 
+- show everything the hole text's "It must show" list names (its headings, columns, tabs, buttons and
+  labels, in those words); a panel the screen has is never dropped for a simpler one;
 - port the markup to React on the zas kit; for markup the kit has no block for, write it with the screen's
   classes from `css.used.css`, as zas classes or token-only inline styles;
 - keep every `data-zas-ref` / `data-zas-action` marker the snapshot has on the element that shows that

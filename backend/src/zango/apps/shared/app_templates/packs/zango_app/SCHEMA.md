@@ -167,6 +167,12 @@ prototype:
     - { id: board,    maps: /pages/@requests, rebuild: true,
         why: "User wants the exact lane layout the table can't show" }
     - { id: signin,   only: prototype, why: "The platform's sign-in is used" }
+    - { id: agents,   only: prototype, why: "AI helpers come in a later version",
+        menu: { group: AI, label: Agents, icon: bot } }      # greyed out in the menu
+    - id: request
+      maps: /detail_views/@request_360
+      not_built:
+        - { text: Run AI review, why: "The AI review is a later custom requirement" }
 ```
 
 - Every manifest screen is listed once. `maps` is `/pages/@<code>` or
@@ -174,9 +180,18 @@ prototype:
   with a `why`.
 - Standard pages (crud, detail) are **themed**: the runtime page in the
   prototype's tokens. Custom pages are **rebuilt** from their screen.
-- `rebuild: true` (with `why`) rebuilds a standard page from its screen.
-  Use it only when the user asks for that exact layout; the page keeps its
-  data, actions and permissions.
+- The YAML says everything each screen shows, in the prototype's words:
+  menu items, labels, groups and order (`roles[].menu`), page titles,
+  columns, status tabs (`quick_filters`), 360 tabs, sections, sidebar
+  panels, dashboard blocks, buttons and field labels. `spec_mark_ready`
+  renders the prototype and refuses while any of these is missing.
+- `rebuild: true` (with `why`) rebuilds a standard page from its screen:
+  when it shows what the YAML can't say (a stage tracker, a custom list
+  row). The page keeps its data, actions and permissions.
+- `menu` on an `only: prototype` screen keeps it in the menu, greyed out,
+  under `group` (`roles` limits it to those roles).
+- `not_built: [{text, why}]` lists what the build leaves out of a screen.
+  The user sees each one before approving.
 
 ## `choice_sets`
 

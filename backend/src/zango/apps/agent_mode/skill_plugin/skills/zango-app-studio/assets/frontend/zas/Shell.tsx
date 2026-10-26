@@ -34,9 +34,14 @@ export interface ShellOptions {
   topbar?: boolean;
   /** Sidebar width in px (default 240). */
   width?: number;
+  /** Prototype screens not built in this version, greyed out in the menu where the prototype has them
+   * (spec prototype.screens[].menu). `group` joins that menu group, or adds it after the group `after`. */
+  soon?: SoonItem[];
 }
 
-interface PlatformItem { name?: string; label?: string; url?: string; uri?: string; icon?: string; children?: PlatformItem[] }
+export interface SoonItem { label: string; group?: string; icon?: string; roles?: string[]; after?: string }
+
+interface PlatformItem { name?: string; label?: string; url?: string; uri?: string; icon?: string; children?: PlatformItem[]; soon?: boolean }
 interface LayoutProps { menu?: PlatformItem[]; profileInfo?: Record<string, any>; appLogo?: string; children?: React.ReactNode }
 
 const NAMED: Record<string, string> = {
@@ -105,12 +110,36 @@ function UserCard({ user, up }: { user: Record<string, any>; up: boolean }) {
   );
 }
 
+const same = (a?: string, b?: string) => (a || "").trim().toLowerCase() === (b || "").trim().toLowerCase();
+
+/** The platform menu with the role's not-built prototype screens added, greyed out. */
+function withSoon(menu: PlatformItem[], soon: SoonItem[], role: string): PlatformItem[] {
+  const out = menu.map((it) => (it.children ? { ...it, children: [...it.children] } : it));
+  for (const s of soon) {
+    if (s.roles?.length && !s.roles.some((r) => same(r, role))) continue;
+    const item: PlatformItem = { name: s.label, icon: s.icon, soon: true };
+    const group = s.group ? out.find((it) => it.children && same(label(it), s.group)) : undefined;
+    if (group) { group.children!.push(item); continue; }
+    const added = s.group ? { name: s.group, children: [item] } : item;
+    const at = s.after ? out.findIndex((it) => same(label(it), s.after)) : -1;
+    if (at >= 0) out.splice(at + 1, 0, added); else out.push(added);
+  }
+  return out;
+}
+
 function NavItems({ items, groups, path }: { items: PlatformItem[]; groups: "headings" | "collapsible"; path: string }) {
   const [shut, setShut] = useState<Record<string, boolean>>({});
   return (
     <>
       {items.map((it, i) => {
         const kids = it.children || [];
+        if (it.soon) {
+          return (
+            <span key={i} className="zas-sh-a soon" aria-disabled="true" title="Not in this version" data-zas="shell-soon">
+              <ItemIcon icon={it.icon} /><span>{label(it)}</span>
+            </span>
+          );
+        }
         if (!kids.length) {
           return (
             <Link key={i} to={href(it)} className={cx("zas-sh-a", isOn(it, path) && "on")} data-zas="shell-nav" data-zas-key={href(it)}>
@@ -158,7 +187,9 @@ export function makeShell(options: ShellOptions = {}): React.FC<LayoutProps> {
         <span className="zas-sh-name">{b.title || SPEC.app.name}{b.subtitle && <small>{b.subtitle}</small>}</span>
       </Link>
     );
-    const nav = <nav className="zas-sh-nav"><NavItems items={menu} groups={o.groups} path={pathname} /></nav>;
+    const role = String(profileInfo.current_role || profileInfo.user_role || "");
+    const items = o.soon?.length ? withSoon(menu, o.soon, role) : menu;
+    const nav = <nav className="zas-sh-nav"><NavItems items={items} groups={o.groups} path={pathname} /></nav>;
     return (
       <div className={cx("zas zas-sh", `is-${o.layout}`, o.tone === "dark" && "dark")} data-zas="shell"
         style={{ "--zas-sh-bg": navBackground(o.nav), "--zas-sh-w": `${o.width}px` } as React.CSSProperties}>

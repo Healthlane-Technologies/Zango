@@ -28,6 +28,7 @@ never be added (user decision).
 | Done-when | 3 chat-only runs measured | partly: 1 existing-app run (15 screens, ~$3.8) and 1 HTML import run; no brand-new chat-only app yet |
 | U (slice) | Upload an HTML page on new app / change, `proto_import` | **done**, checked in Chrome |
 | U (chat) | Files and screenshots in the chat composer, linked to the message | **done 2026-10-26**, checked in Chrome |
+| B7 | The YAML covers the prototype: coverage gate in spec_mark_ready, greyed menu items, must-show lists | **done 2026-10-26** (unit-tested; checked against the sponsorship app's approved YAML) |
 | P2 | Map contract (`data-zas-*` markers, map check, gates) | **not started** |
 | P3 | Probe/look/Point for open mode | **not started** (only location focus works) |
 
@@ -448,3 +449,37 @@ The sponsorship spec in the local DB was rewritten once (data identical, lines 5
 
 Recommended first move next session: the YAML bug, then S0 (with guard 1) + B1 on the two test apps above
 (both kinds), then B2.
+
+## B7: the YAML covers the prototype (2026-10-26)
+
+Why: the first sponsorship build (manage_sponsorships_healthcare) kept the look but lost the content:
+menu 6 of 11 items (AI/Help groups gone, "Requests" → "Sponsorship requests"), a home with 3 generic
+cards, a plain requests list (no status tabs, no Next action), a request page without its sections,
+sidebar panels and buttons. The build followed the YAML; the YAML had left these out. Its
+"0 custom screen(s)" line and the 3-5% look scores hid it (testing step, separate).
+
+- `scripts/proto_landmarks.py` (stdlib; spec_check and the platform share it): labels of a captured
+  `dom.<role>.html` by kind: menu `(group, label)`, title (h1), headings, columns, tabs, buttons, field
+  labels; counts dropped, IDs/amounts/dates/long text skipped.
+- `agent_mode/prototype_coverage.py`: per screen, labels not said in the YAML it maps to (page/360 and
+  the entities they show). Skips persona names, shell chrome (on every screen), record titles, screens
+  that render like an earlier one, `not_built` texts. Rebuilt screens go to the build instead. Menu: per
+  persona when menus differ; when all personas share one menu, every item must be in some role's menu
+  and the fullest role keeps groups and order.
+- `spec_mark_ready` (open mode) runs it after app.design: capture via `write_prototype_bundle` into
+  `$TMPDIR/zas-proto-coverage/<parts hash>`; refuses with each gap and where it goes; no browser → note.
+- Schema (pack 1.1.21): `prototype.screens[].menu {label, group, icon, roles}` and
+  `not_built [{text, why}]`; SCHEMA.md, requirements.py prompt and zango-prototype SKILL.md say the YAML
+  covers everything ("The YAML covers the prototype" table); "rebuild only when the user insists" is gone.
+- Build: spec_check passes `menu` rows to index.md ("Shell: screens kept in the menu, greyed out" →
+  `makeShell({soon})`, new groups placed after the prototype's previous group) and adds "It must show: …"
+  to rebuild holes; `not_built` listed for the report. `makeShell` gained `soon` (greyed, not links).
+- On the sponsorship approved YAML the gate lists: menu 'Requests', 'Agents', 'Templates', 'Evidence
+  requirements', 'Getting started', 'Integrations'; home 'Your work', 'Sponsorships by stage'; requests
+  'Next action' + 3 status tabs; request 'Package and benefits', 'Amounts', 'Next action', 'Run AI
+  review', 'View text', 'Withdraw request', 'Received via'; organisers/agreements columns; policy fields.
+- Tests: `test_prototype_coverage.py` (12, fictional lab fixture). 125 pass with parity/guards/declared_ui/prototype.
+- Limits: KPI captions that are not headings aren't read; label matching is by text within the screen's
+  YAML scope (a word used elsewhere in the entity can count as covered).
+- Next: re-run the sponsorship requirement so the analyst fixes the YAML through the gate, then build.
+  Testing fixes (look score, test-data cleanup, demo data) after that.

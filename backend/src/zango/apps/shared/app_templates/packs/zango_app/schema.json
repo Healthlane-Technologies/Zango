@@ -218,6 +218,48 @@
               },
               "rebuild": {
                 "type": "boolean"
+              },
+              "menu": {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "A screen that is not built (only: prototype) still shows in the menu, greyed out, where the prototype has it.",
+                "properties": {
+                  "label": {
+                    "type": "string"
+                  },
+                  "group": {
+                    "type": "string"
+                  },
+                  "icon": {
+                    "type": "string"
+                  },
+                  "roles": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "not_built": {
+                "type": "array",
+                "description": "What this screen shows in the prototype that the build leaves out, each with why (the user sees these).",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "text",
+                    "why"
+                  ],
+                  "properties": {
+                    "text": {
+                      "type": "string"
+                    },
+                    "why": {
+                      "type": "string"
+                    }
+                  }
+                }
               }
             },
             "allOf": [

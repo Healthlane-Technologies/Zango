@@ -325,6 +325,7 @@ table.zas-t { width: 100%; border-collapse: separate; border-spacing: 0; font-si
 .zas-sh-a:hover { background: var(--zas-sh-hover); color: var(--zas-sh-strong); }
 .zas-sh-a.on { background: var(--zas-sh-on); color: var(--zas-sh-on-fg); font-weight: 600; }
 .zas-sh-a.in { color: var(--zas-sh-strong); }
+.zas-sh-a.soon, .zas-sh-a.soon:hover { opacity: .5; cursor: default; background: none; color: inherit; }
 .zas-sh-a > span:not(.zi) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .zas-sh-svg { display: inline-grid; place-items: center; }
 .zas-sh-svg svg { width: 1em; height: 1em; }

@@ -1780,7 +1780,8 @@ class Spec:
             seen.add(sid)
             why = str(sc.get("why") or "").strip()
             if sc.get("only") == "prototype":
-                rows.append({"id": sid, "cls": "prototype-only", "reason": why or "not built"})
+                rows.append({"id": sid, "cls": "prototype-only", "reason": why or "not built",
+                             "menu": sc.get("menu") if isinstance(sc.get("menu"), dict) else None})
                 continue
             m = re.fullmatch(r"/(pages|detail_views)/@([A-Za-z0-9_]+)", str(sc.get("maps") or ""))
             if not m:
@@ -1788,7 +1789,8 @@ class Spec:
                         "use /pages/@<code> or /detail_views/@<code>, or only: prototype with a why")
                 continue
             kind, code = m.groups()
-            row = {"id": sid, "maps": sc["maps"]}
+            row = {"id": sid, "maps": sc["maps"],
+                   "not_built": [x for x in arr(sc.get("not_built")) if isinstance(x, dict)]}
             if kind == "pages":
                 P = M["pages"].get(code)
                 if not P:
@@ -2359,15 +2361,77 @@ def attach_prototype(S, out):
                       " shot.<role>.png and dom.<role>.html: port the markup onto the zas kit with this slot's data,"
                       " keep every data-zas-ref / data-zas-action marker, and take styles from css.used.css as zas"
                       " classes or token-only inline styles (open-mode.md, \"Screens\").")
+        shows = must_show(os.path.join(bundle, "screens", r["id"]), r.get("not_built"))
+        if shows:
+            h["text"] += f" It must show, in these words: {shows}."
         r["slot"] = h["slot"]
     idx = os.path.join(bundle, "index.md")
     try:
         text = open(idx, encoding="utf-8").read()
     except OSError:
         return
-    text = text.split(PROTO_CLASSES_START)[0].rstrip() + "\n\n" + PROTO_CLASSES_START + "\n" + proto_classes_md(rows, missing)
+    text = (text.split(PROTO_CLASSES_START)[0].rstrip() + "\n\n" + PROTO_CLASSES_START + "\n"
+            + proto_classes_md(rows, missing) + soon_md(rows, manifest))
     with open(idx, "w", encoding="utf-8") as f:
         f.write(text)
+
+
+def must_show(screen_dir, not_built=None):
+    """A rebuilt screen's labels (proto_landmarks.py, over every role's dom), minus what the spec says
+    it leaves out: what the slot must show."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    if here not in sys.path:
+        sys.path.insert(0, here)
+    import proto_landmarks as PL
+
+    skip = {PL.norm(x.get("text")) for x in not_built or []}
+    seen, out = set(), []
+    try:
+        names = sorted(f for f in os.listdir(screen_dir) if f.startswith("dom."))
+    except OSError:
+        return ""
+    for f in names:
+        marks = PL.landmarks(open(os.path.join(screen_dir, f), encoding="utf-8").read())
+        for kind in ("heading", "column", "tab", "button", "label"):
+            for t in marks.get(kind, []):
+                if PL.norm(t) not in seen and PL.norm(t) not in skip:
+                    seen.add(PL.norm(t))
+                    out.append(f"{kind} '{t}'")
+    return ", ".join(out)
+
+
+def soon_items(rows, manifest):
+    """makeShell's `soon` entries: not-built screens kept in the menu (prototype.screens[].menu),
+    each new group placed after the group the prototype shows before it."""
+    order = []
+    for sc in manifest.get("screens") or []:
+        g = (sc or {}).get("group")
+        if g and g not in order:
+            order.append(g)
+    titles = {sc.get("id"): sc.get("title") for sc in manifest.get("screens") or [] if isinstance(sc, dict)}
+    out = []
+    for r in rows:
+        m = r.get("menu")
+        if r["cls"] != "prototype-only" or not m:
+            continue
+        item = {"label": m.get("label") or titles.get(r["id"]) or r["id"]}
+        for k in ("group", "icon", "roles"):
+            if m.get(k):
+                item[k] = m[k]
+        g = m.get("group")
+        if g in order and order.index(g) > 0:
+            item["after"] = order[order.index(g) - 1]
+        out.append(item)
+    return out
+
+
+def soon_md(rows, manifest):
+    items = soon_items(rows, manifest)
+    if not items:
+        return ""
+    return ("\n## Shell: screens kept in the menu, greyed out\n\n"
+            "Pass these to `makeShell` as `soon` in `src/custom/Shell.tsx`, exactly as written:\n\n"
+            "```json\n" + json.dumps(items, indent=2) + "\n```\n")
 
 
 def proto_classes_md(rows, missing):
@@ -2383,6 +2447,10 @@ def proto_classes_md(rows, missing):
         L.append(f"| `{r['id']}` | {r.get('maps') or '-'} | {r['cls']} | {str(r.get('reason', '')).replace('|', '/')} | {builds} |")
     for sid in missing:
         L.append(f"| `{sid}` | - | unmapped | not in the spec's prototype.screens | standard if it has a page; report it |")
+    left = [(r["id"], x) for r in rows for x in r.get("not_built") or []]
+    if left:
+        L += ["", "Not built from the prototype (the spec's not_built; say so in the build report):", ""]
+        L += [f"- `{sid}`: {x.get('text')} ({x.get('why')})" for sid, x in left]
     return "\n".join(L) + "\n"
 
 

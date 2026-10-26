@@ -739,6 +739,19 @@ a{color:var(--blue)}
     <p class="done"><span class="pill ok">first part done 26 Oct</span> In open mode the parity check opens every mapped screen as each persona's spec role, fails on errors or an error/no-access state, and scores the built screenshot against <code>shot.&lt;role&gt;.png</code>. Pairs feed an open-mode look round (worst first; theme fixes stay in tokens), and the build report gains a Prototype screens section with class, roles opened, look difference and library swaps. Checked on the deployed voucher app: 10/10 screen×role pairs open. Marker parity (refs) follows P2.</p>
   </div></div>
 
+  <div class="phase"><div class="id">B7</div><div>
+    <h4>The YAML covers the prototype (added 26 Oct, after the first sponsorship build)</h4>
+    <div class="row"><span class="pill">requirement side</span><span class="pill">spec_mark_ready</span><span class="pill">shell</span></div>
+    <p>The first imported sponsorship build kept the prototype's colours and sidebar but not its content: the menu lost 5 items and 2 groups, "Requests" became "Sponsorship requests", the home got 3 different cards, the requests list lost its status tabs and Next action column, and the request page lost its sections, sidebar panels and buttons. The build followed the YAML faithfully; the YAML had left all of it out. The rule "theme by default, rebuild only when the user insists" let it.</p>
+    <ul>
+      <li><b>Rule:</b> the YAML says everything each screen shows, in the prototype's words: menu items, labels, groups and order; page titles; columns; status tabs; 360 tabs, sections and side panels; dashboard blocks; buttons; field labels. What the YAML can't say makes the screen <code>rebuild: true</code> with that thing named in the why.</li>
+      <li><b>Gate:</b> <code>spec_mark_ready</code> renders the prototype for every persona (the bundle capture, cached by parts hash), reads each screen's labels (<code>proto_landmarks.py</code>) and refuses with each missing label and where it goes in the YAML. Escape: <code>prototype.screens[].not_built: [{text, why}]</code>, which the user sees.</li>
+      <li><b>Menu:</b> a screen not built keeps its menu entry, greyed out, through <code>prototype.screens[].menu</code>; spec_check hands them to <code>makeShell({soon})</code>, each new group after the prototype's previous one.</li>
+      <li><b>Rebuilds:</b> each rebuild hole carries the screen's labels as "It must show", so a rebuilt home can't drop panels.</li>
+    </ul>
+    <p class="done"><span class="pill ok">built 26 Oct</span> Against the sponsorship app's approved YAML the gate lists exactly the gaps seen in the build: 6 menu items, the Requests label, the Next action column and 3 status tabs, the request page's Package and benefits / Amounts / Next action panels and its Run AI review / Withdraw buttons, organiser and policy columns and fields. Pack 1.1.21. Limits: KPI tile captions that are not headings are not read yet; matching is per screen scope, by label text. Testing (look score, test data, demo data) is a separate step.</p>
+  </div></div>
+
   <h3>Order across both stages</h3>
   <div class="tw"><table>
     <thead><tr><th>Week</th><th>Requirement side</th><th>Build side</th></tr></thead>
