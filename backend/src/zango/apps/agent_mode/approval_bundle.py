@@ -629,6 +629,30 @@ def prototype_index_md(capture: dict, manifest: dict, design=None) -> str:
             "Blocked requests (not on the allowed hosts):",
             *[f"- {u}" for u in capture["blocked"][:10]],
         ]
+    # The shell is in every snapshot; each role's home shows it with that role's menu.
+    homes = manifest.get("home") if isinstance(manifest.get("home"), dict) else {}
+    shot = {
+        (s["id"], r["role"]): r.get("same_as") or r["role"]
+        for s in capture.get("screens") or []
+        for r in s.get("roles") or []
+        if r.get("files") or r.get("same_as")
+    }
+    shell_refs = [
+        f"{role} `screens/{home}/shot.{shot[(home, role)]}.png`"
+        for role, home in homes.items()
+        if (home, role) in shot
+    ]
+    lines += [
+        "",
+        "Shell (sidebar or top bar, app name, menu groups, user card): build it as "
+        "`src/custom/Shell.tsx` on the runtime's `makeShell` (references/open-mode.md, "
+        '"The shell"). Only its look comes from here; the menu is the spec\'s per role.'
+        + (
+            " Read it on each role's home: " + ", ".join(shell_refs) + "."
+            if shell_refs
+            else ""
+        ),
+    ]
     lines += [
         "",
         "Libraries the prototype loads are in `libraries.json`: use the npm package of the same "

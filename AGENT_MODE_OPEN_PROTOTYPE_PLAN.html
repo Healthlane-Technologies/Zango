@@ -697,6 +697,7 @@ a{color:var(--blue)}
       <li>The runtime takes a <code>shell</code> slot so a custom shell replaces the default without forking routing</li>
       <li>A prototype persona switcher becomes the real user menu. Trial-account sign-in is prototype-only and is not built.</li>
     </ul>
+    <p class="done"><span class="pill ok">done 26 Oct</span> The slot was already there: appbuilder's <code>ZangoApp</code> renders <code>customComponents.Layout</code> in place of its navbar and topbar. The runtime's <code>makeShell(options)</code> fills it: side or top layout, the menu's background as a token name, light or dark text, brand block, group headings, user card place, top bar. <code>src/custom/Shell.tsx</code> is one <code>makeShell</code> call with no colours. Menu items are the platform's for the role; the user card opens appbuilder's own profile drawer (role switch) and logout. A lint check makes open-mode builds wire it. Live on the voucher app: teal sidebar, active items, navigation, profile drawer and a role switch that redraws the menu.</p>
   </div></div>
 
   <div class="phase"><div class="id">B4</div><div>

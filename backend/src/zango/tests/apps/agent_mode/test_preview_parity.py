@@ -60,6 +60,37 @@ class ParityDiffTests(unittest.TestCase):
                          ['missing bars "Open by status"', 'not in the approved screen: bars "By status"'])
 
 
+class OpenShellLintTests(unittest.TestCase):
+    """Open mode builds the shell as src/custom/Shell.tsx on makeShell (references/open-mode.md)."""
+
+    def ws(self, tmp, shell=None, app=None, open_mode=True):
+        root = Path(tmp)
+        if open_mode:
+            (root / ".zas" / "bundle" / "prototype").mkdir(parents=True)
+            (root / ".zas" / "bundle" / "prototype" / "manifest.json").write_text("{}")
+        (root / "frontend" / "src" / "custom").mkdir(parents=True)
+        if shell is not None:
+            (root / "frontend" / "src" / "custom" / "Shell.tsx").write_text(shell)
+        if app is not None:
+            (root / "frontend" / "src" / "App.tsx").write_text(app)
+        return str(root)
+
+    def test_kit_mode_has_nothing_to_check(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(design.open_shell_problems(self.ws(tmp, open_mode=False)), [])
+
+    def test_open_mode_needs_the_shell_and_its_wiring(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertIn("no frontend/src/custom/Shell.tsx", design.open_shell_problems(self.ws(tmp))[0])
+        with tempfile.TemporaryDirectory() as tmp:
+            probs = design.open_shell_problems(self.ws(tmp, shell="export default () => null;", app="<ZApp />"))
+            self.assertEqual(len(probs), 2)
+        with tempfile.TemporaryDirectory() as tmp:
+            ok = self.ws(tmp, shell='export default makeShell({ tone: "dark" });',
+                         app="<ZApp customComponents={{ Layout: Shell }} />")
+            self.assertEqual(design.open_shell_problems(ok), [])
+
+
 class TargetTests(unittest.TestCase):
     def setUp(self):
         self.Dx = type("Dx", (), {})()

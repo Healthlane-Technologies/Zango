@@ -152,6 +152,9 @@ faithfully, keeping its structure and its inline styles (`style="background:line
 
 ## The app shell (sidebar header, user card, top bar)
 
+Open mode (`.zas/bundle/prototype/`) builds the shell differently: `src/custom/Shell.tsx` on `makeShell`,
+see `references/open-mode.md` §The shell. This section is for the kit preview's `/shell` screen.
+
 The shell comes from `@zango-core/appbuilder`'s `ZangoApp`; the preview draws its own. When
 `.zas/bundle/index.md` has a `/shell` screen, **Read its screenshot first**, then make the shell
 look like it through `ZangoApp`'s props in `src/App.tsx` (`references/zango/frontend/appbuilder.md`,

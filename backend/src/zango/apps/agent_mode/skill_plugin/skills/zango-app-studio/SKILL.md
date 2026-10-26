@@ -173,6 +173,8 @@ catch backend bugs before the frontend exists.
 4. `src/custom/pages/index.ts` and `src/App.tsx` from `assets/templates/frontend/` (keep the
    scaffold's `appInitializerEndpoint`; add the shell props when the bundle has a `/shell` screen,
    custom-code.md §The app shell). One export per page (`references/map/pages-menus.md`).
+   **Open mode** (`.zas/bundle/prototype/` exists): instead of the shell props, write `src/custom/Shell.tsx`
+   on `makeShell` and pass it as `customComponents={{ Layout: Shell }}` (`references/open-mode.md` §The shell).
 5. Slots for `custom_page` / `custom_tab` / `custom_panel` holes from `Slot.tsx.tmpl`, exported in
    `slots/index.ts` (`references/custom-code.md` §Slots). A hole that names `.zas/bundle/screens/…`
    was approved in the preview: port its `sketch.js` onto the zas kit, block for block
@@ -231,7 +233,8 @@ manual steps) + the HTML path. Rules: `references/report.md`.
   blocks writing its file until you have Read them. Custom screens are ported from their sketch; standard
   screens are arranged with their levers only: the switcher's place (`makeViewsPage(…, { switcher })`,
   views.md §Matching the approved page) and the shell's logo, user card and top bar (`ZangoApp` props in
-  `src/App.tsx`, components in `src/custom/shell/`, custom-code.md §The app shell).
+  `src/App.tsx`, components in `src/custom/shell/`, custom-code.md §The app shell). In open mode the shell is
+  `src/custom/Shell.tsx` on `makeShell`, options only (open-mode.md §The shell).
 - Never edit `packages/`, the runtime inside the app, or the database by hand. Fix the generated code,
   the runtime in the skill (`assets/`), or report a spec problem.
 - Never print or commit passwords or tokens. `.zas/test_users.json` is chmod 600.
@@ -247,6 +250,7 @@ manual steps) + the HTML path. Rules: `references/report.md`.
 | prose → hooks and slots | `references/custom-code.md` |
 | 360 pitfalls / child tables | `references/zango/entity-360.md`, `references/zango/child-tables.md` |
 | look and feel | `references/design-system.md` |
+| open mode (an approved prototype in `.zas/bundle/prototype/`) | `references/open-mode.md` |
 | tests / report | `references/testing.md` (layers, intent review, fixtures, scenarios), `references/report.md` |
 | a full worked module | `references/examples/vendors/` |
 | environment, app, running commands | `references/setup.md` |

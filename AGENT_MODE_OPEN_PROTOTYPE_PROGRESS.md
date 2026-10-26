@@ -339,5 +339,31 @@ The sponsorship spec in the local DB was rewritten once (data identical, lines 5
   bridge under `html:root`, which wins. Apps without `app.design` still have that order problem.
 - Not in B2: the appbuilder shell (sidebar, top bar, "zelthy" logo) stays Inter; that is B3.
 
+**B3 done (2026-10-26):** the prototype's shell on the runtime.
+- The "shell slot" already exists: appbuilder's `ZangoApp` renders `customComponents.Layout` (with `menu`,
+  `profileInfo`, `appLogo` and the routed page as `children`) instead of its own navbar + topbar. No fork.
+- Runtime `zas/Shell.tsx`: `makeShell(options)` → the Layout component. Options only: `layout` side/top,
+  `nav` (a token name, e.g. `brand-strong`; other names read `--p-<name>`), `tone` light/dark, `brand`
+  {title, subtitle, icon | logo}, `groups` headings/collapsible, `user` side/top, `topbar`, `width`.
+  Colours are all derived in `tokens.css` (`.zas-sh*`), so `src/custom/Shell.tsx` stays colour-free.
+- Menu = the platform's for the signed-in role (spec `roles[].menu`); a platform group (item with children)
+  draws as a heading or a fold. User card → appbuilder's own `UserProfileDrawer` (role switch, sessions,
+  password) and `/app/logout`. The prototype's persona switcher is not built. Markers: `shell`,
+  `shell-brand`, `shell-nav`, `shell-user`, `shell-top` (the last three as the kit-mode parity expects).
+- Build: `references/open-mode.md` (new) §The shell: options table read off each role's home screenshot;
+  SKILL.md Phase 6 step 4 + critical rules + reference index; custom-code.md and the App.tsx template point
+  there. The bundle's `index.md` now has a Shell line naming each role's home screenshot.
+- Lint: `zas_test.design` lint, open mode only (bundle has `prototype/manifest.json`): `src/custom/Shell.tsx`
+  exists, uses `makeShell(`, and `App.tsx` has `Layout: Shell`.
+- Live (voucher scratch frontend, hand-written Shell.tsx: brand-strong, dark, ticket, headings, user side):
+  sidebar #0B4F4A with Plus Jakarta Sans, active item highlighted on list and 360 pages, client-side
+  navigation, the user menu opens the profile drawer, and a role switch (Program Admin → PSP Executive)
+  redraws the menu from the platform. Not checked: the < 760px layout and `layout: "top"`.
+- Seen: the voucher spec's menus have no groups, so the prototype's "Work"/"Masters" headings don't show.
+  That is a spec matter (menu `group`), as the plan says; nothing in B3 invents groups.
+- Also fixed: `test_prototype.py` had `PrototypeBundleTests` twice (B1); the stale first copy is gone.
+- Tests: `test_preview_parity.OpenShellLintTests`, `test_prototype.PrototypeIndexTests`, the bundle test
+  checks the Shell line. Same pre-existing failures as before (test_skill_plugin 7+1, dashboard tree).
+
 Recommended first move next session: the YAML bug, then S0 (with guard 1) + B1 on the two test apps above
 (both kinds), then B2.

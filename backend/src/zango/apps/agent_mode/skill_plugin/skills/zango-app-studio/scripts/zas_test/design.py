@@ -108,6 +108,28 @@ def approved_palettes(Dx):
     return out
 
 
+def open_shell_problems(ws):
+    """Open mode (an approved prototype in the bundle): the shell is src/custom/Shell.tsx on makeShell,
+    wired as ZangoApp's Layout (references/open-mode.md, "The shell")."""
+    if not os.path.isfile(os.path.join(ws, ".zas", "bundle", "prototype", "manifest.json")):
+        return []
+    src = os.path.join(ws, "frontend", "src")
+    try:
+        shell = open(os.path.join(src, "custom", "Shell.tsx"), encoding="utf-8").read()
+    except OSError:
+        return ["open mode: no frontend/src/custom/Shell.tsx (the approved prototype's shell on makeShell)"]
+    probs = []
+    if "makeShell(" not in shell:
+        probs.append("frontend/src/custom/Shell.tsx: build the shell with makeShell from ../zas, options only")
+    try:
+        app = open(os.path.join(src, "App.tsx"), encoding="utf-8").read()
+    except OSError:
+        app = ""
+    if not re.search(r"Layout\s*:\s*Shell\b", app):
+        probs.append("frontend/src/App.tsx: pass the shell as customComponents={{ Layout: Shell }}")
+    return probs
+
+
 def g_lint(Dx, b=None):
     root = os.path.join(Dx.ws, "frontend", "src", "custom")
     files = [f for f in glob.glob(os.path.join(root, "**", "*"), recursive=True) if os.path.isfile(f)]
@@ -145,6 +167,7 @@ def g_lint(Dx, b=None):
         for word in ("Lorem", "Coming soon", "TODO"):
             if re.search(rf">[^<]*{word}", code):
                 probs.append(f"{rel}: placeholder copy '{word}' rendered")
+    probs += open_shell_problems(Dx.ws)
     try:  # lucide_icons.py maps a name lucide does not have to Circle: a typo shows an empty circle
         gen = open(os.path.join(Dx.ws, "frontend", "src", "zas", "icons.gen.ts"), encoding="utf-8").read()
         unknown = [n for n, c in re.findall(r'^\s*"([a-z0-9-]+)":\s*(\w+),', gen, re.M) if c == "Circle" and n != "circle"]
