@@ -524,3 +524,23 @@ so the build opened a drawer.
 
 - The new app was pinned to zango_app 1.1.20: the 1.1.21/1.1.22 bumps were never imported into the local DB (packs seed only on migrate). Imported and published 1.1.22, moved the app's binding and requirement pin to it mid-gathering.
 - The B7 gate, run offline on draft rev 14, catches the preview-only menu items (Agents in AI; Getting started and Integrations in Help; these screens are prototype-only with no `menu` entry), the agreement/evidence row targets (`request_360#agreement` / `#evidence`, now drawer), and missing columns, headings, buttons and labels on home, requests, request, organisers, organiser, agreements and policy. The analyst will be refused at mark-ready until each is placed in the YAML, set to `rebuild`, or listed under `not_built`.
+
+## B7c: the gate can't be skipped, and reads 360s strictly (2026-10-26)
+
+Run 3 (tidy-osprey, pack 1.1.22): the analyst never called spec_mark_ready and told the user to press
+Commit for build, which only validated the schema. The YAML (rev 32) had the greyed-out menu items
+right, but the request 360 had no Closure tab, extra Benefits/Documents tabs and none of the Summary /
+Package and benefits / Business rationale / Amounts / Next action panels; the organiser 360 had no
+Agreements or Profile; every role had the full menu.
+
+- `template_spec.approval_problem` (open mode) runs `prototype_gaps` → `prototype_coverage.coverage_issues`;
+  gaps return 409 `{issues, agent_prompt}`. AgentPage sends `agent_prompt` + the issues to the agent and
+  commits again after its turn (the existing unfinished-custom-work path). No browser: commit goes through.
+- `GUIDE` (shared by spec_mark_ready and Commit) adds: one shared menu doesn't say who sees what; 360 tabs
+  are the prototype's only; a heading is a `title`, not a field.
+- Headings/titles match `scope_titles` (every `title`, tab labels) instead of all scope strings; a 360's tabs
+  match its view's tab labels exactly, and view tabs the prototype lacks are `extra_tab` gaps.
+- Fixed false alarms: not-built menu items are placed where Shell's `withSoon` puts them (`_place`) before
+  the order check; a button on more than half of a persona's screens (4+) is shell chrome.
+- Prompt and zango-prototype SKILL.md say the same. 6 new tests (20 in the module). The 5
+  TemplateFenceTests errors in test_requirements also fail on HEAD (missing test-DB table).

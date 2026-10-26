@@ -763,6 +763,19 @@ a{color:var(--blue)}
     <p class="done"><span class="pill ok">built 26 Oct</span> On the sponsorship YAML the gate now also asks for <code>request_360#agreement</code> and <code>request_360#evidence</code>. Pack 1.1.22. The 360 also shows No access on a 403 instead of an error page.</p>
   </div></div>
 
+  <div class="phase"><div class="id">B7c</div><div>
+    <h4>The coverage gate can't be skipped, and reads 360s strictly</h4>
+    <div class="row"><span class="pill">coverage gate</span><span class="pill">approval</span><span class="pill">console</span></div>
+    <p>On the second sponsorship run the analyst asked the user to press Commit for build without marking the spec ready, so the gate never ran: the request page lost its Closure tab and its Summary / Package and benefits / Amounts / Next action panels, the organiser page its Agreements and Profile, and every role got the whole menu.</p>
+    <ul>
+      <li><b>Commit for build</b> runs the same check; gaps come back as issues the console hands to the agent with the gate's brief, and the commit goes through once the agent has fixed them.</li>
+      <li><b>360 tabs</b> are the prototype's and no others; a <b>heading</b> must be a section, panel or block title (a field of that name no longer counts).</li>
+      <li><b>No false alarms</b> for greyed-out menu items (counted in their group's place, as the shell draws them) or a top-bar button most screens show.</li>
+      <li><b>Roles:</b> a menu shared by every persona doesn't say who sees what; each item goes only to the roles that can open its page.</li>
+    </ul>
+    <p class="done"><span class="pill ok">built 26 Oct</span> On run 2's YAML the gate now names the Closure tab, the extra Benefits and Documents tabs, and the five request headings, with no menu or New request false alarms.</p>
+  </div></div>
+
   <h3>Order across both stages</h3>
   <div class="tw"><table>
     <thead><tr><th>Week</th><th>Requirement side</th><th>Build side</th></tr></thead>

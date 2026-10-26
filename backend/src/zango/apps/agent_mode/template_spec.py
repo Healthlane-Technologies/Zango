@@ -126,7 +126,35 @@ def approval_problem(requirement):
             "message": "Some custom parts are not finished. Ask the agent to finish them before building.",
             "issues": unfinished,
         }
+    if is_open:
+        gaps = prototype_gaps(requirement)
+        if gaps:
+            from .prototype_coverage import GUIDE
+
+            return 409, {
+                "message": "The spec leaves out some of what the approved prototype shows. "
+                "Ask the agent to add them before building.",
+                "issues": gaps,
+                "agent_prompt": "Before building, the YAML must cover what the approved "
+                "prototype shows; the build would drop these. " + GUIDE,
+            }
     return None
+
+
+def prototype_gaps(requirement) -> list:
+    """Open mode: what the prototype shows and the spec leaves out (prototype_coverage.py), so
+    Commit for build can't skip the check spec_mark_ready runs."""
+    import yaml
+
+    from .prototype_coverage import coverage_issues
+
+    try:
+        doc = yaml.safe_load(requirement.spec_markdown or "")
+    except yaml.YAMLError:
+        return []
+    if not isinstance(doc, dict):
+        return []
+    return coverage_issues(doc, requirement.prototype_parts or {})
 
 
 def unfinished_custom_work(spec_text, sketches: bool = True) -> list:

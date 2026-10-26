@@ -24,6 +24,23 @@ from functools import lru_cache
 from pathlib import Path
 
 
+# What to do with a gap: spec_mark_ready's refusal, and the agent's brief when Commit finds one.
+GUIDE = (
+    "Put each where it belongs in the YAML, with the prototype's own words: menu items, labels, "
+    "groups and order → roles[].menu (a screen that is not built → its prototype.screens entry's "
+    "`menu`); the prototype shows one menu for every persona, so give each item only to the roles "
+    "that can open its page (the requirements decide who sees what, not the prototype); page "
+    "titles → pages[].title; columns → table.columns; status tabs and filter chips → "
+    "table.quick_filters; where a row opens → table.row_click (its 360, `<view>#<tab>` for its "
+    "parent's 360 on a tab, or drawer); 360 tabs → detail_views[].tabs, the prototype's tabs "
+    "and no others; section and panel headings → a summary section's, sidebar block's or "
+    "dashboard block's `title` (a field of that name is not a heading); buttons → "
+    "header.actions.buttons, row_actions, add_button or a transition's label; field labels → "
+    "the field's label. If the YAML can't say it, set `rebuild: true` with a why on that "
+    "screen's prototype.screens entry. If it won't be built, list it under that entry's "
+    "`not_built` as {text, why}; the user sees those."
+)
+
 CONTENT_KINDS = ("title", "heading", "column", "tab", "button", "label")
 KIND_WORDS = {
     "title": "page title",
@@ -32,6 +49,7 @@ KIND_WORDS = {
     "tab": "tab",
     "button": "button",
     "label": "field label",
+    "extra_tab": "extra tab",
 }
 
 
@@ -130,6 +148,43 @@ def scope_labels(doc: dict, maps: str, norm) -> set:
     return out
 
 
+def _titles(node, out: set, norm, key=None) -> set:
+    """Titles a page or view shows: every ``title``, and each tab's ``label``."""
+    if isinstance(node, dict):
+        for k, v in node.items():
+            if k == "title" and isinstance(v, str):
+                out.add(norm(v))
+            elif k == "tabs" and isinstance(v, list):
+                for t in v:
+                    if isinstance(t, dict) and isinstance(t.get("label"), str):
+                        out.add(norm(t["label"]))
+                    _titles(t, out, norm)
+            else:
+                _titles(v, out, norm)
+    elif isinstance(node, list):
+        for v in node:
+            _titles(v, out, norm)
+    return out
+
+
+def scope_titles(doc: dict, maps: str, norm) -> set:
+    """The titles of the page or 360 a screen maps to (not its entities' field names): what a
+    heading must match."""
+    m = re.fullmatch(r"/(pages|detail_views)/@([A-Za-z0-9_]+)", str(maps or ""))
+    if not m:
+        return set()
+    out: set = set()
+    if m.group(1) == "pages":
+        page = next(
+            (p for p in _items(doc.get("pages")) if p.get("code") == m.group(2)), None
+        )
+        _titles(page or {}, out, norm)
+    view = _view_of(doc, maps)
+    if view:
+        _titles(view, out, norm)
+    return out
+
+
 def covered(label: str, have: set, norm) -> bool:
     want = norm(label)
     if not want:
@@ -138,9 +193,13 @@ def covered(label: str, have: set, norm) -> bool:
     return any(want == h or padded in f" {h} " for h in have)
 
 
-def _menu_labels(doc: dict, role: dict, screens: list, manifest: dict, norm) -> list:
-    """``[(group, label)]`` a role's menu shows in the build, in order: roles[].menu, then the
-    not-built screens' ``prototype.screens[].menu`` entries for this role."""
+def _menu_labels(
+    doc: dict, role: dict, screens: list, manifest: dict, norm, nav=None
+) -> list:
+    """``[(group, label)]`` a role's menu shows in the build, in order: roles[].menu, with the
+    not-built screens' ``prototype.screens[].menu`` entries for this role placed as the shell
+    places them (Shell.tsx ``withSoon``): at the end of their group, or as a new group after the
+    group that comes before it in the prototype (``nav``)."""
     titles = {p.get("code"): p.get("title") for p in _items(doc.get("pages"))}
     out = []
     for it in role.get("menu") or []:
@@ -169,13 +228,35 @@ def _menu_labels(doc: dict, role: dict, screens: list, manifest: dict, norm) -> 
         roles = [norm(r) for r in menu.get("roles") or []]
         if roles and norm(role.get("name")) not in roles:
             continue
-        out.append(
+        _place(
+            out,
             (
                 menu.get("group"),
                 menu.get("label") or proto_titles.get(sc.get("id")) or sc.get("id"),
-            )
+            ),
+            nav or [],
+            norm,
         )
     return out
+
+
+def _place(out: list, item: tuple, nav: list, norm) -> None:
+    group = norm(item[0] or "")
+    same = [i for i, (g, _) in enumerate(out) if norm(g or "") == group]
+    if same:
+        out.insert(same[-1] + 1, item)
+        return
+    order = []
+    for g, _ in nav:
+        if norm(g or "") not in order:
+            order.append(norm(g or ""))
+    if group in order:
+        for before in reversed(order[: order.index(group)]):
+            hit = [i for i, (g, _) in enumerate(out) if norm(g or "") == before]
+            if hit:
+                out.insert(hit[-1] + 1, item)
+                return
+    out.append(item)
 
 
 def menu_gaps(doc: dict, manifest: dict, nav_by_persona: dict, norm) -> list[str]:
@@ -193,7 +274,8 @@ def menu_gaps(doc: dict, manifest: dict, nav_by_persona: dict, norm) -> list[str
     if len(navs) == 1 and len(nav_by_persona) > 1:
         nav = next(iter(nav_by_persona.values()))
         menus = [
-            (r, _menu_labels(doc, r, screens, manifest, norm)) for r in roles.values()
+            (r, _menu_labels(doc, r, screens, manifest, norm, nav))
+            for r in roles.values()
         ]
         if not menus:
             return []
@@ -219,7 +301,7 @@ def menu_gaps(doc: dict, manifest: dict, nav_by_persona: dict, norm) -> list[str
                 "has no role by that name"
             )
             continue
-        have = _menu_labels(doc, role, screens, manifest, norm)
+        have = _menu_labels(doc, role, screens, manifest, norm, nav)
         gaps += _role_menu_gaps(role.get("name"), nav, have, norm)
     return gaps
 
@@ -388,6 +470,16 @@ def coverage(doc: dict, bundle_dir) -> dict:
             if persona in per
         ]
         chrome[persona] = set.intersection(*sets) if len(sets) > 1 else set()
+        # a top-bar button some screens hide (a "New" action) is still the shell's
+        if len(sets) >= 4:
+            counts: dict = {}
+            for st in sets:
+                for k, n in st:
+                    if k == "button":
+                        counts[n] = counts.get(n, 0) + 1
+            chrome[persona] |= {
+                ("button", n) for n, c in counts.items() if c * 2 > len(sets)
+            }
 
     records = {
         s.get("id")
@@ -438,10 +530,35 @@ def coverage(doc: dict, bundle_dir) -> dict:
             out["rebuild"][sid] = {k: v for k, v in labels.items() if v}
             continue
         have = scope_labels(doc, entry["maps"], norm)
-        gaps = {
-            k: [t for t in v if not covered(t, have, norm)] for k, v in labels.items()
-        }
-        gaps = {k: v for k, v in gaps.items() if v}
+        titles = scope_titles(doc, entry["maps"], norm)
+        view = _view_of(doc, entry["maps"])
+        tabs = [
+            norm(t.get("label"))
+            for t in ((view or {}).get("tabs") or [])
+            if isinstance(t, dict) and t.get("label")
+        ]
+        gaps = {}
+        for k, v in labels.items():
+            if k in ("title", "heading"):
+                miss = [t for t in v if not covered(t, titles, norm)]
+            elif k == "tab" and view is not None:
+                miss = [t for t in v if norm(t) not in tabs]
+            else:
+                miss = [t for t in v if not covered(t, have, norm)]
+            if miss:
+                gaps[k] = miss
+        if view is not None and labels["tab"]:
+            shown = {norm(t) for t in labels["tab"]}
+            extra = [
+                t.get("label")
+                for t in view.get("tabs") or []
+                if isinstance(t, dict)
+                and t.get("label")
+                and norm(t["label"]) not in shown
+                and norm(t["label"]) not in skip
+            ]
+            if extra:
+                gaps["extra_tab"] = extra
         if gaps:
             out["screens"].append({"id": sid, "maps": entry["maps"], "gaps": gaps})
     return out
@@ -480,3 +597,30 @@ def ensure_capture(parts: dict, design=None) -> tuple[Path | None, str]:
     if capture.get("probe") != "ok":
         return None, str(capture.get("probe"))
     return out, ""
+
+
+def coverage_issues(doc: dict, parts: dict) -> list:
+    """The coverage gaps as approval issues (``{level, path, message}``), for Commit. Empty when
+    the YAML covers the prototype or it can't be rendered here."""
+    design = (doc.get("app") or {}).get("design")
+    try:
+        bundle, _ = ensure_capture(
+            parts, design=design if isinstance(design, dict) else None
+        )
+    except Exception:  # noqa: BLE001 - no browser here: spec_mark_ready said so already
+        return []
+    if bundle is None:
+        return []
+    result = coverage(doc, bundle)
+    out = [
+        {
+            "level": "error",
+            "path": "/roles" if g.startswith("menu") else "/modules",
+            "message": g,
+        }
+        for g in result.get("menu") or []
+    ]
+    for s in result.get("screens") or []:
+        line = format_gaps({"screens": [s]})[2:]
+        out.append({"level": "error", "path": s["maps"], "message": line})
+    return out

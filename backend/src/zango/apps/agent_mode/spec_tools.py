@@ -798,7 +798,7 @@ class SpecWorkbench:
         """The YAML says everything the prototype shows (prototype_coverage.py), or says why not.
 
         Skipped, with a note, when the prototype can't be rendered here (no Playwright)."""
-        from .prototype_coverage import coverage, ensure_capture, format_gaps
+        from .prototype_coverage import GUIDE, coverage, ensure_capture, format_gaps
 
         try:
             bundle, why = ensure_capture(self.proto.parts, design=design)
@@ -810,18 +810,7 @@ class SpecWorkbench:
         if result["menu"] or result["screens"]:
             raise ToolRefused(
                 "Not ready — the YAML leaves out what the approved prototype shows, so the build "
-                "would drop it. Put each where it belongs in the YAML, with the prototype's own "
-                "words: menu items, labels, groups and order → roles[].menu (a screen that is not "
-                "built → its prototype.screens entry's `menu`); page titles → pages[].title; "
-                "columns → table.columns; status tabs and filter chips → table.quick_filters; "
-                "where a row opens → table.row_click (its 360, `<view>#<tab>` for its parent's 360 "
-                "on a tab, or drawer); 360 tabs → detail_views[].tabs; section and panel titles → summary sections, "
-                "sidebar or dashboard blocks; buttons → header.actions.buttons, row_actions, "
-                "add_button or a transition's label; field labels → the field's label. If the "
-                "YAML can't say it, set `rebuild: true` with a why on that screen's "
-                "prototype.screens entry. If it won't be built, list it under that entry's "
-                "`not_built` as {text, why}; the user sees those.\n"
-                + format_gaps(result)
+                "would drop it. " + GUIDE + "\n" + format_gaps(result)
             )
         dropped = [
             f"- {sc['id']}: {x.get('text')} ({x.get('why')})"

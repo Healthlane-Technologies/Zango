@@ -316,17 +316,25 @@ export function AgentPage() {
 			const detail = ((raw?.response as Record<string, unknown> | undefined) ?? raw ?? {}) as {
 				open_decisions?: unknown[];
 				issues?: unknown[];
+				agent_prompt?: string;
+				message?: string;
 			};
 			const unfinished = status === 409 && !detail.open_decisions?.length && !!detail.issues?.length;
 			if (unfinished && !autoCommitted.current) {
-				// Unfinished custom work (no sketch, no contract): the agent finishes it, not the user.
+				// Unfinished custom work (no sketch, no contract), or what the approved prototype shows and
+				// the spec leaves out: the agent finishes it, not the user.
 				const items = (detail.issues as { path?: string; message?: string }[])
 					.map((i) => `- ${i.path}: ${i.message}`)
 					.join('\n');
 				autoCommitted.current = true;
-				if (await sendReply(`Before building, finish these custom parts:\n${items}`)) {
+				const brief = detail.agent_prompt ?? 'Before building, finish these custom parts:';
+				if (await sendReply(`${brief}\n${items}`)) {
 					commitAfterTurn.current = 'waiting';
-					toast.success('The agent is finishing a few custom parts. The commit will go through when it is done.');
+					toast.success(
+						detail.agent_prompt
+							? 'The agent is adding what the spec leaves out of the prototype. The commit will go through when it is done.'
+							: 'The agent is finishing a few custom parts. The commit will go through when it is done.',
+					);
 				}
 				return;
 			}

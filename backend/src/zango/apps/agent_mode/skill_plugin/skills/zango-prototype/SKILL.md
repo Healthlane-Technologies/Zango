@@ -164,12 +164,12 @@ For every screen, say in the YAML, with the prototype's own words:
 
 | The prototype shows | The YAML says it in |
 |---|---|
-| menu items, their labels, groups and order | `roles[].menu` (each role's, in the prototype's order) |
+| menu items, their labels, groups and order | `roles[].menu` (each role's, in the prototype's order). One menu shown to every persona doesn't say who sees what: an item goes only to the roles that can open its page |
 | a menu item for a screen not built | that screen's `prototype.screens` entry: `menu: {group, label, icon}` (shown greyed out) |
 | a page heading | `pages[].title` |
 | list columns, status tabs or filter chips | `table.columns`, `table.quick_filters` |
 | where a list row opens (its record, a parent record on a tab, a drawer) | `table.row_click`: the 360, `<view>#<tab>`, or `drawer` |
-| 360 tabs, sections, side panels, header buttons, banners | `detail_views[]`: `tabs`, summary `sections`, `sidebar`, `header.actions.buttons`, `banners` |
+| 360 tabs, sections, side panels, header buttons, banners | `detail_views[]`: `tabs` (the prototype's, no others), summary `sections`, `sidebar`, `header.actions.buttons`, `banners`. A heading is a section's or panel's `title`; a field of that name doesn't show it |
 | home cards, "your work" lists, charts | dashboard `blocks`: `kpis`, `table`, `bars` |
 | buttons | `add_button`, `row_actions`, `header.actions.buttons`, or the transition's label |
 | field labels | the field's `label` |

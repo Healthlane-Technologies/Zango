@@ -197,6 +197,40 @@ class CoverageTests(unittest.TestCase):
         self.assertEqual(gaps["home"], {"heading": ["Your queue"]})
 
 
+    def test_a_heading_is_a_title_not_a_field_of_that_name(self):
+        doc = spec()
+        doc["detail_views"][0]["tabs"][0]["sections"] = [{"title": "Details", "fields": ["chain_of_custody"]}]
+        gaps = {s["id"]: s["gaps"] for s in pc.coverage(doc, self.bundle)["screens"]}
+        self.assertEqual(gaps["sample"], {"heading": ["Chain of custody"]})
+
+    def test_a_360_has_the_prototypes_tabs_and_no_others(self):
+        doc = spec()
+        tabs = doc["detail_views"][0]["tabs"]
+        tabs[1]["label"] = "Results and reports"
+        tabs.append({"code": "audit", "label": "Audit", "type": "timeline"})
+        gaps = {s["id"]: s["gaps"] for s in pc.coverage(doc, self.bundle)["screens"]}
+        self.assertEqual(gaps["sample"], {"tab": ["Results"], "extra_tab": ["Results and reports", "Audit"]})
+
+    def test_a_top_bar_button_most_screens_show_is_chrome(self):
+        bare = NAV.replace("<button>New sample</button>", "")
+        doms = {"home": bare + "<main><h2>Your queue</h2></main>", "samples": SAMPLES, "sample": SAMPLE,
+                "instruments": SAMPLES, "tour": HOME}
+        with tempfile.TemporaryDirectory() as tmp:
+            result = pc.coverage(spec(), write_bundle(Path(tmp), doms))
+        self.assertEqual(result["screens"], [])
+
+    def test_a_not_built_item_counts_in_its_place_in_the_menu(self):
+        nav = [(None, "Home"), ("Lab", "Samples"), ("AI", "Helpers"), ("Help", "Tour")]
+        doc = spec()
+        doc["prototype"]["screens"].append(
+            {"id": "helpers", "only": "prototype", "why": "later", "menu": {"group": "AI", "label": "Helpers"}})
+        role = {"name": "Lab lead", "menu": [{"page": "home", "label": "Home"},
+                                            {"group": "Lab", "items": [{"page": "samples", "label": "Samples"}]}]}
+        have = pc._menu_labels(doc, role, doc["prototype"]["screens"], MANIFEST, PL.norm, nav)
+        self.assertEqual(have, nav)
+        self.assertEqual(pc._role_menu_gaps("Lab lead", nav, have, PL.norm), [])
+
+
 class RowTargetTests(unittest.TestCase):
     """Where a list row goes in the prototype (capture row_opens) against table.row_click."""
 
@@ -260,6 +294,35 @@ class MarkReadyTests(unittest.TestCase):
         with mock.patch.object(pc, "ensure_capture", return_value=(None, "unavailable: no Playwright")):
             note = self.bench()._check_prototype_coverage(spec(), None)
         self.assertIn("not checked: unavailable", note)
+
+
+class CommitTests(unittest.TestCase):
+    """Commit for build runs the same check, so the coverage gate can't be skipped."""
+
+    def test_gaps_block_commit_with_a_brief_for_the_agent(self):
+        import yaml
+
+        from zango.apps.agent_mode import template_spec
+
+        doc = spec()
+        doc["pages"][1]["title"] = "Sample queue"
+        req = SimpleNamespace(spec_markdown=yaml.safe_dump(doc), prototype_parts={"body.html": "x"})
+        with tempfile.TemporaryDirectory() as tmp:
+            bundle = write_bundle(Path(tmp))
+            with mock.patch.object(pc, "ensure_capture", return_value=(bundle, "")):
+                issues = template_spec.prototype_gaps(req)
+        self.assertEqual(issues[0]["path"], "/roles")
+        self.assertIn("'Samples' (group 'Lab')", issues[0]["message"])
+        self.assertTrue(all(i["level"] == "error" for i in issues))
+
+    def test_no_browser_lets_commit_through(self):
+        import yaml
+
+        from zango.apps.agent_mode import template_spec
+
+        req = SimpleNamespace(spec_markdown=yaml.safe_dump(spec()), prototype_parts={})
+        with mock.patch.object(pc, "ensure_capture", return_value=(None, "no Playwright")):
+            self.assertEqual(template_spec.prototype_gaps(req), [])
 
 
 class BuildHandoffTests(unittest.TestCase):
