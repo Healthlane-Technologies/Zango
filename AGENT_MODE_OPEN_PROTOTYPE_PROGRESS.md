@@ -483,3 +483,18 @@ sidebar panels and buttons. The build followed the YAML; the YAML had left these
   YAML scope (a word used elsewhere in the entity can count as covered).
 - Next: re-run the sponsorship requirement so the analyst fixes the YAML through the gate, then build.
   Testing fixes (look score, test-data cleanup, demo data) after that.
+
+## Testing step 1: which failures are the app's (2026-10-26, sponsorship build)
+
+Checked against the spec, the test code and the app (Chrome as Sponsorship Office; screenshots for others):
+
+| Failure | Verdict | Why |
+|---|---|---|
+| Agreement steps "from the 360" time out (4) | test bug | agreement, payment, evidence_item have no 360; rows open a drawer. ui flows assume a 360 |
+| Payment / Evidence "360 did not open for Requester" | test bug | same: no 360 for those entities |
+| Finance: request_360 not_found (api + ui + design.tree) | test bug | api.g_detail opens a fresh record (status submitted); Finance's rows are `status in [payment, event, evidence, closed]` |
+| Requester: Withdraw 403 (4) | test bug | g_transitions runs as `allowed[0]` (Requester) on a record someone else created; Requester rows are created_by_me |
+| Mark executed: "No transition available" | test bug, plus a small UX gap | free-text condition "fully signed copy attached" is false on a test record; the refusal says "No transition available", not the condition_msg |
+| Signatory on organiser_360 | small app (runtime) bug, no leak | the 360 shows "This page could not load / Error: 403 Forbidden" with "Back to Organisers" instead of the No access state |
+
+So none of the red results is a wrong permission or broken workflow in the app itself.
