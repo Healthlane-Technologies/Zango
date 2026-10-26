@@ -318,7 +318,7 @@ The sponsorship spec in the local DB was rewritten once (data identical, lines 5
 - Not in B1: `maps` per screen (P2) and the theme/rebuild class (B4) are not in `index.md` yet.
 - `test_skill_plugin` has 7 failures + 1 error that predate this branch's Stage 2 work (checked on a stash).
 
-**B2 done (2026-10-26), live check in an app page pending:** prototype tokens reach the zas runtime.
+**B2 done (2026-10-26):** prototype tokens reach the zas runtime.
 - `spec_check.py` turns `app.design` into CSS shipped in `spec.ui.json` as `app.design.{css,font_url,fonts}`
   (no separate `tokens.app.css`). `DESIGN_MAP` maps canonical names onto `--z-*`, the tone fg/bg (borders are
   a color-mix), and the crud `--color-gray-*` / `--color-brand-*` ramp; other names become `--p-<name>`.
@@ -330,9 +330,14 @@ The sponsorship spec in the local DB was rewritten once (data identical, lines 5
   unpinned "themed" section shows buttons, badges and a field grid in the app's look. `zas_test.design`
   check `design.tokens.themed` compares its computed colours, radius and font with `app.design`.
 - Test: `test_declared_ui.BuildHearsItTests.test_app_design_themes_the_runtime`. `tsc` clean in `src/zas`.
-- Live (voucher, scratch frontend on 127.0.0.1:3100 against bright-isle:8000): login page has brand
-  #0F766E on the button, ground #F3F6F6, Plus Jakarta Sans loaded and applied. Still to see live: a crud
-  list, a form and `/app/__zas` themed section as a signed-in app user.
+- Live (voucher, scratch frontend on 127.0.0.1:3100 against bright-isle:8000, signed in as PSP Executive):
+  login, the Tests crud list (Add Test #0F766E, ground #F3F6F6, borders #DCE5E3, Plus Jakarta Sans in the
+  table) and the Add Test FormRenderer modal all use the prototype's look; `/app/__zas` themed section is
+  teal + Plus Jakarta Sans while the pinned part keeps the defaults (#4F46E5, Inter, #f7f8fa).
+- Found live: the form/crud packages load their own `:root` palettes after tokens.css, so FormRenderer's
+  Submit and radios were #5048ed. The design CSS now restates the tokens.css `--color-*` / `--zango-*`
+  bridge under `html:root`, which wins. Apps without `app.design` still have that order problem.
+- Not in B2: the appbuilder shell (sidebar, top bar, "zelthy" logo) stays Inter; that is B3.
 
 Recommended first move next session: the YAML bug, then S0 (with guard 1) + B1 on the two test apps above
 (both kinds), then B2.

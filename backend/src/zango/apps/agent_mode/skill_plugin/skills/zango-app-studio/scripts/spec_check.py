@@ -281,6 +281,11 @@ def design_css(design):
             decl[f"--p-{name}"] = values[name]
     css = ""
     if decl:
+        # The form and crud packages load their own `:root` palettes after tokens.css (FormRenderer's
+        # Submit came out #5048ed). Restating the tokens.css bridge here wins by specificity.
+        for k, v in _token_defaults().items():
+            if k.startswith(("--color-", "--zango-")):
+                decl.setdefault(k, v)
         css = "html:root {\n" + "".join(f"  {k}: {v};\n" for k, v in decl.items()) + "}\n"
         # The component gallery keeps the default look for its goldens ([data-zas-pinned]).
         defaults = _token_defaults()

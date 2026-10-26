@@ -149,6 +149,8 @@ class BuildHearsItTests(DeclaredUITestBase):
         self.assertIn("--z-r-card: 12px;", main)
         self.assertIn("--t-green-bd: color-mix(", main)
         self.assertIn("--p-purple: #6B3FC4;", main)
+        # the package palettes that load after tokens.css must not win (FormRenderer Submit)
+        self.assertIn("--color-brand-500: var(--brand);", main)
         self.assertNotIn("body{x:y", css)  # not a plain value: dropped
         self.assertIn('--z-font: "Plus Jakarta Sans"', main)
         # the gallery keeps the defaults for its goldens
