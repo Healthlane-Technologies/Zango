@@ -519,3 +519,8 @@ so the build opened a drawer.
   fail identically on the committed code before this change.
 - Pending (testing step, uncommitted): zas_test/api.py scope-aware records (`record_for`), test
   crashes reported as "test could not run" skips.
+
+## Run 2 (bright-slate, 2026-10-26)
+
+- The new app was pinned to zango_app 1.1.20: the 1.1.21/1.1.22 bumps were never imported into the local DB (packs seed only on migrate). Imported and published 1.1.22, moved the app's binding and requirement pin to it mid-gathering.
+- The B7 gate, run offline on draft rev 14, catches the preview-only menu items (Agents in AI; Getting started and Integrations in Help; these screens are prototype-only with no `menu` entry), the agreement/evidence row targets (`request_360#agreement` / `#evidence`, now drawer), and missing columns, headings, buttons and labels on home, requests, request, organisers, organiser, agreements and policy. The analyst will be refused at mark-ready until each is placed in the YAML, set to `rebuild`, or listed under `not_built`.
