@@ -131,6 +131,61 @@ class BuildHearsItTests(DeclaredUITestBase):
         zas = Path(tmp) / ".zas"
         return json.loads((zas / "spec.ui.json").read_text()), (zas / "holes.md").read_text()
 
+    def test_prototype_screens_are_themed_or_rebuilt(self):
+        doc = copy.deepcopy(self.doc)
+        doc["prototype"] = {"screens": [
+            {"id": "vendors", "maps": "/pages/@vendors"},
+            {"id": "vendor", "maps": "/detail_views/@vendor_360"},
+            {"id": "po", "maps": "/detail_views/@po_360", "rebuild": True, "why": "the user wants the PO paper layout"},
+            {"id": "orders", "maps": "/pages/@purchase_orders", "rebuild": True, "why": "a lane per buyer"},
+            {"id": "home", "maps": "/pages/@dashboard"},
+            {"id": "signin", "only": "prototype", "why": "platform sign-in"},
+        ]}
+        tmp = tempfile.mkdtemp()
+        proto = Path(tmp) / ".zas" / "bundle" / "prototype"
+        proto.mkdir(parents=True)
+        ids = [s["id"] for s in doc["prototype"]["screens"]] + ["orphan"]
+        (proto / "manifest.json").write_text(json.dumps({"screens": [{"id": i} for i in ids]}))
+        (proto / "index.md").write_text("# Approved prototype\n")
+        spec = Path(tmp) / "app_spec.yaml"
+        spec.write_text(yaml.safe_dump(doc, sort_keys=False))
+        proc = subprocess.run([sys.executable, str(SPEC_CHECK), str(spec), "--workspace", tmp, "--quiet"],
+                              capture_output=True, text=True)
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        zas = Path(tmp) / ".zas"
+        resolved = json.loads((zas / "spec.resolved.json").read_text())
+        cls = {r["id"]: r["cls"] for r in resolved["prototype"]["screens"]}
+        self.assertEqual(cls, {"vendors": "theme", "vendor": "theme", "po": "rebuild", "orders": "rebuild",
+                               "home": "rebuild", "signin": "prototype-only"})
+        holes = {h["where"]: h for h in resolved["holes"]}
+        self.assertEqual(holes["detail_views.po_360"]["kind"], "rebuild_view")
+        self.assertEqual(holes["pages.purchase_orders"]["slot"], "RebuildPurchaseOrders")
+        self.assertIn("Approved look: `.zas/bundle/prototype/screens/home/`", holes["pages.dashboard"]["text"])
+        self.assertEqual(holes["pages.purchase_orders"]["bundle"], ".zas/bundle/prototype/screens/orders/")
+        self.assertNotIn("pages.vendors", holes)  # themed: no custom code
+        ui = json.loads((zas / "spec.ui.json").read_text())
+        self.assertEqual(ui["pages"]["purchase_orders"]["rebuild"], "RebuildPurchaseOrders")
+        self.assertEqual(ui["detail_views"]["po_360"]["rebuild"], "RebuildPo360")
+        self.assertNotIn("rebuild", ui["pages"]["vendors"])
+        index = (proto / "index.md").read_text()
+        self.assertIn("| `vendors` | /pages/@vendors | theme |", index)
+        self.assertIn("| `orphan` | - | unmapped |", index)
+        warned = [i["msg"] for i in resolved["issues"] if i["where"] == "prototype.screens"]
+        self.assertTrue(any("orphan" in m for m in warned), warned)
+
+    def test_a_forced_rebuild_needs_a_why(self):
+        doc = copy.deepcopy(self.doc)
+        doc["prototype"] = {"screens": [{"id": "vendors", "maps": "/pages/@vendors", "rebuild": True},
+                                        {"id": "x", "maps": "/pages/@nope"}]}
+        tmp = tempfile.mkdtemp()
+        spec = Path(tmp) / "app_spec.yaml"
+        spec.write_text(yaml.safe_dump(doc, sort_keys=False))
+        subprocess.run([sys.executable, str(SPEC_CHECK), str(spec), "--workspace", tmp, "--quiet"],
+                       capture_output=True, text=True)
+        issues = (Path(tmp) / ".zas" / "issues.md").read_text()
+        self.assertIn("rebuild: true needs a why", issues)
+        self.assertIn("page 'nope' not in pages", issues)
+
     def test_app_design_themes_the_runtime(self):
         doc = copy.deepcopy(self.doc)
         doc["app"]["design"] = {

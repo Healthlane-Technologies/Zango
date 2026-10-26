@@ -365,5 +365,35 @@ The sponsorship spec in the local DB was rewritten once (data identical, lines 5
 - Tests: `test_preview_parity.OpenShellLintTests`, `test_prototype.PrototypeIndexTests`, the bundle test
   checks the Shell line. Same pre-existing failures as before (test_skill_plugin 7+1, dashboard tree).
 
+**B4 built (2026-10-26); its done-criterion (a full sponsorship build passing B6) waits for B6:** screens, theme or rebuild.
+- Spec: top-level `prototype {hash, screens: [{id, maps: /pages/@x | /detail_views/@x, only: prototype, why,
+  rebuild}]}` in schema.json (the plan's §5.6 shape, taken from P2 because B4 needs it; P2's proto_map will
+  write it later), SCHEMA.md section, pack 1.1.20 published; both test requirements re-pinned. Until P2,
+  the analyst writes it (`_OPEN_PROTOTYPE_APPEND`, zango-prototype SKILL step 7).
+- `spec_check.prototype_screens()`: theme = crud list / 360 (also a detail page → its view); rebuild =
+  custom page or dashboard, or `rebuild: true` + `why` (error without why); prototype-only. Lint errors for
+  unknown pages/views and duplicates; a warning for manifest screens the spec doesn't list (P2 gates later).
+  Not automatic yet: "layout the runtime can't reach" needs P2's refs, so only the analyst forces it.
+- Holes: a forced rebuild adds `rebuild_page` (slot `Rebuild<Page>`, props `data {entity, endpoint, page}`)
+  or `rebuild_view` (slot `Rebuild<View>`, props `zas`, `record`, `refresh`); `spec.ui.json` marks
+  `pages.<x>.rebuild` / `detail_views.<x>.rebuild`. Custom pages keep their `custom_page` hole.
+  `attach_prototype` appends "Approved look: .zas/bundle/prototype/screens/<id>/" to each rebuild hole and
+  writes the theme/rebuild table into the bundle's `index.md` (replaced on every run) and `plan.md`.
+- Runtime: `makeListPage` renders the `rebuild` slot in place of ZasTable (360 sub-route unchanged);
+  the 360 renders its `rebuild` slot after the access checks, inside its context.
+- Guard (`guards.bundle_rules`): a rebuild slot can't be written before its screen's `shot.*.png` and
+  `dom.*.html` are Read; `src/custom/Shell.tsx` before each role's home shot (B3 follow-up).
+- Lint: a themed crud page's `Page_<x>` must be `makeListPage` / `makeViewsPage` (no upgrading to custom);
+  `src/custom/screens/<page>.css` is allowed for themed pages only, every selector scoped to
+  `[data-zas-key="<page>"]`, no colour literals, url() or @import.
+- Docs: open-mode.md §Screens (classes, slot props, porting rules, libraries), SKILL Phase 6 step 4.
+- Checked: spec_check on the sponsorship spec + its B1 bundle with a mapping per the done criterion →
+  home rebuild (dashboard, slot DashboardHome), req rebuild (RebuildSponsorship360), 11 themed, start and
+  signin prototype-only; table replaced, not duplicated, on a second run. Live on the voucher scratch
+  frontend with throwaway slots: a `rebuild` list page drew rows from its crud endpoint, a `rebuild` 360
+  got the payload (title, subtitle); both reverted.
+- Tests: BuildHearsItTests (classes, holes, ui flags, index table, why/unknown errors),
+  OpenModeScreenGateTests, OpenScreensLintTests. Pre-existing failures unchanged.
+
 Recommended first move next session: the YAML bug, then S0 (with guard 1) + B1 on the two test apps above
 (both kinds), then B2.

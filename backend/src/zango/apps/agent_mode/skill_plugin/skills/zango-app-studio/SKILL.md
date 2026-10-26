@@ -175,6 +175,8 @@ catch backend bugs before the frontend exists.
    custom-code.md §The app shell). One export per page (`references/map/pages-menus.md`).
    **Open mode** (`.zas/bundle/prototype/` exists): instead of the shell props, write `src/custom/Shell.tsx`
    on `makeShell` and pass it as `customComponents={{ Layout: Shell }}` (`references/open-mode.md` §The shell).
+   Each prototype screen is themed or rebuilt as `spec_check` classed it (`.zas/bundle/prototype/index.md`,
+   open-mode.md §Screens): themed pages stay `makeListPage` / `makeViewsPage`; rebuilds are holes.
 5. Slots for `custom_page` / `custom_tab` / `custom_panel` holes from `Slot.tsx.tmpl`, exported in
    `slots/index.ts` (`references/custom-code.md` §Slots). A hole that names `.zas/bundle/screens/…`
    was approved in the preview: port its `sketch.js` onto the zas kit, block for block

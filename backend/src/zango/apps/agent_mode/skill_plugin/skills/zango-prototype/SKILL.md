@@ -133,6 +133,11 @@ ZAS.on('approve', (data, el, event, ctx) => { ... })        // data-act="approve
    tokens the canonical way where you can (`--brand`, `--accent`, `--page`, `--card`, `--text`,
    `--text-2`, `--border`, `--ok`/`--ok-bg`…, `--radius`, `--shadow`; full list in SCHEMA.md,
    app.design) so the build maps them without guessing.
+7. **Record the mapping** in the YAML's `prototype.screens`, one entry per manifest screen:
+   `{id: requests, maps: /pages/@requests}`, `{id: request, maps: /detail_views/@request_360}`, or
+   `{id: signin, only: prototype, why: "…"}`. The build themes standard pages and rebuilds custom pages
+   from their screen. `rebuild: true` with a `why` rebuilds a standard page too: only when the user
+   insists on that exact layout.
 
 ## Runtime first: how screens map
 
@@ -204,7 +209,8 @@ When the user uploaded their app as an `.html` file, it is the prototype. Do not
 4. Write the YAML from what the page shows: personas → roles, its records → entities and fields,
    its stages and approve/send back/decline → workflow transitions with role policies, uploads →
    file fields, automation it fakes → custom requirements. Map its screens the runtime-first way
-   (above), then call `proto_design`: it reads the page's own `:root` variables.
+   (above) and record them in `prototype.screens`, then call `proto_design`: it reads the page's own
+   `:root` variables.
 
 The page keeps its own look. Imported parts may be up to 1 MB each.
 

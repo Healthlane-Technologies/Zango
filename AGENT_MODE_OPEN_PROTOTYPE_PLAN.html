@@ -711,6 +711,7 @@ a{color:var(--blue)}
       <li><b>Libraries</b>: for each entry in <code>libraries.json</code>, the build uses the npm package of the same library (Chart.js, ECharts, …). When none exists or it doesn't fit, it rebuilds the visual with <code>zas</code> or plain SVG and records the swap in the build report.</li>
     </ul>
     <p class="done"><b>Done when</b> the sponsorship app's home and request record page are rebuilt and the other screens are themed, and every screen passes B6.</p>
+    <p class="done"><span class="pill ok">built 26 Oct</span> The spec gained <code>prototype.screens</code> in the §5.6 shape (pulled forward from P2). <code>spec_check</code> classes each screen: crud lists and 360s are theme, custom pages and dashboards are rebuild, and <code>rebuild: true</code> with a <code>why</code> forces a standard page to rebuild onto a slot that gets the same data. The table lands in the bundle's <code>index.md</code>; rebuild holes point at their screen, and the build can't write them before reading its screenshots and DOM. The lint keeps themed pages on the runtime and allows a token-only screen stylesheet. On the sponsorship data: home and the request page rebuild, 11 screens theme. Automatic "layout the runtime can't reach" waits for P2's refs; the full build check waits for B6.</p>
   </div></div>
 
   <div class="phase"><div class="id">B5</div><div>

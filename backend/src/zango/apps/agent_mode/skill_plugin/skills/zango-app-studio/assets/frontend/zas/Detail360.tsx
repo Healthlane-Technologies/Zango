@@ -261,6 +261,18 @@ function Page({ viewCode, uuid, initial }: { viewCode: string; uuid: string; ini
   }
   if (z.error) return <div className="zas zas-page"><StateBox kind="error" title="This page could not load" text={z.error} action={backBtn} /></div>;
 
+  if (view.rebuild) {
+    // open mode: the approved prototype screen, ported onto a slot over the same 360 payload
+    const R = (SLOTS as Record<string, React.ComponentType<any>>)[view.rebuild];
+    return (
+      <DetailCtx.Provider value={{ view, viewCode, zas: z, endpoint: hero.endpoint, uuid, refresh: load, goTab: setTab }}>
+        <div className="zas zas-page" data-zas="page" data-zas-key={view.page || viewCode} data-zas-rebuild={view.rebuild}>
+          {R ? <R api={api} zas={z} record={z.record} refresh={load} />
+            : <EmptyState title="This page is not built yet" text={`Add ${view.rebuild} to src/custom/slots.`} zasKey={viewCode} />}
+        </div>
+      </DetailCtx.Provider>
+    );
+  }
   const tabs = view.tabs.filter((t) => z.tabs.some((x) => x.code === t.code));
   const cur = tabs.find((t) => t.code === tab) || tabs[0];
   const counts = Object.fromEntries(z.tabs.map((t) => [t.code, t]));

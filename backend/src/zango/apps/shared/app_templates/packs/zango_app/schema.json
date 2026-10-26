@@ -182,6 +182,88 @@
       "items": {
         "$ref": "#/$defs/detailView"
       }
+    },
+    "prototype": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Open mode (Free design): which declared page each prototype screen is (SCHEMA.md, prototype).",
+      "properties": {
+        "hash": {
+          "type": "string"
+        },
+        "screens": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "maps": {
+                "type": "string",
+                "pattern": "^/(pages|detail_views)/@[A-Za-z0-9_]+$"
+              },
+              "only": {
+                "type": "string",
+                "enum": [
+                  "prototype"
+                ]
+              },
+              "why": {
+                "type": "string"
+              },
+              "rebuild": {
+                "type": "boolean"
+              }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "required": [
+                    "only"
+                  ]
+                },
+                "then": {
+                  "required": [
+                    "why"
+                  ],
+                  "not": {
+                    "required": [
+                      "maps"
+                    ]
+                  }
+                },
+                "else": {
+                  "required": [
+                    "maps"
+                  ]
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "rebuild": {
+                      "const": true
+                    }
+                  },
+                  "required": [
+                    "rebuild"
+                  ]
+                },
+                "then": {
+                  "required": [
+                    "why"
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      }
     }
   },
   "$defs": {

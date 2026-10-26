@@ -91,6 +91,46 @@ class OpenShellLintTests(unittest.TestCase):
             self.assertEqual(design.open_shell_problems(ok), [])
 
 
+class OpenScreensLintTests(unittest.TestCase):
+    """Open mode: themed pages stay the runtime's, and their stylesheets use tokens only."""
+
+    M = {"pages": {"vendors": {"type": "crud"}, "orders": {"type": "crud"}},
+         "prototype": {"screens": [{"id": "v", "page": "vendors", "kind": "page", "cls": "theme"},
+                                   {"id": "o", "page": "orders", "kind": "page", "cls": "rebuild"}]}}
+
+    def dx(self, tmp, index):
+        import types
+
+        root = Path(tmp) / "frontend" / "src" / "custom"
+        (root / "pages").mkdir(parents=True)
+        (root / "screens").mkdir()
+        (root / "pages" / "index.ts").write_text(index)
+        return types.SimpleNamespace(ws=tmp, M=self.M), root
+
+    def test_a_themed_page_stays_the_runtime_page(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            Dx, _ = self.dx(tmp, 'export const Page_vendors = makeListPage("vendors");\n'
+                                 'export const Page_orders = makeListPage("orders");\n')
+            self.assertEqual(design.themed_page_problems(Dx), [])
+        with tempfile.TemporaryDirectory() as tmp:
+            Dx, _ = self.dx(tmp, 'export const Page_vendors = VendorsByHand;\n')
+            self.assertIn("Page_vendors is themed", design.themed_page_problems(Dx)[0])
+
+    def test_a_screen_stylesheet_is_scoped_and_token_only(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            Dx, root = self.dx(tmp, "")
+            ok = root / "screens" / "vendors.css"
+            ok.write_text('[data-zas-key="vendors"] .zas-tb { gap: var(--z-gap); background: var(--p-accent-soft); }')
+            self.assertEqual(design.screen_css_problems(Dx, str(ok), "vendors.css"), [])
+            bad = root / "screens" / "vendors.css"
+            bad.write_text('.zas-t th, [data-zas-key="vendors"] td { color: #333; background: url(x.png); }')
+            probs = design.screen_css_problems(Dx, str(bad), "vendors.css")
+            self.assertEqual(len(probs), 3, probs)
+            other = root / "screens" / "orders.css"
+            other.write_text('[data-zas-key="orders"] td { gap: 0; }')
+            self.assertIn("only for a themed page", design.screen_css_problems(Dx, str(other), "orders.css")[0])
+
+
 class TargetTests(unittest.TestCase):
     def setUp(self):
         self.Dx = type("Dx", (), {})()

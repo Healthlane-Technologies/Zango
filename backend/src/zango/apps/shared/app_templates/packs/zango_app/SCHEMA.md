@@ -108,6 +108,7 @@ roles: [...]
 pages: [...]
 modules: [...]
 detail_views: [...]     # optional
+prototype: {...}        # open mode only
 ```
 
 ## `app`
@@ -152,6 +153,30 @@ text-2, text-3, text-faint, border-faint, border, border-strong, ok, ok-bg,
 warn, warn-bg, bad, bad-bg, info, info-bg, radius-sm, radius, radius-lg,
 shadow-sm, shadow, shadow-lg. Other tokens keep their own names. Keep
 `theme.primary` equal to `tokens.brand`.
+
+**Open mode only: `prototype`.** Which declared page each prototype screen
+is. The build reads it to decide, per screen, whether the standard page is
+themed with `app.design` or rebuilt from the approved prototype:
+
+```yaml
+prototype:
+  screens:
+    - { id: requests, maps: /pages/@requests }                 # themed list page
+    - { id: request,  maps: /detail_views/@request_360 }       # themed 360
+    - { id: home,     maps: /pages/@home }                     # a custom page: rebuilt
+    - { id: board,    maps: /pages/@requests, rebuild: true,
+        why: "User wants the exact lane layout the table can't show" }
+    - { id: signin,   only: prototype, why: "The platform's sign-in is used" }
+```
+
+- Every manifest screen is listed once. `maps` is `/pages/@<code>` or
+  `/detail_views/@<code>`. A screen that is not built is `only: prototype`
+  with a `why`.
+- Standard pages (crud, detail) are **themed**: the runtime page in the
+  prototype's tokens. Custom pages are **rebuilt** from their screen.
+- `rebuild: true` (with `why`) rebuilds a standard page from its screen.
+  Use it only when the user asks for that exact layout; the page keeps its
+  data, actions and permissions.
 
 ## `choice_sets`
 

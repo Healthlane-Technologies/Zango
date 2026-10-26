@@ -57,7 +57,49 @@ Rules:
 - **The user menu is the platform's.** The prototype's persona or role switcher becomes the user card:
   it opens appbuilder's profile drawer (role switch, sessions, password) and logs out through
   `/app/logout`. Trial-account sign-in or persona pickers are prototype-only: do not build them.
-- **Look only through options.** No CSS files and no colours in `src/custom/` (the design lint). If the
+- **Look only through options.** No stylesheet for the shell and no colours in `src/custom/` (the design lint). If the
   shell needs something the options can't express, say so in the build report instead of forking it.
 - The shell renders `data-zas="shell"`, `shell-brand`, `shell-nav`, `shell-user` and (with a top bar)
   `shell-top`; `zas_test.design --only lint` checks that `Shell.tsx` exists and is wired.
+
+## Screens: theme or rebuild
+
+`spec_check` decides, from the spec's `prototype.screens` (SCHEMA.md, `prototype`), and writes the table
+at the end of `.zas/bundle/prototype/index.md` (and `plan.md`). Follow it; never change a class yourself.
+
+| Class | When | How it is built |
+|---|---|---|
+| **theme** | a crud list or 360 page | The standard runtime page (`makeListPage` / `makeViewsPage`, the 360 from its list page), already in the prototype's tokens. Optionally `src/custom/screens/<page>.css` for what tokens can't say (filter chips, table density, header treatment), imported from `src/custom/pages/index.ts`. |
+| **rebuild** | a custom page or dashboard, or a standard page marked `rebuild: true` | Its hole's slot, ported from the approved screen. The hole text names the folder. |
+| **prototype-only** | not built | Nothing. |
+
+**Theme.** Compare the built page with `shot.<role>.png`. Anything left that the runtime can't reach is a
+gap for the build report, not a reason to write custom code: the lint fails a themed page whose
+`Page_<code>` export isn't `makeListPage` / `makeViewsPage`. A screen stylesheet:
+
+- selectors all start with `[data-zas-key="<page>"]` (the page's root);
+- values are tokens only: `var(--z-*)`, `var(--p-*)` (other `app.design` tokens), `var(--t-*)`; no colour
+  literals, `url()` or `@import`.
+
+**Rebuild.** The slot gets the page's data, nothing new:
+
+| Hole | Slot props | Data |
+|---|---|---|
+| `custom_page` (custom page, dashboard) | `api` | its contract's data hook, as in kit mode |
+| `rebuild_page` (list page) | `api`, `data: { entity, endpoint, page }` | `api.useTableRows(endpoint)`; rows, filters and row actions through the zas kit (`ZasTable`, `RecordDrawer`) |
+| `rebuild_view` (360) | `api`, `zas`, `record`, `refresh` | the 360 payload (header, stats, panels, actions); `api.runTransition`, `runTag`, `runRowAction` |
+
+The runtime routes stay as they are: `makeListPage` renders a `rebuild_page` slot in place of the table, and
+the 360 renders a `rebuild_view` slot after its access checks. Before writing a rebuild slot, Read the
+screen's `shot.<role>.png` and `dom.<role>.html` (the platform blocks the write until you have). Then:
+
+- port the markup to React on the zas kit; for markup the kit has no block for, write it with the screen's
+  classes from `css.used.css`, as zas classes or token-only inline styles;
+- keep every `data-zas-ref` / `data-zas-action` marker the snapshot has on the element that shows that
+  field or runs that action;
+- the prototype's data and scripts are not used: values come from the props above, and actions run through
+  the API, so permissions and workflow stay the platform's.
+
+**Libraries** (`libraries.json`): use the npm package of the same library (Chart.js → `chart.js`, ECharts →
+`echarts`); when there is none or it doesn't fit, draw it with the zas kit or plain SVG. Name each swap in
+the build report.

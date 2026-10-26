@@ -700,7 +700,8 @@ class Spec:
 
         self.M = {"spec_version": 1, "skill_version": SKILL_VERSION, "app": app, "choice_sets": sets,
                   "roles": R, "modules": mods, "entities": ents, "pages": pages, "detail_views": dvs,
-                  "app_custom_requirements": arr(app.get("custom_requirements"))}
+                  "app_custom_requirements": arr(app.get("custom_requirements")),
+                  "prototype_raw": s.get("prototype")}
 
     # ---------- path resolution ----------
     def resolve(self, E, path, allow_form=False, allow_reverse=False, allow_txn=False):
@@ -1757,7 +1758,88 @@ class Spec:
                            "module": mod, "function": fn, "signature": sig, "target": target,
                            "data_hook": backend, "slot": slot, "scheduled": bool(sched or area == "scheduled")})
 
+    def prototype_screens(self):
+        """Open mode (SCHEMA.md, prototype): each prototype screen's build class. theme = the standard
+        page in app.design's tokens; rebuild = the approved screen ported onto a slot (a custom page, or
+        a standard page the analyst marked rebuild: true with a why); prototype-only = not built."""
+        M, L = self.M, self.L
+        raw = M.get("prototype_raw")
+        if raw is None:
+            M["prototype"] = None
+            return
+        rows, seen = [], set()
+        for i, sc in enumerate(arr((raw or {}).get("screens"))):
+            w = f"prototype.screens[{i}]"
+            sid = str((sc or {}).get("id") or "")
+            if not sid:
+                L.error(w, "a prototype screen has no id")
+                continue
+            if sid in seen:
+                L.error(w, f"screen {sid!r} is listed twice")
+                continue
+            seen.add(sid)
+            why = str(sc.get("why") or "").strip()
+            if sc.get("only") == "prototype":
+                rows.append({"id": sid, "cls": "prototype-only", "reason": why or "not built"})
+                continue
+            m = re.fullmatch(r"/(pages|detail_views)/@([A-Za-z0-9_]+)", str(sc.get("maps") or ""))
+            if not m:
+                L.error(w + ".maps", f"screen {sid!r} maps to {sc.get('maps')!r}",
+                        "use /pages/@<code> or /detail_views/@<code>, or only: prototype with a why")
+                continue
+            kind, code = m.groups()
+            row = {"id": sid, "maps": sc["maps"]}
+            if kind == "pages":
+                P = M["pages"].get(code)
+                if not P:
+                    L.error(w + ".maps", f"screen {sid!r}: page {code!r} not in pages")
+                    continue
+                if P["type"] == "detail" and P.get("detail_view") in M["detail_views"]:
+                    row.update(kind="view", code=P["detail_view"], page=code)
+                else:
+                    row.update(kind="page", code=code, page=code)
+                custom = P["type"] == "custom"
+                what = {"crud": "list page", "detail": "360 page"}.get(P["type"], "dashboard" if P.get("declared") else "custom page")
+            else:
+                V = M["detail_views"].get(code)
+                if not V:
+                    L.error(w + ".maps", f"screen {sid!r}: detail view {code!r} not in detail_views")
+                    continue
+                row.update(kind="view", code=code, page=V.get("page") or M["entities"].get(V.get("hero"), {}).get("list_page"))
+                custom, what = False, "360 page"
+            if custom:
+                row.update(cls="rebuild", reason=f"{what} in the spec")
+            elif sc.get("rebuild"):
+                if not why:
+                    L.error(w, f"screen {sid!r}: rebuild: true needs a why (what the standard {what} can't show)")
+                row.update(cls="rebuild", reason=why or "rebuild: true", forced=True)
+            else:
+                row.update(cls="theme", reason=f"standard {what} in app.design's tokens")
+            rows.append(row)
+        M["prototype"] = {"hash": (raw or {}).get("hash"), "screens": rows}
+
     def page_holes(self):
+        done = set()
+        for r in (self.M.get("prototype") or {}).get("screens") or []:
+            if not r.get("forced") or (r["kind"], r["code"]) in done:
+                continue
+            done.add((r["kind"], r["code"]))
+            comp = "Rebuild" + pascal(r["code"])
+            if r["kind"] == "page":
+                P = self.M["pages"][r["code"]]
+                kind, where = "rebuild_page", f"pages.{r['code']}"
+                text = (f"Rebuild list page {r['code']} ({P['title']}) from the approved prototype screen: {r['reason']}. "
+                        f"Data: props.data = {{ entity, endpoint, page }}; rows with api.useTableRows(endpoint), "
+                        "row actions and forms through the zas kit (RecordDrawer, ZasTable parts). The 360 route stays standard.")
+            else:
+                kind, where = "rebuild_view", f"detail_views.{r['code']}"
+                text = (f"Rebuild 360 view {r['code']} from the approved prototype screen: {r['reason']}. "
+                        "Data: props.zas (the 360 payload: header, stats, panels, actions), props.record, props.refresh; "
+                        "transitions and actions through api.runTransition / runRowAction.")
+            self.holes.append({"kind": kind, "where": where, "text": text, "entity": None, "module": None,
+                               "function": comp, "signature": "SlotProps", "slot": comp,
+                               "target": f"frontend/src/custom/slots/{comp}.tsx::{comp}", "data_hook": None,
+                               "scheduled": False})
         for p in self.M["pages"].values():
             if p.get("type") == "custom":
                 comp = p.get("component") or "Page_" + p["code"]
@@ -2134,6 +2216,11 @@ class Spec:
                 "sticky_header": any("sticky" in str(cr.get("title", "")).lower() for cr in arr(V.get("custom_requirements"))),
             }
         for h in self.holes:
+            if h["kind"] == "rebuild_page" and h["where"][6:] in out["pages"]:
+                out["pages"][h["where"][6:]]["rebuild"] = h["slot"]
+            if h["kind"] == "rebuild_view" and h["where"][13:] in out["detail_views"]:
+                out["detail_views"][h["where"][13:]]["rebuild"] = h["slot"]
+        for h in self.holes:
             if h.get("slot"):
                 out["slots"][h["slot"]] = {"export": h["slot"], "hole": h["id"], "kind": h["kind"],
                                            "data_key": h["function"].split("__custom__")[-1] if "__custom__" in h["function"] else None}
@@ -2189,6 +2276,8 @@ class Spec:
             n[h["kind"]] += 1
         L += ["", f"## Custom code: {len(self.holes)} holes", "",
               ", ".join(f"{k} {v}" for k, v in sorted(n.items())), "", "Details: `holes.md`.", ""]
+        if (M.get("prototype") or {}).get("screens"):
+            L += ["", proto_classes_md(M["prototype"]["screens"], [])]
         return "\n".join(L)
 
     def holes_md(self):
@@ -2230,6 +2319,73 @@ def attach_bundle(holes, out):
         h["text"] += note
 
 
+PROTO_CLASSES_START = "<!-- spec_check: build classes -->"
+
+
+def attach_prototype(S, out):
+    """Open mode (.zas/bundle/prototype/, written by the platform): point each rebuild hole at its approved
+    screen, warn about screens the spec doesn't map, and write the theme / rebuild table into index.md."""
+    bundle = os.path.join(out, "bundle", "prototype")
+    try:
+        with open(os.path.join(bundle, "manifest.json"), encoding="utf-8") as f:
+            manifest = json.load(f)
+    except (OSError, ValueError):
+        return
+    M, L = S.M, S.L
+    proto = M.get("prototype")
+    rows = (proto or {}).get("screens") or []
+    listed = {r["id"] for r in rows}
+    missing = [sc.get("id") for sc in manifest.get("screens") or [] if sc.get("id") and sc["id"] not in listed]
+    if proto is None:
+        L.warn("prototype", "open mode: the spec has no prototype.screens, so no screen is mapped to a page",
+               "add prototype.screens (SCHEMA.md, prototype); until then every page is built standard and themed")
+    elif missing:
+        L.warn("prototype.screens", f"prototype screens not in prototype.screens: {', '.join(missing)}",
+               "map each to its page, or mark it only: prototype with a why")
+    by_target = {}
+    for h in S.holes:
+        by_target.setdefault(h["where"], h)
+    for r in rows:
+        if r["cls"] != "rebuild":
+            continue
+        where = f"pages.{r['page']}" if r["kind"] == "page" else f"detail_views.{r['code']}"
+        h = by_target.get(where)
+        if r["kind"] == "view" and not r.get("forced"):
+            h = None
+        if not h or h.get("bundle"):
+            continue
+        h["bundle"] = f".zas/bundle/prototype/screens/{r['id']}/"
+        h["text"] += (f" Approved look: `{h['bundle']}` (prototype screen {r['id']}). Before writing it, Read its"
+                      " shot.<role>.png and dom.<role>.html: port the markup onto the zas kit with this slot's data,"
+                      " keep every data-zas-ref / data-zas-action marker, and take styles from css.used.css as zas"
+                      " classes or token-only inline styles (open-mode.md, \"Screens\").")
+        r["slot"] = h["slot"]
+    idx = os.path.join(bundle, "index.md")
+    try:
+        text = open(idx, encoding="utf-8").read()
+    except OSError:
+        return
+    text = text.split(PROTO_CLASSES_START)[0].rstrip() + "\n\n" + PROTO_CLASSES_START + "\n" + proto_classes_md(rows, missing)
+    with open(idx, "w", encoding="utf-8") as f:
+        f.write(text)
+
+
+def proto_classes_md(rows, missing):
+    L = ["## Build: theme or rebuild (spec_check)", "",
+         "Theme: the standard page, in app.design's tokens (plus an optional token-only "
+         "`src/custom/screens/<page>.css`). Rebuild: port the screen onto its slot. Never rebuild a themed screen; "
+         "if it can't match, say so in the build report (open-mode.md, \"Screens\").", "",
+         "| Screen | Maps | Class | Reason | Builds as |", "|---|---|---|---|---|"]
+    for r in rows:
+        builds = (f"slot `{r['slot']}`" if r.get("slot") else
+                  "-" if r["cls"] == "prototype-only" else
+                  f"page `{r.get('page')}`" if r.get("kind") == "page" else f"360 `{r.get('code')}`")
+        L.append(f"| `{r['id']}` | {r.get('maps') or '-'} | {r['cls']} | {str(r.get('reason', '')).replace('|', '/')} | {builds} |")
+    for sid in missing:
+        L.append(f"| `{sid}` | - | unmapped | not in the spec's prototype.screens | standard if it has a page; report it |")
+    return "\n".join(L) + "\n"
+
+
 def read_existing_holes(path):
     out = {}
     if not os.path.exists(path):
@@ -2269,6 +2425,7 @@ def main(argv=None):
     S.build()
     if S.M:
         S.lint()
+        S.prototype_screens()
         S.page_holes()
         S.derive()
         S.intent()
@@ -2279,6 +2436,7 @@ def main(argv=None):
     if out and S.M:
         os.makedirs(out, exist_ok=True)
         attach_bundle(S.holes, out)
+        attach_prototype(S, out)
         S.number_holes(read_existing_holes(os.path.join(out, "holes.md")))
         resolved = strip_internal(S.M)
         resolved["spec_hash"] = spec_hash

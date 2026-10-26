@@ -4,9 +4,11 @@
 // its route: <list route>/detail-view/<uuid> renders the 360 (contracts §9).
 import React from "react";
 import { useParams } from "react-router-dom";
+import * as api from "./api";
 import { SPEC } from "./config";
+import * as SLOTS from "../custom/slots";
 import { getDetailComponent } from "./Detail360";
-import { ToastHost } from "./ui";
+import { EmptyState, ToastHost } from "./ui";
 import { ZasTable } from "./ZasTable";
 
 function detailUuid(params: Record<string, string | undefined>): string | null {
@@ -28,6 +30,16 @@ function ListPageInner({ pageCode, toolbar }: { pageCode: string; toolbar?: Reac
   if (uuid && ownsDetail) {
     const Detail = getDetailComponent(E.detail_view as string);
     return <Detail objectUuid={uuid} />;
+  }
+  if (page.rebuild) {
+    // open mode: the approved prototype screen, ported onto a slot over the same crud endpoint
+    const Slot = (SLOTS as Record<string, React.ComponentType<any>>)[page.rebuild];
+    return (
+      <div className="zas zas-page" data-zas="page" data-zas-key={pageCode} data-zas-rebuild={page.rebuild}>
+        {Slot ? <Slot api={api} data={{ entity: page.entity, endpoint: E.endpoint, page: { code: pageCode, title: page.title } }} />
+          : <EmptyState title="This page is not built yet" text={`Add ${page.rebuild} to src/custom/slots.`} zasKey={pageCode} />}
+      </div>
+    );
   }
   return (
     <div className="zas zas-page" data-zas="page" data-zas-key={pageCode}>

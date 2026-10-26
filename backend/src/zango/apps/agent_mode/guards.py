@@ -540,7 +540,8 @@ def bundle_rules(workspace_root: str) -> tuple[str, list]:
     bundle = os.path.join(ws, ".zas", "bundle")
     mpath = os.path.join(bundle, "manifest.json")
     rpath = os.path.join(ws, ".zas", "spec.resolved.json")
-    stamp = (ws, _mtime(mpath), _mtime(rpath))
+    cpath = os.path.join(bundle, "prototype", "capture.json")
+    stamp = (ws, _mtime(mpath), _mtime(rpath), _mtime(cpath))
     cached = _BUNDLE_RULES.get(ws)
     if cached and cached[0] == stamp:
         return cached[1], cached[2]
@@ -563,6 +564,22 @@ def bundle_rules(workspace_root: str) -> tuple[str, list]:
     # Custom screens: the slot named by the hole that points at the screen's folder.
     for hole in (_json(rpath) or {}).get("holes") or []:
         if not isinstance(hole, dict) or not hole.get("bundle") or not hole.get("slot"):
+            continue
+        if hole["bundle"].startswith(".zas/bundle/prototype/screens/"):
+            # open mode: the screen's screenshots and DOM snapshots (bundle/prototype/index.md)
+            folder = os.path.join(ws, hole["bundle"])
+            need = sorted(
+                os.path.join(folder, f)
+                for f in (os.listdir(folder) if os.path.isdir(folder) else [])
+                if (f.startswith("shot.") and f.endswith(".png"))
+                or (f.startswith("dom.") and f.endswith(".html"))
+            )
+            if need:
+                rel = f"frontend/src/custom/slots/{hole['slot']}.tsx"
+                label = hole["bundle"].rstrip("/").rsplit("/", 1)[-1]
+                rules.append(
+                    (lambda r, rel=rel: r == rel, need, f"prototype screen {label}")
+                )
             continue
         hit = by_folder.get(os.path.realpath(os.path.join(ws, hole["bundle"])))
         if hit and hit[1]:
@@ -592,6 +609,39 @@ def bundle_rules(workspace_root: str) -> tuple[str, list]:
                     or r.startswith("frontend/src/custom/shell/"),
                     need,
                     "the app shell",
+                )
+            )
+    # Open mode: the shell (src/custom/Shell.tsx) needs each role's home screenshot.
+    capture = _json(cpath) or {}
+    homes = (_json(os.path.join(bundle, "prototype", "manifest.json")) or {}).get(
+        "home"
+    )
+    if isinstance(homes, dict):
+        files = {
+            (sc.get("id"), r.get("role")): r.get("same_as") or r.get("role")
+            for sc in capture.get("screens") or []
+            for r in sc.get("roles") or []
+        }
+        need = sorted(
+            {
+                os.path.join(
+                    bundle,
+                    "prototype",
+                    "screens",
+                    home,
+                    f"shot.{files[(home, role)]}.png",
+                )
+                for role, home in homes.items()
+                if (home, role) in files
+            }
+        )
+        need = [f for f in need if os.path.isfile(f)]
+        if need:
+            rules.append(
+                (
+                    lambda r: r == "frontend/src/custom/Shell.tsx",
+                    need,
+                    "the prototype's shell",
                 )
             )
     _BUNDLE_RULES[ws] = (stamp, key, rules)

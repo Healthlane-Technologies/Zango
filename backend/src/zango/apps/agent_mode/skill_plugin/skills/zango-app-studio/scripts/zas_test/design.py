@@ -130,6 +130,49 @@ def open_shell_problems(ws):
     return probs
 
 
+def themed_page_problems(Dx):
+    """Open mode: a page spec_check classed as theme stays the runtime page (makeListPage / makeViewsPage);
+    the build may not upgrade it to custom code. Rebuilds are spec_check's call (prototype.screens)."""
+    rows = ((Dx.M or {}).get("prototype") or {}).get("screens") or []
+    pages = (Dx.M or {}).get("pages") or {}
+    try:
+        index = open(os.path.join(Dx.ws, "frontend", "src", "custom", "pages", "index.ts"), encoding="utf-8").read()
+    except OSError:
+        return []
+    probs = []
+    for r in rows:
+        P = pages.get(r.get("page") or "") or {}
+        if r.get("cls") != "theme" or r.get("kind") != "page" or P.get("type") != "crud":
+            continue
+        m = re.search(rf"export const Page_{re.escape(r['page'])}\s*=\s*([^;\n]+)", index)
+        if m and not re.match(rf"""make(List|Views)Page\(\s*["']{re.escape(r['page'])}["']""", m.group(1).strip()):
+            probs.append(f"pages/index.ts: Page_{r['page']} is themed (prototype screen {r['id']}): export "
+                         f"makeListPage(\"{r['page']}\") or makeViewsPage, not custom code")
+    return probs
+
+
+def screen_css_problems(Dx, path, rel):
+    """Open mode, a themed screen's stylesheet (src/custom/screens/<page>.css): only that page, only tokens
+    (references/open-mode.md, "Screens")."""
+    page = os.path.splitext(os.path.basename(path))[0]
+    proto = (Dx.M.get("prototype") or {}).get("screens") or []
+    themed = {r.get("page") for r in proto if r.get("cls") == "theme"}
+    if page not in themed:
+        return [f"{rel}: a screen stylesheet is only for a themed page in prototype.screens (no themed page {page!r})"]
+    css = re.sub(r"/\*.*?\*/", "", open(path, encoding="utf-8").read(), flags=re.S)
+    probs = []
+    scope = f'[data-zas-key="{page}"]'
+    for sel in re.findall(r"([^{}]+)\{", css):
+        for one in sel.split(","):
+            if one.strip() and not one.strip().startswith(scope):
+                probs.append(f"{rel}: selector `{one.strip()[:60]}` is not scoped to {scope}")
+    for m in COLOUR.finditer(css):
+        probs.append(f"{rel}: colour `{m.group(0)}` (use a token: var(--z-*), var(--p-*), var(--t-*))")
+    if "url(" in css or "@import" in css:
+        probs.append(f"{rel}: url() / @import (fonts and images come from app.design)")
+    return probs
+
+
 def g_lint(Dx, b=None):
     root = os.path.join(Dx.ws, "frontend", "src", "custom")
     files = [f for f in glob.glob(os.path.join(root, "**", "*"), recursive=True) if os.path.isfile(f)]
@@ -139,6 +182,9 @@ def g_lint(Dx, b=None):
     probs = []
     for f in files:
         rel = os.path.relpath(f, Dx.ws)
+        if f.endswith(".css") and os.path.dirname(f) == os.path.join(root, "screens"):
+            probs += screen_css_problems(Dx, f, rel)
+            continue
         if f.endswith((".css", ".scss", ".less")):
             probs.append(f"{rel}: stylesheet in src/custom (use zas classes, or inline styles in an approved screen)")
             continue
@@ -168,6 +214,7 @@ def g_lint(Dx, b=None):
             if re.search(rf">[^<]*{word}", code):
                 probs.append(f"{rel}: placeholder copy '{word}' rendered")
     probs += open_shell_problems(Dx.ws)
+    probs += themed_page_problems(Dx)
     try:  # lucide_icons.py maps a name lucide does not have to Circle: a typo shows an empty circle
         gen = open(os.path.join(Dx.ws, "frontend", "src", "zas", "icons.gen.ts"), encoding="utf-8").read()
         unknown = [n for n, c in re.findall(r'^\s*"([a-z0-9-]+)":\s*(\w+),', gen, re.M) if c == "Circle" and n != "circle"]
