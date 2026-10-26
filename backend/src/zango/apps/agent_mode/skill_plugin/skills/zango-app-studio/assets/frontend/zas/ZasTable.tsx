@@ -10,7 +10,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ChevronsUpDown, Download, EllipsisVertical, Inbox, Paperclip, Plus, Search } from "lucide-react";
 import * as api from "./api";
-import { SPEC, date, detailUrl, number, pageUrl, viewUrl } from "./config";
+import { SPEC, date, detailUrl, number, pageUrl, parentTabUrl, viewUrl } from "./config";
 import { ConfirmDialog, FormDialog, useDialog } from "./dialogs";
 import { Badge, Banner, Button, Chip, Drawer, EmptyState, Menu, Nil, Skeleton, Timeline, Value, cx, useToast } from "./ui";
 import type { MenuItemDef } from "./ui";
@@ -171,6 +171,7 @@ export function ZasTable(p: ZasTableProps) {
       const url = field ? hrefOf(r[field]) : null;
       if (url) { window.open(url, "_blank", "noopener"); return; }
     }
+    if (rc.includes("#")) { const u = parentTabUrl(p.entity, rc, r.zas?.links); if (u) { navigate(u); return; } }
     const V = SPEC.detail_views[rc];
     if (V && V.hero === p.entity) { const u = viewUrl(rc, r.object_uuid); if (u) { navigate(u); return; } }
     setDrawer(r.object_uuid);
@@ -282,7 +283,7 @@ export function ZasTable(p: ZasTableProps) {
                       <React.Fragment key={group ?? "_"}>
                         {group !== null && <tr className="grp"><td colSpan={cols.length + (hasActs ? 1 : 0)}>{group} · {rs.length}</td></tr>}
                         {rs.map((r) => (
-                          <tr key={r.object_uuid} className={(p.rowClick || E.row_click) !== "none" ? "click" : undefined} onClick={() => onRow(r)}>
+                          <tr key={r.object_uuid} data-zas="row" data-zas-key={r.object_uuid} className={(p.rowClick || E.row_click) !== "none" ? "click" : undefined} onClick={() => onRow(r)}>
                             {cols.map((c) => <td key={c.key} className={r.zas?.hl?.[c.key] ? `hl-${r.zas.hl[c.key] === "amber" ? "amber" : "red"}` : undefined}>
                               <Cell E={E} col={c} row={r} onOpen={navigate} /></td>)}
                             {hasActs && <td className="act" onClick={(e) => e.stopPropagation()}>

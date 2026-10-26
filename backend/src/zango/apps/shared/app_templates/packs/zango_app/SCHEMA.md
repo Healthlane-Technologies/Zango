@@ -563,7 +563,7 @@ table:
   page_size: 25
   quick_filters:
     - { label: Pending my approval, where: status == pending_approval, roles: [Procurement Manager], default: true }
-  row_click: vendor_360              # a detail_view code | drawer | none
+  row_click: vendor_360              # a detail_view code | <view>#<tab> | drawer | none
   add_button: Add Vendor
   row_actions:
     - { key: edit, label: Edit, type: edit, show_when: status == draft }
@@ -574,6 +574,10 @@ table:
   footer_totals: [amount]
   group_by: doc_type
 ```
+
+`row_click: <view>#<tab>` opens the row's parent on its 360, on the tab that
+lists this entity (`request_360#agreement`: an agreement row opens its request
+on the Agreement tab). The tab must be a related_table of this entity.
 
 Column `source`: field (default), status, tags, computed (describe it in
 `shows`) or a `path`. Workflow transitions and tag toggles are added to the

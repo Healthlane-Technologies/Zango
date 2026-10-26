@@ -40,9 +40,19 @@ export function detailUrl(entityCode: string, uuid: string): string | null {
   return page ? page.route.replace(/\/:id$/, "") + "/" + uuid : null;
 }
 
-export function viewUrl(viewCode: string, uuid: string): string | null {
+export function viewUrl(viewCode: string, uuid: string, tab?: string): string | null {
   const V = SPEC.detail_views[viewCode];
-  return V ? detailUrl(V.hero, uuid) : null;
+  const u = V ? detailUrl(V.hero, uuid) : null;
+  return u && tab ? `${u}?tab=${encodeURIComponent(tab)}` : u;
+}
+
+/** row_click "<view>#<tab>": the 360 of the row's parent, on the tab that lists the row's entity. */
+export function parentTabUrl(entityCode: string, rowClick: string, links: Record<string, string> | undefined): string | null {
+  const [vc, tc] = rowClick.split("#");
+  const tab = SPEC.detail_views[vc]?.tabs.find((t) => t.code === tc);
+  const fk = tab?.param ? SPEC.entities[entityCode]?.parents?.[tab.param as string]?.fk : null;
+  const parent = fk ? links?.[fk] : null;
+  return parent ? viewUrl(vc, parent, tc) : null;
 }
 
 export function pageUrl(code: string): string | null {

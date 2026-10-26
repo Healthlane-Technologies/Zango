@@ -197,6 +197,38 @@ class CoverageTests(unittest.TestCase):
         self.assertEqual(gaps["home"], {"heading": ["Your queue"]})
 
 
+class RowTargetTests(unittest.TestCase):
+    """Where a list row goes in the prototype (capture row_opens) against table.row_click."""
+
+    def doc(self, row_click=None):
+        doc = spec()
+        doc["modules"][0]["entities"].append({
+            "code": "result", "fields": [{"key": "sample", "type": "link", "to": "sample"}],
+            "table": {"row_click": row_click} if row_click else {},
+        })
+        doc["pages"].append({"code": "results", "type": "crud", "title": "Results", "entity": "result"})
+        doc["detail_views"][0]["tabs"].append(
+            {"code": "results_tab", "label": "Results", "type": "related_table", "entity": "result", "via": "sample"})
+        doc["prototype"]["screens"].append({"id": "results", "maps": "/pages/@results"})
+        return doc
+
+    def capture(self, goes):
+        return {"screens": [{"id": "results", "row_opens": goes},
+                            {"id": "samples", "row_opens": {"screen": "sample", "tab": "Overview"}}]}
+
+    def test_a_row_that_opens_its_parent_on_a_tab_needs_view_hash_tab(self):
+        gaps = pc.row_gaps(self.doc(), self.capture({"screen": "sample", "tab": "Results"}), PL.norm)
+        self.assertEqual(len(gaps), 1)
+        self.assertIn("set result's table.row_click: sample_360#results_tab (now 'drawer')", gaps[0])
+        ok = pc.row_gaps(self.doc("sample_360#results_tab"), self.capture({"screen": "sample", "tab": "Results"}), PL.norm)
+        self.assertEqual(ok, [])  # and samples rows open their own 360 by default
+
+    def test_a_drawer_in_the_prototype_wants_drawer(self):
+        gaps = pc.row_gaps(self.doc("sample_360#results_tab"), self.capture({"screen": None, "overlay": True}), PL.norm)
+        self.assertIn("opens a drawer", gaps[0])
+        self.assertEqual(pc.row_gaps(self.doc(), self.capture({"screen": None, "overlay": True}), PL.norm), [])
+
+
 class MarkReadyTests(unittest.TestCase):
     def bench(self):
         b = SpecWorkbench.__new__(SpecWorkbench)

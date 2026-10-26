@@ -95,12 +95,13 @@ class ZasTableMixin:
     def post_process_data(self, data):
         """Rows as crud serializes them, plus `zas` for the React table (contracts §8b):
         `links` = object_uuid of each linked record shown in a column (so a `link_to` cell can
-        open the linked 360), `status` / `tags` = codes (the crud cells are HTML labels)."""
+        open the linked 360) or that is a parent link (a `<view>#<tab>` row click opens the parent),
+        `status` / `tags` = codes (the crud cells are HTML labels)."""
         rows = super().post_process_data(data)
         try:
-            cols = set(self.get_columns())
-            fks = [f for f in data[0]["obj"]._meta.fields if f.is_relation and f.name in cols] if data else []
             E = zs.entity(self.zas_entity)
+            cols = set(self.get_columns()) | {p.get("fk") for p in (E.get("parents") or {}).values() if p.get("fk")}
+            fks = [f for f in data[0]["obj"]._meta.fields if f.is_relation and f.name in cols] if data else []
             has_wf = bool((E.get("workflow") or {}).get("statuses"))
             hls = [(c["key"], c["highlight"]) for c in (E.get("table") or {}).get("columns", [])
                    if (c.get("highlight") or {}).get("ast")]

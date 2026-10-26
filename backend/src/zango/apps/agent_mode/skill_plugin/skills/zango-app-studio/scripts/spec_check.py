@@ -1390,8 +1390,18 @@ class Spec:
             if q.get("roles"):
                 chk_roles(f"{tw}.quick_filters.{q['key']}", q["roles"])
         rc = tb.get("row_click")
-        if rc and rc not in ("none", "drawer") and rc not in dvs:
-            L.error(tw + ".row_click", f"{rc!r} is not a detail view, none or drawer")
+        if rc and "#" in str(rc):
+            # <view>#<tab>: the row opens its parent's 360 on the tab that lists this entity
+            vc, tc = str(rc).split("#", 1)
+            V = dvs.get(vc)
+            tab = next((t for t in arr((V or {}).get("tabs")) if t.get("code") == tc), None)
+            if not V:
+                L.error(tw + ".row_click", f"{rc!r}: {vc!r} is not a detail view")
+            elif not tab or tab.get("type") != "related_table" or tab.get("entity") != E["code"]:
+                L.error(tw + ".row_click", f"{rc!r}: {vc} has no related_table tab {tc!r} listing {E['code']}",
+                        f"use <view>#<tab> where the tab lists {E['code']}, or a detail view, drawer or none")
+        elif rc and rc not in ("none", "drawer") and rc not in dvs:
+            L.error(tw + ".row_click", f"{rc!r} is not a detail view, <view>#<tab>, none or drawer")
         for k in tb["footer_totals"]:
             if k not in E["fmap"]:
                 L.error(tw + ".footer_totals", f"{k!r} is not a field")

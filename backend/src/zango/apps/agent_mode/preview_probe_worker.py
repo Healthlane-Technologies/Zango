@@ -438,6 +438,25 @@ OPEN_GO_JS = """async ([screen, role]) => {
 }"""
 
 
+# Where a list's row goes: click the first row's first cell, then read the runtime's location (screen,
+# record), the tab that is open there, and whether a drawer or dialog opened instead.
+ROW_PROBE_JS = """async () => {
+  const cell = Array.from(document.querySelectorAll('tbody tr td'))
+    .find(td => !td.closest('nav, aside, header') && td.offsetParent !== null);
+  if (!cell) return null;
+  const from = ZAS.state.screen;
+  cell.click();
+  await new Promise(r => setTimeout(r, 300));
+  const to = ZAS.state.screen;
+  const tab = document.querySelector('[role="tab"][aria-selected="true"], .tab.on, .tab.active, .tab[aria-current="true"]');
+  const overlay = Array.from(document.querySelectorAll('.z-drawer, .z-modal, [role="dialog"], .drawer, .modal'))
+    .some(n => n.offsetParent !== null);
+  if (to === from && !overlay) return null;
+  return { screen: to === from ? null : to, record: ZAS.state.record == null ? null : String(ZAS.state.record),
+           tab: tab ? (tab.innerText || '').trim().replace(/\\s+\\d+$/, '') : null, overlay: to === from && overlay };
+}"""
+
+
 def open_capture(html_path: str, out_dir: str) -> int:
     """Every manifest screen x role of an open-mode prototype, written under out_dir/screens/."""
     import hashlib
@@ -541,6 +560,15 @@ def open_capture(html_path: str, out_dir: str) -> int:
                     os.path.join(folder, "css.used.css"), "w", encoding="utf-8"
                 ) as fh:
                     fh.write(page.evaluate(OPEN_CSS_TEXT_JS, css_keys))
+            opened = next((r["role"] for r in entry["roles"] if "error" not in r), None)
+            if opened and not screen.get("record") and not screen.get("only"):
+                try:  # where this screen's list rows go (the coverage check compares row_click)
+                    page.evaluate(OPEN_GO_JS, [sid, opened])
+                    goes = page.evaluate(ROW_PROBE_JS)
+                    if goes:
+                        entry["row_opens"] = goes
+                except Exception:  # noqa: BLE001 - a screen without a clickable list
+                    pass
             summary["screens"].append(entry)
         browser.close()
     _send(summary)

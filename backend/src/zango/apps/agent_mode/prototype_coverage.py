@@ -252,6 +252,92 @@ def _role_menu_gaps(name, nav: list, have: list, norm, missing=True) -> list[str
     return gaps
 
 
+def _view_of(doc: dict, maps: str):
+    """The detail view a ``maps`` target is (a 360, or a detail page's view), or None."""
+    m = re.fullmatch(r"/(pages|detail_views)/@([A-Za-z0-9_]+)", str(maps or ""))
+    if not m:
+        return None
+    kind, code = m.groups()
+    if kind == "pages":
+        page = next(
+            (p for p in _items(doc.get("pages")) if p.get("code") == code), None
+        )
+        code = (page or {}).get("detail_view")
+    return next(
+        (v for v in _items(doc.get("detail_views")) if v.get("code") == code), None
+    )
+
+
+def row_gaps(doc: dict, capture: dict, norm) -> list[str]:
+    """Where a list's rows go in the prototype (the capture's ``row_opens``) against ``table.row_click``:
+    its own 360, its parent's 360 on a tab (``<view>#<tab>``), or a drawer."""
+    entries = {
+        s.get("id"): s for s in _items((doc.get("prototype") or {}).get("screens"))
+    }
+    pages = {p.get("code"): p for p in _items(doc.get("pages"))}
+    entities = _entities(doc)
+    views = _items(doc.get("detail_views"))
+    gaps = []
+    for sc in capture.get("screens") or []:
+        goes = sc.get("row_opens")
+        m = re.fullmatch(
+            r"/pages/@([A-Za-z0-9_]+)",
+            str((entries.get(sc.get("id")) or {}).get("maps") or ""),
+        )
+        page = pages.get(m.group(1)) if m else None
+        if (
+            not goes
+            or not page
+            or page.get("type") != "crud"
+            or page.get("entity") not in entities
+        ):
+            continue
+        ent = page["entity"]
+        table = entities[ent].get("table") or {}
+        own = next((v.get("code") for v in views if v.get("hero") == ent), None)
+        have = table.get("row_click") or own or "drawer"
+        where = f"{sc['id']} (/pages/@{page['code']})"
+        if goes.get("overlay"):
+            if have != "drawer":
+                gaps.append(
+                    f"{where}: a row opens a drawer in the prototype; table.row_click is {have!r} (set drawer)"
+                )
+            continue
+        target = _view_of(doc, (entries.get(goes.get("screen")) or {}).get("maps"))
+        if target is None:
+            continue
+        if target.get("hero") == ent:
+            want = target.get("code")
+        else:
+            tabs = [
+                t
+                for t in target.get("tabs") or []
+                if isinstance(t, dict) and t.get("entity") == ent
+            ]
+            hit = next(
+                (t for t in tabs if norm(t.get("label")) == norm(goes.get("tab"))),
+                tabs[0] if tabs else None,
+            )
+            if hit is None:
+                gaps.append(
+                    f"{where}: a row opens {target.get('code')} on its {goes.get('tab') or 'first'!r} tab in the "
+                    f"prototype; {target.get('code')} has no related_table tab listing {ent} (add it)"
+                )
+                continue
+            want = f"{target.get('code')}#{hit.get('code')}"
+        if have != want:
+            gaps.append(
+                f"{where}: a row opens {goes.get('screen')}"
+                + (
+                    f" on its {goes['tab']!r} tab"
+                    if goes.get("tab") and "#" in want
+                    else ""
+                )
+                + f" in the prototype; set {ent}'s table.row_click: {want} (now {have!r})"
+            )
+    return gaps
+
+
 def coverage(doc: dict, bundle_dir) -> dict:
     """``{"menu": [gap], "screens": [{id, maps, gaps: {kind: [label]}}], "rebuild": {id: {kind: [label]}}}``
     for the capture in ``bundle_dir`` (``write_prototype_bundle``'s output)."""
@@ -315,7 +401,8 @@ def coverage(doc: dict, bundle_dir) -> dict:
     )
     firsts: dict = {}
     out = {
-        "menu": menu_gaps(doc, manifest, nav_by_persona, norm),
+        "menu": menu_gaps(doc, manifest, nav_by_persona, norm)
+        + row_gaps(doc, capture, norm),
         "screens": [],
         "rebuild": {},
     }

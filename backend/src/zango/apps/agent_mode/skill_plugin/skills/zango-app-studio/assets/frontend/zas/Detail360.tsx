@@ -239,7 +239,8 @@ function Page({ viewCode, uuid, initial }: { viewCode: string; uuid: string; ini
   const navigate = useNavigate();
   const [data, setData] = useState<DetailResponse | null>(initial?.zas ? initial : null);
   const [err, setErr] = useState<string | null>(null);
-  const [tab, setTab] = useState<string | null>(null);
+  // ?tab=<code> opens a tab (a list row whose row_click is "<view>#<tab>")
+  const [tab, setTab] = useState<string | null>(() => new URLSearchParams(window.location.search).get("tab"));
 
   const load = useCallback(() => {
     api.fetchDetail(hero.endpoint, uuid).then((r) => { setData(r); setErr(null); }).catch((e) => setErr(String(e)));
@@ -249,6 +250,9 @@ function Page({ viewCode, uuid, initial }: { viewCode: string; uuid: string; ini
   const back = view.back_to && pageUrl(view.back_to);
   const backBtn = back ? <Button icon={<ArrowLeft />} onClick={() => navigate(back)}>Back to {SPEC.pages[view.back_to as string]?.title}</Button> : undefined;
 
+  if (err && /\b403\b/.test(err)) {
+    return <div className="zas zas-page"><StateBox kind="no_access" title="No access" text={view.states?.no_access?.text || `You don't have access to this ${hero.name.toLowerCase()}.`} /></div>;
+  }
   if (err) return <div className="zas zas-page"><StateBox kind="error" title="This page could not load" text={err} action={backBtn} /></div>;
   if (!data || !data.zas) return <div className="zas zas-page" aria-busy="true"><div className="zas-dhead"><Skeleton lines={4} /></div></div>;
   const z = data.zas;

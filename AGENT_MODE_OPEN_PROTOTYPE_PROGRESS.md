@@ -498,3 +498,24 @@ Checked against the spec, the test code and the app (Chrome as Sponsorship Offic
 | Signatory on organiser_360 | small app (runtime) bug, no leak | the 360 shows "This page could not load / Error: 403 Forbidden" with "Back to Organisers" instead of the No access state |
 
 So none of the red results is a wrong permission or broken workflow in the app itself.
+
+## B7b: list rows open where the prototype opens them (2026-10-26)
+
+The mockup has no agreement/payment/evidence record page: a row on Agreements or Evidence opens its
+request on the Agreement / Evidence tab. The YAML could not say that (row_click: a 360, drawer or none),
+so the build opened a drawer.
+
+- `row_click: <view>#<tab>` (pack 1.1.22): the row's parent 360 on the tab that lists this entity.
+  spec_check and the kit preview validate it (view exists, tab is a related_table of this entity);
+  ZasTable navigates via `parentTabUrl` (the parent's uuid from row `zas.links`, which now always
+  carry parent FKs, mixins.py); Detail360 opens `?tab=<code>`; the kit preview follows it too.
+- Capture: after each list screen, the worker clicks the first row and records `row_opens`
+  {screen, record, tab, overlay} in capture.json (~41 s for this 14-screen, 7-persona prototype).
+- Coverage: `row_gaps` compares row_opens with `table.row_click`. On the sponsorship YAML it adds:
+  agreements → `request_360#agreement`, evidence → `request_360#evidence` (both "drawer" now).
+- Also: Detail360 shows the No access state on a 403 (was "This page could not load / 403").
+- Tests: RowTargetTests (2) in test_prototype_coverage.py; coverage/parity/guards pass. 10 failures in
+  app_templates pack tests (ordering_portal, compliance_monitoring, rems_compliance, sketch_kit)
+  fail identically on the committed code before this change.
+- Pending (testing step, uncommitted): zas_test/api.py scope-aware records (`record_for`), test
+  crashes reported as "test could not run" skips.
