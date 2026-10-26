@@ -164,7 +164,7 @@ For every screen, say in the YAML, with the prototype's own words:
 
 | The prototype shows | The YAML says it in |
 |---|---|
-| menu items, their labels, groups and order | `roles[].menu` (each role's, in the prototype's order). One menu shown to every persona doesn't say who sees what: an item goes only to the roles that can open its page |
+| each persona's menu: items, labels, groups and order | that role's `roles[].menu`, exactly. When the requirements give a role less than the prototype shows it, change the prototype's menu for that persona; never give the role items it shouldn't have |
 | a menu item for a screen not built | that screen's `prototype.screens` entry: `menu: {group, label, icon}` (shown greyed out) |
 | a page heading | `pages[].title` |
 | list columns, status tabs or filter chips | `table.columns`, `table.quick_filters` |
@@ -235,6 +235,11 @@ When the user uploaded their app as an `.html` file, it is the prototype. Do not
    (above) and record them in `prototype.screens`, then call `proto_design`: it reads the page's own
    `:root` variables. Then cover every screen ("The YAML covers the prototype"): its menu, columns,
    tabs, sections and buttons, in the page's own words.
+5. Make each persona's menu its role's. An uploaded page often draws one menu for everyone; when the
+   requirements give a role less, `proto_patch` the page's menu render to hide, for that persona,
+   the items its role doesn't get (one map of persona → hidden labels, applied where the page draws
+   its nav). The user approves what the preview shows each persona, and the build gives each role
+   exactly its `roles[].menu`.
 
 The page keeps its own look. Imported parts may be up to 1 MB each.
 

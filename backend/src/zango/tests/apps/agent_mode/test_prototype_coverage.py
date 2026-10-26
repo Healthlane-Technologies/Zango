@@ -77,7 +77,10 @@ def spec(**over):
                 {"page": "home"},
                 {"group": "Lab", "items": [{"page": "samples"}, {"page": "instruments"}]},
             ]},
-            {"name": "Technician", "menu": [{"page": "samples"}]},
+            {"name": "Technician", "menu": [
+                {"page": "home"},
+                {"group": "Lab", "items": [{"page": "samples"}, {"page": "instruments"}]},
+            ]},
         ],
         "modules": [{"code": "lab", "entities": [{
             "code": "sample",
@@ -176,7 +179,24 @@ class CoverageTests(unittest.TestCase):
         doc["pages"][1]["title"] = "Sample queue"
         doc["prototype"]["screens"][4].pop("menu")
         menu = pc.coverage(doc, self.bundle)["menu"]
-        self.assertEqual(menu, ["menu: in no role's menu: 'Samples' (group 'Lab'), 'Tour' (group 'Help')"])
+        self.assertIn(
+            "menu (Lab lead): the prototype shows this role 'Samples' (group 'Lab'), 'Tour' (group 'Help'); "
+            "the YAML menu doesn't have them",
+            menu,
+        )
+
+    def test_each_persona_sees_exactly_its_roles_menu(self):
+        # One menu drawn for every persona, while the requirements give the Technician less:
+        # the preview must change, so the user approves what the build will show.
+        doc = spec()
+        doc["roles"][1]["menu"] = [{"group": "Lab", "items": [{"page": "samples"}]}]
+        menu = pc.coverage(doc, self.bundle)["menu"]
+        self.assertTrue(any(g.startswith("menu (Technician): the prototype shows this role 'Home'") for g in menu))
+        # and a role whose YAML menu has more than its persona sees
+        doc = spec()
+        doc["roles"][0]["menu"].append({"page": "reports", "label": "Reports"})
+        menu = pc.coverage(doc, self.bundle)["menu"]
+        self.assertEqual(menu, ["menu (Lab lead): the YAML menu has 'Reports'; the prototype doesn't show them to this role"])
 
     def test_not_built_and_rebuild_take_labels_off_the_gaps(self):
         doc = spec()

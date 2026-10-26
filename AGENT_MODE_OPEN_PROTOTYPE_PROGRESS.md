@@ -547,3 +547,8 @@ Agreements or Profile; every role had the full menu.
 - Run 4 (solar-summit): greyed-out items followed the spec's prototype.screens order (Integrations before
   Getting started), so the shell would draw them out of the prototype's order and the check flagged it.
   `soon_items` and `_menu_labels` now order them by the manifest's screen order.
+- Run 4, rev 35: the preview drew one menu (11 items) for all seven personas while the YAML gave each role its
+  own subset (Signatory: Home, Requests, Agreements). The gate's shared-menu mode let that through. Removed:
+  each persona's menu must equal its role's `roles[].menu` in both directions (missing and extra items, groups,
+  order). The fix goes in the prototype (proto_patch its menu render with persona → hidden items), never by
+  widening a role: the user approves what the preview shows each persona. Import step 5 and the prompt say so.

@@ -10,7 +10,8 @@ A label is covered when the YAML says it there, or the screen's ``prototype.scre
 it under ``not_built`` with a why (the user sees those). A rebuilt screen (custom page, or
 ``rebuild: true``) is ported from the prototype itself, so its labels go to the build instead of
 blocking. The menu is checked per persona: the prototype's items, labels, groups and order against
-that role's ``roles[].menu``, plus ``prototype.screens[].menu`` for screens that are not built.
+that role's ``roles[].menu``, plus ``prototype.screens[].menu`` for screens that are not built, in
+both directions (what the preview shows a persona is what its role gets).
 """
 
 from __future__ import annotations
@@ -28,8 +29,11 @@ from pathlib import Path
 GUIDE = (
     "Put each where it belongs in the YAML, with the prototype's own words: menu items, labels, "
     "groups and order → roles[].menu (a screen that is not built → its prototype.screens entry's "
-    "`menu`); the prototype shows one menu for every persona, so give each item only to the roles "
-    "that can open its page (the requirements decide who sees what, not the prototype); page "
+    "`menu`). Each persona's menu in the prototype is its role's menu, exactly: the user approves "
+    "what the preview shows. When the requirements give a role less than the prototype shows "
+    "(one menu drawn for every persona), change the prototype so that persona's menu shows only "
+    "its role's items (proto_patch the menu by persona), never the YAML to match a menu the role "
+    "shouldn't have; page "
     "titles → pages[].title; columns → table.columns; status tabs and filter chips → "
     "table.quick_filters; where a row opens → table.row_click (its 360, `<view>#<tab>` for its "
     "parent's 360 on a tab, or drawer); 360 tabs → detail_views[].tabs, the prototype's tabs "
@@ -266,37 +270,12 @@ def _place(out: list, item: tuple, nav: list, norm) -> None:
 
 
 def menu_gaps(doc: dict, manifest: dict, nav_by_persona: dict, norm) -> list[str]:
-    """Each prototype menu item is in the YAML's menus, with its label, group and order.
-
-    When every persona sees its own menu, each role is checked against its persona's. When they all
-    see the same one, the prototype doesn't say who sees what: every item must be in some role's
-    menu, and the role with the fullest menu keeps the prototype's groups and order."""
+    """Each persona's menu in the prototype is its role's menu in the build: the same items, labels,
+    groups and order, nothing more and nothing less. The user approves what the preview shows, so a
+    role that sees less than the prototype's menu needs the prototype changed for that persona,
+    not a lenient check."""
     roles = {norm(r.get("name")): r for r in _items(doc.get("roles"))}
     screens = _items((doc.get("prototype") or {}).get("screens"))
-    navs = {
-        tuple((norm(g or ""), norm(t)) for g, t in nav)
-        for nav in nav_by_persona.values()
-    }
-    if len(navs) == 1 and len(nav_by_persona) > 1:
-        nav = next(iter(nav_by_persona.values()))
-        menus = [
-            (r, _menu_labels(doc, r, screens, manifest, norm, nav))
-            for r in roles.values()
-        ]
-        if not menus:
-            return []
-        anywhere = {norm(label) for _, have in menus for _, label in have}
-        missing = [
-            f"{label!r}" + (f" (group {group!r})" if group else "")
-            for group, label in nav
-            if norm(label) not in anywhere
-        ]
-        gaps = ["menu: in no role's menu: " + ", ".join(missing)] if missing else []
-        role, have = max(
-            menus,
-            key=lambda m: len({norm(t) for _, t in m[1]} & {norm(t) for _, t in nav}),
-        )
-        return gaps + _role_menu_gaps(role.get("name"), nav, have, norm, missing=False)
     gaps = []
     for persona, nav in nav_by_persona.items():
         role_name = (manifest.get("roles") or {}).get(persona) or persona
@@ -312,9 +291,10 @@ def menu_gaps(doc: dict, manifest: dict, nav_by_persona: dict, norm) -> list[str
     return gaps
 
 
-def _role_menu_gaps(name, nav: list, have: list, norm, missing=True) -> list[str]:
-    """One role's menu against the prototype's: missing items, groups, order."""
+def _role_menu_gaps(name, nav: list, have: list, norm) -> list[str]:
+    """One role's menu against its persona's in the prototype: missing, extra, groups, order."""
     index = {norm(label): (i, group) for i, (group, label) in enumerate(have)}
+    shown = {norm(label) for _, label in nav}
     absent, wrong_group, order = [], [], []
     for group, label in nav:
         hit = index.get(norm(label))
@@ -327,9 +307,18 @@ def _role_menu_gaps(name, nav: list, have: list, norm, missing=True) -> list[str
                 f"{label!r} is under {group or 'no group'!r} in the prototype, "
                 f"{hit[1] or 'no group'!r} in the YAML"
             )
+    extra = [f"{label!r}" for _, label in have if norm(label) not in shown]
     gaps = []
-    if absent and missing:
-        gaps.append(f"menu ({name}): missing " + ", ".join(absent))
+    if absent:
+        gaps.append(
+            f"menu ({name}): the prototype shows this role {', '.join(absent)}; the YAML menu "
+            "doesn't have them"
+        )
+    if extra:
+        gaps.append(
+            f"menu ({name}): the YAML menu has {', '.join(extra)}; the prototype doesn't show "
+            "them to this role"
+        )
     if wrong_group:
         gaps.append(f"menu ({name}): " + "; ".join(wrong_group))
     if order != sorted(order):
