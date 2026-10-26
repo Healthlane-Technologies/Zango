@@ -752,6 +752,17 @@ a{color:var(--blue)}
     <p class="done"><span class="pill ok">built 26 Oct</span> Against the sponsorship app's approved YAML the gate lists exactly the gaps seen in the build: 6 menu items, the Requests label, the Next action column and 3 status tabs, the request page's Package and benefits / Amounts / Next action panels and its Run AI review / Withdraw buttons, organiser and policy columns and fields. Pack 1.1.21. Limits: KPI tile captions that are not headings are not read yet; matching is per screen scope, by label text. Testing (look score, test data, demo data) is a separate step.</p>
   </div></div>
 
+  <div class="phase"><div class="id">B7b</div><div>
+    <h4>List rows open where the prototype opens them</h4>
+    <div class="row"><span class="pill">spec</span><span class="pill">runtime</span><span class="pill">coverage gate</span></div>
+    <p>In the sponsorship mockup, agreements and evidence have no record page: a row opens its request on the Agreement or Evidence tab. The YAML's <code>row_click</code> could only name the entity's own 360, a drawer or none, so the build opened a drawer.</p>
+    <ul>
+      <li><code>row_click: &lt;view&gt;#&lt;tab&gt;</code> opens the row's parent 360 on the tab that lists it (spec_check, kit preview, ZasTable, Detail360 <code>?tab=</code>).</li>
+      <li>The prototype capture clicks each list's first row and records where it lands (screen, tab, or a drawer); the coverage gate compares that with <code>row_click</code>.</li>
+    </ul>
+    <p class="done"><span class="pill ok">built 26 Oct</span> On the sponsorship YAML the gate now also asks for <code>request_360#agreement</code> and <code>request_360#evidence</code>. Pack 1.1.22. The 360 also shows No access on a 403 instead of an error page.</p>
+  </div></div>
+
   <h3>Order across both stages</h3>
   <div class="tw"><table>
     <thead><tr><th>Week</th><th>Requirement side</th><th>Build side</th></tr></thead>
