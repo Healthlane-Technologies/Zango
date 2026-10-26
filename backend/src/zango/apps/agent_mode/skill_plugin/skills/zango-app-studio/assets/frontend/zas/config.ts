@@ -13,6 +13,21 @@ export function applyTheme() {
   const ui = SPEC.app.ui || {};
   root.dataset.zasRadius = ui.radius || "rounded";
   root.dataset.zasDensity = ui.density || "comfortable";
+  // app.design (open mode): the approved prototype's tokens over tokens.css, and its web fonts.
+  const design = SPEC.app.design;
+  if (design?.css && !document.querySelector("style[data-zas-design]")) {
+    const style = document.createElement("style");
+    style.setAttribute("data-zas-design", "");
+    style.textContent = design.css;
+    document.head.appendChild(style);
+  }
+  if (design?.font_url && !document.querySelector("link[data-zas-design]")) {
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = design.font_url;
+    link.setAttribute("data-zas-design", "");
+    document.head.appendChild(link);
+  }
 }
 
 /** URL of an entity's 360 page: served by its list page's CrudHandler (contracts §9). */

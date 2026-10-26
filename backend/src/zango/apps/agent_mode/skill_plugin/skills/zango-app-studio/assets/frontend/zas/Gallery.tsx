@@ -47,7 +47,7 @@ export default function ZasGallery() {
   useLayoutEffect(() => () => { delete FMT.locale; delete FMT.currency; delete FMT.now; }, []);
   return (
     <ToastHost>
-      <div className="zas zas-page" data-zas="page" data-zas-key="__zas" style={{ ["--brand" as any]: "#4F46E5", ...GALLERY_DEFAULTS }}>
+      <div className="zas zas-page" data-zas="page" data-zas-key="__zas" data-zas-pinned="" style={{ ["--brand" as any]: "#4F46E5", ...GALLERY_DEFAULTS }}>
         <div className="zas-ph"><div><h1>Design system</h1><p>Every component and state, with fixed sample data.</p></div></div>
         <div data-gallery="badges" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
           {TONES.map((t) => <Badge key={t} label={t} tone={t} zasKey={`badge-${t}`} />)}
@@ -102,6 +102,16 @@ export default function ZasGallery() {
           </Stack>
         </div>
         <div data-gallery="states"><StateBox kind="not_found" title="Vendor not found" text="It may have been removed or you may not have access." /></div>
+      </div>
+      {/* Not pinned: the app's own look (app.brand, app.ui, app.design), so the design tests can see
+          that every token reaches a component. No golden: it differs per app. */}
+      <div className="zas zas-page" data-gallery="themed" data-zas-key="__zas_themed">
+        <div className="zas-ph"><div><h1>This app's look</h1><p>The same components with the app's tokens.</p></div></div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+          <Button variant="primary" icon={<Plus />}>Primary</Button><Button>Default</Button>
+          {(["green", "amber", "red", "blue"] as const).map((t) => <Badge key={t} label={t} tone={t} zasKey={`themed-badge-${t}`} />)}
+        </div>
+        <Panel title="Fields" zasKey="themed-fields"><FieldGrid fields={FIELDS} /></Panel>
       </div>
     </ToastHost>
   );

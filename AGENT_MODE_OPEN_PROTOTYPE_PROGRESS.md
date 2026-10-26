@@ -318,5 +318,21 @@ The sponsorship spec in the local DB was rewritten once (data identical, lines 5
 - Not in B1: `maps` per screen (P2) and the theme/rebuild class (B4) are not in `index.md` yet.
 - `test_skill_plugin` has 7 failures + 1 error that predate this branch's Stage 2 work (checked on a stash).
 
+**B2 done (2026-10-26), live check in an app page pending:** prototype tokens reach the zas runtime.
+- `spec_check.py` turns `app.design` into CSS shipped in `spec.ui.json` as `app.design.{css,font_url,fonts}`
+  (no separate `tokens.app.css`). `DESIGN_MAP` maps canonical names onto `--z-*`, the tone fg/bg (borders are
+  a color-mix), and the crud `--color-gray-*` / `--color-brand-*` ramp; other names become `--p-<name>`.
+  Values with `;{}<>` or `url(` are dropped with an `app.design` warning. `brand` sets `theme.primary`.
+- `config.ts applyTheme()` injects `<style data-zas-design>` + a Google Fonts `<link>` (families other than
+  Inter / JetBrains Mono) at runtime, not in `index.html`, because the single-file Zango build may not serve it.
+  A zero-specificity `:where(.zas *, .zas-login *)` font rule beats appbuilder's global `* {Inter}`.
+- Gallery: the pinned part is marked `data-zas-pinned` and keeps the defaults (goldens unchanged); a new
+  unpinned "themed" section shows buttons, badges and a field grid in the app's look. `zas_test.design`
+  check `design.tokens.themed` compares its computed colours, radius and font with `app.design`.
+- Test: `test_declared_ui.BuildHearsItTests.test_app_design_themes_the_runtime`. `tsc` clean in `src/zas`.
+- Live (voucher, scratch frontend on 127.0.0.1:3100 against bright-isle:8000): login page has brand
+  #0F766E on the button, ground #F3F6F6, Plus Jakarta Sans loaded and applied. Still to see live: a crud
+  list, a form and `/app/__zas` themed section as a signed-in app user.
+
 Recommended first move next session: the YAML bug, then S0 (with guard 1) + B1 on the two test apps above
 (both kinds), then B2.

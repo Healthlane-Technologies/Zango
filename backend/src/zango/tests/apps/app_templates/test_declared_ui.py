@@ -131,6 +131,37 @@ class BuildHearsItTests(DeclaredUITestBase):
         zas = Path(tmp) / ".zas"
         return json.loads((zas / "spec.ui.json").read_text()), (zas / "holes.md").read_text()
 
+    def test_app_design_themes_the_runtime(self):
+        doc = copy.deepcopy(self.doc)
+        doc["app"]["design"] = {
+            "source": "prototype",
+            "fonts": {"body": "Plus Jakarta Sans", "mono": "JetBrains Mono"},
+            "tokens": {"brand": "#0F766E", "page": "#F3F6F6", "card": "#FFFFFF", "sunk": "#EAF0EF",
+                       "border": "#DCE5E3", "radius": "12px", "ok": "#1F7A45", "ok-bg": "#E4F4EA",
+                       "purple": "#6B3FC4", "bad": "red;}body{x:y"},
+        }
+        ui, _ = self.run_check(doc)
+        app = ui["app"]
+        self.assertEqual(app["brand"], "#0F766E")  # brand drives --brand and every ramp
+        css = app["design"]["css"]
+        main, pinned = css.split("html:root [data-zas-pinned]")
+        self.assertIn("--z-ground: #F3F6F6;", main)
+        self.assertIn("--z-r-card: 12px;", main)
+        self.assertIn("--t-green-bd: color-mix(", main)
+        self.assertIn("--p-purple: #6B3FC4;", main)
+        self.assertNotIn("body{x:y", css)  # not a plain value: dropped
+        self.assertIn('--z-font: "Plus Jakarta Sans"', main)
+        # the gallery keeps the defaults for its goldens
+        self.assertIn("--z-ground: #f7f8fa;", pinned)
+        self.assertIn(":where(.zas, .zas *, .zas-login, .zas-login *)", css)
+        self.assertEqual(
+            app["design"]["font_url"],
+            "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap",
+        )
+        # kit mode: nothing
+        ui, _ = self.run_check(copy.deepcopy(self.doc))
+        self.assertNotIn("design", ui["app"])
+
     def test_ui_dashboard_and_contracts_reach_the_build(self):
         doc = copy.deepcopy(self.doc)
         doc["app"]["ui"] = {"radius": "sharp", "density": "compact"}

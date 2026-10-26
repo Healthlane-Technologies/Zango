@@ -35,7 +35,7 @@ export interface SpecView {
 export interface SpecPage { type: "crud" | "detail" | "custom"; route: string; title: string; entity?: string; detail_view?: string; roles?: string[]; export: string }
 export interface MenuItem { page?: string; label?: string; icon?: string; group?: string; items?: MenuItem[] }
 export interface SpecUi {
-  app: { code: string; name: string; description: string; locale: string; currency: string; brand: string; ui?: { radius?: "sharp" | "rounded" | "soft"; density?: "compact" | "comfortable" }; roles: { name: string; description: string }[];
+  app: { code: string; name: string; description: string; locale: string; currency: string; brand: string; ui?: { radius?: "sharp" | "rounded" | "soft"; density?: "compact" | "comfortable" }; design?: { css?: string; font_url?: string | null; fonts?: Record<string, string> }; roles: { name: string; description: string }[];
     modules: { code: string; name: string; description: string }[] };
   pages: Record<string, SpecPage>;
   entities: Record<string, SpecEntity>;

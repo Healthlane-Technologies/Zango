@@ -686,6 +686,7 @@ a{color:var(--blue)}
       <li>Gallery + goldens: pinned defaults stay, plus one "themed" gallery shot to catch tokens that don't reach a component</li>
     </ul>
     <p class="done"><b>Done when</b> a standard crud list and form, with no custom code, use the prototype's palette, fonts, radii and shadows.</p>
+    <p class="done"><span class="pill ok">built 26 Oct</span> <code>spec_check</code> maps <code>app.design</code> onto the runtime's tokens, tone colours and the crud gray/brand ramp; unknown names become <code>--p-*</code>. The CSS travels in <code>spec.ui.json</code> and <code>applyTheme()</code> injects it with the fonts link (no separate <code>tokens.app.css</code>, no <code>index.html</code> edit). The Gallery keeps a pinned default part and adds a themed section, checked by <code>design.tokens.themed</code>. Live on the voucher login page: brand, ground and Plus Jakarta Sans applied. Crud list and form still to be seen signed in.</p>
   </div></div>
 
   <div class="phase"><div class="id">B3</div><div>

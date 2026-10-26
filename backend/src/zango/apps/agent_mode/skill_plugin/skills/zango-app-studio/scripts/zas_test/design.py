@@ -267,8 +267,40 @@ def g_tokens(Dx, b):
         bad = {t: v for t, v in css["badges"].items() if v != rgb(TONE_BG.get(t, "#000000"))}
         Dx.check("design.tokens.tones", "nine tones match tokens.css", "design-system",
                  lambda: (len(css["badges"]) == 9 and not bad, f"{len(css['badges'])} tones rendered; wrong: {bad}"))
+        design = Dx.M["app"].get("design") or {}
+        if design.get("tokens"):
+            g_themed(Dx, rp, design)
     finally:
         rp.close()
+
+
+HEX = re.compile(r"^#[0-9a-fA-F]{6}$")
+
+
+def g_themed(Dx, rp, design):
+    """Open mode: the gallery's unpinned section uses app.design (B2): palette, radius, font, tones."""
+    got = rp.page.evaluate("""() => {
+      const root = document.querySelector('[data-gallery="themed"]');
+      if (!root) return null;
+      const st = (sel, prop) => { const e = root.querySelector(sel); return e ? getComputedStyle(e)[prop] : null; };
+      return {page: getComputedStyle(root).backgroundColor, font: getComputedStyle(root).fontFamily,
+              card: st('.zas-panel', 'backgroundColor'), border: st('.zas-panel', 'borderTopColor'),
+              radius: st('.zas-panel', 'borderTopLeftRadius'), pri: st('.zas-btn.pri', 'backgroundColor'),
+              text: st('.zas-ph h1', 'color'), ok: st('[data-zas-key="themed-badge-green"]', 'backgroundColor')}; }""")
+    if got is None:
+        Dx.add("design.tokens.themed", "app.design reaches the components", "app.design", "fail",
+               "no [data-gallery=themed] section on /app/__zas (runtime older than the skill?)")
+        return
+    tokens, fonts = design.get("tokens") or {}, design.get("fonts") or {}
+    want = {"page": tokens.get("page"), "card": tokens.get("card"), "border": tokens.get("border"),
+            "pri": tokens.get("brand"), "text": tokens.get("text"), "ok": tokens.get("ok-bg")}
+    wrong = {k: f"{got[k]} != {v}" for k, v in want.items() if v and HEX.match(str(v)) and got.get(k) != rgb(v)}
+    if tokens.get("radius") and str(tokens["radius"]).endswith("px") and got["radius"] != tokens["radius"]:
+        wrong["radius"] = f"{got['radius']} != {tokens['radius']}"
+    if fonts.get("body") and fonts["body"] not in (got["font"] or ""):
+        wrong["font"] = f"{got['font']} lacks {fonts['body']}"
+    Dx.check("design.tokens.themed", "app.design reaches the components", "app.design",
+             lambda: (not wrong, "; ".join(f"{k}: {v}" for k, v in wrong.items()) or "palette, radius and font applied"))
 
 
 # ───────────────────────── tree, layout ─────────────────────────

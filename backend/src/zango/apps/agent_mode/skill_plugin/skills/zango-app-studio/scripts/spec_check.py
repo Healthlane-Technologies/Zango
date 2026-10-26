@@ -187,6 +187,121 @@ def dashboard_text(P):
     return "\n".join(lines)
 
 
+
+# --- app.design (open mode): the approved prototype's tokens on the runtime ---------------------
+# app.design.tokens uses canonical names (SCHEMA.md, app.design); each maps onto the zas tokens
+# (tokens.css) and the crud package's gray ramp, so standard screens take the prototype's look.
+# config.ts applyTheme() injects the CSS (html:root beats the app.ui radius/density rules) and the
+# Google Fonts link for families the runtime does not embed.
+DESIGN_MAP = {
+    "page": ["--z-ground"],
+    "card": ["--z-card", "--color-base-white"],
+    "sunk": ["--z-sunken", "--color-gray-100"],
+    "text-strong": ["--color-gray-900"],
+    "text": ["--z-text", "--color-gray-900", "--color-gray-800"],
+    "text-2": ["--z-text2", "--z-sub", "--color-gray-700", "--color-gray-600"],
+    "text-3": ["--z-muted", "--color-gray-500"],
+    "text-faint": ["--z-faint", "--color-gray-400"],
+    "border-faint": ["--z-bdf"],
+    "border": ["--z-bd", "--color-gray-200"],
+    "border-strong": ["--z-bds", "--z-ghost", "--color-gray-300"],
+    "brand-strong": ["--b600", "--color-brand-600"],
+    "brand-soft": ["--b50", "--color-brand-50", "--color-primary-light"],
+    "radius-sm": ["--z-r-ctl"],
+    "radius": ["--z-r-card"],
+    "radius-lg": ["--z-r-head"],
+    "shadow-sm": ["--z-shadow"],
+    "shadow": ["--z-shadow"],
+    "shadow-lg": ["--z-shadow-pop"],
+    "ok": ["--t-green-fg"], "ok-bg": ["--t-green-bg"],
+    "warn": ["--t-amber-fg"], "warn-bg": ["--t-amber-bg"],
+    "bad": ["--t-red-fg", "--color-error-500"], "bad-bg": ["--t-red-bg"],
+    "info": ["--t-blue-fg"], "info-bg": ["--t-blue-bg"],
+}
+TONE_OF = {"ok": "green", "warn": "amber", "bad": "red", "info": "blue"}
+EMBEDDED_FONTS = {"inter", "jetbrains mono"}
+_CSS_VALUE = re.compile(r"^[^;{}<>]{1,300}$")
+
+
+def _token_defaults():
+    """{--var: value} from the runtime's tokens.css :root block (the pinned gallery's values)."""
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets", "frontend", "zas", "tokens.css")
+    try:
+        text = open(path, encoding="utf-8").read()
+    except OSError:
+        return {}
+    text = re.sub(r"/\*.*?\*/", "", text, flags=re.S)
+    m = re.search(r":root\s*\{(.*?)\n\}", text, re.S)
+    return {k: " ".join(v.split()) for k, v in re.findall(r"(--[\w-]+)\s*:\s*([^;]+);", m.group(1) if m else "")}
+
+
+def _font_stack(family, fallback):
+    return f'"{family}", {fallback}' if family else None
+
+
+def design_css(design):
+    """(css, google_fonts_url, problems) for app.design; ("", None, []) without tokens."""
+    design = design if isinstance(design, dict) else {}
+    tokens = design.get("tokens") if isinstance(design.get("tokens"), dict) else {}
+    fonts = design.get("fonts") if isinstance(design.get("fonts"), dict) else {}
+    problems, decl = [], OrderedDict()
+    values = {}
+    for name, value in tokens.items():
+        value = str(value).strip()
+        if not _CSS_VALUE.match(value) or "url(" in value.lower():
+            problems.append(f"app.design.tokens.{name}: not a plain CSS value")
+            continue
+        values[name] = value
+    for name, targets in DESIGN_MAP.items():
+        if name in values:
+            for t in targets:
+                if t == "--z-shadow" and name == "shadow-sm" and "shadow" in values:
+                    continue
+                decl[t] = values[name]
+    if "card" in values and "sunk" in values:
+        decl["--z-head"] = f"color-mix(in srgb, {values['sunk']} 50%, {values['card']})"
+        decl["--color-gray-50"] = decl["--z-head"]
+    for name, tone in TONE_OF.items():
+        if name in values and f"{name}-bg" in values:
+            decl[f"--t-{tone}-bd"] = f"color-mix(in srgb, {values[name]} 30%, {values[name + '-bg']})"
+    body = _font_stack(fonts.get("body"), '-apple-system, "Segoe UI", system-ui, sans-serif')
+    mono = _font_stack(fonts.get("mono"), '"SF Mono", ui-monospace, Menlo, monospace')
+    if body:
+        decl["--z-font"] = body
+    if mono:
+        decl["--z-mono"] = mono
+    if fonts.get("display"):
+        decl["--z-display"] = _font_stack(fonts["display"], "var(--z-font)")
+    # every other token stays available to custom screens as --p-<name>
+    for name, value in values.items():
+        if name not in DESIGN_MAP and name not in ("brand", "accent", "accent-soft", "nav"):
+            decl[f"--p-{name}"] = value
+    for name in ("accent", "accent-soft", "nav"):
+        if name in values:
+            decl[f"--p-{name}"] = values[name]
+    css = ""
+    if decl:
+        css = "html:root {\n" + "".join(f"  {k}: {v};\n" for k, v in decl.items()) + "}\n"
+        # The component gallery keeps the default look for its goldens ([data-zas-pinned]).
+        defaults = _token_defaults()
+        pinned = [(k, defaults[k]) for k in decl if k in defaults]
+        if pinned:
+            css += "html:root [data-zas-pinned] {\n" + "".join(f"  {k}: {v};\n" for k, v in pinned) + "}\n"
+        if body:
+            # @zango-core/appbuilder sets `* { font-family: Inter }`; zero specificity keeps every
+            # runtime font rule (mono, headings) in charge while beating that reset.
+            css += ":where(.zas, .zas *, .zas-login, .zas-login *) { font-family: var(--z-font); }\n"
+    families = []
+    for fam in (fonts.get("body"), fonts.get("display"), fonts.get("mono")):
+        if fam and fam.lower() not in EMBEDDED_FONTS and fam not in families:
+            families.append(fam)
+    url = None
+    if families:
+        url = "https://fonts.googleapis.com/css2?" + "&".join(
+            "family=" + f.replace(" ", "+") + ":wght@400;500;600;700" for f in families
+        ) + "&display=swap"
+    return css, url, problems
+
 def arr(x):
     if x is None:
         return []
@@ -488,6 +603,15 @@ class Spec:
         if unknown:
             L.warn("app.ui", f"app.ui does not know {', '.join(unknown)} (only radius and density)")
         app["ui"] = {"radius": ui["radius"], "density": ui["density"]}
+        if app.get("design") is not None:
+            css, font_url, bad = design_css(app.get("design"))
+            for b in bad:
+                L.warn("app.design", b)
+            brand = str(((app.get("design") or {}).get("tokens") or {}).get("brand") or "")
+            if re.match(r"^#[0-9A-Fa-f]{6}$", brand):
+                app["theme"]["primary"] = brand  # the runtime's --brand and every ramp follow it
+            app["design_ui"] = {"css": css, "font_url": font_url,
+                                "fonts": (app.get("design") or {}).get("fonts") or {}}
         sets = {k: norm_choices(v, {}) for k, v in (s.get("choice_sets") or {}).items()}
 
         roles = s.get("roles") or []
@@ -1939,6 +2063,7 @@ class Spec:
         out = {"app": {"code": M["app"].get("code"), "name": M["app"]["name"],
                        "description": M["app"].get("description", ""), "locale": M["app"]["locale"],
                        "currency": M["app"]["currency"], "brand": M["app"]["theme"]["primary"], "ui": M["app"]["ui"],
+                       **({"design": M["app"]["design_ui"]} if M["app"].get("design_ui") else {}),
                        "roles": [{"name": r["name"], "description": r.get("description", "")} for r in M["roles"].values()],
                        "modules": [{"code": m["code"], "name": m["name"], "description": m.get("description", "")}
                                    for m in M["modules"]]},
