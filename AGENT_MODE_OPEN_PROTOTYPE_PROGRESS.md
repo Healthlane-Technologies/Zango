@@ -552,3 +552,20 @@ Agreements or Profile; every role had the full menu.
   each persona's menu must equal its role's `roles[].menu` in both directions (missing and extra items, groups,
   order). The fix goes in the prototype (proto_patch its menu render with persona → hidden items), never by
   widening a role: the user approves what the preview shows each persona. Import step 5 and the prompt say so.
+
+## B7d: the preview is the app (2026-10-26)
+
+Run 5 (pack 1.1.22, strict menus) passed the gate only through not_built: 19 entries, most of them renames
+("Amounts are part of the Request section", "built as Legal threshold"), while the preview still showed
+them. The request and organiser 360s differed in layout (stage tracker, banner, Overview sections, three
+side panels, stat cards, a tab-less organiser page), which label matching can't see.
+
+The rule now, in the gate, prompt and skill: the user approves the preview as the app; what it shows is
+built exactly, and nothing it doesn't show.
+- `not_built` no longer hides a label: one the preview still shows is a `still_shown` gap. Leaving
+  something out needs the user's agreement and a proto_patch that takes it out of the preview.
+- An uploaded page's (manifest `source: imported`) record screens must be `rebuild: true`
+  (`needs_rebuild` gap): the build ports them from the screen, with the "It must show" list.
+- Never rename the preview's words to fit the YAML.
+On run 5's YAML the gate now refuses: req and org need rebuild; the not_built headings, labels and
+policy fields are still in the preview. 24 tests.

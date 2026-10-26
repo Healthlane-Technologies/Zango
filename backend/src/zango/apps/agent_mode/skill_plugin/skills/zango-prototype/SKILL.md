@@ -159,7 +159,9 @@ Only what none of these can show (a map, a planner, a drag-and-drop canvas) beco
 
 ## The YAML covers the prototype
 
-The build follows the YAML, never the prototype's code, so whatever the YAML leaves out is lost.
+The user approves the preview as the app: whatever it shows is built, exactly as shown, and nothing
+it doesn't show. The build follows the YAML, never the prototype's code, so whatever the YAML leaves
+out is lost.
 For every screen, say in the YAML, with the prototype's own words:
 
 | The prototype shows | The YAML says it in |
@@ -174,9 +176,12 @@ For every screen, say in the YAML, with the prototype's own words:
 | buttons | `add_button`, `row_actions`, `header.actions.buttons`, or the transition's label |
 | field labels | the field's `label` |
 
-Where the YAML can't say it (a stage tracker, a custom list row), mark the screen `rebuild: true`
-with a `why` naming it; the build ports it from the screen. Only what the first version won't have
-goes in that entry's `not_built: [{text, why}]`: the user sees the list before approving.
+Use the preview's words; never rename a heading, label or button to fit the YAML. Where the YAML
+can't say it or can't lay it out as the preview does (a stage tracker, a custom list row, panels
+beside the tabs), mark the screen `rebuild: true` with a `why` naming it; the build ports it from
+the screen. A record screen of an uploaded page is always `rebuild: true`: its layout is its own.
+Leave something out only when the user agreed to: list it in that entry's `not_built: [{text, why}]`
+and `proto_patch` it out of the preview, so the preview never shows what won't be built.
 
 ## Later turns
 

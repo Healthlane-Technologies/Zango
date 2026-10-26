@@ -198,11 +198,29 @@ class CoverageTests(unittest.TestCase):
         menu = pc.coverage(doc, self.bundle)["menu"]
         self.assertEqual(menu, ["menu (Lab lead): the YAML menu has 'Reports'; the prototype doesn't show them to this role"])
 
-    def test_not_built_and_rebuild_take_labels_off_the_gaps(self):
+    def test_not_built_while_the_preview_still_shows_it_is_a_gap(self):
+        # The user approves the preview as the app: what won't be built must leave the preview too.
         doc = spec()
         doc["prototype"]["screens"][2]["not_built"] = [{"text": "Release result", "why": "later"}]
         doc["modules"][0]["entities"][0]["workflow"]["transitions"] = []
-        self.assertEqual(pc.coverage(doc, self.bundle)["screens"], [])
+        gaps = {s["id"]: s["gaps"] for s in pc.coverage(doc, self.bundle)["screens"]}
+        self.assertEqual(gaps["sample"], {"still_shown": ["Release result"]})
+        self.assertIn("the preview still shows: 'Release result'", pc.format_gaps(pc.coverage(doc, self.bundle)))
+
+    def test_an_uploaded_pages_record_screen_is_rebuilt(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            bundle = write_bundle(Path(tmp))
+            (bundle / "manifest.json").write_text(json.dumps({**MANIFEST, "source": "imported"}))
+            gaps = {s["id"]: s["gaps"] for s in pc.coverage(spec(), bundle)["screens"]}
+            self.assertIn("needs_rebuild", gaps["sample"])
+            doc = spec()
+            doc["prototype"]["screens"][2].update(rebuild=True, why="tracker and side panels")
+            result = pc.coverage(doc, bundle)
+        self.assertEqual(result["screens"], [])
+        self.assertIn("Release result", result["rebuild"]["sample"]["button"])
+
+    def test_rebuild_takes_labels_off_the_gaps(self):
+        doc = spec()
         doc["prototype"]["screens"][1].update(rebuild=True, why="row layout")
         doc["modules"][0]["entities"][0]["table"]["columns"] = []
         result = pc.coverage(doc, self.bundle)
@@ -318,11 +336,11 @@ class MarkReadyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             bundle = write_bundle(Path(tmp))
             doc = spec()
-            doc["prototype"]["screens"][2]["not_built"] = [{"text": "Release result", "why": "later"}]
+            doc["prototype"]["screens"][2]["not_built"] = [{"text": "Barcode printing", "why": "later"}]
             with mock.patch.object(pc, "ensure_capture", return_value=(bundle, "")):
                 note = self.bench()._check_prototype_coverage(doc, None)
         self.assertIn("covers every prototype screen", note)
-        self.assertIn("sample: Release result (later)", note)
+        self.assertIn("sample: Barcode printing (later)", note)
 
     def test_no_browser_skips_with_a_note(self):
         with mock.patch.object(pc, "ensure_capture", return_value=(None, "unavailable: no Playwright")):

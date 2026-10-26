@@ -27,6 +27,8 @@ from pathlib import Path
 
 # What to do with a gap: spec_mark_ready's refusal, and the agent's brief when Commit finds one.
 GUIDE = (
+    "The user approves the preview as the app: whatever it shows is built, exactly, and nothing "
+    "it doesn't show. "
     "Put each where it belongs in the YAML, with the prototype's own words: menu items, labels, "
     "groups and order → roles[].menu (a screen that is not built → its prototype.screens entry's "
     "`menu`). Each persona's menu in the prototype is its role's menu, exactly: the user approves "
@@ -40,9 +42,12 @@ GUIDE = (
     "and no others; section and panel headings → a summary section's, sidebar block's or "
     "dashboard block's `title` (a field of that name is not a heading); buttons → "
     "header.actions.buttons, row_actions, add_button or a transition's label; field labels → "
-    "the field's label. If the YAML can't say it, set `rebuild: true` with a why on that "
-    "screen's prototype.screens entry. If it won't be built, list it under that entry's "
-    "`not_built` as {text, why}; the user sees those."
+    "the field's label, always in the preview's words (never renamed). If the YAML can't say it "
+    "or can't lay it out as the preview does, set `rebuild: true` with a why on that screen's "
+    "prototype.screens entry (the build ports the screen; a record screen of an uploaded page "
+    "always is). Leave something out only when the user agreed to: list it under the entry's "
+    "`not_built` as {text, why} and take it out of the preview too (proto_patch), so the "
+    "preview never shows what won't be built."
 )
 
 CONTENT_KINDS = ("title", "heading", "column", "tab", "button", "label")
@@ -54,6 +59,11 @@ KIND_WORDS = {
     "button": "button",
     "label": "field label",
     "extra_tab": "extra tab",
+}
+# gaps that are not a list of missing labels: (phrase, plural-free)
+NOTE_KINDS = {
+    "still_shown": "listed as not_built but the preview still shows",
+    "needs_rebuild": "the preview's page layout",
 }
 
 
@@ -476,6 +486,7 @@ def coverage(doc: dict, bundle_dir) -> dict:
                 ("button", n) for n, c in counts.items() if c * 2 > len(sets)
             }
 
+    imported = manifest.get("source") == "imported"
     records = {
         s.get("id")
         for s in manifest.get("screens") or []
@@ -504,6 +515,7 @@ def coverage(doc: dict, bundle_dir) -> dict:
             for x in entry.get("not_built") or []
         }
         labels: dict = {k: [] for k in CONTENT_KINDS}
+        still: list = []  # not_built, yet the preview shows it: the user would expect it built
         for persona, marks in per.items():
             for k in CONTENT_KINDS:
                 for t in marks.get(k, []):
@@ -511,10 +523,13 @@ def coverage(doc: dict, bundle_dir) -> dict:
                     if (
                         (k == "title" and sid in records)
                         or (k, n) in chrome.get(persona, set())
-                        or n in skip
                         or names & set(n.split())
                         or any(norm(x) == n for x in labels[k])
                     ):
+                        continue
+                    if n in skip:
+                        if t not in still:
+                            still.append(t)
                         continue
                     labels[k].append(t)
         m = re.fullmatch(r"/pages/@([A-Za-z0-9_]+)", entry["maps"])
@@ -523,6 +538,22 @@ def coverage(doc: dict, bundle_dir) -> dict:
         )
         if rebuilt:
             out["rebuild"][sid] = {k: v for k, v in labels.items() if v}
+            if still:
+                out["screens"].append(
+                    {"id": sid, "maps": entry["maps"], "gaps": {"still_shown": still}}
+                )
+            continue
+        if imported and sid in records:
+            # An uploaded page's record screen is its own layout (panels, trackers, cards); the
+            # standard 360 can't draw it as the preview shows it, so the build ports it.
+            gaps = {
+                "needs_rebuild": [
+                    "set `rebuild: true` with a why on this screen's entry"
+                ]
+            }
+            if still:
+                gaps["still_shown"] = still
+            out["screens"].append({"id": sid, "maps": entry["maps"], "gaps": gaps})
             continue
         have = scope_labels(doc, entry["maps"], norm)
         titles = scope_titles(doc, entry["maps"], norm)
@@ -554,6 +585,8 @@ def coverage(doc: dict, bundle_dir) -> dict:
             ]
             if extra:
                 gaps["extra_tab"] = extra
+        if still:
+            gaps["still_shown"] = still
         if gaps:
             out["screens"].append({"id": sid, "maps": entry["maps"], "gaps": gaps})
     return out
@@ -563,8 +596,14 @@ def format_gaps(result: dict) -> str:
     lines = [f"- {g}" for g in result.get("menu") or []]
     for s in result.get("screens") or []:
         what = "; ".join(
-            f"{KIND_WORDS[k]}{'s' if len(v) > 1 else ''} "
-            + ", ".join(repr(t) for t in v)
+            (
+                f"{NOTE_KINDS[k]}: " + ", ".join(repr(t) for t in v)
+                if k == "still_shown"
+                else f"{NOTE_KINDS[k]}: {v[0]}"
+                if k in NOTE_KINDS
+                else f"{KIND_WORDS[k]}{'s' if len(v) > 1 else ''} "
+                + ", ".join(repr(t) for t in v)
+            )
             for k, v in s["gaps"].items()
         )
         lines.append(f"- {s['id']} ({s['maps']}): {what}")

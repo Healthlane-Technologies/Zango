@@ -776,6 +776,18 @@ a{color:var(--blue)}
     <p class="done"><span class="pill ok">built 26 Oct</span> On run 2's YAML the gate now names the Closure tab, the extra Benefits and Documents tabs, and the five request headings, with no menu or New request false alarms.</p>
   </div></div>
 
+  <div class="phase"><div class="id">B7d</div><div>
+    <h4>The preview is the app</h4>
+    <div class="row"><span class="pill">coverage gate</span><span class="pill">analyst</span></div>
+    <p>The user approves the preview as the app: whatever it shows is built exactly as shown, and nothing it doesn't show. Run 5 passed the gate by listing 19 things as not built, most of them renames, while the preview still showed them, and its record pages differed in layout (stage tracker, banner, side panels, stat cards).</p>
+    <ul>
+      <li><b>Not built means gone from the preview:</b> something the preview still shows can't be listed as not built. Leaving it out needs the user's agreement, and the preview changes with it.</li>
+      <li><b>Record pages of an uploaded mockup are rebuilt</b> (<code>rebuild: true</code> on their <code>prototype.screens</code> entry): the build ports the page from the mockup, with every heading, label and button it shows.</li>
+      <li><b>No renames:</b> headings, labels and buttons keep the preview's words.</li>
+    </ul>
+    <p class="done"><span class="pill ok">built 26 Oct</span> On run 5's YAML the gate now refuses: the request and organiser pages need rebuilding, and the not-built headings, labels and policy fields are still in the preview.</p>
+  </div></div>
+
   <h3>Order across both stages</h3>
   <div class="tw"><table>
     <thead><tr><th>Week</th><th>Requirement side</th><th>Build side</th></tr></thead>
