@@ -3,6 +3,8 @@ import {
 	useMemo,
 	useRef,
 	useState,
+	type ClipboardEvent,
+	type DragEvent,
 	type FormEvent,
 	type KeyboardEvent,
 	type ReactNode,
@@ -16,6 +18,8 @@ import {
 	type RunRef,
 } from '@/api/agentMode';
 import { useMe } from '@/api/me';
+import type { UploadedDocument } from '@/api/scaffolds';
+import { ACCEPTED, addFiles, extOf, formatBytes } from '@/pages/new/intake';
 import { Avatar, Button, Icon, cx } from '@/ui';
 import { Markdown } from './Markdown';
 import { composeAnswer, isAnswered, seedAnswers, toggleOption, type Answers } from './questions';
@@ -32,14 +36,37 @@ function AgentMark() {
 	);
 }
 
+/** Files attached to a sent message: image thumbnails, other files as chips; both download. */
+function Attachments({ files, url }: { files: UploadedDocument[]; url: (id: string | number) => string }) {
+	return (
+		<div className="att-sent">
+			{files.map((f) =>
+				f.content_type.startsWith('image/') ? (
+					<a key={f.id} href={url(f.id)} className="att-img" title={f.name}>
+						<img src={`${url(f.id)}?inline=1`} alt={f.name} loading="lazy" />
+					</a>
+				) : (
+					<a key={f.id} href={url(f.id)} className="att-chip" title={`Download ${f.name}`}>
+						<span className="docext">{extOf(f.name).toUpperCase()}</span>
+						<span className="min-w-0 truncate">{f.name}</span>
+						<small>{formatBytes(f.size)}</small>
+					</a>
+				),
+			)}
+		</div>
+	);
+}
+
 function Message({
 	message,
 	fresh,
 	you,
+	docUrl,
 }: {
-	message: Pick<RequirementMessage, 'role' | 'content' | 'ts' | 'preview_focus'>;
+	message: Pick<RequirementMessage, 'role' | 'content' | 'ts' | 'preview_focus' | 'attachments'>;
 	fresh?: boolean;
 	you: string;
+	docUrl?: (id: string | number) => string;
 }) {
 	const user = message.role === 'user';
 	return (
@@ -52,6 +79,9 @@ function Message({
 				</div>
 				{/* The user typed plain text; the agent replies in markdown. */}
 				<div className="mt">{user ? message.content : <Markdown text={message.content} />}</div>
+				{user && docUrl && !!message.attachments?.length && (
+					<Attachments files={message.attachments} url={docUrl} />
+				)}
 				{user && message.preview_focus && 'pointed' in message.preview_focus && message.preview_focus.pointed && (
 					<div className="ptr-sent" title={message.preview_focus.pointed.path}>
 						<Icon name="eye" size={11} />
@@ -199,9 +229,11 @@ interface ThreadProps {
 	/** False when Agent Mode is unavailable for this app. */
 	enabled: boolean;
 	sending: boolean;
-	/** Resolve true when the message was accepted. */
-	onSend: (content: string) => Promise<boolean>;
-	onNewRound: (prompt: string) => Promise<boolean>;
+	/** Resolve true when the message was accepted. `files` are attached to it. */
+	onSend: (content: string, files: File[]) => Promise<boolean>;
+	onNewRound: (prompt: string, files: File[]) => Promise<boolean>;
+	/** Where a round's attached file can be fetched. */
+	documentUrl?: (reqUuid: string, id: string | number) => string;
 	onOpenBuild: (roundUuid: string) => void;
 	/** Incremented to focus the composer (the header's "New change"). */
 	focusSignal: number;
@@ -227,10 +259,16 @@ export function Thread({
 	idlePlaceholder,
 	pointer,
 	onClearPointer,
+	documentUrl,
 }: ThreadProps) {
 	const { data: me } = useMe();
 	const you = me?.name || me?.email || 'You';
 	const [draft, setDraft] = useState('');
+	// Files to attach to the next message: chosen, dropped on the composer or pasted.
+	const [files, setFiles] = useState<File[]>([]);
+	const [fileErrors, setFileErrors] = useState<string[]>([]);
+	const [dropping, setDropping] = useState(false);
+	const fileInput = useRef<HTMLInputElement>(null);
 	const scrollRef = useRef<HTMLDivElement>(null);
 	const inputRef = useRef<HTMLTextAreaElement>(null);
 	// Messages present when a round was first seen don't animate; ones that arrive later do.
@@ -309,12 +347,43 @@ export function Thread({
 		if (pointer?.pointed) inputRef.current?.focus();
 	}, [pointer]);
 
-	/** Send `content` (the box, or composed answers). The box clears only once the send succeeds. */
+	const attach = (incoming: File[]) => {
+		if (!incoming.length) return;
+		const result = addFiles(files, incoming);
+		setFileErrors(result.errors);
+		setFiles(result.files);
+	};
+	const onDrop = (e: DragEvent) => {
+		e.preventDefault();
+		setDropping(false);
+		if (!disabled) attach(Array.from(e.dataTransfer.files));
+	};
+	// A pasted screenshot arrives as an unnamed image: give it a name the agent can cite.
+	const onPaste = (e: ClipboardEvent<HTMLTextAreaElement>) => {
+		const pasted = Array.from(e.clipboardData.files);
+		if (!pasted.length || disabled) return;
+		e.preventDefault();
+		const stamp = new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '');
+		attach(
+			pasted.map((f, i) =>
+				!f.name || f.name === 'image.png'
+					? new File([f], `pasted-${stamp}${i ? `-${i}` : ''}.${f.type.split('/')[1] || 'png'}`, { type: f.type })
+					: f,
+			),
+		);
+	};
+
+	/** Send `content` (the box, or composed answers) with the attached files. Both clear only once
+	 * the send succeeds. */
 	const send = async (content = draft) => {
 		const text = content.trim();
-		if (!text || disabled) return;
-		const ok = await (mode === 'reply' ? onSend(text) : onNewRound(text));
-		if (ok) setDraft('');
+		if ((!text && !files.length) || disabled) return;
+		const ok = await (mode === 'reply' ? onSend(text, files) : onNewRound(text, files));
+		if (ok) {
+			setDraft('');
+			setFiles([]);
+			setFileErrors([]);
+		}
 	};
 
 	const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -374,6 +443,9 @@ export function Thread({
 											message={m}
 											you={you}
 											fresh={seen !== undefined && m.seq > seen}
+											docUrl={
+												documentUrl ? (id) => documentUrl(round.summary.uuid, id) : undefined
+											}
 										/>
 									))
 								) : (
@@ -421,7 +493,18 @@ export function Thread({
 					)}
 				</div>
 			</div>
-			<div className="composer">
+			<div
+				className={cx('composer', dropping && 'dropping')}
+				onDragOver={(e) => {
+					if (!e.dataTransfer.types.includes('Files')) return;
+					e.preventDefault();
+					if (!disabled) setDropping(true);
+				}}
+				onDragLeave={(e) => {
+					if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDropping(false);
+				}}
+				onDrop={onDrop}
+			>
 				<form onSubmit={onSubmit}>
 					{pointed && (
 						<div className="ptr" role="status">
@@ -436,12 +519,36 @@ export function Thread({
 							</button>
 						</div>
 					)}
+					{(files.length > 0 || fileErrors.length > 0) && (
+						<div className="att-tray">
+							{files.map((f) => (
+								<span key={`${f.name}-${f.size}`} className="att-chip">
+									<span className="docext">{extOf(f.name).toUpperCase()}</span>
+									<span className="min-w-0 truncate">{f.name}</span>
+									<small>{formatBytes(f.size)}</small>
+									<button
+										type="button"
+										aria-label={`Remove ${f.name}`}
+										onClick={() => setFiles(files.filter((x) => x !== f))}
+									>
+										<Icon name="x" size={11} />
+									</button>
+								</span>
+							))}
+							{fileErrors.map((err) => (
+								<span key={err} className="att-err" role="alert">
+									{err}
+								</span>
+							))}
+						</div>
+					)}
 					<textarea
 						ref={inputRef}
 						rows={1}
 						value={draft}
 						onChange={(e) => setDraft(e.target.value)}
 						onKeyDown={onKeyDown}
+						onPaste={onPaste}
 						placeholder={placeholder}
 						disabled={!enabled || (mode === 'reply' && thinking)}
 						aria-label="Message the agent"
@@ -450,13 +557,34 @@ export function Thread({
 					<div className="cb">
 						<span>{hint}</span>
 						<div className="r">
+							<button
+								type="button"
+								className="ib att-add"
+								aria-label="Attach files"
+								title={`Attach files or screenshots (${ACCEPTED.join(', ')}); you can also drop or paste them`}
+								disabled={disabled}
+								onClick={() => fileInput.current?.click()}
+							>
+								<Icon name="clip" size={14} />
+							</button>
+							<input
+								ref={fileInput}
+								type="file"
+								multiple
+								hidden
+								accept={ACCEPTED.map((a) => `.${a}`).join(',')}
+								onChange={(e) => {
+									attach(Array.from(e.target.files ?? []));
+									e.target.value = '';
+								}}
+							/>
 							<Button
 								type="submit"
 								variant="primary"
 								size="xs"
 								className="!w-[26px] !px-0"
 								aria-label="Send"
-								disabled={disabled || !draft.trim()}
+								disabled={disabled || (!draft.trim() && !files.length)}
 								loading={sending}
 							>
 								{!sending && <Icon name="up" weight={2.2} />}

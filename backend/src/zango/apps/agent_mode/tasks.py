@@ -1525,7 +1525,7 @@ def agent_requirement_turn(self, requirement_uuid: str, tenant_name: str) -> dic
     bench = None
     try:
         ctx = build_app_context(tenant)
-        from .documents import write_docs_dir
+        from .documents import attachment_note, write_docs_dir
         from .preview_focus import focus_note
 
         # The user's documents, where the analyst can read them.
@@ -1534,7 +1534,9 @@ def agent_requirement_turn(self, requirement_uuid: str, tenant_name: str) -> dic
         prompt = compose_analyst_prompt(
             req,
             ctx,
-            last_user.content + focus_note(last_user.preview_focus, _plain_spec(req)),
+            last_user.content
+            + attachment_note(str(docs_path) if docs_path else "", req, last_user)
+            + focus_note(last_user.preview_focus, _plain_spec(req)),
             docs_dir=str(docs_path) if docs_path else "",
         )
         stream = AgentStream(options=None, prompt=prompt)

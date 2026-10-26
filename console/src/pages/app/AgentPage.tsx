@@ -5,6 +5,7 @@ import { parse as parseYaml } from 'yaml';
 import {
 	agentKeys,
 	requirementQuery,
+	documentUrl,
 	useApproveRequirement,
 	useAvailability,
 	useCommitRequirement,
@@ -208,8 +209,10 @@ export function AgentPage() {
 		};
 		return () => channel.close();
 	}, [activeId]);
-	const sendReply = async (content: string) => {
-		const ok = await attempt(sendMessage.mutateAsync({ content, focus: pointer ?? place.current }));
+	const sendReply = async (content: string, documents: File[] = []) => {
+		const ok = await attempt(
+			sendMessage.mutateAsync({ content, focus: pointer ?? place.current, documents }),
+		);
 		if (ok) setPointer(null);
 		return ok;
 	};
@@ -595,10 +598,13 @@ export function AgentPage() {
 						active={active}
 						enabled={!blocked}
 						sending={sendMessage.isPending || create.isPending}
-						onSend={async (c) =>
-							(!active?.template || (await flushTemplate())) && sendReply(c)
+						onSend={async (c, files) =>
+							(!active?.template || (await flushTemplate())) && sendReply(c, files)
 						}
-						onNewRound={newChange}
+						onNewRound={(prompt, files) =>
+							newChange(files.length ? { prompt, documents: files } : prompt)
+						}
+						documentUrl={(reqUuid, id) => documentUrl(appId, reqUuid, id)}
 						onOpenBuild={(uuid) => setView({ round: uuid, tab: 'builds' })}
 						focusSignal={focusSignal}
 						pointer={pointer}

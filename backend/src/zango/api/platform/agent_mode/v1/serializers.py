@@ -217,6 +217,10 @@ class AgentRunCreateSerializer(serializers.Serializer):
 
 
 class AgentRequirementMessageSerializer(serializers.ModelSerializer):
+    # Files the user attached to this message (chips in the chat; the file itself is
+    # served by requirements/{uuid}/documents/{id}/).
+    attachments = serializers.SerializerMethodField()
+
     class Meta:
         model = AgentRequirementMessage
         fields = (
@@ -227,7 +231,14 @@ class AgentRequirementMessageSerializer(serializers.ModelSerializer):
             "is_question",
             "questions",
             "preview_focus",
+            "attachments",
         )
+
+    def get_attachments(self, obj):
+        return [
+            {"id": d.pk, "name": d.name, "content_type": d.content_type, "size": d.size}
+            for d in obj.attachments.all()
+        ]
 
 
 def _template_payload(obj):

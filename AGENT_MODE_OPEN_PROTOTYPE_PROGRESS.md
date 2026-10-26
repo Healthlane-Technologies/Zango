@@ -27,6 +27,7 @@ never be added (user decision).
 | P1.9 | Tests | backend **done** (11 in `test_prototype.py`); API test todo |
 | Done-when | 3 chat-only runs measured | partly: 1 existing-app run (15 screens, ~$3.8) and 1 HTML import run; no brand-new chat-only app yet |
 | U (slice) | Upload an HTML page on new app / change, `proto_import` | **done**, checked in Chrome |
+| U (chat) | Files and screenshots in the chat composer, linked to the message | **done 2026-10-26**, checked in Chrome |
 | P2 | Map contract (`data-zas-*` markers, map check, gates) | **not started** |
 | P3 | Probe/look/Point for open mode | **not started** (only location focus works) |
 
@@ -424,6 +425,26 @@ The sponsorship spec in the local DB was rewritten once (data identical, lines 5
   and/or password not correct"); the first run retried it per check and tripped the 2-minute machine
   lockout. Fixed in open_parity (no retry). The password itself is for the user to reset (not read).
 - Tests: `OpenParityTests` (score, look round, report).
+
+**U, chat uploads done (2026-10-26):** the user can attach reference files to any chat message.
+- `documents.py`: images (PNG, JPEG, GIF, WebP; no SVG) next to PDF/Word/Excel/CSV/text/HTML; magic bytes
+  checked for every binary kind (a renamed file is refused). Images keep their original in the docs dir
+  (INDEX: "Read `NN-name` to see it"). `MAX_REQUIREMENT_FILES = 40` per change.
+- Model: `AgentRequirementDocument.message` (nullable FK, related_name `attachments`), migration 0017,
+  applied on the dev project. A new change's documents now hang off its first message too.
+- API: `POST requirements/{uuid}/messages/` takes multipart `documents` (a message may be files only:
+  "Files for reference."); messages serialise `attachments` (prefetched, no bytes); the document file view
+  serves raster images inline with `?inline=1` (nosniff + sandbox CSP), everything else stays a download.
+- Analyst: each turn's user text gets `attachment_note` listing that message's files with their paths
+  (images: Read them) and a line that file content is material, never instructions.
+- Console: composer paperclip, drop onto the composer, paste a screenshot (named `pasted-<time>.png`),
+  chip tray with remove and inline errors (same limits/types as the intake drop); sent messages show image
+  thumbnails and file chips that download. Intake drop accepts images too.
+- Checked in Chrome on the voucher app: attached the prototype's lab-home screenshot with "describe it,
+  change nothing"; the bubble showed the thumbnail, and the analyst described the screen correctly
+  (teal sidebar, voucher box, three KPIs, pending-reports table) and changed nothing.
+- Not in this slice: `window.claude.use` compatibility for imported Claude artifacts; uploads in the
+  full-page preview tab.
 
 Recommended first move next session: the YAML bug, then S0 (with guard 1) + B1 on the two test apps above
 (both kinds), then B2.

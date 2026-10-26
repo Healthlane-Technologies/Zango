@@ -58,6 +58,8 @@ export interface RequirementMessage {
 	questions: AnalystQuestion[];
 	/** Where the user was in the preview when they wrote it (user messages only). */
 	preview_focus?: PreviewFocus | Record<string, never>;
+	/** Files the user attached to this message (reference material for the agent). */
+	attachments?: UploadedDocument[];
 }
 
 /**
@@ -391,14 +393,23 @@ export function useCreateRequirement(appId: string, onCreated: (uuid: string) =>
 
 export function useSendMessage(appId: string, reqId: string) {
 	return useApiMutation({
-		fn: (message: string | { content: string; focus?: PreviewFocus | null }) =>
-			api<{ status: RequirementStatus }>(
-				`${base(appId)}/requirements/${reqId}/messages/`,
-				'POST',
-				typeof message === 'string'
-					? { content: message }
-					: { content: message.content, ...(message.focus ? { focus: message.focus } : {}) },
-			),
+		fn: (
+			message: string | { content: string; focus?: PreviewFocus | null; documents?: File[] },
+		) => {
+			const url = `${base(appId)}/requirements/${reqId}/messages/`;
+			if (typeof message === 'string') return api<{ status: RequirementStatus }>(url, 'POST', { content: message });
+			if (!message.documents?.length)
+				return api<{ status: RequirementStatus }>(url, 'POST', {
+					content: message.content,
+					...(message.focus ? { focus: message.focus } : {}),
+				});
+			// Attachments go as multipart, like a new change's documents.
+			const body = new FormData();
+			body.append('content', message.content);
+			if (message.focus) body.append('focus', JSON.stringify(message.focus));
+			for (const file of message.documents) body.append('documents', file, file.name);
+			return api<{ status: RequirementStatus }>(url, 'POST', body);
+		},
 		invalidate: [agentKeys.requirement(appId, reqId)],
 	});
 }

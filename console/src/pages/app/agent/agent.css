@@ -398,6 +398,96 @@
 	gap: 8px;
 }
 
+/* attachments: the tray above the box, and what a sent message carries */
+.ws .composer.dropping form {
+	border-color: var(--accent);
+	border-style: dashed;
+	box-shadow: 0 0 0 3px var(--ring);
+}
+.ws .composer .att-add {
+	display: grid;
+	place-items: center;
+	width: 26px;
+	height: 26px;
+	border-radius: 6px;
+	color: var(--t3);
+}
+.ws .composer .att-add:hover:not(:disabled) {
+	background: var(--hover);
+	color: var(--t1);
+}
+.ws .composer .att-tray {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin: 8px 8px 0;
+}
+.ws .att-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	max-width: 260px;
+	padding: 3px 6px;
+	border: 1px solid var(--border);
+	border-radius: 7px;
+	background: var(--panel);
+	color: var(--t2);
+	font-size: 12px;
+	text-decoration: none;
+}
+.ws a.att-chip:hover {
+	border-color: var(--accent);
+	color: var(--t1);
+}
+.ws .att-chip small {
+	flex-shrink: 0;
+	color: var(--t4);
+}
+.ws .att-chip .docext {
+	flex-shrink: 0;
+	padding: 0 4px;
+	border-radius: 4px;
+	background: var(--subtle);
+	color: var(--t2);
+	font: 600 10px var(--mono);
+}
+.ws .att-chip button {
+	display: grid;
+	place-items: center;
+	width: 18px;
+	height: 18px;
+	border-radius: 4px;
+	color: var(--t3);
+}
+.ws .att-chip button:hover {
+	background: var(--hover);
+	color: var(--t1);
+}
+.ws .composer .att-err {
+	width: 100%;
+	color: var(--red-t, #b42318);
+	font-size: 11.5px;
+}
+.ws .msg .att-sent {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin-top: 6px;
+}
+.ws .msg .att-img {
+	display: block;
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	overflow: hidden;
+	background: var(--subtle);
+}
+.ws .msg .att-img img {
+	display: block;
+	max-width: 220px;
+	max-height: 140px;
+	object-fit: cover;
+}
+
 /* ---------- right panel ---------- */
 .ws .panel {
 	display: flex;

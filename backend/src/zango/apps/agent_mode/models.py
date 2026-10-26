@@ -395,6 +395,14 @@ class AgentRequirementDocument(models.Model):
     requirement = models.ForeignKey(
         AgentRequirement, on_delete=models.CASCADE, related_name="documents"
     )
+    # The chat message it was attached to; empty for documents given with the brief.
+    message = models.ForeignKey(
+        "AgentRequirementMessage",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="attachments",
+    )
     name = models.CharField(max_length=160)
     content_type = models.CharField(max_length=120)
     size = models.PositiveIntegerField(default=0)

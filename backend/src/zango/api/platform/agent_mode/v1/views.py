@@ -994,16 +994,16 @@ class AgentRequirementListCreateView(
                     )
                     _seed_preview_mode(requirement, request.data.get("preview_mode"))
                 requirement.save()
-                for doc in documents:
-                    AgentRequirementDocument.objects.create(
-                        requirement=requirement, **doc.model_fields()
-                    )
                 from zango.apps.agent_mode.preview_focus import clean_focus
 
                 # What the user pointed at in the preview starts the change.
-                _append_user_message(
+                first = _append_user_message(
                     requirement, prompt, clean_focus(request.data.get("focus"))
                 )
+                for doc in documents:
+                    AgentRequirementDocument.objects.create(
+                        requirement=requirement, message=first, **doc.model_fields()
+                    )
 
             _dispatch_turn(requirement, tenant)
             return get_api_response(
@@ -1021,10 +1021,20 @@ class AgentRequirementDetailView(ZangoGenericPlatformAPIView, TenantMixin):
     """GET requirements/{uuid}/ — the conversation, spec and status."""
 
     def get(self, request, app_uuid, requirement_uuid, *args, **kwargs):
+        from django.db.models import Prefetch
+
         try:
             _bind_tenant(self, app_uuid)
             try:
-                requirement = AgentRequirement.objects.get(object_uuid=requirement_uuid)
+                # attachments without their bytes: one query, not one per message
+                requirement = AgentRequirement.objects.prefetch_related(
+                    Prefetch(
+                        "messages__attachments",
+                        queryset=AgentRequirementDocument.objects.only(
+                            "pk", "name", "content_type", "size", "message_id"
+                        ).order_by("pk"),
+                    )
+                ).get(object_uuid=requirement_uuid)
             except AgentRequirement.DoesNotExist:
                 return get_api_response(False, {"message": "not found"}, 404)
             return get_api_response(
@@ -1062,12 +1072,35 @@ class AgentRequirementMessageView(ZangoGenericPlatformAPIView, TenantMixin):
                     False, {"message": "The agent is still replying."}, 409
                 )
 
+            from zango.apps.agent_mode.documents import (
+                MAX_REQUIREMENT_FILES,
+                DocumentError,
+                read_uploads,
+            )
             from zango.apps.agent_mode.template_spec import decisions_message
+
+            # Files attached in the chat: reference material for this turn.
+            try:
+                documents = read_uploads(request)
+            except DocumentError as exc:
+                return get_api_response(False, {"message": str(exc)}, 400)
+            if documents and (
+                requirement.documents.count() + len(documents) > MAX_REQUIREMENT_FILES
+            ):
+                return get_api_response(
+                    False,
+                    {
+                        "message": f"An app can have at most {MAX_REQUIREMENT_FILES} files."
+                    },
+                    400,
+                )
 
             # Answers to the Review tab's open decisions arrive as one batch.
             content, answered = decisions_message(
                 request.data.get("content") or "", request.data.get("answers")
             )
+            if not content and documents:
+                content = "Files for reference."
             if not content:
                 return get_api_response(False, {"message": "Message is empty."}, 400)
             if len(content) > MAX_MESSAGE_CHARS:
@@ -1076,9 +1109,13 @@ class AgentRequirementMessageView(ZangoGenericPlatformAPIView, TenantMixin):
             from zango.apps.agent_mode.preview_focus import clean_focus
 
             with transaction.atomic():
-                _append_user_message(
+                message = _append_user_message(
                     requirement, content, clean_focus(request.data.get("focus"))
                 )
+                for doc in documents:
+                    AgentRequirementDocument.objects.create(
+                        requirement=requirement, message=message, **doc.model_fields()
+                    )
                 requirement.is_thinking = True
                 requirement.error_message = ""
                 update = ["is_thinking", "error_message", "modified_at"]
@@ -1321,9 +1358,20 @@ class AgentRequirementDocumentFileView(ZangoGenericPlatformAPIView, TenantMixin)
             if doc is None:
                 return get_api_response(False, {"message": "not found"}, 404)
             response = HttpResponse(bytes(doc.data), content_type=doc.content_type)
-            # Always a download: an uploaded file must never render as a page.
-            response["Content-Disposition"] = f'attachment; filename="{doc.name}"'
+            # A download, so an uploaded file never renders as a page. Raster images
+            # (magic bytes checked at upload; no SVG) may be shown inline as chat thumbnails.
+            inline = request.GET.get("inline") == "1" and doc.content_type in (
+                "image/png",
+                "image/jpeg",
+                "image/gif",
+                "image/webp",
+            )
+            response["Content-Disposition"] = (
+                f'{"inline" if inline else "attachment"}; filename="{doc.name}"'
+            )
             response["X-Content-Type-Options"] = "nosniff"
+            if inline:
+                response["Content-Security-Policy"] = "default-src 'none'; sandbox"
             return response
         except Exception as exc:  # noqa: BLE001
             log.exception("agent_mode: document download failed")
