@@ -249,6 +249,14 @@ class CoverageTests(unittest.TestCase):
         gaps = {s["id"]: s["gaps"] for s in pc.coverage(doc, self.bundle)["screens"]}
         self.assertEqual(gaps["sample"], {"tab": ["Results"], "extra_tab": ["Results and reports", "Audit"]})
 
+    def test_a_rebuilt_360_still_has_the_prototypes_tabs_only(self):
+        doc = spec()
+        entry = next(e for e in doc["prototype"]["screens"] if e["id"] == "sample")
+        entry.update(rebuild=True, why="tracker above the tabs")
+        doc["detail_views"][0]["tabs"].append({"code": "audit", "label": "Audit", "type": "timeline"})
+        gaps = {s["id"]: s["gaps"] for s in pc.coverage(doc, self.bundle)["screens"]}
+        self.assertEqual(gaps["sample"], {"extra_tab": ["Audit"]})
+
     def test_a_top_bar_button_most_screens_show_is_chrome(self):
         bare = NAV.replace("<button>New sample</button>", "")
         doms = {"home": bare + "<main><h2>Your queue</h2></main>", "samples": SAMPLES, "sample": SAMPLE,

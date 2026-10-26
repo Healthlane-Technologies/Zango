@@ -425,6 +425,28 @@ def row_gaps(doc: dict, capture: dict, norm) -> list[str]:
     return gaps
 
 
+def _tab_gaps(view, shown_tabs, skip, record, norm) -> dict:
+    """A record page's tabs are the prototype's, exactly: none missing, none added. A record
+    screen the prototype draws without tabs gets none."""
+    if view is None or not (shown_tabs or record):
+        return {}
+    tabs = [
+        t.get("label")
+        for t in view.get("tabs") or []
+        if isinstance(t, dict) and t.get("label")
+    ]
+    have = {norm(t) for t in tabs}
+    shown = {norm(t) for t in shown_tabs}
+    gaps = {}
+    miss = [t for t in shown_tabs if norm(t) not in have]
+    extra = [t for t in tabs if norm(t) not in shown and norm(t) not in skip]
+    if miss:
+        gaps["tab"] = miss
+    if extra:
+        gaps["extra_tab"] = extra
+    return gaps
+
+
 def coverage(doc: dict, bundle_dir) -> dict:
     """``{"menu": [gap], "screens": [{id, maps, gaps: {kind: [label]}}], "rebuild": {id: {kind: [label]}}}``
     for the capture in ``bundle_dir`` (``write_prototype_bundle``'s output)."""
@@ -536,12 +558,15 @@ def coverage(doc: dict, bundle_dir) -> dict:
         rebuilt = entry.get("rebuild") or (
             m and (pages.get(m.group(1)) or {}).get("type") == "custom"
         )
+        view = _view_of(doc, entry["maps"])
         if rebuilt:
             out["rebuild"][sid] = {k: v for k, v in labels.items() if v}
+            # the build ports the layout, but a record page's tabs are still the YAML's
+            gaps = _tab_gaps(view, labels["tab"], skip, sid in records, norm)
             if still:
-                out["screens"].append(
-                    {"id": sid, "maps": entry["maps"], "gaps": {"still_shown": still}}
-                )
+                gaps["still_shown"] = still
+            if gaps:
+                out["screens"].append({"id": sid, "maps": entry["maps"], "gaps": gaps})
             continue
         if imported and sid in records:
             # An uploaded page's record screen is its own layout (panels, trackers, cards); the
@@ -557,34 +582,17 @@ def coverage(doc: dict, bundle_dir) -> dict:
             continue
         have = scope_labels(doc, entry["maps"], norm)
         titles = scope_titles(doc, entry["maps"], norm)
-        view = _view_of(doc, entry["maps"])
-        tabs = [
-            norm(t.get("label"))
-            for t in ((view or {}).get("tabs") or [])
-            if isinstance(t, dict) and t.get("label")
-        ]
         gaps = {}
         for k, v in labels.items():
+            if k == "tab" and view is not None:
+                continue
             if k in ("title", "heading"):
                 miss = [t for t in v if not covered(t, titles, norm)]
-            elif k == "tab" and view is not None:
-                miss = [t for t in v if norm(t) not in tabs]
             else:
                 miss = [t for t in v if not covered(t, have, norm)]
             if miss:
                 gaps[k] = miss
-        if view is not None and labels["tab"]:
-            shown = {norm(t) for t in labels["tab"]}
-            extra = [
-                t.get("label")
-                for t in view.get("tabs") or []
-                if isinstance(t, dict)
-                and t.get("label")
-                and norm(t["label"]) not in shown
-                and norm(t["label"]) not in skip
-            ]
-            if extra:
-                gaps["extra_tab"] = extra
+        gaps.update(_tab_gaps(view, labels["tab"], skip, sid in records, norm))
         if still:
             gaps["still_shown"] = still
         if gaps:

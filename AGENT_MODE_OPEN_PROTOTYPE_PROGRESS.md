@@ -569,3 +569,7 @@ built exactly, and nothing it doesn't show.
 - Never rename the preview's words to fit the YAML.
 On run 5's YAML the gate now refuses: req and org need rebuild; the not_built headings, labels and
 policy fields are still in the preview. 24 tests.
+
+### Run 6 (e72dc4f1, 2026-10-26)
+- Analyst asked 6 decisions before mark_ready. Gate run by hand on its yml: Home grouped under Sponsorships (prototype: no group), home "Open getting started", requests "Waiting on me" / "Event & evidence".
+- Missed until now: a rebuilt 360 skipped the tab check. The yml's request page added "Benefits"; the organiser page had 3 tabs where the mockup has none. Fix: `_tab_gaps` runs on rebuilt screens too, and a record screen drawn without tabs gets none (spec_check accepts `tabs: []`).
