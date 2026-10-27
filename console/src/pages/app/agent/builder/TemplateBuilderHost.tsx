@@ -47,6 +47,8 @@ export function TemplateBuilderHost({
 		draft: requirement.draft_revision,
 		version: requirement.spec_version,
 		status: requirement.status,
+		turns: requirement.turns,
+		thinking: requirement.is_thinking,
 	});
 
 	const error = builder.error ?? spec.error;

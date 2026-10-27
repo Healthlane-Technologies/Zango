@@ -172,6 +172,8 @@ export function AgentPage() {
 		draft: active?.draft_revision,
 		version: active?.spec_version,
 		status: active?.status,
+		turns: active?.turns,
+		thinking: active?.is_thinking,
 	});
 	const decisions = activeSpec.data?.open_decisions ?? [];
 	const openDecisions = decisions.length;

@@ -578,3 +578,10 @@ policy fields are still in the preview. 24 tests.
 - The build agent dispatched 5 subagents (Agent runs them in the background) and ended its turn to wait. The pump used `receive_response()`, which stops at the first ResultMessage; closing the client killed the subagents. `backend/sponsorships/` was left as a bare `__init__.py`, no entity `policies.json`, no `app.html`.
 - Bring-up then failed at `platform:check` ("policy not synced" for every entity policy), so api/ui/design/scenarios were skipped ("the bring-up did not complete"). Both fix rounds hit the same cut-off (round 1: 0 turns).
 - Fix (stream.py): read with `receive_messages()`, track background task ids (TaskStarted / TaskNotification / terminal TaskUpdated), end only on a ResultMessage with none running; if the CLI takes no turn within 30 s of the last task finishing, send a nudge to collect results. Test: `test_stream_background.py`.
+- Hardening after reviewing every failure in the run 6 log (app deleted 2026-10-27 for a fresh start):
+  - stream.py: track subagents only (a background shell must not hold the run); a result before the agent's first reply (resumed fix round, num_turns 0) re-sends the prompt once; only the parent's AssistantMessages count (subagent ones carry parent_tool_use_id).
+  - Guard: Bash run_in_background denied. Reads allowed under this workspace's CLI `tool-results/` folder (large tool outputs; 4 denied reads in run 6).
+  - Build and analyst: ScheduleWakeup/Cron*/Monitor/RemoteTrigger/PushNotification disallowed. System prompt: subagents don't see the Bash rules (paste them into every Agent prompt); summary only after every subagent reported.
+  - Console: the spec query key includes turns + is_thinking, so open decisions and flags (no draft_revision bump) appear without a reload.
+  - Checked, no change: ws_migrate's "dynamic_models has changes" warning is the packages' models (own migrations), benign.
+  - Known stale: 9 tests in test_skill_plugin/test_preview_focus assert old developer-server skill wording; failing before this change.

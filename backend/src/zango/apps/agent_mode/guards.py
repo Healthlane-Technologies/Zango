@@ -765,6 +765,9 @@ def make_pre_tool_use_guard(
                         note_read(workspace_root, path)
             except Exception:  # noqa: BLE001 - the gate is an aid; never break the run on it
                 pass
+        elif tool_name == "Bash" and tool_input.get("run_in_background"):
+            # A background shell outlives the turn and nobody collects it.
+            reason = "Bash blocked: run_in_background is not permitted; run it in the foreground"
         elif tool_name == "Bash":
             ok, why = check_bash(
                 tool_input.get("command") or "",

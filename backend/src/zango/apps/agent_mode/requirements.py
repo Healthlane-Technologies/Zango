@@ -66,6 +66,14 @@ ANALYST_DISALLOWED = [
     "Bash",
     "WebFetch",
     "WebSearch",
+    # A turn has no later session to wake up into.
+    "ScheduleWakeup",
+    "CronCreate",
+    "CronDelete",
+    "CronList",
+    "Monitor",
+    "RemoteTrigger",
+    "PushNotification",
 ]
 
 

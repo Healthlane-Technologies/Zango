@@ -469,14 +469,17 @@ export function useCommitRequirement(appId: string, reqId: string) {
 export function useRequirementSpec(
 	appId: string,
 	reqId: string | undefined,
-	revision: { draft?: number; version?: number; status?: string },
+	revision: { draft?: number; version?: number; status?: string; turns?: number; thinking?: boolean },
 ) {
 	return useQuery({
+		// Open decisions and flags change without a draft revision: the turn's end refetches them.
 		queryKey: [
 			...agentKeys.spec(appId, reqId ?? ''),
 			revision.draft ?? 0,
 			revision.version ?? 0,
 			revision.status ?? '',
+			revision.turns ?? 0,
+			!!revision.thinking,
 		],
 		queryFn: () => api<RequirementSpec>(`${base(appId)}/requirements/${reqId}/spec/`),
 		enabled: !!reqId,

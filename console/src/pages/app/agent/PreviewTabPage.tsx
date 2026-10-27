@@ -57,6 +57,8 @@ export function PreviewTabPage() {
 		draft: r?.draft_revision,
 		version: r?.spec_version,
 		status: r?.status,
+		turns: r?.turns,
+		thinking: r?.is_thinking,
 	});
 	const goto = useMemo(placeFromHash, []);
 	const [sent, setSent] = useState<string | null>(null);

@@ -82,7 +82,11 @@ def _track_task(message, active: set) -> None:
     if not task_id:
         return
     if name == "TaskStartedMessage":
-        active.add(task_id)
+        # Subagents only ("local_agent"): a background shell such as a dev
+        # server never finishes, and must not hold the run open.
+        task_type = getattr(message, "task_type", None)
+        if task_type is None or "agent" in task_type:
+            active.add(task_id)
     elif name == "TaskNotificationMessage":
         active.discard(task_id)
     elif name == "TaskUpdatedMessage":
@@ -205,6 +209,9 @@ class AgentStream:
                 active: set = set()
                 waiting = False  # the turn ended while subagents still ran
                 nudge_at = None
+                nudge = NUDGE_PROMPT
+                answered = False  # the agent has said or done anything
+                reprompted = False
                 last_message_at = loop.time()
                 try:
                     while True:
@@ -223,11 +230,29 @@ class AgentStream:
                             name = type(message).__name__
                             _track_task(message, active)
                             if name == "ResultMessage":
-                                if not active:
+                                if (
+                                    not answered
+                                    and not reprompted
+                                    and not getattr(message, "is_error", False)
+                                ):
+                                    # A resumed session can close a turn on its
+                                    # queued task notifications (num_turns 0)
+                                    # before reading the prompt: send it again.
+                                    reprompted, nudge = True, self.prompt
+                                    waiting, nudge_at = True, None
+                                elif not active:
                                     break
-                                waiting, nudge_at = True, None
-                            elif name == "AssistantMessage":
-                                nudge_at = None  # the CLI took a turn by itself
+                                else:
+                                    waiting, nudge_at = True, None
+                                    nudge = NUDGE_PROMPT
+                            elif (
+                                name == "AssistantMessage"
+                                and getattr(message, "parent_tool_use_id", None) is None
+                            ):
+                                # The parent took a turn (a subagent's messages
+                                # carry its Agent call's id): its result decides.
+                                answered = True
+                                waiting, nudge_at = False, None
                             if waiting and not active and nudge_at is None:
                                 nudge_at = loop.time() + NUDGE_SECONDS
                         if (
@@ -237,7 +262,7 @@ class AgentStream:
                             and not self.cancel.is_set()
                         ):
                             waiting, nudge_at = False, None
-                            await client.query(NUDGE_PROMPT)
+                            await client.query(nudge)
                         if (
                             waiting
                             and loop.time() - last_message_at >= BACKGROUND_IDLE_SECONDS
