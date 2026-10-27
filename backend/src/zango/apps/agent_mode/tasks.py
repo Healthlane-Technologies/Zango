@@ -976,6 +976,22 @@ def _finish_studio(
         return not failure and not fix_state.get("is_error")
 
     more = {"checkpoint": checkpoint, "skip": skip} if checkpoint is not None else {}
+
+    def card(layers, bring_up_ok, active=True):
+        """The chat's status card, kept current while the build checks and fixes (studio_status)."""
+        from .studio_status import user_status
+
+        status = user_status(
+            studio.workspace,
+            layers,
+            bring_up_ok,
+            active=active,
+            app_url=_app_url(studio),
+        )
+        run.studio_report = {**(run.studio_report or {}), "user_status": status}
+        run.save(update_fields=["studio_report", "modified_at"])
+        return status
+
     try:
         with service_account(tenant, emit=emit) as platform_creds:
             outcome = studio.finish(
@@ -983,6 +999,7 @@ def _finish_studio(
                 resume_agent=resume_agent,
                 rounds=rounds,
                 emit=emit,
+                progress=card,
                 **more,
             )
     finally:
@@ -1001,7 +1018,33 @@ def _finish_studio(
     ]
     # Skipped checks are never presented as passed: the run says what it could not verify.
     not_verified = [s["layer"] for s in skipped]
+    try:
+        final_card = card(outcome.layers, outcome.bring_up_ok, active=False)
+    except Exception:  # noqa: BLE001 - the card is a view; the run's outcome stands
+        logger.exception("agent_mode: the build's status card could not be made")
+        final_card = None
+    from .studio_status import sort_failures
+
+    left = sort_failures(outcome.layers)
+    if left["harness"]:
+        # our own test code broke: the team's to fix, never the user's or the agent's
+        logger.warning(
+            "agent_mode: run %s: %d check(s) failed inside the test harness: %s",
+            run.pk,
+            len(left["harness"]),
+            "; ".join(
+                f"{f.get('id')}: {str(f.get('detail'))[:120]}"
+                for f in left["harness"][:10]
+            ),
+        )
     run.studio_report = {
+        "user_status": final_card,
+        "internal": {
+            "harness": [f.get("id") for f in left["harness"]],
+            "test": [f.get("id") for f in left["test"]],
+            "core": [f.get("id") for f in left["core"]],
+            "polish": [f.get("id") for f in left["polish"]],
+        },
         "ok": outcome.ok,
         "bring_up_ok": outcome.bring_up_ok,
         "frontend": studio.frontend_ready,
@@ -1114,6 +1157,20 @@ def _finish_studio(
         "error_type": "StudioChecksFailed",
         "error_message": message[:8000],
     }
+
+
+def _app_url(studio) -> str:
+    """Where the built app opens: the test users' target plus /app/."""
+    import json
+
+    try:
+        data = json.loads(
+            (studio.zas_dir / "test_users.json").read_text(encoding="utf-8")
+        )
+    except (OSError, ValueError):
+        return ""
+    target = str(data.get("target") or "").rstrip("/")
+    return f"{target}/app/" if target else ""
 
 
 def _save_baseline(run_dir: str, manifest) -> str:

@@ -15,6 +15,7 @@ import {
 	type PreviewFocus,
 	type Requirement,
 	type RequirementMessage,
+	type BuildCardStatus,
 	type RunRef,
 } from '@/api/agentMode';
 import { useMe } from '@/api/me';
@@ -105,6 +106,82 @@ function RoundRule({ round }: { round: Round }) {
 }
 
 /** The build that came out of a round, as the last thing that happened in it. Details live in Builds. */
+const CARD_LABEL = { building: 'Still building', finishing: 'Ready', ready: 'Ready' } as const;
+
+/** The build's last word to the person who made the app: progress and what works, never failures. */
+function BuildCard({ status, onOpen }: { status: BuildCardStatus; onOpen: () => void }) {
+	const [allRoles, setAllRoles] = useState(false);
+	const roles = allRoles ? status.roles : status.roles.slice(0, 4);
+	const t = status.tried;
+	return (
+		<div className="msg fresh">
+			<AgentMark />
+			<div className="mb">
+				<div className={cx('bc', `bc-${status.state}`)}>
+					<div className="bc-top">
+						<span className="bc-pill">
+							<span className="dot" />
+							{CARD_LABEL[status.state]}
+						</span>
+						<h3>{status.headline}</h3>
+						<p>{status.body}</p>
+						{status.state !== 'building' && status.app_url && (
+							<div className="bc-acts">
+								<a className="btn btn-p" href={status.app_url} target="_blank" rel="noreferrer">
+									Open the app <Icon name="ext" size={13} />
+								</a>
+							</div>
+						)}
+					</div>
+					{status.finishing && (
+						<div className="bc-row bc-fin">
+							{status.active && <span className="spin" />}
+							<span>{status.finishing}</span>
+						</div>
+					)}
+					{roles.length > 0 && (
+						<div className="bc-row bc-roles">
+							<h4>What each role can do</h4>
+							<dl>
+								{roles.map((r) => (
+									<div key={r.role}>
+										<dt>{r.role}</dt>
+										<dd>
+											{r.steps.slice(0, 5).map((s) => (
+												<span key={s}>
+													<Icon name="check" size={11} weight={2.6} /> {s}
+												</span>
+											))}
+											{r.steps.length > 5 && <span className="bc-n">and {r.steps.length - 5} more</span>}
+										</dd>
+									</div>
+								))}
+							</dl>
+							{status.roles.length > 4 && !allRoles && (
+								<button type="button" className="bc-more" onClick={() => setAllRoles(true)}>
+									Show {status.roles.length - 4} more roles
+								</button>
+							)}
+						</div>
+					)}
+					<div className="bc-foot">
+						<span>
+							{t.steps > 0
+								? `We tried ${t.steps} steps as ${t.roles} roles${t.screens ? ` and compared ${t.screens} screens with your preview` : ''}.`
+								: status.state === 'building'
+									? 'Nothing for you to do while we finish.'
+									: ''}
+						</span>
+						<button type="button" onClick={onOpen}>
+							Details
+						</button>
+					</div>
+				</div>
+			</div>
+		</div>
+	);
+}
+
 function BuildMarker({ run, onOpen }: { run: RunRef; onOpen: () => void }) {
 	const active = isRunActive(run.status);
 	const bad = ['failed', 'timeout', 'aborted'].includes(run.status);
@@ -471,8 +548,15 @@ export function Thread({
 										<span>{d.error_message}</span>
 									</div>
 								)}
-								{latestRun && (
-									<BuildMarker run={latestRun} onOpen={() => onOpenBuild(round.summary.uuid)} />
+								{latestRun?.user_status ? (
+									<BuildCard
+										status={latestRun.user_status}
+										onOpen={() => onOpenBuild(round.summary.uuid)}
+									/>
+								) : (
+									latestRun && (
+										<BuildMarker run={latestRun} onOpen={() => onOpenBuild(round.summary.uuid)} />
+									)
 								)}
 							</div>
 						);

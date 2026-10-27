@@ -145,6 +145,13 @@ def fix_rounds() -> int:
     return max(0, int(getattr(settings, "AGENT_MODE_STUDIO_FIX_ROUNDS", 2)))
 
 
+def polish_rounds() -> int:
+    """Extra fix rounds for finishing touches once the core steps work (the user already has the app)."""
+    from django.conf import settings
+
+    return max(0, int(getattr(settings, "AGENT_MODE_STUDIO_POLISH_ROUNDS", 2)))
+
+
 def look_rounds() -> int:
     """How many times the agent compares its custom screens with the approved preview."""
     from django.conf import settings
@@ -1765,6 +1772,7 @@ class StudioBuild:
         emit=None,
         checkpoint=None,
         skip=False,
+        progress=None,
     ) -> StudioOutcome:
         """Bring-up, checks, fix rounds, report — pausing for the user when it has to.
 
@@ -1777,7 +1785,14 @@ class StudioBuild:
         ``checkpoint`` continues such a build: only what was held runs.
         ``skip`` continues without it: those checks are recorded as skipped by
         the user, never as passed.
+
+        Failures of our own test code (studio_status "harness") go neither to the agent nor into
+        the verdict. Once the core steps work, up to ``polish_rounds()`` more rounds finish the
+        details while the user already has the app; they stop when a round fixes nothing.
+        ``progress(layers, bring_up_ok)`` is told after the checks and after every round.
         """
+        from .studio_status import sort_failures, without_harness
+
         cp = checkpoint or {}
         layers = {
             n: LayerResult.from_checkpoint(d)
@@ -1828,19 +1843,42 @@ class StudioBuild:
         parity_stale = (
             checkpoint is not None
         )  # a resumed build did not shoot this session
-        while (
-            done < rounds
-            and resume_agent is not None
-            and (not bring_up_ok or any(x.status == "fail" for x in layers.values()))
+
+        def tell():
+            if progress is not None:
+                try:
+                    progress(layers, bring_up_ok)
+                except Exception:  # noqa: BLE001 - the card is a view; the build goes on
+                    logger.exception("agent_mode: build progress callback failed")
+
+        tell()
+        polish_left = None
+        while resume_agent is not None and (
+            not bring_up_ok
+            or any(x.status == "fail" for x in without_harness(layers).values())
         ):
+            if done >= rounds:
+                left = sort_failures(without_harness(layers))
+                if (
+                    not bring_up_ok
+                    or left["core"]
+                    or done >= rounds + polish_rounds()
+                    or (polish_left is not None and len(left["polish"]) >= polish_left)
+                ):
+                    break
+                polish_left = len(left["polish"])
             done += 1
             if emit:
                 emit(
                     "sys",
-                    f"Fix round {done} of {rounds}: sending the failures back to the agent.",
+                    (
+                        f"Fix round {done} of {rounds}: sending the failures back to the agent."
+                        if done <= rounds
+                        else f"Finishing round {done - rounds}: the app works; sending the details back."
+                    ),
                     level="sys",
                 )
-            if not resume_agent(self.digest(bring_up_ok, layers)):
+            if not resume_agent(self.digest(bring_up_ok, without_harness(layers))):
                 if emit:
                     emit(
                         "sys",
@@ -1858,6 +1896,7 @@ class StudioBuild:
                 emit, only=only, bring_up_ok=bring_up_ok, hold=held_layers
             )
             layers.update(fresh)
+            tell()
             # the agent changed files: the built-screen shots are stale unless parity just re-ran
             design_groups = (only or {}).get("design") or []
             parity_stale = not (
@@ -1898,7 +1937,7 @@ class StudioBuild:
                 layers, creds, resume_agent, emit, parity_stale, hold_steps, held_layers
             )
         report = self.report(emit)
-        ok = bring_up_ok and not blocking(layers)
+        ok = bring_up_ok and not blocking(without_harness(layers))
         return StudioOutcome(
             ok=ok, bring_up_ok=bring_up_ok, layers=layers, rounds=done, report=report
         )

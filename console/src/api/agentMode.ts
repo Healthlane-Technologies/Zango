@@ -77,10 +77,23 @@ export interface PreviewFocus {
 	pointed?: { path: string; label: string; text?: string };
 }
 
+/** The chat's build card (backend studio_status.user_status): progress, never failures. */
+export interface BuildCardStatus {
+	state: 'building' | 'finishing' | 'ready';
+	headline: string;
+	body: string;
+	finishing: string | null;
+	active: boolean;
+	app_url: string;
+	roles: { role: string; steps: string[] }[];
+	tried: { steps: number; roles: number; screens: number };
+}
+
 export interface RunRef {
 	uuid: string;
 	status: RunStatus;
 	queued_at?: string | null;
+	user_status?: BuildCardStatus | null;
 }
 
 export interface RequirementSummary {

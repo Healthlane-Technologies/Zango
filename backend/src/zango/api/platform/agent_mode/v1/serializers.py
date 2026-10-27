@@ -299,7 +299,11 @@ class AgentRequirementListSerializer(serializers.ModelSerializer):
         run = obj.runs.order_by("-queued_at").first()
         if run is None:
             return None
-        return {"uuid": str(run.object_uuid), "status": run.status}
+        return {
+            "uuid": str(run.object_uuid),
+            "status": run.status,
+            "user_status": (run.studio_report or {}).get("user_status"),
+        }
 
 
 class AgentRequirementDetailSerializer(serializers.ModelSerializer):
@@ -358,6 +362,8 @@ class AgentRequirementDetailSerializer(serializers.ModelSerializer):
                 "uuid": str(run.object_uuid),
                 "status": run.status,
                 "queued_at": run.queued_at.isoformat() if run.queued_at else None,
+                # the chat's build card (studio_status.user_status): progress, never failures
+                "user_status": (run.studio_report or {}).get("user_status"),
             }
             for run in obj.runs.order_by("-queued_at")[:10]
         ]
