@@ -94,7 +94,8 @@ there is no current role, and `allow_system=True` lets `is_manual: False` entrie
 **Schedules:** turn the text's timing ("nightly", "daily at 07:00") into a cron line directly above
 the task, `# zas:schedule <minute> <hour> <day-of-month> <month> <day-of-week>` (for example
 `# zas:schedule 0 7 * * *`). After `zango_platform.py sync` registers the task,
-`zango_platform.py schedule` sets and enables the cron through the App Panel API. A task whose text gives
+`zango_platform.py schedule` sets and enables the cron through the App Panel API (`*/n`, `a-b` and
+lists are fine; day of week is 1 = Monday … 6 = Saturday, Sunday cannot be picked). A task whose text gives
 no timing gets no marker and is listed in the report ([report](../report.md)). Background: `references/zango/core/async-tasks.md`.
 
 ## CrudView wiring

@@ -126,7 +126,7 @@ class Platform:
     def _login(self, user, password):
         if not user or not password:
             raise PlatformError("platform credentials missing: set PLATFORM_USERNAME / PLATFORM_USER_PASSWORD in deploy/.env")
-        r = self.s.get(self.url + "/auth/login/", timeout=30)
+        r = self._reachable()
         if r.status_code >= 400:
             raise PlatformError(f"platform not reachable at {self.url} (HTTP {r.status_code})")
         r = self.s.post(self.url + "/auth/login/", timeout=30, allow_redirects=True,
@@ -135,6 +135,19 @@ class Platform:
         # session cookie name is configurable (SESSION_COOKIE_NAME, e.g. "zangocookie")
         if not any(c.name != "csrftoken" for c in self.s.cookies) or "/auth/login" in r.url:
             raise PlatformError("platform login failed (check PLATFORM_USERNAME / PLATFORM_USER_PASSWORD)")
+
+    def _reachable(self, wait=45):
+        """GET /auth/login/, waiting out a dev server that is restarting after a file change."""
+        import time
+
+        end = time.monotonic() + wait
+        while True:
+            try:
+                return self.s.get(self.url + "/auth/login/", timeout=30)
+            except requests.ConnectionError:
+                if time.monotonic() >= end:
+                    raise PlatformError(f"platform not reachable at {self.url} (still refusing connections after {wait}s)")
+                time.sleep(2)
 
     def get(self, path, **params):
         return ok(self.s.get(self.url + path, params=params, timeout=60))
@@ -477,6 +490,33 @@ def cmd_app(P, a, log):
     log(f"workspace: {P.ws}")
 
 
+# The platform's task API takes each cron field as `*` or a comma list of numbers in these ranges
+# (zango/apps/tasks/utils.py); steps and ranges are expanded here so normal cron lines still work.
+# Day of week: the platform rejects 0 and Celery rejects 7, so Sunday cannot be scheduled by weekday.
+CRON_FIELDS = (("minute", 0, 59), ("hour", 0, 23), ("day_of_month", 1, 31), ("month_of_year", 1, 12), ("day_of_week", 1, 6))
+
+
+def cron_field(value, lo, hi):
+    """`*`, `*/5`, `1-5`, `0-30/10`, `1,15` → `*` or a comma list of numbers within lo..hi; else ValueError."""
+    if value == "*":
+        return value
+    out = []
+    for part in value.split(","):
+        base, _, step = part.partition("/")
+        step = int(step) if step else 1
+        if base == "*":
+            a, b = lo, hi
+        elif "-" in base:
+            a, b = (int(x) for x in base.split("-", 1))
+        else:
+            a = int(base)
+            b = hi if step > 1 else a
+        if step < 1 or a > b or a < lo or b > hi:
+            raise ValueError(part)
+        out += [n for n in range(a, b + 1, step) if n not in out]
+    return ",".join(str(n) for n in sorted(out))
+
+
 def cmd_schedule(P, M, log):
     """`# zas:schedule <min> <hour> <day-of-month> <month> <day-of-week>` on a line above a task's def."""
     want = {}
@@ -504,10 +544,19 @@ def cmd_schedule(P, M, log):
         if not t:
             missing.append(fn)
             continue
-        exp = {"minute": mi, "hour": h, "day_of_month": dom, "month_of_year": mon, "day_of_week": dow}
+        exp = {}
+        for (key, lo, hi), value in zip(CRON_FIELDS, (mi, h, dom, mon, dow)):
+            try:
+                exp[key] = cron_field(value, lo, hi)
+            except ValueError:
+                raise PlatformError(
+                    f"task {fn}: `# zas:schedule {' '.join([mi, h, dom, mon, dow])}`: {key} `{value}` is not "
+                    f"supported; use *, */n, a-b or a comma list of numbers from {lo} to {hi}"
+                    + (" (1 = Monday … 6 = Saturday; Sunday cannot be scheduled by weekday)" if key == "day_of_week" else "")
+                ) from None
         P.post(f"/api/v1/apps/{P.uuid}/tasks/{t['id']}/",
                files=[("crontab_exp", (None, json.dumps(exp))), ("is_enabled", (None, "true")), ("kwargs", (None, "{}"))])
-        log(f"task {fn}: {' '.join([mi, h, dom, mon, dow])}")
+        log(f"task {fn}: {' '.join(exp.values())}")
     if missing:
         raise PlatformError(f"tasks not registered on the platform (run `sync` first): {missing}")
     log("restart Celery beat/worker to pick up schedules: zango_env.py celery --workspace <ws>")
