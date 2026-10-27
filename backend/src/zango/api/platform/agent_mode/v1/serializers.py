@@ -182,6 +182,8 @@ class AgentRunDetailSerializer(serializers.ModelSerializer):
                 "verdict": report.get("verdict", ""),
             },
             "html_url": None,
+            # the Builds pane's status card (studio_status.user_status): progress, never failures
+            "user_status": data.get("user_status"),
             # Kept for older clients.
             "summary_md": report.get("summary_md", ""),
             "html_path": report.get("html_path", ""),

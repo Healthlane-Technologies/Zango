@@ -77,7 +77,7 @@ function SignIns({ users, copy, copied }: { users: TestUser[] } & ReturnType<typ
  * The app exists: the link, the sign-ins the build created, and Share / Deploy. Opening the
  * app needs a login, so the credentials sit next to the link rather than inside Share.
  */
-export function AppReady({ appName, run }: { appName: string; run: RunDetail }) {
+export function AppReady({ appName, run, quiet = false }: { appName: string; run: RunDetail; quiet?: boolean }) {
 	const url = run.app_access?.url ?? '';
 	const users = run.test_users ?? [];
 	const clip = useCopy();
@@ -87,12 +87,19 @@ export function AppReady({ appName, run }: { appName: string; run: RunDetail }) 
 	return (
 		<Card className="p-4">
 			<div className="mb-3 flex items-center gap-2">
-				<span className="rp-okc">
-					<Icon name="check" size={11} weight={3} />
-				</span>
-				<b className="text-t1">Your app is ready</b>
-				{run.status === 'partial' && (
-					<span className="text-[12px] text-amber-t">· some finishing steps reported errors</span>
+				{quiet ? (
+					// the status card above says how the app is; this card is how to try it
+					<b className="text-t1">Try it</b>
+				) : (
+					<>
+						<span className="rp-okc">
+							<Icon name="check" size={11} weight={3} />
+						</span>
+						<b className="text-t1">Your app is ready</b>
+						{run.status === 'partial' && (
+							<span className="text-[12px] text-amber-t">· some finishing steps reported errors</span>
+						)}
+					</>
 				)}
 			</div>
 			{url ? (
