@@ -587,3 +587,21 @@ policy fields are still in the preview. 24 tests.
   - Known stale: 9 tests in test_skill_plugin/test_preview_focus assert old developer-server skill wording; failing before this change.
 - Run 7 (9991892a, deleted 2026-10-27): the preview showed the mockup's menu as a top bar without group labels. Cause: the pane is < 820 px and the mockup's own `@media (max-width:820px)` turns its sidebar into a top bar. Fix 27fe339f: PrototypeFrame draws the page at 1280 px and scales it to fit (checked live: sidebar with Sponsorships / AI / Library / Help).
   - Fixed: the preview greys the YAML's not-built menu items (`prototype.screens` with `only: prototype` + `menu`), as the build does. The server puts them in the page (`#zas-soon`, also in the build's bundle shots); zas-proto.js greys a nav/sidebar/menu control naming one by screen id (data-nav/data-go/data-screen/data-page/href) or label (a count badge after it is fine), re-applied on every redraw, and a click on it only says it isn't built. The ETag and the console's frame key include a digest of the list, so a YAML change reloads the frame. Checked live on run 7's mockup: exactly Agents, Getting started, Integrations, still greyed after navigating.
+
+## Run 8 build (2026-10-27, app 0b8e52c1, run 0caaf0e3) — partial, fixed in ead53388
+
+Built and brought up in 63 min / 51 turns / $10.36; subagents finished (B7e held). Report: api 2, ui 19,
+design 8, scenarios 2 failing after 2 fix rounds. Triage:
+- App bugs (runtime): required file on a workflow move always failed (workflow 1.0.1 builds the form from
+  POST only → ZasActionFormMixin passes request.FILES); agreement ID link opened /requests/detail-view/<agreement
+  uuid> ("Request not found"); evidence rows on the request's Evidence tab could not be opened (row click
+  navigated to the same tab) → drawer.
+- Checker bugs: transitions of entities with no 360 (approval, payment, agreement, evidence) opened a
+  non-existent 360 or None; rebuilt pages/360s held to kit layout; menu groups compared with CSS case;
+  drawer mistaken for the move's dialog.
+- After the fixes on this app: api upload moves pass; ui flows 20 pass / 3 fail. The 3 left are the app's:
+  agreement start/mark-ready disabled (test data had no route; the agent wrote no before_transition fixture),
+  release_payment disabled when a check failed although the note in its form should override (guide now
+  says: form-satisfiable conditions go in clean()).
+- Not fixed: the app tab title is the tenant description = first line of the prompt (app creation).
+- The app's frontend was rebuilt by hand with the runtime fixes (static/js + assets + collected static).

@@ -802,6 +802,14 @@ a{color:var(--blue)}
       <li><b>Menu items for screens not built are greyed in the preview</b>, as in the built app, including on uploaded mockups that draw their own menu. Clicking one only says it isn't in this version.</li>
     </ul>
     <p class="done"><span class="pill ok">built 27 Oct</span> Covered by tests. Run 6's app was deleted for a fresh start.</p>
+    <p><b>Run 8 (27 Oct)</b> built and brought itself up; the helpers finished. Its report failed on 31 checks, and most were the checks' own faults or runtime bugs, now fixed:</p>
+    <ul>
+      <li><b>Uploads on a workflow step</b> (invoice, evidence) always failed as "file required". The form now receives the uploaded file.</li>
+      <li><b>An agreement's ID</b> opened "Request not found". It now opens its request.</li>
+      <li><b>Evidence rows on the request's Evidence tab</b> couldn't be opened. They now open their side panel.</li>
+      <li><b>The checks act on agreements, payments and evidence from that side panel</b>, and leave screens rebuilt from the mockup to the look comparison.</li>
+    </ul>
+    <p>On this app the flow checks went from 19 failures to 3. All 3 are the app's own: two agreement steps need a route the test data never set, and a payment release is disabled although its note should override. The guide now covers that case.</p>
   </div></div>
 
   <h3>Order across both stages</h3>
