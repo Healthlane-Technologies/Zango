@@ -5,11 +5,31 @@
 // page's runtime (zas-proto.js) reports where the user is ("location") and what failed ("error");
 // we send "goto" so a reload after the agent's next write lands where the user was.
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import { usePrototypeHtml, type PreviewFocus } from '@/api/agentMode';
 import { ErrorState, Icon, Skeleton } from '@/ui';
 
 const SANDBOX = 'allow-scripts allow-popups allow-forms';
+// The prototype is drawn at a desktop width and scaled to fit the pane. Laid out at the pane's
+// own width, a mockup's responsive CSS kicks in (a sidebar became a top bar with its group
+// labels hidden), and the user approves a layout the built app never has.
+const DESKTOP_WIDTH = 1280;
+
+/** The scale that fits a DESKTOP_WIDTH page into the stage, and the stage's height. */
+function useFit(stage: RefObject<HTMLDivElement | null>, active: boolean) {
+	const [fit, setFit] = useState({ scale: 1, height: 0 });
+	useEffect(() => {
+		const el = stage.current;
+		if (!el || !active) return;
+		const measure = () =>
+			setFit({ scale: Math.min(1, el.clientWidth / DESKTOP_WIDTH), height: el.clientHeight });
+		measure();
+		const observer = new ResizeObserver(measure);
+		observer.observe(el);
+		return () => observer.disconnect();
+	}, [stage, active]);
+	return fit;
+}
 
 export interface ProtoPlace {
 	screen: string;
@@ -67,6 +87,8 @@ export function PrototypeFrame({
 	const onFocusRef = useRef(onFocus);
 	onFocusRef.current = onFocus;
 	const [failure, setFailure] = useState<{ part?: string; message?: string } | null>(null);
+	const stage = useRef<HTMLDivElement>(null);
+	const fit = useFit(stage, !!page.data);
 
 	useEffect(() => {
 		const onMessage = (event: MessageEvent) => {
@@ -110,13 +132,24 @@ export function PrototypeFrame({
 				</div>
 			)}
 			{page.data ? (
-				<iframe
-					ref={frame}
-					className="emb-frame"
-					title="App prototype"
-					sandbox={SANDBOX}
-					srcDoc={page.data}
-				/>
+				<div ref={stage} className="emb-frame emb-stage">
+					<iframe
+						ref={frame}
+						title="App prototype"
+						sandbox={SANDBOX}
+						srcDoc={page.data}
+						style={
+							fit.scale < 1
+								? {
+										width: DESKTOP_WIDTH,
+										height: fit.height / fit.scale,
+										transform: `scale(${fit.scale})`,
+										transformOrigin: '0 0',
+									}
+								: undefined
+						}
+					/>
+				</div>
 			) : page.isLoading || !revision ? (
 				<div className="grid gap-3 p-4">
 					<Skeleton width="40%" height={18} />
