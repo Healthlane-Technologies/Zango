@@ -573,3 +573,8 @@ policy fields are still in the preview. 24 tests.
 ### Run 6 (e72dc4f1, 2026-10-26)
 - Analyst asked 6 decisions before mark_ready. Gate run by hand on its yml: Home grouped under Sponsorships (prototype: no group), home "Open getting started", requests "Waiting on me" / "Event & evidence".
 - Missed until now: a rebuilt 360 skipped the tab check. The yml's request page added "Benefits"; the organiser page had 3 tabs where the mockup has none. Fix: `_tab_gaps` runs on rebuilt screens too, and a record screen drawn without tabs gets none (spec_check accepts `tabs: []`).
+
+### Run 6 build (2026-10-27): why most checks did not run
+- The build agent dispatched 5 subagents (Agent runs them in the background) and ended its turn to wait. The pump used `receive_response()`, which stops at the first ResultMessage; closing the client killed the subagents. `backend/sponsorships/` was left as a bare `__init__.py`, no entity `policies.json`, no `app.html`.
+- Bring-up then failed at `platform:check` ("policy not synced" for every entity policy), so api/ui/design/scenarios were skipped ("the bring-up did not complete"). Both fix rounds hit the same cut-off (round 1: 0 turns).
+- Fix (stream.py): read with `receive_messages()`, track background task ids (TaskStarted / TaskNotification / terminal TaskUpdated), end only on a ResultMessage with none running; if the CLI takes no turn within 30 s of the last task finishing, send a nudge to collect results. Test: `test_stream_background.py`.

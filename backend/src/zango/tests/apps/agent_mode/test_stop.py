@@ -45,7 +45,7 @@ class _SilentClient:
         self.interrupts += 1
         self.interrupted.set()
 
-    async def receive_response(self):
+    async def receive_messages(self):
         yield "first"
         await self.interrupted.wait()
         if not self.ends_on_interrupt:
@@ -91,7 +91,7 @@ class StopInterruptsASilentAgentTests(unittest.TestCase):
 
     def test_a_stream_nobody_stops_runs_to_its_end(self):
         class Finishing(_SilentClient):
-            async def receive_response(self):
+            async def receive_messages(self):
                 yield "first"
                 yield "result"
 

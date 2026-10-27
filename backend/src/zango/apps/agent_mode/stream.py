@@ -60,6 +60,37 @@ DEFAULT_POLL_TIMEOUT = 0.25
 # interrupted agent to wind down before closing the client under it.
 STOP_POLL_SECONDS = 0.25
 STOP_GRACE_SECONDS = 20.0
+# Subagents run in the background: the parent's turn can end (a ResultMessage)
+# while they still work, and closing the client then kills them. The pump holds
+# the session open until they finish; if the CLI does not start a turn on their
+# results by itself within NUDGE_SECONDS, it asks the agent to collect them.
+# BACKGROUND_IDLE_SECONDS bounds a wait in which nothing arrives at all.
+NUDGE_SECONDS = 30.0
+BACKGROUND_IDLE_SECONDS = 30 * 60.0
+NUDGE_PROMPT = (
+    "Your background agents have finished. Collect their results, finish "
+    "whatever is still left, and end only when the work is complete; do not "
+    "end your turn while an agent you started is still running."
+)
+_TERMINAL_TASK = {"completed", "failed", "stopped", "killed"}
+
+
+def _track_task(message, active: set) -> None:
+    """Keep ``active`` = the ids of background tasks still running."""
+    name = type(message).__name__
+    task_id = getattr(message, "task_id", None)
+    if not task_id:
+        return
+    if name == "TaskStartedMessage":
+        active.add(task_id)
+    elif name == "TaskNotificationMessage":
+        active.discard(task_id)
+    elif name == "TaskUpdatedMessage":
+        status = getattr(message, "status", None) or (
+            getattr(message, "patch", None) or {}
+        ).get("status")
+        if status in _TERMINAL_TASK:
+            active.discard(task_id)
 
 
 @dataclass
@@ -165,10 +196,16 @@ class AgentStream:
                 # The stop flag is watched alongside the stream, not only when
                 # a message arrives: during a long tool call or a subagent the
                 # SDK may send nothing for minutes, and a stop has to land then.
-                messages = client.receive_response().__aiter__()
+                # receive_messages, not receive_response: the latter stops at the
+                # first ResultMessage, even while background subagents still run.
+                messages = client.receive_messages().__aiter__()
                 pending = asyncio.ensure_future(messages.__anext__())
                 loop = asyncio.get_running_loop()
                 give_up_at = None
+                active: set = set()
+                waiting = False  # the turn ended while subagents still ran
+                nudge_at = None
+                last_message_at = loop.time()
                 try:
                     while True:
                         done, _ = await asyncio.wait(
@@ -182,6 +219,35 @@ class AgentStream:
                             _log_auth_source(message)
                             self._q.put(StreamItem("message", message))
                             pending = asyncio.ensure_future(messages.__anext__())
+                            last_message_at = loop.time()
+                            name = type(message).__name__
+                            _track_task(message, active)
+                            if name == "ResultMessage":
+                                if not active:
+                                    break
+                                waiting, nudge_at = True, None
+                            elif name == "AssistantMessage":
+                                nudge_at = None  # the CLI took a turn by itself
+                            if waiting and not active and nudge_at is None:
+                                nudge_at = loop.time() + NUDGE_SECONDS
+                        if (
+                            waiting
+                            and nudge_at is not None
+                            and loop.time() >= nudge_at
+                            and not self.cancel.is_set()
+                        ):
+                            waiting, nudge_at = False, None
+                            await client.query(NUDGE_PROMPT)
+                        if (
+                            waiting
+                            and loop.time() - last_message_at >= BACKGROUND_IDLE_SECONDS
+                        ):
+                            logger.warning(
+                                "agent_mode: background tasks %s silent for %ss; closing",
+                                sorted(active),
+                                BACKGROUND_IDLE_SECONDS,
+                            )
+                            break
                         if not self.cancel.is_set():
                             continue
                         if give_up_at is None:
