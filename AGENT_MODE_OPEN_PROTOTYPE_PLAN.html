@@ -786,6 +786,20 @@ a{color:var(--blue)}
       <li><b>No renames:</b> headings, labels and buttons keep the preview's words.</li>
     </ul>
     <p class="done"><span class="pill ok">built 26 Oct</span> On run 5's YAML the gate now refuses: the request and organiser pages need rebuilding, and the not-built headings, labels and policy fields are still in the preview.</p>
+    <p class="done"><span class="pill ok">fixed 26 Oct</span> Rebuilt record pages also keep the preview's tabs exactly (run 6 added a Benefits tab, and gave the organiser page tabs the mockup doesn't have).</p>
+  </div></div>
+
+  <div class="phase"><div class="id">B7e</div><div>
+    <h4>The build finishes its own work</h4>
+    <div class="row"><span class="pill">build session</span><span class="pill">guard</span></div>
+    <p>Run 6's build split the work across five helper agents, which run in the background, and then ended its turn to wait for them. The platform treated that as finished and closed the session, which stopped the helpers mid-write. One backend module was left empty and the app shell had no page. Setup then stopped at the policy check, so the API, UI, design and scenario checks never ran. Both fix rounds were cut off the same way.</p>
+    <ul>
+      <li><b>The session stays open while helpers run.</b> The build ends only on a turn with none still running. If the agent doesn't pick up their results within 30 s, the platform asks it to.</li>
+      <li><b>A fix round that ends before reading its instructions</b> (0 turns) gets them again.</li>
+      <li><b>No background shells and no waiting tools</b> (ScheduleWakeup, Cron, Monitor). Helpers are given the shell rules, and large tool outputs saved to file can be read.</li>
+      <li><b>The chat's open decisions refresh</b> when a turn ends, with no reload.</li>
+    </ul>
+    <p class="done"><span class="pill ok">built 27 Oct</span> Covered by tests. Run 6's app was deleted for a fresh start.</p>
   </div></div>
 
   <h3>Order across both stages</h3>
