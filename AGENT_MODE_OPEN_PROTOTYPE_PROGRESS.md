@@ -648,3 +648,12 @@ role can do, and Open the app. No check counts, layers, spec paths or failure wo
   one-line marker in the card's words ("Ready"); the pane's status line says "Built"/"Still building" with a
   green icon, no checks chip or attention dot; AppReady's header becomes "Try it". Checked in Chrome.
   Still open there: test-user passwords shown in plain text, and the app URL uses the console's port (:5173).
+
+## zango_isn_hcp build (2026-10-27, app a02cab7b, run 0d888089) — partial, bring-up only; fixed in 94e7703c
+
+- Every test layer "not run": the bring-up never finished. Rounds 1-2: `platform:schedule` HTTP 500 "Invalid cron
+  expression" on `# zas:schedule */5 * * * *` (the platform's task API takes only `*` or comma lists). The agent then
+  wrote `0,5,…,55`, but the last bring-up started 7 s after that edit and the restarting dev server refused the login.
+- Fix: `zango_platform.py` expands `*/n`, `a-b`, `a-b/n` and names the task on a bad field (weekday 1-6: the platform
+  rejects 0, Celery rejects 7, so Sunday can't be scheduled by weekday, a platform bug left as is); the login waits up
+  to 45 s for a server that refuses connections. Tests: `test_platform_schedule.py` (5).
