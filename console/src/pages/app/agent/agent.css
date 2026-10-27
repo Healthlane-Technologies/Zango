@@ -760,11 +760,13 @@
 	flex-direction: column;
 	gap: 6px;
 }
+.ws .bc-roles dl {
+	gap: 9px;
+}
 .ws .bc-roles dl > div {
-	display: grid;
-	grid-template-columns: 130px minmax(0, 1fr);
-	gap: 10px;
-	align-items: baseline;
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
 }
 .ws .bc-roles dt {
 	font-weight: 600;
@@ -779,6 +781,7 @@
 	display: inline-flex;
 	align-items: center;
 	gap: 4px;
+	white-space: nowrap;
 }
 .ws .bc-roles dd svg {
 	color: var(--green);
@@ -805,10 +808,4 @@
 .ws .bc-foot button {
 	color: var(--accent-t);
 	font-weight: 550;
-}
-@media (max-width: 560px) {
-	.ws .bc-roles dl > div {
-		grid-template-columns: 1fr;
-		gap: 2px;
-	}
 }
