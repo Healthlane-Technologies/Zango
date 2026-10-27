@@ -14,6 +14,8 @@ the probe worker) and returns its labels by kind:
 - ``tab``: ``role="tab"`` elements, or elements whose class list has ``tab``.
 - ``button``: buttons and ``role="button"`` elements outside the menu.
 - ``label``: ``<dt>`` and ``<label>`` text (field labels in summaries and forms).
+- ``counted``: buttons and tabs drawn with a count ("Open 7" → "Open"): filter chips that show one.
+- ``subtitle``: the text right under the page's h1 (``subtitle(dom)``), for the build's parity check.
 - ``cells``: per table, the first data row's cells that are more than one plain value, as
   ``{"column", "lines", "icon", "mono"}``: ``lines`` the cell's text blocks in order (a title and a
   muted "SP-2026-0061 · Congress exhibit" under it), ``icon`` "icon" for an icon before the text or
@@ -26,7 +28,7 @@ is record data rather than UI copy (IDs, amounts, dates, long sentences) is skip
 import re
 from html.parser import HTMLParser
 
-KINDS = ("menu", "title", "heading", "column", "tab", "button", "label")
+KINDS = ("menu", "title", "heading", "column", "tab", "button", "label", "counted")
 VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
 SKIP = {"script", "style", "svg", "template", "noscript"}
 CLICKABLE = {"a", "button"}
@@ -125,6 +127,8 @@ class _Reader(HTMLParser):
             self.stack[-1][3].append(data)
 
     def _emit(self, kind, text, a):
+        if kind in ("button", "tab") and re.search(r"\s\d+$", text):
+            self.out["counted"].append(re.sub(r"(\s\d+)+$", "", text).strip())  # "Open 7": a chip with a count
         text = re.sub(r"(\s\d+)+$", "", text).strip()
         if not text:
             return
@@ -235,6 +239,16 @@ def cells(dom_html: str) -> list:
     return out
 
 
+def subtitle(dom_html: str):
+    """The first paragraph after the page's h1, as text, or None."""
+    m = re.search(r"<h1\b[^>]*>.*?</h1>(.*)", dom_html or "", re.S | re.I)
+    if not m:
+        return None
+    p = re.search(r"<(p|div)\b[^>]*>((?:(?!<(?:p|div|h\d|table|button)\b).)*?)</\1>", m.group(1)[:4000], re.S | re.I)
+    text = " ".join(re.sub(r"<[^>]+>", " ", p.group(2)).split()) if p else ""
+    return text or None
+
+
 def landmarks(dom_html: str) -> dict:
     """Labels by kind (see the module doc), each kind de-duplicated in page order."""
     r = _Reader()
@@ -250,4 +264,78 @@ def landmarks(dom_html: str) -> dict:
                 keep.append(it)
         out[k] = keep
     out["cells"] = cells(dom_html)
+    sub = subtitle(dom_html)
+    out["subtitle"] = [sub] if sub else []
     return out
+
+
+CONTENT = ("title", "heading", "column", "tab", "button", "label")
+_WORD = re.compile(r"[a-z]{3,}")
+
+
+def _words(text):
+    return set(_WORD.findall(norm(text)))
+
+
+def content_gaps(approved_dom: str, built_dom: str, built_text: str, skip=(), record=False,
+                 ignore_words=(), drawn_cells=(), subtitle_words=None) -> list:
+    """What the approved screen shows that the built one doesn't, as problems for the fix round.
+
+    A label counts as shown when its words appear anywhere in the built page's text (the kit draws a
+    heading or a chip with other tags than the prototype). ``skip``: normalised labels to leave out
+    (the screen's not_built, the persona's shell chrome). ``record``: the h1 and the line under it
+    are the record's data. ``ignore_words``: the demo personas' names and titles ("Good morning,
+    Elena" is matched as "good morning"). ``drawn_cells``: normalised column labels the spec already
+    draws with a second line or icon (an empty line there is test data, not a gap).
+    ``subtitle_words``: the subtitle words every persona's version shares (the rest is per persona).
+    Also compared: filter chips that show a count, the subtitle under the h1, and each table's
+    first-row cells (a second line, an icon or initials)."""
+    want, got = landmarks(approved_dom), landmarks(built_dom)
+    # "Open48": a chip's count drawn right after its label is a separate word
+    text = " " + norm(re.sub(r"(?<=[A-Za-z])(?=\d)", " ", built_text or "")) + " "
+    skip = {norm(x) for x in skip}
+    ignore = {w for x in ignore_words for w in norm(x).split()}
+    probs, seen = [], set()
+    for kind in CONTENT:
+        if kind == "title" and record:
+            continue
+        for label in want.get(kind, []):
+            n = norm(label)
+            if not n or n in skip:
+                continue
+            if ignore:  # "Good morning, Elena" → "good morning"; a persona chip leaves nothing
+                n = " ".join(w for w in n.split() if w not in ignore)
+                if not _WORD.search(n):
+                    continue
+            if n in skip or n in seen:
+                continue
+            seen.add(n)
+            if f" {n} " not in text:
+                probs.append(f"missing {kind} {label!r}")
+    counted = {norm(x) for x in got.get("counted", [])}
+    for label in want.get("counted", []):
+        n = norm(label)
+        if n not in skip and f" {n} " in text and n not in counted:
+            probs.append(f"filter chip {label!r} shows no count (the approved screen shows one)")
+    sub = None if record else subtitle(approved_dom)
+    if sub and norm(sub) not in skip:
+        mine = subtitle(built_dom) or ""
+        a = (set(subtitle_words) if subtitle_words is not None else _words(sub)) - ignore
+        b = _words(mine) - ignore
+        if a and len(a & b) / len(a) < 0.5:
+            probs.append(f"subtitle under the title: approved {sub!r}, built {mine or 'none'!r}")
+    if "data-zas=\"empty\"" not in (built_dom or ""):
+        built_cells = {c["index"]: c for c in cells(built_dom)}
+        drawn = {norm(x) for x in drawn_cells}
+        for c in cells(approved_dom):
+            if norm(c["column"]) in drawn or (c["index"] == 0 and "#0" in drawn_cells):
+                continue
+            b = built_cells.get(c["index"]) or {"lines": [], "icon": None}
+            need = []
+            if len(c["lines"]) > 1 and len(b["lines"]) < 2:
+                need.append(f"a second line ({c['lines'][1]!r})")
+            if c["icon"] and not b["icon"]:
+                need.append("initials" if c["icon"] == "initials" else "an icon")
+            if need:
+                probs.append(f"column {c['column']!r} cells lack " + " and ".join(need))
+    return probs

@@ -160,6 +160,8 @@ html[data-zas-density="compact"] { --z-ctl-h: 32px; --z-cell-y: 7px; --z-th-y: 7
 .zas-chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 .zas-qf { height: 30px; padding: 0 11px; border-radius: 999px; border: 1px solid var(--z-bd); background: var(--z-head); font-size: 12.5px; font-weight: 550; color: var(--z-sub); }
 .zas-qf.on { background: var(--b50); border-color: var(--b100); color: var(--b600); }
+.zas-qf-n { margin-left: 6px; font-weight: 500; color: var(--z-muted); font-variant-numeric: tabular-nums; }
+.zas-qf.on .zas-qf-n { color: inherit; opacity: .75; }
 
 /* 360 header */
 .zas-dhead { background: var(--z-card); border: 1px solid var(--z-bd); border-radius: var(--z-r-head); padding: 20px 22px; box-shadow: var(--z-shadow); }

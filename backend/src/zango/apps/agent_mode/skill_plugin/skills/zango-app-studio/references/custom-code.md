@@ -188,6 +188,11 @@ directly under the `# zas:hole H-NN` marker:
 def site__tag_at_risk__sync(): ...
 ```
 
+A note never drops something the approved screen or the spec asks for. "Out of scope", "left out",
+"not built", "instead of …" or "falls back to the plain form" on a note fails the build's parity check
+unless the item is in that screen's `not_built` (which the user saw and agreed to). If the spec can't
+express it, build it in the slot.
+
 The build report shows them on the item. Never put notes in `holes.md`: `spec_check` regenerates that file
 and keeps only each row's status.
 

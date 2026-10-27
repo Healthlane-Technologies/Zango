@@ -10,7 +10,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ChevronsUpDown, Download, EllipsisVertical, Inbox, Paperclip, Plus, Search } from "lucide-react";
 import * as api from "./api";
-import { SPEC, date, detailUrl, number, pageUrl, parentTabUrl, viewUrl } from "./config";
+import { SPEC, date, detailUrl, money, number, pageUrl, parentTabUrl, percent, viewUrl } from "./config";
 import { ConfirmDialog, FormDialog, useDialog } from "./dialogs";
 import { Badge, Banner, Button, Chip, Drawer, EmptyState, Icon, Menu, Nil, Skeleton, Timeline, Value, cx, useToast } from "./ui";
 import type { MenuItemDef } from "./ui";
@@ -20,11 +20,13 @@ import type { FieldValue, SpecColumn, SpecEntity } from "./types";
 type Meta = {
   columns: { name: string; sortable?: boolean; choices?: { id: string; label: string }[] | null }[];
   has_add_perm?: boolean; has_download_perm?: boolean;
-  zas?: { quick_filters: { key: string; label: string; default: boolean }[]; filter_options?: Record<string, string[]> };
+  zas?: { quick_filters: { key: string; label: string; default: boolean; count?: number | null }[];
+    filter_options?: Record<string, string[]>; subtitle_stat?: number | null };
 };
 type Row = Record<string, any> & { object_uuid: string; zas?: { links: Record<string, string>; status?: string; tags?: string[]; hl?: Record<string, string>; sub?: Record<string, string>; icon?: Record<string, string> } };
 
 const NA = (v: any) => v === null || v === undefined || v === "" || v === "NA";
+const fmtValue = (v: any, f?: string | null) => (f === "money" ? money(v) : f === "percent" ? percent(v) : number(v));
 const strip = (v: any) => (typeof v === "string" ? v.replace(/<[^>]*>/g, "").trim() : v);
 const hrefOf = (v: any): string | null => (typeof v === "string" ? v.match(/href=['"]([^'"]+)['"]/)?.[1] || null : v?.url || null);
 
@@ -154,6 +156,11 @@ export function ZasTable(p: ZasTableProps) {
     return meta ? base.filter((c) => metaIdx.has(c.key)) : base;
   }, [E, p.columns, meta, metaIdx]);
   const quick = meta?.zas?.quick_filters || [];
+  // pages[].subtitle: its text, then " · " and the stat ("$366,000 requested") once the metadata has it
+  const sub = p.page ? SPEC.pages[p.page.code]?.subtitle : undefined;
+  const figure = sub?.stat && meta?.zas?.subtitle_stat != null
+    ? [fmtValue(meta.zas.subtitle_stat, sub.stat.format), sub.stat.suffix].filter(Boolean).join(" ") : "";
+  const subtitle = sub ? [sub.text, figure].filter(Boolean).join(" · ") || null : null;
   const activeQf = qf === undefined ? (quick.find((x) => x.default)?.key ?? null) : qf;
   const filterCols = cols.filter((c) => c.filterable);
 
@@ -263,7 +270,7 @@ export function ZasTable(p: ZasTableProps) {
     <>
       {p.page && (
         <div className="zas-ph">
-          <div><h1>{p.page.title}</h1><p>{rows ? `${number(total)} ${total === 1 ? "record" : "records"}` : " "}</p></div>
+          <div><h1>{p.page.title}</h1><p>{subtitle ?? (rows ? `${number(total)} ${total === 1 ? "record" : "records"}` : " ")}</p></div>
           <span className="zas-sp" />
           {addBtn}
         </div>
@@ -280,7 +287,8 @@ export function ZasTable(p: ZasTableProps) {
               {quick.map((x, i) => (
                 <button key={x.key} type="button" className={cx("zas-qf", activeQf === x.key && "on")} aria-pressed={activeQf === x.key}
                   data-zas="quick-filter" data-zas-key={x.key} data-zas-order={i}
-                  onClick={() => { setQf(activeQf === x.key ? null : x.key); setPageNo(1); }}>{x.label}</button>
+                  onClick={() => { setQf(activeQf === x.key ? null : x.key); setPageNo(1); }}>
+                  {x.label}{x.count != null && <span className="zas-qf-n">{number(x.count)}</span>}</button>
               ))}
             </div>
           )}
@@ -289,7 +297,7 @@ export function ZasTable(p: ZasTableProps) {
           {meta?.has_download_perm && !p.footer?.length && <Button icon={<Download />} onClick={exportRows} zasKey="export">Export</Button>}
           {!p.page && addBtn}
         </div>
-        {err || loadErr ? <div style={{ padding: 14 }}><Banner tone="danger">{err || loadErr}</Banner></div>
+        {err || loadErr ? <div style={{ padding: 14 }} data-zas="load-error"><Banner tone="danger">{err || loadErr}</Banner></div>
           : rows === null ? <div style={{ padding: "8px 16px" }}><Skeleton lines={5} /></div>
           : rows.length === 0 ? (
             <EmptyState zasKey={p.zasKey || p.entity} icon={<Inbox />}

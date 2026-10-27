@@ -40,6 +40,8 @@ from . import auth, browser, load_json, print_summary, save_results
 
 GROUPS = ["lint", "gallery", "tokens", "tree", "layout", "parity"]
 HERE = os.path.dirname(os.path.abspath(__file__))
+if os.path.dirname(HERE) not in sys.path:
+    sys.path.insert(0, os.path.dirname(HERE))  # scripts/: proto_landmarks
 GOLDENS = os.path.join(HERE, "..", "..", "assets", "goldens")
 SECTIONS = ["badges", "buttons", "stats", "banners", "tabs", "panels", "states", "kit"]
 TONE_BG = {"gray": "#f2f4f7", "blue": "#eff8ff", "green": "#ecfdf3", "amber": "#fffaeb", "red": "#fef3f2",
@@ -672,9 +674,10 @@ def look_score(built, approved, width=1280, height=900):
 
 
 def open_parity(Dx, b):
-    """Open mode, before P2's markers (plan B6): every mapped screen opens as each of its roles without
-    errors, and its built screenshot is scored against the approved shot.<role>.png. The pairs go to the
-    look rounds; the score goes to the report only."""
+    """Open mode (plan B6): every mapped screen opens as each of its roles without errors and shows
+    what the approved screen shows (proto_landmarks.content_gaps: its labels, chip counts, subtitle and
+    cell shapes); a gap fails the screen and goes to the fix round. The built screenshot is scored
+    against the approved shot.<role>.png for the look rounds; that score is a report figure only."""
     proto = os.path.join(Dx.ws, ".zas", "bundle", "prototype")
     try:
         with open(os.path.join(proto, "manifest.json"), encoding="utf-8") as f:
@@ -700,6 +703,29 @@ def open_parity(Dx, b):
     target = auth.load_users(Dx.ws)["target"]
     looks = []
     sessions, failed = {}, {}  # one login per role; one bad password must not lock every role out
+    import proto_landmarks as PL
+
+    # the demo personas' names, titles and roles: copy like "Good morning, Elena" is per persona
+    persona_words = [str(v) for p in (manifest.get("personas") or {}).values() if isinstance(p, dict)
+                     for k, v in p.items() if k in ("name", "title", "role") and v]
+    persona_words += [str(v) for v in (manifest.get("roles") or {}).values()]
+    sub_words = {}  # screen id → the subtitle words all its personas share
+    for sc in capture.values():
+        for pr in sc.get("roles") or []:
+            f = os.path.join(proto, "screens", sc["id"], f"dom.{pr.get('same_as') or pr['role']}.html")
+            if os.path.isfile(f):
+                w = PL._words(PL.subtitle(open(f, encoding="utf-8").read()) or "")
+                sub_words[sc["id"]] = w if sc["id"] not in sub_words else sub_words[sc["id"]] & w
+    # shell chrome: what a persona's prototype shows on every screen (menu, top bar) is the shell's,
+    # checked by app_shell, not each screen's content
+    chrome = {}
+    for sc in capture.values():
+        for pr in sc.get("roles") or []:
+            f = os.path.join(proto, "screens", sc["id"], f"dom.{pr.get('same_as') or pr['role']}.html")
+            if os.path.isfile(f):
+                lm = PL.landmarks(open(f, encoding="utf-8").read())
+                labels = {PL.norm(x) for k in PL.CONTENT for x in lm.get(k, [])}
+                chrome[pr["role"]] = labels if pr["role"] not in chrome else chrome[pr["role"]] & labels
 
     def login(role):
         if role in failed:
@@ -754,6 +780,21 @@ def open_parity(Dx, b):
                     if state:
                         probs.append(f"the page shows {state.get_attribute('data-zas-key')}: "
                                      f"{(state.inner_text() or '')[:120]}")
+                    dom_file = approved.replace("/shot.", "/dom.").replace(".png", ".html")
+                    if os.path.isfile(dom_file):
+                        # what the approved screen shows must be on the built one: a rebuild that
+                        # wraps the stock table, a chip without its count, a dropped subtitle
+                        skip = set(chrome.get(persona, set())) | {
+                            x.get("text") if isinstance(x, dict) else x for x in r.get("not_built") or []}
+                        E = Dx.M["entities"].get((Dx.M["pages"].get(r.get("page")) or {}).get("entity")) or {}
+                        cols = (E.get("table") or {}).get("columns") or []
+                        drawn = [c["label"] for c in cols if c.get("secondary") or c.get("icon")]
+                        if cols and (cols[0].get("secondary") or cols[0].get("icon")):
+                            drawn.append("#0")
+                        probs += PL.content_gaps(open(dom_file, encoding="utf-8").read(), rp.page.content(),
+                                                 rp.page.inner_text("body"), skip=skip,
+                                                 record=r.get("kind") == "view", ignore_words=persona_words,
+                                                 drawn_cells=drawn, subtitle_words=sub_words.get(r["id"]))
                     shot_dir = os.path.join(Dx.ws, ".zas", "screens", "parity")
                     os.makedirs(shot_dir, exist_ok=True)
                     built = os.path.join(shot_dir, f"proto.{r['id']}.{slug}.png")
@@ -765,12 +806,42 @@ def open_parity(Dx, b):
                                   "dom": os.path.relpath(approved.replace("/shot.", "/dom.").replace(".png", ".html"), Dx.ws),
                                   "built": os.path.relpath(built, Dx.ws), "hand_written": False})
                     look = f"look difference {score:.0%}" if score is not None else "no score (PIL missing)"
-                    return not probs, ("; ".join(probs[:5]) + ". " if probs else "") + f"{r.get('cls')}, {look}."
+                    return not probs, ("; ".join(probs[:12]) + ". " if probs else "") + f"{r.get('cls')}, {look}."
                 finally:
                     rp.close()
             Dx.check(rid, title, where, t, role)
     with open(os.path.join(Dx.ws, ".zas", "parity_looks.json"), "w", encoding="utf-8") as f:
         json.dump(looks, f, indent=1)
+    notes_dropping(Dx, rows)
+
+
+DROP_NOTE = re.compile(r"out of scope|left out|leaves? out|not (?:built|implemented|ported|included)|omitted|"
+                       r"skipped|instead of|falls? back to|plain (?:create )?form|not in this version", re.I)
+
+
+def notes_dropping(Dx, rows):
+    """A `zas:note` that drops something the approved prototype shows fails, unless the screen's
+    `not_built` (which the user agreed to) names it (references/custom-code.md, Notes on an item)."""
+    agreed = [str(x.get("text") if isinstance(x, dict) else x).lower()
+              for r in rows for x in r.get("not_built") or []]
+    found = []
+    for base in ("frontend/src/custom", "backend"):
+        for path in glob.glob(os.path.join(Dx.ws, base, "**", "*.*"), recursive=True):
+            if not path.endswith((".py", ".ts", ".tsx")) or "/node_modules/" in path or "/zas_core/" in path:
+                continue
+            try:
+                lines = open(path, encoding="utf-8").read().splitlines()
+            except OSError:
+                continue
+            for i, line in enumerate(lines, 1):
+                m = re.search(r"zas:note\s+(.*)", line)
+                if m and DROP_NOTE.search(m.group(1)) and not any(a and a in m.group(1).lower() for a in agreed):
+                    found.append(f"{os.path.relpath(path, Dx.ws)}:{i}: {m.group(1).strip()[:200]}")
+
+    def t():
+        return not found, ("notes drop what the approved screens show (build it, or ask the user to "
+                           "agree to leave it out): " + " | ".join(found[:8])) if found else "no note drops anything"
+    Dx.check("design.parity.notes", "nothing the user approved is dropped in a note", "prototype", t)
 
 
 def g_parity(Dx, b):
@@ -845,6 +916,36 @@ def g_parity(Dx, b):
     standard_parity(Dx, b, manifest, looks)
     with open(os.path.join(Dx.ws, ".zas", "parity_looks.json"), "w", encoding="utf-8") as f:
         json.dump(looks, f, indent=1)
+    notes_dropping(Dx, rows)
+
+
+DROP_NOTE = re.compile(r"out of scope|left out|leaves? out|not (?:built|implemented|ported|included)|omitted|"
+                       r"skipped|instead of|falls? back to|plain (?:create )?form|not in this version", re.I)
+
+
+def notes_dropping(Dx, rows):
+    """A `zas:note` that drops something the approved prototype shows fails, unless the screen's
+    `not_built` (which the user agreed to) names it (references/custom-code.md, Notes on an item)."""
+    agreed = [str(x.get("text") if isinstance(x, dict) else x).lower()
+              for r in rows for x in r.get("not_built") or []]
+    found = []
+    for base in ("frontend/src/custom", "backend"):
+        for path in glob.glob(os.path.join(Dx.ws, base, "**", "*.*"), recursive=True):
+            if not path.endswith((".py", ".ts", ".tsx")) or "/node_modules/" in path or "/zas_core/" in path:
+                continue
+            try:
+                lines = open(path, encoding="utf-8").read().splitlines()
+            except OSError:
+                continue
+            for i, line in enumerate(lines, 1):
+                m = re.search(r"zas:note\s+(.*)", line)
+                if m and DROP_NOTE.search(m.group(1)) and not any(a and a in m.group(1).lower() for a in agreed):
+                    found.append(f"{os.path.relpath(path, Dx.ws)}:{i}: {m.group(1).strip()[:200]}")
+
+    def t():
+        return not found, ("notes drop what the approved screens show (build it, or ask the user to "
+                           "agree to leave it out): " + " | ".join(found[:8])) if found else "no note drops anything"
+    Dx.check("design.parity.notes", "nothing the user approved is dropped in a note", "prototype", t)
 
 
 SHELL_MARKERS = (

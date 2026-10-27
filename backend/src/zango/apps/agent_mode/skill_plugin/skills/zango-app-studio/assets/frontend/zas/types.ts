@@ -35,7 +35,9 @@ export interface SpecView {
   sidebar: { type: string; title?: string; key: string; slot?: string }[]; sticky_header?: boolean;
   rebuild?: string;  // open mode: the slot that draws this 360 from the approved prototype
 }
-export interface SpecPage { type: "crud" | "detail" | "custom"; route: string; title: string; entity?: string; detail_view?: string; roles?: string[]; export: string; rebuild?: string }
+export interface SpecPage { type: "crud" | "detail" | "custom"; route: string; title: string; entity?: string; detail_view?: string; roles?: string[]; export: string; rebuild?: string;
+  // the line under the title; stat's figure arrives with the table metadata (zas.subtitle_stat)
+  subtitle?: { text: string; stat?: { format?: string | null; suffix?: string | null } } }
 export interface MenuItem { page?: string; label?: string; icon?: string; group?: string; items?: MenuItem[] }
 export interface SpecUi {
   app: { code: string; name: string; description: string; locale: string; currency: string; brand: string; ui?: { radius?: "sharp" | "rounded" | "soft"; density?: "compact" | "comfortable" }; design?: { css?: string; font_url?: string | null; fonts?: Record<string, string> }; roles: { name: string; description: string }[];

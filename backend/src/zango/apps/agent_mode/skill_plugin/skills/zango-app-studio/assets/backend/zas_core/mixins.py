@@ -105,13 +105,22 @@ class ZasTableMixin:
         try:
             req = self._zas_request()
             role = access.role_name(req)
-            qfs = (zs.entity(self.zas_entity).get("table") or {}).get("quick_filters", [])
+            qfs = [q for q in (zs.entity(self.zas_entity).get("table") or {}).get("quick_filters", [])
+                   if not q.get("roles") or role in q["roles"]]
+            counted = [q for q in qfs if q.get("count")]
+            page = next((p for p in (zs.load().get("pages") or {}).values()
+                         if p.get("type") == "crud" and p.get("entity") == self.zas_entity
+                         and (p.get("subtitle") or {}).get("stat")), None)
+            base = self._zas_base_queryset(req) if counted or page else None
             meta["zas"] = {
                 "entity": self.zas_entity, "role": role,
-                "quick_filters": [{"key": q["key"], "label": q["label"], "default": bool(q.get("default"))}
-                                  for q in qfs if not q.get("roles") or role in q["roles"]],
+                "quick_filters": [{"key": q["key"], "label": q["label"], "default": bool(q.get("default")),
+                                   **({"count": self._zas_count(base, q, req)} if q.get("count") else {})}
+                                  for q in qfs],
                 "filter_options": self._zas_filter_options(req),
             }
+            if page:
+                meta["zas"]["subtitle_stat"] = self._zas_stat(base, page["subtitle"]["stat"], req)
         except Exception:
             logger.exception("zas: table metadata for %s", self.zas_entity)
         return meta
@@ -209,6 +218,33 @@ class ZasTableMixin:
         except Exception:
             logger.exception("zas: filter options for %s", self.zas_entity)
         return out
+
+    def _zas_base_queryset(self, req):
+        """The rows this viewer may list, before search, filters and the quick filter."""
+        qs = super().get_table_data_queryset()
+        qs = access.scope_queryset(self.zas_entity, qs, req)
+        return access.parent_filter(self.zas_entity, qs, req)
+
+    def _zas_count(self, base, q, req):
+        """quick_filters[].count: how many of the viewer's rows the chip shows."""
+        try:
+            return (base.filter(zx.to_q(q["ast"], base.model, access.expr_ctx(req))) if q.get("ast") else base).count()
+        except Exception:
+            logger.exception("zas: count for quick filter %s.%s", self.zas_entity, q.get("key"))
+            return None
+
+    def _zas_stat(self, base, st, req):
+        """pages[].subtitle.stat: a count or a sum over the viewer's rows (where narrows them)."""
+        from django.db.models import Sum
+
+        try:
+            qs = base.filter(zx.to_q(st["ast"], base.model, access.expr_ctx(req))) if st.get("ast") else base
+            if st.get("sum"):
+                return float(qs.aggregate(v=Sum(st["sum"]))["v"] or 0)  # Decimal is not JSON
+            return qs.count()
+        except Exception:
+            logger.exception("zas: subtitle stat for %s", self.zas_entity)
+            return None
 
     def _zas_quick_filter(self, qs, req):
         key = req.GET.get("qf")

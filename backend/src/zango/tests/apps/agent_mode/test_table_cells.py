@@ -126,3 +126,119 @@ class CellSpecTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# ---- the built screen shows what the approved one does (run 8: a rebuild that wrapped the stock table) ----
+
+APPROVED = NAV + """
+<main><h1>Sponsorship requests</h1><p>Congress exhibits and symposia · $366,000 requested</p>
+  <button class="chip">Open <span>7</span></button><button class="chip">Closed <span>5</span></button>
+  <table><thead><tr><th>Request</th><th>Organiser</th></tr></thead>
+  <tbody><tr><td><div><div>Summit 2027</div><div class="mono">SP-1 · Congress exhibit</div></div></td><td>NOS</td></tr></tbody></table>
+</main>
+"""
+
+STOCK = NAV + """
+<main><h1>Sponsorship requests</h1><p>48 records</p>
+  <button>Open</button><button>Closed</button>
+  <table><thead><tr><th>Request</th><th>Organiser</th></tr></thead>
+  <tbody><tr><td>Summit 2027</td><td>NOS</td></tr></tbody></table>
+</main>
+"""
+
+
+def text_of(html):
+    import re
+    return re.sub(r"<[^>]+>", " ", html)
+
+
+class ContentParityTests(unittest.TestCase):
+    def test_a_stock_table_in_place_of_the_approved_one_is_named(self):
+        gaps = PL.content_gaps(APPROVED, STOCK, text_of(STOCK))
+        text = " | ".join(gaps)
+        self.assertIn("filter chip 'Open' shows no count", text)
+        self.assertIn("subtitle under the title", text)
+        self.assertIn("column 'Request' cells lack a second line", text)
+
+    def test_the_same_screen_has_no_gaps(self):
+        self.assertEqual(PL.content_gaps(APPROVED, APPROVED, text_of(APPROVED)), [])
+
+    def test_persona_names_chrome_and_spec_drawn_cells_are_not_gaps(self):
+        approved = "<main><h1>Good morning, Elena</h1><button>EP Elena Park Budget owner</button></main>"
+        built = "<main><h1>Good morning, Test</h1></main>"
+        self.assertEqual(PL.content_gaps(approved, built, text_of(built),
+                                         ignore_words=["Elena Park", "Budget owner"]), [])
+        gaps = PL.content_gaps(APPROVED, STOCK, text_of(STOCK), drawn_cells=["Request"])
+        self.assertFalse([g for g in gaps if "cells lack" in g])
+
+
+class ListGapTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        html = SAMPLES.replace("<h1>Samples</h1>", "<h1>Samples</h1><p>Every sample received this week</p>")
+        self.bundle = write_bundle(Path(self.tmp.name), {"samples": html})
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def gaps(self, doc):
+        return {s["id"]: s["gaps"] for s in pc.coverage(doc, self.bundle)["screens"]}
+
+    def test_counts_subtitle_and_exact_column_labels_are_asked_for(self):
+        doc = spec()
+        for q in doc["modules"][0]["entities"][0]["table"]["quick_filters"]:
+            q.pop("count")
+        g = self.gaps(doc)["samples"]
+        self.assertEqual(g["count"], ["Open", "Due today"])
+        self.assertEqual(g["subtitle"], ["Every sample received this week"])
+
+    def test_count_and_subtitle_in_the_yaml_cover_them(self):
+        doc = spec()
+        doc["pages"][1]["subtitle"] = {"text": "Every sample received this week"}
+        for q in doc["modules"][0]["entities"][0]["table"]["quick_filters"]:
+            q["count"] = True
+        g = self.gaps(doc).get("samples", {})
+        self.assertNotIn("count", g)
+        self.assertNotIn("subtitle", g)
+
+    def test_a_rebuilt_wizard_on_a_kept_list_page_needs_its_own_page(self):
+        doc = spec()
+        doc["prototype"]["screens"].append({"id": "new", "maps": "/pages/@samples", "rebuild": True, "why": "wizard"})
+        with tempfile.TemporaryDirectory() as tmp:
+            bundle = write_bundle(Path(tmp), {"samples": SAMPLES, "new": SAMPLES})
+            g = {s["id"]: s["gaps"] for s in pc.coverage(doc, bundle)["screens"]}
+        self.assertIn("shared_rebuild", g["new"])
+
+
+class SubtitleSpecTests(CellSpecTests):
+    def page(self, sub):
+        raw = copy.deepcopy(self.raw)
+        page = next(p for p in raw["pages"] if p.get("entity") == "purchase_order")
+        page["subtitle"] = sub
+        S = spec_check.Spec(raw, "t.yaml")
+        S.build()
+        S.lint()
+        S.prototype_screens()
+        S.page_holes()
+        S.derive()
+        S.number_holes({})
+        msgs = [i["msg"] for i in S.L.items if ".subtitle" in i["where"]]
+        return msgs, S.ui_json()["pages"][page["code"]].get("subtitle")
+
+    def test_text_and_a_sum_reach_the_runtime(self):
+        msgs, ui = self.page({"text": "Orders this year", "stat": {"sum": "total_amount", "format": "money",
+                                                                  "suffix": "ordered", "where": "status != cancelled"}})
+        self.assertEqual(msgs, [])
+        self.assertEqual(ui, {"text": "Orders this year", "stat": {"format": "money", "suffix": "ordered"}})
+
+    def test_a_sum_of_a_text_field_is_an_error(self):
+        msgs, _ = self.page({"text": "x", "stat": {"sum": "po_ref"}})
+        self.assertTrue(any("not a number field" in m for m in msgs), msgs)
+
+
+class GluedCountTests(unittest.TestCase):
+    def test_a_count_drawn_against_its_label_still_shows_the_label(self):
+        built = STOCK.replace("<button>Open</button>", "<button>Open<span>7</span></button>")
+        gaps = PL.content_gaps(APPROVED, built, "Sponsorship requests Open7 Closed Request Organiser Summit 2027")
+        self.assertFalse([g for g in gaps if "'Open'" in g], gaps)
+        self.assertIn("missing button 'Open'", PL.content_gaps(APPROVED, built, "Sponsorship requests Closed"))

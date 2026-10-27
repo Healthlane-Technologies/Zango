@@ -36,7 +36,7 @@ GUIDE = (
     "(one menu drawn for every persona), change the prototype so that persona's menu shows only "
     "its role's items (proto_patch the menu by persona), never the YAML to match a menu the role "
     "shouldn't have; page "
-    "titles → pages[].title; columns → table.columns (a cell's muted second line → the column's `secondary`, an icon or initials before its value → `icon`); status tabs and filter chips → "
+    "titles → pages[].title; the line under a page title → pages[].subtitle (text, plus `stat: {sum | count, where, format, suffix}` for a live figure); chips that show a count → the quick filter's `count: true`; a screen opened from a list (a create wizard) that must be rebuilt → its own custom page, never `rebuild: true` on the list's page; columns → table.columns, each heading a column's label (a cell's muted second line → the column's `secondary`, an icon or initials before its value → `icon`); status tabs and filter chips → "
     "table.quick_filters; where a row opens → table.row_click (its 360, `<view>#<tab>` for its "
     "parent's 360 on a tab, or drawer); 360 tabs → detail_views[].tabs, the prototype's tabs "
     "and no others; section and panel headings → a summary section's, sidebar block's or "
@@ -64,6 +64,7 @@ KIND_WORDS = {
 NOTE_KINDS = {
     "still_shown": "listed as not_built but the preview still shows",
     "needs_rebuild": "the preview's page layout",
+    "shared_rebuild": "a rebuilt screen on a page another screen keeps",
 }
 
 
@@ -509,6 +510,70 @@ def cell_gaps(doc: dict, maps: str, cells: list, norm) -> list[str]:
     return out
 
 
+def list_gaps(doc: dict, maps: str, per: dict, norm, words) -> dict:
+    """A list page's chips with counts, subtitle and column headings, against its YAML table."""
+    m = re.fullmatch(r"/pages/@([A-Za-z0-9_]+)", str(maps or ""))
+    page = m and next(
+        (p for p in _items(doc.get("pages")) if p.get("code") == m.group(1)), None
+    )
+    E = page and _entities(doc).get(page.get("entity"))
+    if not E:
+        return {}
+    gaps: dict = {}
+    table = E.get("table") or {}
+    qfs = {
+        norm(q.get("label")): q
+        for q in table.get("quick_filters") or []
+        if isinstance(q, dict)
+    }
+    counted = []
+    for marks in per.values():
+        for label in marks.get("counted") or []:
+            q = qfs.get(norm(label))
+            if q is not None and not q.get("count") and label not in counted:
+                counted.append(label)
+    if counted:
+        gaps["count"] = counted
+    shared = None  # the subtitle words every persona's version shares (the rest is per persona)
+    shown = None
+    for marks in per.values():
+        if marks.get("subtitle"):
+            shown = shown or marks["subtitle"][0]
+            w = words(marks["subtitle"][0])
+            shared = w if shared is None else shared & w
+    if shown and shared:
+        sub = page.get("subtitle")
+        text = sub.get("text") if isinstance(sub, dict) else sub
+        if not text or len(shared & words(text)) / len(shared) < 0.5:
+            gaps["subtitle"] = [shown]
+    fields = {}
+    for f in E.get("fields") or []:
+        if (
+            isinstance(f, dict)
+            and len(f) == 1
+            and isinstance(next(iter(f.values())), dict)
+        ):
+            fields.update(f)
+        elif isinstance(f, dict) and f.get("key"):
+            fields[f["key"]] = f
+    labels = {
+        norm(
+            (conf or {}).get("label")
+            or (fields.get(key) or {}).get("label")
+            or key.replace("_", " ")
+        )
+        for key, conf in _columns(doc, maps)
+    }
+    heads = []
+    for marks in per.values():
+        for h in marks.get("column") or []:
+            if norm(h) not in labels and h not in heads:
+                heads.append(h)
+    if heads:
+        gaps["column"] = heads
+    return gaps
+
+
 def coverage(doc: dict, bundle_dir) -> dict:
     """``{"menu": [gap], "screens": [{id, maps, gaps: {kind: [label]}}], "rebuild": {id: {kind: [label]}}}``
     for the capture in ``bundle_dir`` (``write_prototype_bundle``'s output)."""
@@ -592,6 +657,34 @@ def coverage(doc: dict, bundle_dir) -> dict:
         entry = entries.get(sid) or {}
         if entry.get("only") == "prototype" or not entry.get("maps"):
             continue
+        shared_with = [
+            o
+            for o, e in entries.items()
+            if o != sid
+            and e.get("maps") == entry["maps"]
+            and not e.get("rebuild")
+            and e.get("only") != "prototype"
+        ]
+        if (
+            entry.get("rebuild")
+            and re.fullmatch(r"/pages/@\w+", entry["maps"])
+            and shared_with
+        ):
+            # rebuilding this screen (a create wizard opened from the list) would replace the whole
+            # list page the other screen keeps: the wizard needs its own page
+            out["screens"].append(
+                {
+                    "id": sid,
+                    "maps": entry["maps"],
+                    "gaps": {
+                        "shared_rebuild": [
+                            f"map it to its own custom page: {', '.join(shared_with)} keeps {entry['maps']} as a list, "
+                            "and `rebuild: true` here would replace that whole page"
+                        ]
+                    },
+                }
+            )
+            continue
         if firsts.setdefault(sig(per), sid) != sid:
             continue
         skip = {
@@ -655,6 +748,17 @@ def coverage(doc: dict, bundle_dir) -> dict:
             if miss:
                 gaps[k] = miss
         gaps.update(_tab_gaps(view, labels["tab"], skip, sid in records, norm))
+        for k, v in list_gaps(doc, entry["maps"], per, norm, lm._words).items():
+            v = [x for x in v if norm(x) not in skip]
+            if k == "column":
+                v = [
+                    x
+                    for x in v
+                    if not any(norm(x) == norm(y) for y in gaps.get("column", []))
+                ]
+                v = gaps.get("column", []) + v
+            if v:
+                gaps[k] = v
         shown_cells = next((m.get("cells") for m in per.values() if m.get("cells")), [])
         cg = cell_gaps(doc, entry["maps"], shown_cells, norm)
         if cg:
@@ -675,6 +779,11 @@ def format_gaps(result: dict) -> str:
                 if k == "still_shown"
                 else "table cells drawn as one plain value: " + "; ".join(v)
                 if k == "cell"
+                else "filter chips that show a count (→ the quick filter's `count: true`): "
+                + ", ".join(repr(t) for t in v)
+                if k == "count"
+                else f"the line under the title (→ pages[].subtitle: text, and a `stat` for a live figure): {v[0]!r}"
+                if k == "subtitle"
                 else f"{NOTE_KINDS[k]}: {v[0]}"
                 if k in NOTE_KINDS
                 else f"{KIND_WORDS[k]}{'s' if len(v) > 1 else ''} "

@@ -966,6 +966,23 @@ class Spec:
                 L.warn(w, "custom page has no component name; Page_<code> will be used")
             if t == "custom" and not p.get("text"):
                 L.warn(w, "custom page has no text: the agent has nothing to build from")
+            sub = p.get("subtitle")
+            if isinstance(sub, str):  # the line under the page title; a stat adds a live figure
+                p["subtitle"] = sub = {"text": sub}
+            if sub is not None and not isinstance(sub, dict):
+                L.error(w + ".subtitle", "subtitle is text, or {text, stat: {count | sum, where, format, suffix}}")
+            elif sub and sub.get("stat"):
+                st, E = sub["stat"], ents.get(p.get("entity"))
+                if not isinstance(st, dict) or not E:
+                    L.error(w + ".subtitle.stat", "a stat needs a crud page's entity and {count: true} or {sum: <field>}")
+                else:
+                    if st.get("sum") and E["fmap"].get(st["sum"], {}).get("type") not in ("money", "integer", "decimal", "number"):
+                        L.error(w + ".subtitle.stat", f"sum {st['sum']!r} is not a number field of {E['code']}")
+                    if not st.get("sum") and not st.get("count"):
+                        L.error(w + ".subtitle.stat", "stat needs count: true or sum: <field>")
+                    if st.get("format") not in FORMATS:
+                        L.error(w + ".subtitle.stat", f"unknown format {st.get('format')!r}")
+                    st["ast"] = self.check_expr(E, st.get("where"), w + ".subtitle.stat.where")
             r = p.get("route")
             if not r or not str(r).startswith("/app"):
                 L.error(w, f"route {r!r} must start with /app")
@@ -2207,6 +2224,11 @@ class Spec:
         for p in pages.values():
             out["pages"][p["code"]] = {k: p.get(k) for k in ("type", "route", "title", "entity", "detail_view", "roles")
                                        if p.get(k) is not None}
+            if p.get("subtitle"):  # the stat's figure comes with the table metadata (zas.subtitle_stat)
+                st = p["subtitle"].get("stat") or {}
+                out["pages"][p["code"]]["subtitle"] = {
+                    "text": p["subtitle"].get("text") or "",
+                    **({"stat": {"format": st.get("format"), "suffix": st.get("suffix")}} if st else {})}
             out["pages"][p["code"]]["export"] = p.get("component") if p.get("type") == "custom" and p.get("component") else p["export"]
         for E in ents.values():
             tb = E["table"]

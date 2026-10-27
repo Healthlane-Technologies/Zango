@@ -89,7 +89,7 @@ def spec(**over):
             "workflow": {"transitions": [{"key": "release", "label": "Release result"}]},
             "table": {"columns": [{"ref": {"label": "Sample"}}, {"assay": {}}, {"next_step": {"label": "Next step"}},
                                   {"received_on": {}}],
-                      "quick_filters": [{"label": "Open"}, {"label": "Due today"}],
+                      "quick_filters": [{"label": "Open", "count": True}, {"label": "Due today", "count": True}],
                       "row_actions": [{"key": "assign", "label": "Assign", "type": "edit"}]},
         }]}],
         "pages": [
@@ -167,7 +167,7 @@ class CoverageTests(unittest.TestCase):
         doc = spec()
         ent = doc["modules"][0]["entities"][0]
         ent["table"]["columns"] = ent["table"]["columns"][:2] + ent["table"]["columns"][3:]
-        ent["table"]["quick_filters"] = [{"label": "Open"}]
+        ent["table"]["quick_filters"] = [{"label": "Open", "count": True}]
         doc["detail_views"][0]["tabs"][0]["sections"] = []
         gaps = {s["id"]: s["gaps"] for s in pc.coverage(doc, self.bundle)["screens"]}
         self.assertEqual(gaps["samples"], {"column": ["Next step"], "button": ["Due today"]})

@@ -26,6 +26,8 @@ export interface ViewSpec {
 }
 export interface ViewProps {
   pageCode: string; title: string; entity: string; endpoint: string; view: ViewSpec;
+  /** pages[].subtitle's text: show it under the title, in place of a record count, when given. */
+  subtitle?: string;
   /** The switcher: in the view's own toolbar row when placement is "toolbar", else its header row. */
   switcher: React.ReactNode;
   /** Where the approved page has the switcher. */
@@ -87,7 +89,8 @@ export function makeViewsPage(pageCode: string, components: Record<string, React
     return (
       <ToastHost>
         <div className="zas zas-page" data-zas="page" data-zas-key={pageCode} data-zas-view={view.type}>
-          <Custom pageCode={pageCode} title={page.title} entity={page.entity as string} endpoint={E.endpoint} view={view}
+          <Custom pageCode={pageCode} title={page.title} subtitle={page.subtitle?.text || undefined}
+            entity={page.entity as string} endpoint={E.endpoint} view={view}
             switcher={switcher} placement={placement} />
         </div>
       </ToastHost>

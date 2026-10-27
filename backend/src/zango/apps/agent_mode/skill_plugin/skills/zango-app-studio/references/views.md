@@ -12,6 +12,7 @@ or an empty one, means there is nothing to do here.
 ## What you write, per row of `.zas/views.md`
 
 1. `frontend/src/custom/views/<page>_<type>.tsx` — default-export a component taking `ViewProps`
+   (its header shows `subtitle` under the title when given, as the list page does, never a record count instead)
    (from `./ViewsPage`). Start the file with `// zas:view <page>.<type>`.
 2. In `src/custom/pages/index.ts`, export the page through `makeViewsPage` instead of
    `makeListPage`, passing every custom view of that page:
