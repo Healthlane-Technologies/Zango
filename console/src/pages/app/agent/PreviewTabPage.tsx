@@ -121,6 +121,7 @@ export function PreviewTabPage() {
 						appId={appId}
 						reqId={reqId}
 						revision={r.prototype_revision}
+						soon={r.prototype_soon}
 						goto={goto?.page ? { screen: goto.page } : null}
 						className="pvtab-emb"
 					/>

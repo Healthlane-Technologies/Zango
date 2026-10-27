@@ -834,11 +834,16 @@ class StudioBuild:
 
         started = time.monotonic()
         try:
-            doc = yamlio.load(Path(self.spec_path).read_text(encoding="utf-8")) or {}
+            from .prototype import soon_menu
+
+            spec_text = Path(self.spec_path).read_text(encoding="utf-8")
+            doc = yamlio.load(spec_text) or {}
             design = (
                 (doc.get("app") or {}).get("design") if isinstance(doc, dict) else None
             )
-            capture = write_prototype_bundle(parts, out, design=design)
+            capture = write_prototype_bundle(
+                parts, out, design=design, soon=soon_menu(spec_text)
+            )
         except Exception as exc:  # noqa: BLE001 - the bundle is an aid, not a gate
             logger.warning("agent_mode: prototype bundle failed: %s", exc)
             self.steps.append(

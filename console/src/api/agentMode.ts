@@ -128,6 +128,8 @@ export interface Requirement {
 	preview_mode?: 'open' | 'kit';
 	/** Bumped on every prototype write; the frame reloads when it changes. */
 	prototype_revision?: number;
+	/** Digest of the YAML's not-built menu items, which the preview greys; reloads the frame too. */
+	prototype_soon?: string;
 	prototype_hash?: string;
 }
 
@@ -539,9 +541,14 @@ export const prototypeUrl = (appId: string, reqId: string, version?: number) =>
 	`${base(appId)}/requirements/${reqId}/prototype/${version ? `?v=${version}` : ''}`;
 
 /** The prototype page at a revision: refetched when the agent writes a part. */
-export function usePrototypeHtml(appId: string, reqId: string, revision: number | undefined) {
+export function usePrototypeHtml(
+	appId: string,
+	reqId: string,
+	revision: number | undefined,
+	soon?: string,
+) {
 	return useQuery({
-		queryKey: ['agent-prototype', appId, reqId, revision ?? 0],
+		queryKey: ['agent-prototype', appId, reqId, revision ?? 0, soon ?? ''],
 		queryFn: async () => {
 			const res = await fetch(prototypeUrl(appId, reqId), { credentials: 'same-origin' });
 			if (res.status === 404) return null;

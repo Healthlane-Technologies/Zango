@@ -214,6 +214,57 @@
     if (d.type === 'goto') go(d.screen, { role: d.role, record: d.record, replace: true });
   });
 
+  /* ---------- menu items not built: greyed, as the built app shows them ---------- */
+  // The YAML's prototype.screens entries with only: prototype and a menu (the server puts them in
+  // #zas-soon). Any page draws its own menu, so an item is found by what it names: a screen id in
+  // its data-nav/data-go/data-screen/data-page/href, or its label (a count badge after it is fine),
+  // inside a nav, sidebar or menu.
+  var soon = [];
+  try { soon = JSON.parse((document.getElementById('zas-soon') || {}).textContent || '[]') || []; } catch (e) { soon = []; }
+  var SOON_ATTRS = ['data-nav', 'data-go', 'data-screen', 'data-page', 'href'];
+  var MENU_SCOPE = 'nav,aside,[role="navigation"],[role="menu"],[class*="nav"],[class*="side"],[class*="menu"]';
+  function norm(t) { return String(t || '').replace(/\s+/g, ' ').trim().toLowerCase(); }
+  function soonItem(el) {
+    for (var i = 0; i < SOON_ATTRS.length; i++) {
+      var v = el.getAttribute(SOON_ATTRS[i]);
+      if (!v) continue;
+      v = v.replace(/^[#/!]+/, '').split(/[/?#]/)[0];
+      for (var j = 0; j < soon.length; j++) if (soon[j].id && soon[j].id === v) return soon[j];
+    }
+    var text = norm(el.textContent);
+    if (!text || text.length > 60) return null;
+    for (var k = 0; k < soon.length; k++) {
+      var label = norm(soon[k].label);
+      if (label && (text === label || (text.indexOf(label) === 0 && /^[\s\d.,+]*$/.test(text.slice(label.length))))) return soon[k];
+    }
+    return null;
+  }
+  function greySoon() {
+    if (!soon.length) return;
+    var els = document.querySelectorAll('a,button,[role="menuitem"],[role="link"],[data-nav],[data-go],[data-screen]');
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i];
+      if (el.classList.contains('zas-soon') || !el.closest(MENU_SCOPE)) continue;
+      var item = soonItem(el);
+      if (item) { el.classList.add('zas-soon'); el.setAttribute('aria-disabled', 'true'); el.title = (item.label || 'This screen') + ' is not built in this version'; }
+    }
+  }
+  if (soon.length) {
+    var pending = false;
+    new MutationObserver(function () {
+      if (pending) return; pending = true;
+      requestAnimationFrame(function () { pending = false; greySoon(); });
+    }).observe(document.body, { childList: true, subtree: true });
+    document.addEventListener('DOMContentLoaded', greySoon);
+    // Capture phase on window: runs before the page's own handlers, so the item does nothing.
+    window.addEventListener('click', function (ev) {
+      var el = ev.target.closest && ev.target.closest('.zas-soon');
+      if (!el) return;
+      ev.preventDefault(); ev.stopPropagation(); ev.stopImmediatePropagation();
+      toast(el.title || 'Not built in this version');
+    }, true);
+  }
+
   window.ZAS = {
     M: M, state: state, errors: errors, store: store, files: files, fmt: fmt,
     h: h, I: I, pill: pill, table: table, tabs: tabs, field: field, initials: initials,

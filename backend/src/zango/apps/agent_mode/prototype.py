@@ -314,8 +314,52 @@ def _ordered(parts: dict, manifest: dict) -> tuple[list[str], list[str]]:
     return css_head + other_css + screen_css, js_head + other_js + screen_js
 
 
-def assemble(parts: dict) -> str:
-    """The prototype as one HTML page: CSP, fonts, styles, manifest, runtime, parts."""
+def soon_menu(spec_text: str) -> list[dict]:
+    """The menu items the YAML keeps for screens not built: [{id, label, group}].
+
+    A ``prototype.screens`` entry with ``only: prototype`` and a ``menu`` is shown greyed
+    out in the built app; the preview greys the same item so it shows what is built.
+    """
+    if not (spec_text or "").strip():
+        return []
+    try:
+        import yaml
+
+        doc = yaml.safe_load(spec_text)
+    except Exception:  # noqa: BLE001 - a draft that doesn't parse greys nothing
+        return []
+    proto = doc.get("prototype") if isinstance(doc, dict) else None
+    screens = proto.get("screens") if isinstance(proto, dict) else None
+    out = []
+    for s in screens if isinstance(screens, list) else []:
+        menu = s.get("menu") if isinstance(s, dict) else None
+        if s.get("only") != "prototype" or not isinstance(menu, dict):
+            continue
+        label = str(menu.get("label") or "").strip()
+        if s.get("id") or label:
+            out.append(
+                {
+                    "id": str(s.get("id") or ""),
+                    "label": label,
+                    "group": str(menu.get("group") or ""),
+                }
+            )
+    return out
+
+
+def soon_digest(soon: list[dict]) -> str:
+    """Short and stable: changes the page's ETag and the console's frame key."""
+    if not soon:
+        return ""
+    raw = json.dumps(soon, sort_keys=True, ensure_ascii=False).encode()
+    return hashlib.sha256(raw).hexdigest()[:12]
+
+
+def assemble(parts: dict, soon: list[dict] | None = None) -> str:
+    """The prototype as one HTML page: CSP, fonts, styles, manifest, runtime, parts.
+
+    ``soon``: the menu items not built (soon_menu); the runtime greys them.
+    """
     manifest, _ = manifest_of(parts)
     css, js = _ordered(parts, manifest)
     title = _esc_attr(manifest.get("title") or "Prototype")
@@ -344,6 +388,8 @@ def assemble(parts: dict) -> str:
     out.append(
         f'<script type="application/json" id="zas-proto">{manifest_json}</script>'
     )
+    soon_json = json.dumps(soon or [], ensure_ascii=False).replace("</", "<\\/")
+    out.append(f'<script type="application/json" id="zas-soon">{soon_json}</script>')
     out.append(f'<script src="{LUCIDE_URL}"></script>')
     out.append(f'<script data-zas="runtime">{runtime_js()}</script>')
     for url in manifest.get("libraries", []):

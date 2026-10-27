@@ -308,6 +308,8 @@ class AgentRequirementDetailSerializer(serializers.ModelSerializer):
     messages = AgentRequirementMessageSerializer(many=True, read_only=True)
     runs = serializers.SerializerMethodField()
     template = serializers.SerializerMethodField()
+    # The preview greys the YAML's not-built menu items; the frame reloads when they change.
+    prototype_soon = serializers.SerializerMethodField()
 
     class Meta:
         model = AgentRequirement
@@ -318,6 +320,7 @@ class AgentRequirementDetailSerializer(serializers.ModelSerializer):
             "can_build",
             "template_slug",
             "template",
+            "prototype_soon",
             "initial_prompt",
             "spec_markdown",
             "spec_format",
@@ -341,6 +344,13 @@ class AgentRequirementDetailSerializer(serializers.ModelSerializer):
 
     def get_template(self, obj):
         return _template_payload(obj)
+
+    def get_prototype_soon(self, obj):
+        from zango.apps.agent_mode.prototype import soon_digest, soon_menu
+
+        if obj.preview_mode != "open":
+            return ""
+        return soon_digest(soon_menu(obj.spec_markdown))
 
     def get_runs(self, obj):
         return [

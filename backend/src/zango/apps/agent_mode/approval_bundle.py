@@ -492,7 +492,9 @@ def prototype_libraries(parts: dict) -> list:
     return found
 
 
-def write_prototype_bundle(parts: dict, out_dir, *, design=None, python=None) -> dict:
+def write_prototype_bundle(
+    parts: dict, out_dir, *, design=None, python=None, soon=None
+) -> dict:
     """``out_dir`` (``.zas/bundle/prototype``) for an open-mode requirement; returns capture.json.
 
     prototype.html, manifest.json, design.json, libraries.json, index.md, and per manifest screen
@@ -509,7 +511,7 @@ def write_prototype_bundle(parts: dict, out_dir, *, design=None, python=None) ->
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     manifest, _ = manifest_of(parts)
-    (out / "prototype.html").write_text(assemble(parts), encoding="utf-8")
+    (out / "prototype.html").write_text(assemble(parts, soon), encoding="utf-8")
     (out / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     (out / "design.json").write_text(
         json.dumps(design or {}, indent=2), encoding="utf-8"

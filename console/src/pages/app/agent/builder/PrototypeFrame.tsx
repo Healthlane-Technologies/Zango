@@ -70,6 +70,7 @@ export function PrototypeFrame({
 	onFocus,
 	goto,
 	className,
+	soon,
 }: {
 	appId: string;
 	reqId: string;
@@ -79,8 +80,10 @@ export function PrototypeFrame({
 	/** Open this place on first load (the full-page preview). */
 	goto?: ProtoPlace | null;
 	className?: string;
+	/** The requirement's prototype_soon: the greyed menu items changed, so the page reloads. */
+	soon?: string;
 }) {
-	const page = usePrototypeHtml(appId, reqId, revision);
+	const page = usePrototypeHtml(appId, reqId, revision, soon);
 	const frame = useRef<HTMLIFrameElement>(null);
 	// Where the user is, so the page reopens there after the agent's next write.
 	const place = useRef<ProtoPlace | null>(goto ?? null);

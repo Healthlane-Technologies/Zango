@@ -688,6 +688,7 @@ export function TemplateBuilderPanel({
 								appId={appId}
 								reqId={requirement.uuid}
 								revision={requirement.prototype_revision}
+								soon={requirement.prototype_soon}
 								onFocus={onFocus}
 							/>
 						) : (

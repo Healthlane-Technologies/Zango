@@ -1390,7 +1390,12 @@ class AgentRequirementPrototypeView(ZangoGenericPlatformAPIView, TenantMixin):
         from django.http import HttpResponse
 
         from zango.apps.agent_mode.models import AgentRequirementVersion
-        from zango.apps.agent_mode.prototype import CSP, assemble
+        from zango.apps.agent_mode.prototype import (
+            CSP,
+            assemble,
+            soon_digest,
+            soon_menu,
+        )
 
         try:
             _bind_tenant(self, app_uuid)
@@ -1398,6 +1403,7 @@ class AgentRequirementPrototypeView(ZangoGenericPlatformAPIView, TenantMixin):
             if req is None:
                 return get_api_response(False, {"message": "not found"}, 404)
             parts, digest = req.prototype_parts, req.prototype_hash
+            spec_text = req.spec_markdown
             version = request.GET.get("v")
             if version:
                 row = AgentRequirementVersion.objects.filter(
@@ -1406,15 +1412,18 @@ class AgentRequirementPrototypeView(ZangoGenericPlatformAPIView, TenantMixin):
                 if row is None:
                     return get_api_response(False, {"message": "not found"}, 404)
                 parts, digest = row.prototype_parts, row.prototype_hash
+                spec_text = row.spec_markdown
             if not parts:
                 return get_api_response(
                     False, {"message": "There is no prototype yet."}, 404
                 )
-            etag = f'"{digest}"'
+            # The not-built menu items come from the YAML: they change the page too.
+            soon = soon_menu(spec_text)
+            etag = f'"{digest}{soon_digest(soon)}"'
             if request.headers.get("If-None-Match") == etag:
                 return HttpResponse(status=304)
             response = HttpResponse(
-                assemble(parts), content_type="text/html; charset=utf-8"
+                assemble(parts, soon), content_type="text/html; charset=utf-8"
             )
             response["Content-Security-Policy"] = (
                 CSP + "; sandbox allow-scripts allow-popups allow-forms"
