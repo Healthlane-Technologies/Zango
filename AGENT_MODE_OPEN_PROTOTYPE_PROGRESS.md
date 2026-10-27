@@ -585,3 +585,5 @@ policy fields are still in the preview. 24 tests.
   - Console: the spec query key includes turns + is_thinking, so open decisions and flags (no draft_revision bump) appear without a reload.
   - Checked, no change: ws_migrate's "dynamic_models has changes" warning is the packages' models (own migrations), benign.
   - Known stale: 9 tests in test_skill_plugin/test_preview_focus assert old developer-server skill wording; failing before this change.
+- Run 7 (9991892a, deleted 2026-10-27): the preview showed the mockup's menu as a top bar without group labels. Cause: the pane is < 820 px and the mockup's own `@media (max-width:820px)` turns its sidebar into a top bar. Fix 27fe339f: PrototypeFrame draws the page at 1280 px and scales it to fit (checked live: sidebar with Sponsorships / AI / Library / Help).
+  - Open gap: on an imported mockup, `only: prototype` menu items (Agents, Getting started, Integrations) look active in the preview, while the build greys them (`soon`). The mockup draws its own nav, so the preview runtime can't grey them yet.
