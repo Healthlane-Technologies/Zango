@@ -36,7 +36,7 @@ GUIDE = (
     "(one menu drawn for every persona), change the prototype so that persona's menu shows only "
     "its role's items (proto_patch the menu by persona), never the YAML to match a menu the role "
     "shouldn't have; page "
-    "titles → pages[].title; columns → table.columns; status tabs and filter chips → "
+    "titles → pages[].title; columns → table.columns (a cell's muted second line → the column's `secondary`, an icon or initials before its value → `icon`); status tabs and filter chips → "
     "table.quick_filters; where a row opens → table.row_click (its 360, `<view>#<tab>` for its "
     "parent's 360 on a tab, or drawer); 360 tabs → detail_views[].tabs, the prototype's tabs "
     "and no others; section and panel headings → a summary section's, sidebar block's or "
@@ -447,6 +447,68 @@ def _tab_gaps(view, shown_tabs, skip, record, norm) -> dict:
     return gaps
 
 
+def _columns(doc: dict, maps: str) -> list[tuple[str, dict]]:
+    """(key, config) of the table columns a list page shows, from the YAML as written."""
+    m = re.fullmatch(r"/pages/@([A-Za-z0-9_]+)", str(maps or ""))
+    page = m and next(
+        (p for p in _items(doc.get("pages")) if p.get("code") == m.group(1)), None
+    )
+    E = page and _entities(doc).get(page.get("entity"))
+    out = []
+    for c in ((E or {}).get("table") or {}).get("columns") or []:
+        if (
+            isinstance(c, dict)
+            and len(c) == 1
+            and isinstance(next(iter(c.values())), dict)
+        ):
+            key, conf = next(iter(c.items()))
+        elif isinstance(c, dict):
+            key, conf = c.get("key"), c
+        else:
+            key, conf = c, {}
+        out.append((str(key), conf))
+    return out
+
+
+def cell_gaps(doc: dict, maps: str, cells: list, norm) -> list[str]:
+    """A column whose preview cells show a second line or an icon the YAML column doesn't."""
+    cols = _columns(doc, maps)
+    out = []
+    for cell in cells or []:
+        head = norm(cell.get("column"))
+        conf = next(
+            (
+                conf
+                for key, conf in cols
+                if head and norm(conf.get("label") or key.replace("_", " ")) == head
+            ),
+            None,
+        )
+        if conf is None and cell.get("index") == 0 and cols:
+            conf = cols[0][
+                1
+            ]  # the row's lead column, under another heading ("Agreement" vs "ID")
+        if conf is None:
+            continue  # a column the YAML lacks is a column gap already
+        need = []
+        lines = cell.get("lines") or []
+        if len(lines) > 1 and not conf.get("secondary"):
+            need.append(
+                f"a second line {lines[1]!r} → `secondary: [<fields>]`"
+                + (", `secondary_style: mono`" if cell.get("mono") else "")
+            )
+        if cell.get("icon") == "initials" and not conf.get("icon"):
+            need.append("initials before the value → `icon: initials`")
+        elif cell.get("icon") == "icon" and not conf.get("icon"):
+            need.append(
+                "an icon before the value → `icon: <name>`, or `icon: {by: <field>, map: {<value>: <name>}}` "
+                "when it changes by row"
+            )
+        if need:
+            out.append(f"{cell.get('column')!r}: " + "; ".join(need))
+    return out
+
+
 def coverage(doc: dict, bundle_dir) -> dict:
     """``{"menu": [gap], "screens": [{id, maps, gaps: {kind: [label]}}], "rebuild": {id: {kind: [label]}}}``
     for the capture in ``bundle_dir`` (``write_prototype_bundle``'s output)."""
@@ -593,6 +655,10 @@ def coverage(doc: dict, bundle_dir) -> dict:
             if miss:
                 gaps[k] = miss
         gaps.update(_tab_gaps(view, labels["tab"], skip, sid in records, norm))
+        shown_cells = next((m.get("cells") for m in per.values() if m.get("cells")), [])
+        cg = cell_gaps(doc, entry["maps"], shown_cells, norm)
+        if cg:
+            gaps["cell"] = cg
         if still:
             gaps["still_shown"] = still
         if gaps:
@@ -607,6 +673,8 @@ def format_gaps(result: dict) -> str:
             (
                 f"{NOTE_KINDS[k]}: " + ", ".join(repr(t) for t in v)
                 if k == "still_shown"
+                else "table cells drawn as one plain value: " + "; ".join(v)
+                if k == "cell"
                 else f"{NOTE_KINDS[k]}: {v[0]}"
                 if k in NOTE_KINDS
                 else f"{KIND_WORDS[k]}{'s' if len(v) > 1 else ''} "

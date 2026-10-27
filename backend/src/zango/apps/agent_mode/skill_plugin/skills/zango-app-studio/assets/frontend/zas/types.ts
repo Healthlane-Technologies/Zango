@@ -5,6 +5,8 @@ export type Tone = "gray" | "blue" | "green" | "amber" | "red" | "purple" | "tea
 export interface SpecColumn {
   key: string; label: string; source: string; format?: string; link_to?: string; display?: string;
   filterable?: boolean; sortable?: boolean; searchable?: boolean; type?: string; to?: string;
+  // a second, muted line under the value and an icon before it (the row's zas.sub / zas.icon)
+  secondary?: string[]; secondary_style?: "plain" | "mono"; icon?: { by: string | null; map: Record<string, string>; default: string | null };
 }
 export interface SpecField { key: string; label: string; type: string; to?: string; display?: string }
 export interface SpecEntity {

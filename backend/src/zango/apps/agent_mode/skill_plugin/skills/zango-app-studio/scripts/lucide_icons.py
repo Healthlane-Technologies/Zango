@@ -32,6 +32,10 @@ def collect(resolved):
             for sub in it.get("items", []) or []:
                 if sub.get("icon"):
                     names.add(sub["icon"])
+    for e in resolved.get("entities", {}).values():  # table cells: icon or icon by value
+        for c in (e.get("table") or {}).get("columns", []) or []:
+            ic = c.get("icon") or {}
+            names |= {n for n in [*(ic.get("map") or {}).values(), ic.get("default")] if n and n != "initials"}
     for v in resolved.get("detail_views", {}).values():
         for s in v.get("stats", []) or []:
             if s.get("icon"):

@@ -33,6 +33,30 @@ def _hook(entity_code, fn):
     return zs.hook(zs.entity(entity_code)["module"], fn)
 
 
+def _cell_text(E, obj, path):
+    """One part of a cell's second line: the field's display text, formatted like a cell."""
+    from . import records as zr
+
+    v = zr.field_value(E, obj, path)
+    if v["display"] is None:
+        return ""
+    if v["type"] in ("money", "number", "percent", "days", "date", "datetime"):
+        return zr.display(v["value"], v["type"]) or v["display"]
+    return v["display"]
+
+
+def _cell_icon(obj, icon):
+    """`icon` normalised by spec_check: {by, map, default}."""
+    if not icon:
+        return None
+    if not icon.get("by"):
+        return icon.get("default")
+    from . import records as zr
+
+    raw = zr.value_of(obj, icon["by"])
+    return (icon.get("map") or {}).get(str(raw), icon.get("default"))
+
+
 class _FormRecord:
     """Lets expressions read live form values (and fall back to the instance)."""
 
@@ -105,6 +129,7 @@ class ZasTableMixin:
             has_wf = bool((E.get("workflow") or {}).get("statuses"))
             hls = [(c["key"], c["highlight"]) for c in (E.get("table") or {}).get("columns", [])
                    if (c.get("highlight") or {}).get("ast")]
+            cells = [c for c in (E.get("table") or {}).get("columns", []) if c.get("secondary") or c.get("icon")]
             ctx = access.expr_ctx(self._zas_request())
             for row, d in zip(rows, data):
                 obj = d["obj"]
@@ -126,6 +151,16 @@ class ZasTableMixin:
                         logger.exception("zas: highlight %s.%s", self.zas_entity, key)
                 if hl:
                     z["hl"] = hl
+                for c in cells:  # table.columns[].secondary / icon: the cell's second line and icon
+                    try:
+                        sub = [t for t in (_cell_text(E, obj, p) for p in c.get("secondary") or []) if t]
+                        if sub:
+                            z.setdefault("sub", {})[c["key"]] = " · ".join(sub)
+                        icon = _cell_icon(obj, c.get("icon"))
+                        if icon:
+                            z.setdefault("icon", {})[c["key"]] = icon
+                    except Exception:
+                        logger.exception("zas: cell %s.%s", self.zas_entity, c["key"])
                 row["zas"] = z
         except Exception:
             logger.exception("zas: row extras for %s", self.zas_entity)

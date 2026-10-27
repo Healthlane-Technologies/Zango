@@ -12,7 +12,7 @@ import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ChevronsUpDown, Download, El
 import * as api from "./api";
 import { SPEC, date, detailUrl, number, pageUrl, parentTabUrl, viewUrl } from "./config";
 import { ConfirmDialog, FormDialog, useDialog } from "./dialogs";
-import { Badge, Banner, Button, Chip, Drawer, EmptyState, Menu, Nil, Skeleton, Timeline, Value, cx, useToast } from "./ui";
+import { Badge, Banner, Button, Chip, Drawer, EmptyState, Icon, Menu, Nil, Skeleton, Timeline, Value, cx, useToast } from "./ui";
 import type { MenuItemDef } from "./ui";
 import type { FieldValue, SpecColumn, SpecEntity } from "./types";
 
@@ -22,7 +22,7 @@ type Meta = {
   has_add_perm?: boolean; has_download_perm?: boolean;
   zas?: { quick_filters: { key: string; label: string; default: boolean }[]; filter_options?: Record<string, string[]> };
 };
-type Row = Record<string, any> & { object_uuid: string; zas?: { links: Record<string, string>; status?: string; tags?: string[]; hl?: Record<string, string> } };
+type Row = Record<string, any> & { object_uuid: string; zas?: { links: Record<string, string>; status?: string; tags?: string[]; hl?: Record<string, string>; sub?: Record<string, string>; icon?: Record<string, string> } };
 
 const NA = (v: any) => v === null || v === undefined || v === "" || v === "NA";
 const strip = (v: any) => (typeof v === "string" ? v.replace(/<[^>]*>/g, "").trim() : v);
@@ -43,7 +43,29 @@ function useMeta(endpoint: string) {
 }
 
 // ───────── cells ─────────
-function Cell({ E, col, row, onOpen }: { E: SpecEntity; col: SpecColumn; row: Row; onOpen: (url: string) => void }) {
+const initialsOf = (t: string) => t.split(/\s+/).filter((w) => /^[A-Za-z]/.test(w)).slice(0, 2).map((w) => w[0].toUpperCase()).join("");
+
+type CellProps = { E: SpecEntity; col: SpecColumn; row: Row; onOpen: (url: string) => void };
+
+/** table.columns[].secondary / icon: an icon, the value, and a muted second line under it. */
+function Cell(p: CellProps) {
+  const sub = p.row.zas?.sub?.[p.col.key];
+  const icon = p.row.zas?.icon?.[p.col.key];
+  if (!sub && !icon) return <CellValue {...p} />;
+  return (
+    <div className="zas-cell2" data-zas="cell" data-zas-key={p.col.key}>
+      {icon === "initials"
+        ? <span className="zas-cell-ico ini">{initialsOf(String(strip(p.row[p.col.key]) ?? ""))}</span>
+        : icon && <span className="zas-cell-ico"><Icon name={icon} /></span>}
+      <div className="zas-cell-txt">
+        <div className="zas-cell-main"><CellValue {...p} /></div>
+        {sub && <div className={cx("zas-cell-sub", p.col.secondary_style === "mono" && "mono")}>{sub}</div>}
+      </div>
+    </div>
+  );
+}
+
+function CellValue({ E, col, row, onOpen }: CellProps) {
   const v = row[col.key];
   if (col.source === "status") {
     const code = row.zas?.status;

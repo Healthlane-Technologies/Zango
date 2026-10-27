@@ -54,7 +54,8 @@ Use `from ..zas_core import records as zr`. A `format` on a `field` column needs
 (crud renders model values). A `format` on a computed or path column goes through
 `zr.display(value, "<format>")`.
 
-**Not generated in Python:** `link_to` (the frontend turns the cell into a link from
+**Not generated in Python:** `secondary` / `icon` (`ZasTableMixin` adds each row's second line and
+icon as `zas.sub` / `zas.icon`; `ZasTable` draws icon, value and second line), `link_to` (the frontend turns the cell into a link from
 `spec.ui.json`), `row_click` (ListPage wires the 360 route), `quick_filters`,
 `default_sort` and the 360 parent filter (`ZasTableMixin` reads them from `spec.json`).
 `footer_totals` is not rendered yet. The checker accepts it; mention it in the report.

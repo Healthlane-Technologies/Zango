@@ -514,6 +514,15 @@ def norm_entity(e, mod, sets):
         if src == "computed" and c.get("path"):
             src = "path"
         f = fm.get(c["key"]) or BUILTIN.get(c["key"])
+        c = dict(c)
+        if c.get("secondary") is not None:  # a second, muted line under the value
+            c["secondary"] = arr(c["secondary"])
+        ic = c.get("icon")
+        if isinstance(ic, str):  # one icon on every row, or one per value of a field
+            c["icon"] = {"by": None, "map": {}, "default": ic}
+        elif isinstance(ic, dict):
+            c["icon"] = {"by": ic.get("by"), "map": {str(k): v for k, v in (ic.get("map") or {}).items()},
+                         "default": ic.get("default")}
         ncols.append({**c, "source": src,
                       "label": c.get("label") or (f or {}).get("label") or titleize(c["key"]),
                       "roles": arr(c.get("roles")) or None})
@@ -1378,6 +1387,33 @@ class Spec:
                 T = ents.get((f or {}).get("to"))
                 if not T or (c["display"] not in T["fmap"] and c["display"] not in BUILTIN):
                     L.error(cw, f"display {c['display']!r} does not resolve")
+            for p in c.get("secondary") or []:
+                kk, info = self.resolve(E, p)
+                if kk is None:
+                    L.error(cw + ".secondary", f"{p!r}: {info}")
+            if c.get("secondary_style") not in (None, "plain", "mono"):
+                L.error(cw + ".secondary_style", "secondary_style is plain or mono")
+            ic = c.get("icon")
+            if ic is not None and not isinstance(ic, dict):
+                L.error(cw + ".icon", "icon is a lucide name, or {by: <field>, map: {<value>: <icon>}, default}")
+            elif ic:
+                names = [*ic["map"].values(), ic.get("default")]
+                bad = [n for n in names if n is not None and not re.fullmatch(r"[a-z0-9-]+", str(n))]
+                if bad:
+                    L.error(cw + ".icon", f"not lucide icon names: {bad}")
+                if ic.get("by"):
+                    kk, info = self.resolve(E, ic["by"])
+                    if kk is None:
+                        L.error(cw + ".icon.by", f"{ic['by']!r}: {info}")
+                    elif kk == "field" and info.get("choices"):
+                        ids = {str(ch["id"]) for ch in info["choices"]}
+                        extra = sorted(set(ic["map"]) - ids)
+                        if extra:
+                            L.error(cw + ".icon.map", f"not choices of {ic['by']}: {extra}")
+                        if not ic.get("default") and ids - set(ic["map"]):
+                            L.warn(cw + ".icon", f"no icon for {sorted(ids - set(ic['map']))} and no default")
+                elif not ic.get("default"):
+                    L.error(cw + ".icon", "icon needs a name, or `by` with a `map`")
             if c.get("highlight"):
                 c["highlight"]["ast"] = self.check_expr(E, c["highlight"].get("when"), cw + ".highlight")
             if c.get("roles"):
@@ -2143,7 +2179,8 @@ class Spec:
     def _ui_column(self, E, c):
         """One list column for the React runtime: display keys plus what the toolbar needs
         (filterable → an inline filter; a link column carries its target entity)."""
-        col = {k: c.get(k) for k in ("key", "label", "source", "format", "link_to", "display")
+        col = {k: c.get(k) for k in ("key", "label", "source", "format", "link_to", "display",
+                                     "secondary", "secondary_style", "icon")
                if c.get(k) is not None}
         for k in ("filterable", "sortable", "searchable"):
             if c.get(k):

@@ -14,6 +14,10 @@ the probe worker) and returns its labels by kind:
 - ``tab``: ``role="tab"`` elements, or elements whose class list has ``tab``.
 - ``button``: buttons and ``role="button"`` elements outside the menu.
 - ``label``: ``<dt>`` and ``<label>`` text (field labels in summaries and forms).
+- ``cells``: per table, the first data row's cells that are more than one plain value, as
+  ``{"column", "lines", "icon", "mono"}``: ``lines`` the cell's text blocks in order (a title and a
+  muted "SP-2026-0061 · Congress exhibit" under it), ``icon`` "icon" for an icon before the text or
+  "initials" for an avatar of initials, ``mono`` the second line set in a monospace class.
 
 Labels are normalised for matching (``norm``); counts at the end ("Open 7") are dropped. Text that
 is record data rather than UI copy (IDs, amounts, dates, long sentences) is skipped by ``is_copy``.
@@ -137,6 +141,100 @@ class _Reader(HTMLParser):
             self.handle_endtag(self.stack[-1][0])
 
 
+BLOCK = {"div", "p", "small", "li", "td", "th", "h1", "h2", "h3", "h4", "h5", "h6"}
+
+
+class _Cells(HTMLParser):
+    """The first data row of each table, cell by cell (see ``cells`` in the module doc)."""
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.stack = []      # [tag, attrs, block id or None]
+        self.skip = 0
+        self.tables = []     # {"heads": [], "rows": 0, "cells": []}
+        self.th = None       # header text parts
+        self.td = None       # {"blocks": {id: [parts]}, "order": [ids], "icon": bool, "mono": set}
+        self.n = 0
+
+    def handle_starttag(self, tag, attrs):
+        if tag in VOID:
+            if tag == "img" and self.td is not None and not self.td["order"]:
+                self.td["icon"] = True
+            return
+        a = dict(attrs)
+        T = self.tables[-1] if self.tables else None
+        if tag == "svg" and self.td is not None and not self.td["order"]:
+            self.td["icon"] = True
+        if tag in SKIP or self.skip:
+            self.skip += 1
+            self.stack.append([tag, a, None])
+            return
+        if tag == "table":
+            self.tables.append({"heads": [], "rows": 0, "cells": []})
+        elif T is not None and tag == "th":
+            self.th = []
+        elif T is not None and tag == "td":
+            T["in_row"] = True
+            if T["rows"] == 0:
+                self.td = {"blocks": {}, "order": [], "icon": False, "mono": set()}
+        self.n += 1
+        bid = self.n if tag in BLOCK else None
+        if bid and self.td is not None and ("mono" in (a.get("class") or "").split()
+                                             or "mono" in (a.get("style") or "")):
+            self.td["mono"].add(bid)
+        self.stack.append([tag, a, bid])
+
+    def handle_endtag(self, tag):
+        if tag in VOID:
+            return
+        while self.stack:
+            t, a, bid = self.stack.pop()
+            if self.skip:
+                self.skip -= 1
+            elif t == "th" and self.th is not None and self.tables:
+                self.tables[-1]["heads"].append(" ".join("".join(self.th).split()))
+                self.th = None
+            elif t == "td" and self.td is not None and self.tables:
+                td, self.td = self.td, None
+                lines = [" ".join("".join(td["blocks"][b]).split()) for b in td["order"]]
+                order = [b for b, x in zip(td["order"], lines) if x]
+                lines = [x for x in lines if x]
+                icon = "icon" if td["icon"] and lines else None
+                if len(lines) > 1 and re.fullmatch(r"[A-Z]{1,3}", lines[0]):
+                    icon, lines, order = "initials", lines[1:], order[1:]  # an avatar ("NO")
+                self.tables[-1]["cells"].append(
+                    {"lines": lines, "icon": icon, "mono": len(order) > 1 and order[1] in td["mono"]})
+            elif t == "tr" and self.tables and self.tables[-1].pop("in_row", False):
+                self.tables[-1]["rows"] += 1  # a data row ended: only the first one is read
+            if t == tag:
+                break
+
+    def handle_data(self, data):
+        if self.skip:
+            return
+        if self.th is not None:
+            self.th.append(data)
+        elif self.td is not None and data.strip():
+            bid = next((b for _, _, b in reversed(self.stack) if b), None)
+            if bid not in self.td["blocks"]:
+                self.td["blocks"][bid] = []
+                self.td["order"].append(bid)
+            self.td["blocks"][bid].append(data)
+
+
+def cells(dom_html: str) -> list:
+    """Cells of each table's first data row that show more than one plain value."""
+    r = _Cells()
+    r.feed(dom_html or "")
+    out = []
+    for T in r.tables:
+        for i, c in enumerate(T["cells"]):
+            if len(c["lines"]) > 1 or c["icon"]:
+                head = T["heads"][i] if i < len(T["heads"]) else ""
+                out.append({"column": head, "index": i, **c})
+    return out
+
+
 def landmarks(dom_html: str) -> dict:
     """Labels by kind (see the module doc), each kind de-duplicated in page order."""
     r = _Reader()
@@ -151,4 +249,5 @@ def landmarks(dom_html: str) -> dict:
                 seen.add(key)
                 keep.append(it)
         out[k] = keep
+    out["cells"] = cells(dom_html)
     return out
