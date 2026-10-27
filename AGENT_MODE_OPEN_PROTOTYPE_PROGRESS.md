@@ -630,3 +630,17 @@ ZasTable, wrote "out of scope" in a zas:note, and parity only scored screenshots
 - Run 8 app now: parity 84/99; left = Organisers "Open" column, Evidence "Status" column, the wizard
   (all analyst-side; the gate now sends them back).
 - Next (proposed to the user): the build report is a developer QA report; end users need an outcome view.
+
+### The build ends with progress, never failures (944a276c)
+
+Design agreed with the user (canvas https://claude.ai/artifact/UpZuo1Cdd5yxa9Hfz77Hud): the person who made
+the app sees "Still building" / "Ready" (+ a quiet "finishing touches on <screens>") / "Ready", what each
+role can do, and Open the app. No check counts, layers, spec paths or failure words.
+- `studio_status.py`: kinds harness / test / core / polish; `user_status()` writes the card.
+- `studio_build.finish(progress=…)`: harness failures leave the fix brief and the verdict; up to
+  AGENT_MODE_STUDIO_POLISH_ROUNDS (2) extra rounds for polish once core works, stop when no progress.
+- `tasks.py`: saves `studio_report.user_status` live and at the end; `internal` lists per kind; logs harness.
+- Console: `BuildCard` in Thread.tsx replaces the build marker when `user_status` is present.
+- Run 8's card computed from its latest results: finishing (Payments, Evidence & closure, Agreements +1).
+- Not yet: live check in Chrome (extension disconnected), questions for the user from the build
+  (decision cards), "View as <role>", the technical report behind Details being admin-only.
