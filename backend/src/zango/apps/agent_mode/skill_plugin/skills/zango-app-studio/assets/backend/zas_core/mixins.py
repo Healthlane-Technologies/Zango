@@ -490,6 +490,14 @@ class ZasActionFormMixin:
 
     zas_entity = None
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # workflow 1.0.1 builds a transition form from request.POST only and stores the upload
+        # afterwards: without the request's files a required file field always fails validation.
+        req = getattr(getattr(self, "crud_view_instance", None), "request", None)
+        if not self.files and getattr(req, "FILES", None):
+            self.files = req.FILES
+
     def save(self, *args, **kwargs):
         obj = (getattr(self, "initial", {}) or {}).get("object_instance") or getattr(self, "instance", None)
         req = getattr(getattr(self, "crud_view_instance", None), "request", None)

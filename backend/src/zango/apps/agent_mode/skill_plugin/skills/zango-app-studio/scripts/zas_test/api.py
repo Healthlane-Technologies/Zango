@@ -348,6 +348,7 @@ class Ctx:
         raise AssertionError(f"create {ent} as {role} failed: {last}")
 
     def rows(self, role, ent, **params):
+        """(rows, http_code): rows is None when the role may not list the entity."""
         code, j = self.get(role, self.ep(ent), view="table", action="get_table_data", start=0, length=500, **params)
         if code != 200:
             return None, code

@@ -57,6 +57,12 @@ Hooks use the **spec transition name**, even for an expanded `<name>__<from>` en
 so one hook serves every `from`. A failing condition hides the transition in the row menu
 (engine) and shows it disabled with `condition_msg` on the 360 header (runtime).
 
+The condition runs **before** the dialog opens, on the record alone. The part of a condition that
+the move's own form satisfies ("…, or a note is given to override", "a file or pasted text is
+provided") is therefore not checked in the condition hook: return True for it there, and enforce it
+in the transition form's `clean()` with a field error. Otherwise the button stays disabled and the
+user can never open the dialog to type the note.
+
 The engine checks `roles` against the current role. It loads `?object_uuid=` itself.
 `ZasWorkflowMixin.get_object_instance` re-applies the role's row scope there (contracts §4),
 so a role cannot transition a record it cannot see.

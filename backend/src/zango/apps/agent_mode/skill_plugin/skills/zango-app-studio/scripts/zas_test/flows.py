@@ -64,7 +64,7 @@ class Form:
 
     def __init__(self, page, schema):
         self.page = page
-        self.dialog = page.locator('[role="dialog"]').last
+        self.dialog = page.locator('[role="dialog"]:not(.zas-dw)').last  # not the record drawer (also a dialog)
         self.props = (schema.get("json_schema") or {}).get("properties") or {}
         self.ui = schema.get("ui_schema") or {}
         self.files_dir = tempfile.mkdtemp(prefix="zas_flow_")
@@ -260,6 +260,8 @@ class Flows:
 
     def timeline_count(self, ent, uuid, role):
         code, j = self.C.get(role, self.C.ep(ent), view="detail", action="zas_timeline", object_uuid=uuid)
+        if code != 200:  # no 360 of its own (an agreement): the drawer's record payload has the events
+            code, j = self.C.get(role, self.C.ep(ent), action="zas_record", object_uuid=uuid)
         b = self.C.body(j) if code == 200 else {}
         return len((b or {}).get("events") or []) if isinstance(b, dict) else 0
 
@@ -373,30 +375,73 @@ class Flows:
             side = f"The API refused the same values too ({str(e)[:200]}), so the problem is in the backend"
         return f"{where}. On screen: {on_screen or 'no error shown'}. Typed: {data}. {side}."
 
+    # ----- where a record's workflow buttons are -----
+    def open_record(self, ent, uuid, role):
+        """The record's own 360 header; or, for an entity listed only on a parent 360's tab (an
+        agreement on the request), the row drawer opened from that tab, as a user reaches it."""
+        rp, page = self.rp(role), self.rp(role).page
+        wait = '[data-zas="header"], [data-zas="empty"]'
+        views = self.M.get("detail_views") or {}
+        if any(V["hero"] == ent for V in views.values()):
+            rp.open(browser.detail_path(self.M, ent, uuid), wait=wait)
+            header = page.locator('[data-zas="header"]')
+            if header.count() == 0:
+                raise StepFailed(f"the 360 did not open for {role}")
+            return header
+        E = self.M["entities"][ent]
+        for V in views.values():
+            tab = next((t for t in V.get("tabs") or [] if t.get("entity") == ent and t.get("param")), None)
+            par = tab and (E.get("parents") or {}).get(tab["param"])
+            if not par or not par.get("fk"):
+                continue
+            row = self.C.record(ent, uuid, role) or self.C.record(ent, uuid)
+            parent = ((row or {}).get("zas") or {}).get("links", {}).get(par["fk"])
+            if not parent:
+                raise StepFailed(f"the {E['name']} row carries no link to its {par['hero']} ({par['fk']})")
+            path = f"{browser.detail_path(self.M, V['hero'], parent)}?tab={tab['code']}"
+            rp.open(path, wait=wait)
+            cell = page.locator(f'[data-zas="row"][data-zas-key="{uuid}"] td')
+            try:
+                cell.nth(1 if cell.count() > 1 else 0).click(timeout=5000)
+            except Exception:  # not on the tab's first page: the drawer opens from the URL
+                rp.open(f"{path}&record={uuid}", wait=wait)
+            drawer = page.locator("aside.zas-dw")
+            try:
+                drawer.first.wait_for(state="visible", timeout=FORM_TIMEOUT)
+            except Exception:
+                raise StepFailed(f"the {E['name']} drawer did not open from the {V['code']} "
+                                 f"{tab['code']} tab for {role}") from None
+            try:  # the drawer frames at once; its moves arrive with the record payload
+                drawer.first.locator(".zas-ng").first.wait_for(state="visible", timeout=FORM_TIMEOUT)
+            except Exception:
+                raise StepFailed(f"the {E['name']} drawer did not load its record for {role}") from None
+            return drawer.first
+        raise StepFailed(f"{E['name']} has no 360 and no parent 360 tab lists it: there is no screen to act from")
+
     # ----- one transition through the 360 -----
     def ui_transition(self, ent, uuid, t, role):
         C, page = self.C, self.rp(role).page
         if C.fixtures and hasattr(C.fixtures, "before_transition"):
             C.fixtures.before_transition(C, ent, t["name"], uuid, role)
         before = self.timeline_count(ent, uuid, role)
-        self.rp(role).open(browser.detail_path(self.M, ent, uuid), wait='[data-zas="header"], [data-zas="empty"]')
-        header = page.locator('[data-zas="header"]')
-        if header.count() == 0:
-            raise StepFailed(f"the 360 did not open for {role}")
+        header = self.open_record(ent, uuid, role)
         btn = header.locator(f'[data-zas="action"][data-zas-key="{t["name"]}"]')
+        if btn.count() == 0 and header.first.get_attribute("data-zas") == "header":
+            # a rebuilt 360 may place a move outside the header (a Withdraw link in the rail)
+            btn = page.locator(f'[data-zas="action"][data-zas-key="{t["name"]}"]')
         if btn.count() == 0:
             more = header.locator('button[aria-label="More actions"]')
             if more.count():
                 more.first.click()
             btn = page.locator(f'[role="menuitem"][data-zas-key="{t["name"]}"]')
         if btn.count() == 0:
-            raise StepFailed(f"no {t['label']!r} button or menu item on the 360 for {role} "
+            raise StepFailed(f"no {t['label']!r} button or menu item on the 360 (or the row drawer) for {role} "
                              f"(status {C.status_of(ent, uuid)})")
         if btn.first.is_disabled():
             raise StepFailed(f"{t['label']!r} is disabled: {btn.first.get_attribute('title') or 'no reason shown'}")
         data, files = self.transition_values(ent, t, role)
         btn.first.click()
-        dialog = page.locator('[role="dialog"]').last
+        dialog = page.locator('[role="dialog"]:not(.zas-dw)').last  # not the record drawer (also a dialog)
         if t.get("form"):
             code, j = C.get(role, C.ep(ent), view="workflow", action="initialize_form", transition_type="status",
                             transition_name=C.engine(ent, t["name"], C.status_of(ent, uuid)), object_uuid=uuid)
@@ -428,7 +473,9 @@ class Flows:
         if st != t["to"]:
             probs.append(f"backend status is {st}, expected {t['to']}")
         page.wait_for_timeout(500)
-        badge = page.locator('[data-zas="header"] [data-zas="badge"][data-zas-key="status"]')
+        in_drawer = header.first.get_attribute("data-zas") != "header"
+        badge = (header.locator('[data-zas="badge"]') if in_drawer
+                 else page.locator('[data-zas="header"] [data-zas="badge"][data-zas-key="status"]'))
         want = self.status_label(ent, t["to"])
         if badge.count() and want.lower() not in badge.first.inner_text().lower():
             probs.append(f"header badge reads {badge.first.inner_text()!r}, expected {want!r}")
@@ -484,8 +531,11 @@ def g_flows(U, b):
     try:
         for ent, E in M["entities"].items():
             creators = [r for r in C.creators(ent) if r in C.sessions and (not U.roles or r in U.roles)]
+            # a list page rebuilt from the prototype draws its own controls (an inline settings
+            # form, not the kit's Add): the look round checks it, the walk starts from the API
             list_page = next((code for code, P in M["pages"].items()
-                              if P.get("type") == "crud" and P.get("entity") == ent), None)
+                              if P.get("type") == "crud" and P.get("entity") == ent
+                              and not browser.rebuilt(M, "page", code)), None)
             role = creators[0] if creators else None
             wf = E.get("workflow") or {}
             uid, blocked = None, None
@@ -504,6 +554,13 @@ def g_flows(U, b):
                 if uid is None:
                     blocked = f"the {E['name']} could not be created in the browser"
 
+            if wf and wf.get("initial") and uid is None and not blocked:
+                # no list page to create it from (an approval, a payment) or it is rebuilt: the
+                # walk starts from a record the API made, so each move still runs in the browser
+                try:
+                    uid = C.record_in(ent, wf["initial"])
+                except Exception as e:
+                    blocked = f"no {E['name']} to walk: the API could not create one ({str(e)[:200]})"
             if wf and wf.get("initial"):
                 path = longest_path(wf, lambda t: any(r in C.sessions for r in t.get("roles") or []))
                 done = set()

@@ -70,7 +70,11 @@ function Cell({ E, col, row, onOpen }: { E: SpecEntity; col: SpecColumn; row: Ro
     if (opt?.tone) return <Badge label={opt.label} tone={opt.tone} />;
   }
   if (col.link_to) {
-    const uuid = col.type === "link" ? row.zas?.links?.[col.key] : row.object_uuid;
+    // A plain column linking to a parent's 360 (an agreement's ID → request_360) opens the
+    // parent, through the row's parent link; the row's own uuid would be the wrong record.
+    const hero = SPEC.detail_views[col.link_to]?.hero;
+    const up = Object.values(E.parents || {}).find((p) => p.hero === hero && p.fk)?.fk;
+    const uuid = col.type === "link" ? row.zas?.links?.[col.key] : up ? row.zas?.links?.[up] : row.object_uuid;
     const url = uuid ? viewUrl(col.link_to, uuid) : null;
     if (url) return <a className="zas-link" href={url} onClick={(e) => { e.preventDefault(); e.stopPropagation(); onOpen(url); }}>{text}</a>;
   }
@@ -113,7 +117,9 @@ export function ZasTable(p: ZasTableProps) {
   const [busy, setBusy] = useState(false);
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
-  const [drawer, setDrawer] = useState<string | null>(null);
+  // ?record=<uuid> opens that row's drawer: the way to a record with no 360 of its own (an
+  // agreement on the request's tab) when it is not on the first page.
+  const [drawer, setDrawer] = useState<string | null>(() => new URLSearchParams(window.location.search).get("record"));
   const refetch = useCallback(() => setTick((t) => t + 1), []);
 
   useEffect(() => { const t = setTimeout(() => { setDq(q); setPageNo(1); }, 300); return () => clearTimeout(t); }, [q]);
@@ -171,7 +177,12 @@ export function ZasTable(p: ZasTableProps) {
       const url = field ? hrefOf(r[field]) : null;
       if (url) { window.open(url, "_blank", "noopener"); return; }
     }
-    if (rc.includes("#")) { const u = parentTabUrl(p.entity, rc, r.zas?.links); if (u) { navigate(u); return; } }
+    if (rc.includes("#")) {
+      // on that very tab (the request 360's Evidence tab listing evidence) the row opens its drawer
+      const u = parentTabUrl(p.entity, rc, r.zas?.links);
+      const here = window.location.pathname.replace(/\/$/, "");
+      if (u && !here.endsWith(u.split("?")[0].replace(/\/$/, ""))) { navigate(u); return; }
+    }
     const V = SPEC.detail_views[rc];
     if (V && V.hero === p.entity) { const u = viewUrl(rc, r.object_uuid); if (u) { navigate(u); return; } }
     setDrawer(r.object_uuid);

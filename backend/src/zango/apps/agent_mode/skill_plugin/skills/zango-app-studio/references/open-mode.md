@@ -101,6 +101,9 @@ screen's `shot.<role>.png` and `dom.<role>.html` (the platform blocks the write 
   classes from `css.used.css`, as zas classes or token-only inline styles;
 - keep every `data-zas-ref` / `data-zas-action` marker the snapshot has on the element that shows that
   field or runs that action;
+- every workflow move, tag and row action the screen offers, wherever it sits (header, rail, a link in
+  a panel), carries `data-zas="action"` and `data-zas-key="<transition or action name>"`: a kit `Button`
+  with `zasKey`, or those two attributes on your own element. The flow check finds the move by that key;
 - the prototype's data and scripts are not used: values come from the props above, and actions run through
   the API, so permissions and workflow stay the platform's.
 

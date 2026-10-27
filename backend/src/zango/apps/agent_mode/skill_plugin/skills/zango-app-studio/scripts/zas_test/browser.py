@@ -103,6 +103,13 @@ def visible_uid(M, entity, session, uids):
     return uid
 
 
+def rebuilt(M, kind, code):
+    """A page ("page") or 360 ("view") the build rebuilt from the prototype (`rebuild: true`): the
+    mockup is its truth, so the kit-layout checks skip it and the look round compares it."""
+    return any(sc.get("cls") == "rebuild" and sc.get("kind") == kind and sc.get("code") == code
+               for sc in (M.get("prototype") or {}).get("screens") or [])
+
+
 def detail_path(M, entity, uuid):
     """<hero list route>/detail-view/<uuid> (contracts §9)."""
     for p in M["pages"].values():

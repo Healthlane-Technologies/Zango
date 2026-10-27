@@ -470,6 +470,8 @@ def g_tree(Dx, b):
     target = auth.load_users(Dx.ws)["target"]
     for vcode, V in (Dx.M.get("detail_views") or {}).items():
         uids = records.get(V["hero"]) or []
+        if browser.rebuilt(Dx.M, "view", vcode):
+            continue  # its layout is the prototype's: the look round compares it with the mockup
         for role in viewers(Dx, V):
             def t(role=role, V=V, uids=uids):
                 if not uids:
@@ -486,7 +488,7 @@ def g_tree(Dx, b):
                     if [k for k in spec_facts if k in got_facts] != got_facts:
                         probs.append(f"facts order {got_facts} vs spec {spec_facts}")
                     got_stats = sorted((n for n in tree if n["kind"] == "stat"), key=lambda n: n["order"] or 0)
-                    if [n["order"] for n in got_stats] != sorted(n["order"] for n in got_stats):
+                    if [n["order"] or 0 for n in got_stats] != sorted(n["order"] or 0 for n in got_stats):
                         probs.append("stats out of order")
                     statuses = {s["label"]: s["color"] for s in (Dx.M["entities"][V["hero"]].get("workflow") or {}).get("statuses", [])}
                     for n in tree:

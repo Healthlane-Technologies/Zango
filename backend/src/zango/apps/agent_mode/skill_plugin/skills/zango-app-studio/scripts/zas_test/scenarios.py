@@ -21,6 +21,9 @@ test_scenarios.py:
         ctx.call("sites.tasks.site__req__2")           # the nightly job, now
         ctx.expect("at_risk" in ctx.tags("site", site), "at_risk not set")
 
+Reading lists: `rows, code = ctx.rows(role, entity, **params)` returns a tuple (rows is None
+when the role may not list); each row is a dict with `object_uuid` and the table's columns.
+
 A scenario passes when it returns, fails on AssertionError (ctx.expect) or any exception, and is
 skipped with ctx.skip("reason"). Every hole that is `done`/`needs-review` and has no scenario is
 listed as a skip ("no scenario"), so coverage gaps show in the report.

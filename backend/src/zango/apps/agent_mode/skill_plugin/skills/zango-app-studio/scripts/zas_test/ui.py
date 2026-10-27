@@ -122,7 +122,7 @@ def g_pages(U, b):
                     if "is not implemented yet" in body:
                         return False, "a hole is shown as not implemented"
                     probs = list(rp.errors)
-                    if P.get("type") == "crud":
+                    if P.get("type") == "crud" and not browser.rebuilt(U.M, "page", code):
                         E = U.M["entities"][P["entity"]]
                         add_label = (E.get("table") or {}).get("add_button") or E["names"].get("add_label") or f"Add {E['name']}"
                         cr = (E.get("form") or {}).get("create") or {}
@@ -147,9 +147,11 @@ def g_pages(U, b):
                         rp.page.wait_for_timeout(300)
                     except Exception:
                         pass
-                text = rp.page.inner_text("body")
-                missing = [lbl for _, lbl in pages if lbl not in text]
-                missing += [g for g in groups if g not in text]
+                # inner_text applies CSS text-transform: a group heading styled uppercase reads
+                # "LIBRARY", so compare without case.
+                text = rp.page.inner_text("body").casefold()
+                missing = [lbl for _, lbl in pages if lbl.casefold() not in text]
+                missing += [g for g in groups if g.casefold() not in text]
                 return not missing, f"not on screen: {missing}"
             if pages:
                 U.check(f"ui.menu.{slug(role)}", "menu items on screen", role, f"roles.{role}.menu", t_menu)
