@@ -615,3 +615,18 @@ the app drew the title only. Cause: a YAML column names one field, the gate comp
 → ZasTable; the gate reads each table's first row and names the missing keys. Applied to run 8's app
 (requests, organisers, agreements, evidence, templates) in the requirement YAML, the build YAML and the
 workspace; checked in Chrome. Still open: a "rebuild" slot that only wraps ZasTable is not flagged.
+
+### Built screens must match what was approved (6ef9369e)
+
+Why run 8's Requests page shipped as the stock table: the analyst set `rebuild: true` on the wizard screen
+`new`, which maps to the same list page, so the whole list became a rebuild slot; the build wrapped
+ZasTable, wrote "out of scope" in a zas:note, and parity only scored screenshots (0.03–0.05, report only).
+- Parity now fails on content (proto_landmarks.content_gaps): labels anywhere on the built page, chips
+  with counts, the subtitle, first-row cell shapes; ignores persona names/chrome/not_built/spec-drawn cells.
+- `design.parity.notes`: a zas:note that drops something fails unless not_built lists it.
+- YAML: `pages[].subtitle` (text + stat sum|count) and `quick_filters[].count`; gate asks for them,
+  matches column headings exactly, refuses a rebuilt screen on a kept list page.
+- Found: `status is_set` was not a query (All chip 500) → fixed in expr.to_q; UI check clicks every chip.
+- Run 8 app now: parity 84/99; left = Organisers "Open" column, Evidence "Status" column, the wizard
+  (all analyst-side; the gate now sends them back).
+- Next (proposed to the user): the build report is a developer QA report; end users need an outcome view.
