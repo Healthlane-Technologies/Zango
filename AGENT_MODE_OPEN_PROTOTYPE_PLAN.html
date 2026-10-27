@@ -809,6 +809,7 @@ a{color:var(--blue)}
       <li><b>Evidence rows on the request's Evidence tab</b> couldn't be opened. They now open their side panel.</li>
       <li><b>The checks act on agreements, payments and evidence from that side panel</b>, and leave screens rebuilt from the mockup to the look comparison.</li>
     </ul>
+    <p><b>List cells as the preview draws them.</b> The mockup's first column showed an icon for the request type, the title, and the reference and type in small mono text under it; the app showed the title alone. A column in the YAML can now carry that second line and an icon (one per value, or initials), the gate names a column drawn as one plain value, and the built table draws it. Applied to this app's five lists.</p>
     <p>On this app the flow checks went from 19 failures to 3. All 3 are the app's own: two agreement steps need a route the test data never set, and a payment release is disabled although its note should override. The guide now covers that case.</p>
   </div></div>
 

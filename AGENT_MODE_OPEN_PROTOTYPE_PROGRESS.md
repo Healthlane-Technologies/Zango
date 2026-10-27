@@ -605,3 +605,13 @@ design 8, scenarios 2 failing after 2 fix rounds. Triage:
   says: form-satisfiable conditions go in clean()).
 - Not fixed: the app tab title is the tenant description = first line of the prompt (app creation).
 - The app's frontend was rebuilt by hand with the runtime fixes (static/js + assets + collected static).
+
+### Run 8 list cells (513c9701)
+
+The Requests list's first column in the mockup is icon (by request type) + title + mono "SP-… · type" line;
+the app drew the title only. Cause: a YAML column names one field, the gate compared headings only, and the
+"rebuild" slot for requests just wrapped ZasTable. Added `table.columns[].secondary` / `secondary_style` /
+`icon` (name, `{by, map, default}`, or `initials`) through spec_check → ZasTableMixin (`zas.sub`/`zas.icon`)
+→ ZasTable; the gate reads each table's first row and names the missing keys. Applied to run 8's app
+(requests, organisers, agreements, evidence, templates) in the requirement YAML, the build YAML and the
+workspace; checked in Chrome. Still open: a "rebuild" slot that only wraps ZasTable is not flagged.
