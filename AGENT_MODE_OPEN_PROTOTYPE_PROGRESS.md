@@ -644,3 +644,7 @@ role can do, and Open the app. No check counts, layers, spec paths or failure wo
 - Run 8's card computed from its latest results: finishing (Payments, Evidence & closure, Agreements +1).
 - Not yet: live check in Chrome (extension disconnected), questions for the user from the build
   (decision cards), "View as <role>", the technical report behind Details being admin-only.
+- 7947f73f: per the user, the card lives at the top of the Builds pane (not the chat). The chat keeps a
+  one-line marker in the card's words ("Ready"); the pane's status line says "Built"/"Still building" with a
+  green icon, no checks chip or attention dot; AppReady's header becomes "Try it". Checked in Chrome.
+  Still open there: test-user passwords shown in plain text, and the app URL uses the console's port (:5173).
