@@ -5,10 +5,10 @@
 //
 // Only the look is the prototype's. The menu is the platform's for the signed-in role (the spec's
 // roles[].menu, saved by zango_platform.py), routing stays appbuilder's (`children` is its outlet),
-// and profile, role switch and logout are appbuilder's own drawer and /app/logout.
+// and profile, role switch and logout are appbuilder's own (its drawer, its logout API).
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import * as appbuilder from "@zango-core/appbuilder";
 import { ChevronDown, LogOut, UserRound } from "lucide-react";
 import { SPEC } from "./config";
@@ -16,6 +16,26 @@ import { Icon, cx } from "./ui";
 
 // Exported by appbuilder 1.0.0-rc.1 but missing from its main .d.ts (like ZangoApp's customPages).
 const UserProfileDrawer = (appbuilder as any).UserProfileDrawer as React.FC<{ isOpen: boolean; onClose: () => void }>;
+
+/** Sign out the way appbuilder's own drawer does: its logout API (DELETE /api/v1/appauth/logout/;
+ * a 401 means the session is already gone), then its sign-in cookie, then the login page. Not
+ * appbuilder's /app/logout page: that one posts to /logout, which older servers answer with a 405,
+ * so it showed "Logout Error" and left the user signed in. */
+export async function logOut(): Promise<void> {
+  try {
+    await (appbuilder as any).performAppLogout?.();
+  } catch {
+    // signed out or not, the login page decides
+  }
+  const host = window.location.hostname;
+  const domains = ["", host, ...(host.includes(".") ? [`.${host.split(".").slice(-2).join(".")}`] : [])];
+  for (const d of domains) {
+    for (const path of ["/", "/app", "/app/"]) {
+      document.cookie = `zangocookie=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=${path}${d ? `; domain=${d}` : ""}`;
+    }
+  }
+  window.location.href = "/app/login";
+}
 
 export interface ShellOptions {
   /** "side": a sidebar (default). "top": the menu in a bar across the top. */
@@ -80,7 +100,6 @@ export function UserCard({ user, up }: { user: Record<string, any>; up: boolean 
   const [pos, setPos] = useState<{ left: number; top?: number; bottom?: number } | null>(null);
   const [drawer, setDrawer] = useState(false);
   const btn = useRef<HTMLButtonElement>(null);
-  const navigate = useNavigate();
   const name = String(user.name || "User");
   const role = String(user.current_role || user.user_role || "");
   const open = () => {
@@ -102,7 +121,7 @@ export function UserCard({ user, up }: { user: Record<string, any>; up: boolean 
               onClick={() => { setPos(null); setDrawer(true); }}><UserRound />Profile and roles</button>
             <hr />
             <button type="button" role="menuitem" data-zas="action" data-zas-key="logout"
-              onClick={() => { setPos(null); navigate("/app/logout"); }}><LogOut />Log out</button>
+              onClick={() => { setPos(null); void logOut(); }}><LogOut />Log out</button>
           </div>
         </div>, document.body)}
       {drawer && <UserProfileDrawer isOpen={drawer} onClose={() => setDrawer(false)} />}

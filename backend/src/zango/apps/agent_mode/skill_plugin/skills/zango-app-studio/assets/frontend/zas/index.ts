@@ -26,7 +26,7 @@ export { default as ZasLogin } from "./Login";
 export { default as ZasGallery } from "./Gallery";
 export type { ShellOptions, SoonItem, PlatformItem, LayoutProps } from "./Shell";
 // a shell ported from the prototype draws the platform menu and user card with these
-export { shellMenu, regrouped, UserCard } from "./Shell";
+export { shellMenu, regrouped, UserCard, logOut } from "./Shell";
 export { SPEC, detailUrl, viewUrl, pageUrl, money, date, datetime, number, percent, relative, formatValue } from "./config";
 export * as api from "./api";
 export * from "./ui";
