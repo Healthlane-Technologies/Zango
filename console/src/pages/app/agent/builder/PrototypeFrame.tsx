@@ -155,7 +155,7 @@ export function PrototypeFrame({
 				</div>
 			) : !revision ? (
 					<div className="p-6 text-t3">
-						No prototype yet. Ask the agent to import your HTML file or draw the screens.
+						No prototype yet. Ask the agent to draw the screens from your screenshots or notes, or to import your HTML file.
 					</div>
 				) : page.isLoading ? (
 				<div className="grid gap-3 p-4">

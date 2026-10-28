@@ -376,7 +376,10 @@ def attachment_note(docs_root, requirement, message) -> str:
             continue
         path = f"{docs_root}/{stem}"
         if row.content_type.startswith("image/"):
-            lines.append(f"- {row.name}: an image. Read `{path}` to see it.")
+            lines.append(
+                f"- {row.name}: an image. Read `{path}` to see it. In Free design it is a design "
+                "reference, not the prototype: take the look and layout from it and draw the prototype."
+            )
         elif row.content_type == KINDS[".html"]:
             lines.append(
                 f"- {row.name}: an HTML page. Its outline is in `{path}.txt`, the source in `{path}`. "

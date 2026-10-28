@@ -604,7 +604,14 @@ _OPEN_PROTOTYPE_APPEND = (
     "and never redraw it. Skip it only if the user says the file is a reference, not the app. "
     "An empty prototype leaves the user's preview pane blank. Then fill manifest.json (screens "
     "and roles from the page's own navigation and personas), add one small part that calls "
-    "ZAS.ready({go}) with the page's own router, and write the YAML from what the page shows."
+    "ZAS.ready({go}) with the page's own router, and write the YAML from what the page shows.\n"
+    "- Anything else the user gives (screenshots, photos or sketches, a PDF, a brand guide, an "
+    "HTML page they call a reference, or nothing at all) is material for the look and the "
+    "content, not the prototype. Read each image and document, take the palette, type, density "
+    "and layout from it, and DRAW the prototype yourself as in the first-draft step. The "
+    "preview pane stays blank (and the spec cannot be approved) until the prototype has parts, "
+    "so never end a turn that has a spec but no prototype: ask your interview questions only "
+    "after the first draft is on screen, and say which parts you took from the references."
 )
 
 
