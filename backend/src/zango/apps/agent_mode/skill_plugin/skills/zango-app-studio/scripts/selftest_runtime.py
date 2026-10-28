@@ -115,6 +115,11 @@ r = PurchaseOrder.objects.filter(zx.to_q(zx.parse("vendor.status == approved"), 
 check("expr related status", r == 1, r)
 f = PurchaseOrder.objects.filter(zx.to_q(zx.parse("vendor == form.vendor"), PurchaseOrder, {"form": {"vendor": a}})).count()
 check("expr form value", f == 1, f)
+from app.backend.zas_core.mixins import _FormRecord
+ff = zx.parse("end_date > start_date")
+fr = [zx.evaluate(ff, _FormRecord({"start_date": datetime.date(2026, 1, 1), "end_date": d}, model=Vendor))
+      for d in (datetime.date(2026, 2, 1), datetime.date(2025, 12, 1))]
+check("expr field vs field on a form record", fr == [True, False], fr)
 v = zr.compute_arith(po, "quantity * unit_price")
 check("computed quantity * unit_price", float(v) == 37.5, v)
 s = zr.render_sequence("PO-{YY}-{00000}", 42, datetime.date(2026, 3, 1))

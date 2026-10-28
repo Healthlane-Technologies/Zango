@@ -58,10 +58,16 @@ def _cell_icon(obj, icon):
 
 
 class _FormRecord:
-    """Lets expressions read live form values (and fall back to the instance)."""
+    """Lets expressions read live form values (and fall back to the instance).
 
-    def __init__(self, values, instance=None):
+    Carries the model's ``_meta`` so a rule comparing two fields (``bp_systolic > bp_diastolic``)
+    reads the right-hand word as a field value, as it does on a saved record (expr._eval_value)."""
+
+    def __init__(self, values, instance=None, model=None):
         self._v, self._i = values or {}, instance
+        model = model or (type(instance) if instance is not None else None)
+        if getattr(model, "_meta", None) is not None:
+            self._meta = model._meta
 
     def __getattr__(self, name):
         if name.startswith("_"):
@@ -357,7 +363,7 @@ class ZasFormMixin:
         self._zas_is_edit = bool(inst is not None and getattr(inst, "pk", None))
         values = self._zas_values()
         ctx = access.expr_ctx(self._zas_req, form=values)
-        rec = _FormRecord(values, inst if self._zas_is_edit else None)
+        rec = _FormRecord(values, inst if self._zas_is_edit else None, model=getattr(getattr(self, "_meta", None), "model", None))
 
         # 1. parent preset (360 tab): preset + hide the FK, on a COPY of the ModelField
         if self._zas_req is not None and not self._zas_is_edit:
@@ -487,7 +493,7 @@ class ZasFormMixin:
         E = self._E
         req = self._zas_req
         confirmed = bool(cleaned.get(self.CONFIRM))
-        rec = _FormRecord(cleaned, self.instance if self._zas_is_edit else None)
+        rec = _FormRecord(cleaned, self.instance if self._zas_is_edit else None, model=getattr(getattr(self, "_meta", None), "model", None))
         ctx = access.expr_ctx(req, form=cleaned)
         warnings = []
         v = E.get("validation") or {}

@@ -1822,8 +1822,8 @@ class Spec:
                            "data_hook": backend, "slot": slot, "scheduled": bool(sched or area == "scheduled")})
 
     def prototype_screens(self):
-        """Open mode (SCHEMA.md, prototype): each prototype screen's build class. theme = the standard
-        page in app.design's tokens; rebuild = the approved screen ported onto a slot (a custom page, or
+        """Open mode (SCHEMA.md, prototype): each prototype screen's build class. kit = the standard
+        page, drawn with the app's kit built from the prototype (open-mode.md, "The kit"); rebuild = the approved screen ported onto a slot (a custom page, or
         a standard page the analyst marked rebuild: true with a why); prototype-only = not built."""
         M, L = self.M, self.L
         raw = M.get("prototype_raw")
@@ -1879,7 +1879,7 @@ class Spec:
                     L.error(w, f"screen {sid!r}: rebuild: true needs a why (what the standard {what} can't show)")
                 row.update(cls="rebuild", reason=why or "rebuild: true", forced=True)
             else:
-                row.update(cls="theme", reason=f"standard {what} in app.design's tokens")
+                row.update(cls="kit", reason=f"standard {what} drawn with the app's kit")
             rows.append(row)
         M["prototype"] = {"hash": (raw or {}).get("hash"), "screens": rows}
 
@@ -2395,7 +2395,7 @@ PROTO_CLASSES_START = "<!-- spec_check: build classes -->"
 
 def attach_prototype(S, out):
     """Open mode (.zas/bundle/prototype/, written by the platform): point each rebuild hole at its approved
-    screen, warn about screens the spec doesn't map, and write the theme / rebuild table into index.md."""
+    screen, warn about screens the spec doesn't map, and write the kit / rebuild table into index.md."""
     bundle = os.path.join(out, "bundle", "prototype")
     try:
         with open(os.path.join(bundle, "manifest.json"), encoding="utf-8") as f:
@@ -2409,7 +2409,7 @@ def attach_prototype(S, out):
     missing = [sc.get("id") for sc in manifest.get("screens") or [] if sc.get("id") and sc["id"] not in listed]
     if proto is None:
         L.warn("prototype", "open mode: the spec has no prototype.screens, so no screen is mapped to a page",
-               "add prototype.screens (SCHEMA.md, prototype); until then every page is built standard and themed")
+               "add prototype.screens (SCHEMA.md, prototype); until then every page is built standard, with the app's kit")
     elif missing:
         L.warn("prototype.screens", f"prototype screens not in prototype.screens: {', '.join(missing)}",
                "map each to its page, or mark it only: prototype with a why")
@@ -2426,10 +2426,13 @@ def attach_prototype(S, out):
         if not h or h.get("bundle"):
             continue
         h["bundle"] = f".zas/bundle/prototype/screens/{r['id']}/"
-        h["text"] += (f" Approved look: `{h['bundle']}` (prototype screen {r['id']}). Before writing it, Read its"
-                      " shot.<role>.png and dom.<role>.html: port the markup onto the zas kit with this slot's data,"
-                      " keep every data-zas-ref / data-zas-action marker, and take styles from css.used.css as zas"
-                      " classes or token-only inline styles (open-mode.md, \"Screens\").")
+        h["text"] += (f" Approved look: `{h['bundle']}` (prototype screen {r['id']}). Port it, don't redraw it:"
+                      " Read its shot.<role>.png and dom.<role>.html, find the screen's component in the prototype's"
+                      " source (`.zas/bundle/prototype/source/index.md`) and copy its markup, class names and inline"
+                      " styles into this slot under <div className=\"zp\"> (the prototype's stylesheet,"
+                      " custom/prototype.css, styles it), with the app's data in place of the demo data; add to the"
+                      " API whatever field the screen shows that it lacks. Keep every data-zas-ref / data-zas-action"
+                      " marker (open-mode.md, \"Port, don't redraw\").")
         shows = must_show(os.path.join(bundle, "screens", r["id"]), r.get("not_built"))
         if shows:
             h["text"] += f" It must show, in these words: {shows}."
@@ -2506,10 +2509,10 @@ def soon_md(rows, manifest):
 
 
 def proto_classes_md(rows, missing):
-    L = ["## Build: theme or rebuild (spec_check)", "",
-         "Theme: the standard page, in app.design's tokens (plus an optional token-only "
-         "`src/custom/screens/<page>.css`). Rebuild: port the screen onto its slot. Never rebuild a themed screen; "
-         "if it can't match, say so in the build report (open-mode.md, \"Screens\").", "",
+    L = ["## Build: kit or rebuild (spec_check)", "",
+         "Kit: the standard page, drawn with the app's kit (`src/custom/kit/`, built from the prototype's own "
+         "pieces; plus an optional `src/custom/screens/<page>.css`). Rebuild: port the screen onto its slot. "
+         "Never rebuild a kit screen: make the kit piece match instead (open-mode.md, \"The kit\", \"Screens\").", "",
          "| Screen | Maps | Class | Reason | Builds as |", "|---|---|---|---|---|"]
     for r in rows:
         builds = (f"slot `{r['slot']}`" if r.get("slot") else

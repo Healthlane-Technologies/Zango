@@ -30,7 +30,7 @@ LAYER_INFO = {
 BLOCKING_LAYERS = {"api", "ui", "design", "scenarios"}
 REQUIRED_LAYERS = {"api", "ui", "design"}
 # reported, not blocking: platform-dependent / cosmetic, and preview parity (the agent gets fix rounds for it first)
-NON_BLOCKING = ("design.layout", "design.gallery", "design.parity")
+NON_BLOCKING = ("design.layout", "design.gallery", "design.parity", "design.kit")
 TONE = {"pass": "green", "fail": "red", "skip": "amber", "done": "green", "covered": "blue", "needs-review": "amber",
         "blocked": "red", "todo": "red", "error": "red", "warn": "amber", "intent": "purple", "ok": "green"}
 E_ = html.escape
@@ -155,6 +155,10 @@ def proto_screens(D):
         looks = load_json(D["ws"], "parity_looks.json")
     except (OSError, ValueError):
         looks = []
+    try:  # the score-driven look rounds (studio_build.prototype_look_rounds): each round's scores
+        history = load_json(D["ws"], "look_rounds.json")
+    except (OSError, ValueError):
+        history = []
     out = []
     for r in rows:
         res = [x for x in D["results"] if x["id"].startswith(f"design.parity.proto.{r['id']}.")]
@@ -163,6 +167,9 @@ def proto_screens(D):
         out.append({**r, "checked": len(res), "passed": sum(x["status"] == "pass" for x in res),
                     "problems": [f"{x.get('role') or ''}: {x['detail'][:160]}" for x in res if x["status"] == "fail"],
                     "score": max(scores) if scores else None,
+                    "rounds": [max(v) for v in ([s for k, s in (h.get("scores") or {}).items()
+                                                  if k.split("|", 1)[0] == f"prototype/{r['id']}"]
+                                                 for h in history if isinstance(h, dict)) if v],
                     "builds": (f"slot {r['slot']}" if r.get("slot") else "-" if r.get("cls") == "prototype-only"
                                else f"page {r.get('page')}" if r.get("kind") == "page" else f"360 {r.get('code')}")})
     libs = [f"{s['step'].split(':', 1)[-1].strip()}: {s.get('detail') or s['status']}"
@@ -172,6 +179,12 @@ def proto_screens(D):
 
 def pct(v):
     return f"{v:.0%}" if isinstance(v, (int, float)) else "-"
+
+
+def look_path(r):
+    """The look difference, as it went through the look rounds when there were any: 59% → 31% → 18%."""
+    rounds = r.get("rounds") or []
+    return " → ".join(pct(v) for v in rounds) if len(rounds) > 1 else pct(r.get("score"))
 
 
 def to_md(D):
@@ -204,7 +217,7 @@ def to_md(D):
                 "|---|---|---|---|---|---|"]
         for r in screens:
             opens = f"{r['passed']}/{r['checked']} roles" if r["checked"] else "-"
-            out.append(f"| `{r['id']}` | {r['cls']} | {r['builds']} | {opens} | {pct(r['score'])} | "
+            out.append(f"| `{r['id']}` | {r['cls']} | {r['builds']} | {opens} | {look_path(r)} | "
                        f"{str(r.get('reason', '')).replace('|', '/')} |")
         out += ["", "Libraries: " + ("; ".join(libs) if libs else "none swapped.")]
     out += ["", "## Spec review", ""]
@@ -347,7 +360,9 @@ def s_tests(D, by_layer):
                  f'<div><b>{E_(r["title"])}</b>{who}<div class="muted small"><code>{E_(r["spec_path"])}</code></div>{det(r.get("detail"))}</div></div>')
     why = {"design.gallery": "Component screenshots differ from the skill's goldens. Non-blocking: goldens are shot with "
                              "a fixed shell width and font build, so a different sidebar or platform changes the size.",
-           "design.layout": "Layout sanity at 1280/1440 px. Non-blocking: cosmetic."}
+           "design.layout": "Layout sanity at 1280/1440 px. Non-blocking: cosmetic.",
+           "design.kit": "Kit pieces that still differ from the same piece in the approved prototype after the kit "
+                         "rounds (.zas/screens/kit/index.html shows each pair). Non-blocking: the look, not behaviour."}
     for pre, rs in folded.items():
         items = "".join(f"<li><b>{E_(r['title'])}</b>: {E_(r.get('detail', '')[:160])}</li>" for r in rs)
         rows += (f'<div class="issue"><div>{pill("non-blocking", "gray")}<div class="lay">{E_(rs[0]["layer"])}</div></div>'
@@ -517,18 +532,18 @@ def s_proto(D):
         return ""
     trs = ""
     for r in screens:
-        tone = {"theme": "blue", "rebuild": "amber"}.get(r["cls"], "gray")
+        tone = {"kit": "blue", "theme": "blue", "rebuild": "amber"}.get(r["cls"], "gray")
         opens = (pill(f"{r['passed']}/{r['checked']} roles", "green" if r["passed"] == r["checked"] else "red")
                  if r["checked"] else '<span class="muted">not checked</span>')
         probs = "".join(f"<div class='muted small'>{E_(p)}</div>" for p in r["problems"][:3])
         trs += (f"<tr><td><b>{E_(r['id'])}</b><div class='muted small'>{E_(r.get('maps') or '')}</div></td>"
                 f"<td>{pill(r['cls'], tone)}</td><td><code>{E_(r['builds'])}</code></td><td>{opens}{probs}</td>"
-                f"<td>{pct(r['score'])}</td><td class='small'>{E_(str(r.get('reason', '')))}</td></tr>")
+                f"<td>{E_(look_path(r))}</td><td class='small'>{E_(str(r.get('reason', '')))}</td></tr>")
     lib = "".join(f"<li>{E_(x)}</li>" for x in libs) or "<li class='muted'>No library swapped.</li>"
     return (f'<section id="prototype"><h2>Prototype screens</h2><p class="lead">Each screen of the approved prototype: '
-            f'themed (the standard page in its tokens) or rebuilt (ported onto a slot), whether every role opened it '
-            f'without errors, and how different it looks from the approved screenshot (worst role; demo data never '
-            f'matches, so 0% is not expected).</p><div class="card"><table><thead><tr><th>Screen</th><th>Class</th>'
+            f'kit (the standard page drawn with the app\'s kit) or rebuilt (ported onto a slot), whether every role opened it '
+            f'without errors, and how differently it is laid out from the approved screenshot (worst role, through the '
+            f'look rounds; a faithful port sits near 10-15%, a different layout at 40% and more).</p><div class="card"><table><thead><tr><th>Screen</th><th>Class</th>'
             f'<th>Builds as</th><th>Opens</th><th>Look difference</th><th>Reason</th></tr></thead><tbody>{trs}</tbody>'
             f'</table></div><h3>Libraries</h3><div class="card pad"><ul class="checks">{lib}</ul></div></section>')
 

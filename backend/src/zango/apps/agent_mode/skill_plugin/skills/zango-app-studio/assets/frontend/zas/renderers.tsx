@@ -3,7 +3,8 @@
 import { useNavigate } from "react-router-dom";
 import { SPEC, detailUrl, pageUrl } from "./config";
 import * as api from "./api";
-import { Badge, Chip, Menu, useToast } from "./ui";
+import { Menu, useToast } from "./ui";
+import { Badge, Chip } from "./kit";
 import type { SpecEntity } from "./types";
 
 export function statusRenderer(spec: SpecEntity) {

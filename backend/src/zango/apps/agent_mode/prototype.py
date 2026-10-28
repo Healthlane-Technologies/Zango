@@ -134,6 +134,12 @@ def manifest_of(parts: dict) -> tuple[dict, list[str]]:
             if s["id"] in seen:
                 problems.append(f"manifest.json: screen id `{s['id']}` is used twice.")
                 continue
+            if "params" in s and not isinstance(s["params"], dict):
+                problems.append(
+                    f"manifest.json: screen `{s['id']}` `params` must be an object "
+                    '(what the screen needs besides its record, e.g. {"step": 1}).'
+                )
+                s = {k: v for k, v in s.items() if k != "params"}
             seen.add(s["id"])
             clean.append(s)
         data["screens"] = clean

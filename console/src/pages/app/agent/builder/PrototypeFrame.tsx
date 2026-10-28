@@ -153,7 +153,11 @@ export function PrototypeFrame({
 						}
 					/>
 				</div>
-			) : page.isLoading || !revision ? (
+			) : !revision ? (
+					<div className="p-6 text-t3">
+						No prototype yet. Ask the agent to import your HTML file or draw the screens.
+					</div>
+				) : page.isLoading ? (
 				<div className="grid gap-3 p-4">
 					<Skeleton width="40%" height={18} />
 					<Skeleton height={320} />

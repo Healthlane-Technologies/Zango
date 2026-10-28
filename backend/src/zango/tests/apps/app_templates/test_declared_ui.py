@@ -131,7 +131,7 @@ class BuildHearsItTests(DeclaredUITestBase):
         zas = Path(tmp) / ".zas"
         return json.loads((zas / "spec.ui.json").read_text()), (zas / "holes.md").read_text()
 
-    def test_prototype_screens_are_themed_or_rebuilt(self):
+    def test_prototype_screens_are_kit_or_rebuilt(self):
         doc = copy.deepcopy(self.doc)
         doc["prototype"] = {"screens": [
             {"id": "vendors", "maps": "/pages/@vendors"},
@@ -155,20 +155,20 @@ class BuildHearsItTests(DeclaredUITestBase):
         zas = Path(tmp) / ".zas"
         resolved = json.loads((zas / "spec.resolved.json").read_text())
         cls = {r["id"]: r["cls"] for r in resolved["prototype"]["screens"]}
-        self.assertEqual(cls, {"vendors": "theme", "vendor": "theme", "po": "rebuild", "orders": "rebuild",
+        self.assertEqual(cls, {"vendors": "kit", "vendor": "kit", "po": "rebuild", "orders": "rebuild",
                                "home": "rebuild", "signin": "prototype-only"})
         holes = {h["where"]: h for h in resolved["holes"]}
         self.assertEqual(holes["detail_views.po_360"]["kind"], "rebuild_view")
         self.assertEqual(holes["pages.purchase_orders"]["slot"], "RebuildPurchaseOrders")
         self.assertIn("Approved look: `.zas/bundle/prototype/screens/home/`", holes["pages.dashboard"]["text"])
         self.assertEqual(holes["pages.purchase_orders"]["bundle"], ".zas/bundle/prototype/screens/orders/")
-        self.assertNotIn("pages.vendors", holes)  # themed: no custom code
+        self.assertNotIn("pages.vendors", holes)  # kit page: no custom code
         ui = json.loads((zas / "spec.ui.json").read_text())
         self.assertEqual(ui["pages"]["purchase_orders"]["rebuild"], "RebuildPurchaseOrders")
         self.assertEqual(ui["detail_views"]["po_360"]["rebuild"], "RebuildPo360")
         self.assertNotIn("rebuild", ui["pages"]["vendors"])
         index = (proto / "index.md").read_text()
-        self.assertIn("| `vendors` | /pages/@vendors | theme |", index)
+        self.assertIn("| `vendors` | /pages/@vendors | kit |", index)
         self.assertIn("| `orphan` | - | unmapped |", index)
         warned = [i["msg"] for i in resolved["issues"] if i["where"] == "prototype.screens"]
         self.assertTrue(any("orphan" in m for m in warned), warned)

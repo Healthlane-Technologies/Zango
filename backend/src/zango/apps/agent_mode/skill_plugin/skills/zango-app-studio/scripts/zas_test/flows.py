@@ -158,13 +158,18 @@ class Form:
         box.locator("button").last.click()  # the calendar toggle (the other button clears)
         cal = self.page.locator(".react-calendar").last
         cal.wait_for(timeout=5000)
-        for _ in range(120):
-            shown = datetime.datetime.strptime(cal.locator(".react-calendar__navigation__label").inner_text().strip(), "%B %Y")
+        # A year at a time with the double arrows (a date of birth is decades back), then by month.
+        nav = ".react-calendar__navigation__"
+        for _ in range(240):
+            shown = datetime.datetime.strptime(cal.locator(nav + "label").inner_text().strip(), "%B %Y")
             step = (want.year - shown.year) * 12 + (want.month - shown.month)
             if step == 0:
                 break
-            cal.locator(".react-calendar__navigation__next-button" if step > 0
-                        else ".react-calendar__navigation__prev-button").click()
+            jump = cal.locator(nav + ("next2-button" if step > 0 else "prev2-button"))
+            if abs(step) >= 12 and jump.count() and jump.is_enabled():
+                jump.click()
+            else:
+                cal.locator(nav + ("next-button" if step > 0 else "prev-button")).click()
         label = f"{want.strftime('%B')} {want.day}, {want.year}"
         tile = cal.locator(f'.react-calendar__tile:has(abbr[aria-label="{label}"])').first
         if tile.count() == 0 or tile.is_disabled():

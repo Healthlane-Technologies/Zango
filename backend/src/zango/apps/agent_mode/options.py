@@ -155,8 +155,11 @@ def build_agent_options(
     hook_sink=None,
     stderr_sink=None,
     template_build=None,
+    tool_push=None,
 ):
     """Construct ClaudeAgentOptions for a run. Imports the SDK lazily.
+
+    ``tool_push`` is the stream's ``push``: an App Studio build then gets the build tools.
 
     ``template_build`` (a template_build.TemplateBuild) names the build skill
     and lets the agent read the template's plugin and the approved spec
@@ -247,6 +250,22 @@ def build_agent_options(
         kwargs["skills"] = [template_build.skill]
         if not is_studio(template_build):
             kwargs["skills"].append(DEVELOPER_SKILL)
+        elif tool_push is not None:
+            # studio_verify / report_platform_issue (studio_tools), answered on the run's thread
+            from .studio_tools import (
+                SERVER_NAME,
+                TOOL_NAMES,
+                VERIFY_TIMEOUT,
+                build_studio_server,
+            )
+
+            kwargs["mcp_servers"] = {SERVER_NAME: build_studio_server(tool_push)}
+            kwargs["allowed_tools"] = [*kwargs["allowed_tools"], *TOOL_NAMES]
+            # A slice check takes minutes; the CLI must not give up on the call first (ms).
+            kwargs["env"] = {
+                **kwargs["env"],
+                "MCP_TOOL_TIMEOUT": str((VERIFY_TIMEOUT + 180) * 1000),
+            }
         kwargs["add_dirs"] = [template_build.spec_dir]
 
     # Per-run override wins; otherwise the platform setting.

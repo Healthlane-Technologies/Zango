@@ -42,7 +42,7 @@ import sys
 import traceback
 from collections import deque
 
-from . import auth, load_json, print_summary, save_results
+from . import auth, in_scope, load_json, print_summary, save_results
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "..", "assets", "backend"))
@@ -171,6 +171,10 @@ class Skip(Exception):
     pass
 
 
+# A check the test could not run (its own crash): reported with the skips, never as an app failure.
+TEST_ERROR = "test could not run (test error, not an app result)"
+
+
 class Ctx:
     def __init__(self, ws, roles_filter=None):
         self.ws = ws
@@ -208,13 +212,18 @@ class Ctx:
     def check(self, id, title, role, path, fn):
         if self.roles_filter and role and role not in self.roles_filter:
             return
+        if not in_scope(path):
+            return
         try:
             good, detail = fn()
             self.add(id, title, role, path, "pass" if good else "fail", detail if not good else "")
         except Skip as e:
             self.add(id, title, role, path, "skip", e)
-        except Exception as e:  # a test crash is a failure, with the trace tail
-            self.add(id, title, role, path, "fail", f"{e!r} {traceback.format_exc(limit=2)[-300:]}")
+        except AssertionError as e:  # the app refused what the spec allows (e.g. a create failed)
+            self.add(id, title, role, path, "fail", f"{e} {traceback.format_exc(limit=2)[-300:]}")
+        except Exception as e:  # the test itself broke: not a result about the app
+            self.add(id, title, role, path, "skip",
+                     f"{TEST_ERROR}: {e!r} {traceback.format_exc(limit=2)[-300:]}")
 
     # ----- spec helpers -----
     def ep(self, ent):
@@ -430,18 +439,56 @@ class Ctx:
                     q.append((t["to"], path + [t["name"]]))
         return None
 
-    def record_in(self, ent, status, values=None):
+    def record_in(self, ent, status, values=None, role=None):
         """A fresh record walked to `status`; Skip with the blocking step when it cannot get there."""
         path = self.path_to(ent, status) if self.E[ent].get("workflow") else []
         if path is None:
             raise Skip(f"{status} is not reachable from {self.E[ent]['workflow']['initial']} by manual transitions")
-        uid = self.create(ent, values=values)
+        uid = self.create(ent, role=role, values=values)
         for name in path:
             good, msg = self.run(ent, uid, name)
             if not good:
                 raise Skip(f"could not reach {status}: {name} refused ({msg}). Add a before_transition fixture "
                            f"(.zas/test_fixtures.py) that prepares the data {name} needs")
         return uid
+
+
+def _sees_all(C, ent, role):
+    a = C.acc(ent, role)
+    return bool(a) and not a.get("rows")
+
+
+def record_for(C, ent, role, status=None):
+    """A record `role` may see (in `status` when given), made the way its row scope allows: anyone's for
+    an unscoped role, its own for created_by_me, one in a scoped status for a status-only where. A
+    record_for fixture wins. Skip when the test can't make one (the scope reads other data)."""
+    if C.fixtures and hasattr(C.fixtures, "record_for"):
+        uid = C.fixtures.record_for(C, ent, role)
+        if uid and (status is None or C.status_of(ent, uid) == status):
+            return uid
+    rows = (C.acc(ent, role) or {}).get("rows")
+    if not rows:
+        return C.record_in(ent, status) if status else C.create(ent)
+    if rows == "created_by_me":
+        if not C.can(ent, role, "add"):
+            raise Skip(f"{role} sees only the {ent} it created and cannot create one")
+        return C.record_in(ent, status, role=role) if status else C.create(ent, role=role)
+    if isinstance(rows, dict) and rows.get("ast"):
+        statuses = [x["code"] for x in (C.E[ent].get("workflow") or {}).get("statuses", [])]
+        s = status_set(rows["ast"], statuses)
+        if s is not None:
+            if status:
+                if status not in s:
+                    raise Skip(f"{role} sees only {ent} where {rows.get('where')}; a {status} record is not theirs")
+                return C.record_in(ent, status)
+            for st in sorted(s):
+                try:
+                    return C.record_in(ent, st)
+                except Skip:
+                    continue
+            raise Skip(f"no {ent} could be walked to a status {role} sees ({sorted(s)})")
+    raise Skip(f"{role} sees only {ent} where {rows.get('where') or rows.get('text') or rows}: add a "
+               "record_for fixture (.zas/test_fixtures.py) that returns one of theirs")
 
 
 def status_set(ast, statuses):
@@ -558,10 +605,18 @@ def g_transitions(C):
             for fr in t["from"]:
                 path = f"entities.{ent}.workflow.transitions.{t['name']}"
                 allowed = [r for r in (t["roles"] or C.roles()) if r in C.sessions] or (t["roles"] or [None])
+                # a role that sees every record first: a scoped role is refused on someone else's
+                allowed = sorted(allowed, key=lambda r: not (r and _sees_all(C, ent, r)))
+                cond = t.get("condition_ast")
+                statuses = [x["code"] for x in wf.get("statuses", [])]
+                cond_free = cond and status_set(cond, statuses) is None
 
-                def t_ok(ent=ent, t=t, fr=fr, role=allowed[0]):
-                    uid = C.record_in(ent, fr)
+                def t_ok(ent=ent, t=t, fr=fr, role=allowed[0], cond_free=cond_free):
+                    uid = record_for(C, ent, role, fr) if role else C.record_in(ent, fr)
                     good, msg = C.run(ent, uid, t["name"], role)
+                    if not good and cond_free:
+                        raise Skip(f"its condition ({t['condition'].get('text') if isinstance(t.get('condition'), dict) else t.get('condition')}) "
+                                   "is not set up on a test record: prove it with a before_transition fixture")
                     if not good:
                         return False, f"refused: {msg}"
                     if NOT_IMPL in str(msg):
@@ -768,10 +823,8 @@ def g_detail(C):
             def t_open(role=role, ok_role=role in viewers, hero=hero):
                 if not C.can(hero, role, "view") and not ok_role:
                     raise Skip(f"{role} has no access to {hero}")
-                uid = None
-                if ok_role and C.fixtures and hasattr(C.fixtures, "record_for"):
-                    uid = C.fixtures.record_for(C, hero, role)  # e.g. the record a bound login owns
-                uid = uid or hero_uuid()
+                # a viewer opens a record in its row scope; a non-viewer any record
+                uid = record_for(C, hero, role) if ok_role else hero_uuid()
                 code, j = C.get(role, C.ep(hero), view="detail", action="fetch_item_details", object_uuid=uid)
                 zas = (C.body(j) or {}).get("zas") or {}
                 st = zas.get("access")

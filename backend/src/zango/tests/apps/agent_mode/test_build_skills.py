@@ -21,11 +21,13 @@ def _fake_sdk():
     sdk = types.ModuleType("claude_agent_sdk")
     sdk.ClaudeAgentOptions = lambda **kwargs: kwargs
     sdk.HookMatcher = lambda **kwargs: kwargs
+    sdk.tool = lambda name, desc, schema: (lambda fn: name)
+    sdk.create_sdk_mcp_server = lambda name, version, tools: {"name": name, "tools": tools}
     return sdk
 
 
 class BuildSkillsTests(unittest.TestCase):
-    def options_for(self, template_build):
+    def options_for(self, template_build, tool_push=None):
         run = SimpleNamespace(
             permission_mode="",
             model="",
@@ -45,7 +47,8 @@ class BuildSkillsTests(unittest.TestCase):
             options, "build_env", return_value={}
         ):
             return options.build_agent_options(
-                run=run, ctx=ctx, creds=None, settings_path="/tmp/s.json", template_build=template_build
+                run=run, ctx=ctx, creds=None, settings_path="/tmp/s.json", template_build=template_build,
+                tool_push=tool_push,
             )
 
     def test_a_studio_build_loads_only_app_studio(self):
@@ -62,6 +65,23 @@ class BuildSkillsTests(unittest.TestCase):
         self.assertNotIn(DEVELOPER_SKILL, kwargs["skills"])
         # Agent Mode's plugin once: App Studio is in it.
         self.assertEqual(kwargs["plugins"], [{"type": "local", "path": options.SKILL_PLUGIN_DIR}])
+
+    def test_a_studio_build_gets_the_slice_check_tools(self):
+        from zango.apps.agent_mode.studio_tools import SERVER_NAME, TOOL_NAMES
+
+        tb = SimpleNamespace(
+            skill=STUDIO_SKILL,
+            skill_plugin_dir=options.SKILL_PLUGIN_DIR,
+            skill_dir=str(Path(options.SKILL_PLUGIN_DIR) / "skills" / "zango-app-studio"),
+            plugin_dir="/templates/ordering-portal/1.0.0",
+            spec_dir="/runs/x/spec",
+        )
+        kwargs = self.options_for(tb, tool_push=lambda kind, payload: None)
+        self.assertEqual(kwargs["mcp_servers"][SERVER_NAME]["tools"], ["studio_verify", "report_platform_issue"])
+        for name in TOOL_NAMES:
+            self.assertIn(name, kwargs["allowed_tools"])
+        self.assertGreaterEqual(int(kwargs["env"]["MCP_TOOL_TIMEOUT"]), 20 * 60 * 1000)
+        self.assertNotIn("mcp_servers", self.options_for(tb))  # no stream to answer on: no tools
 
     def test_a_template_with_its_own_skill_gets_the_developer_skill_beside_it(self):
         tb = SimpleNamespace(

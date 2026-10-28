@@ -256,7 +256,9 @@ def handoff_requirement(scaffold):
     with schema_context(tenant.schema_name):
         requirement = AgentRequirement(
             initial_prompt=scaffold.prompt,
-            title=(template.name if template else scaffold.prompt)[:80],
+            title=(
+                template.name if template else scaffold.app_label or scaffold.prompt
+            )[:80],
             created_by_label=scaffold.created_by_label,
             is_thinking=True,
             preview_mode=getattr(scaffold, "preview_mode", "") or "kit",

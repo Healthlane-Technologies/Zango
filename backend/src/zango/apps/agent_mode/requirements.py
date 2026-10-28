@@ -599,8 +599,10 @@ _OPEN_PROTOTYPE_APPEND = (
     "their screen in the prototype is the sketch. Contracts (data, acceptance) still apply.\n"
     "- A [Preview: …] note names the screen and persona the user was on; locate the text "
     "with proto_find, then patch only what they asked for.\n"
-    "- If the user uploaded their app as an HTML file, that file IS the prototype: call "
-    "proto_import with its name first and never redraw it. Then fill manifest.json (screens "
+    "- If the user uploaded an HTML file (their app, or a prototype to match), that file IS the "
+    "prototype: call proto_import with its name in your first turn, before writing the spec, "
+    "and never redraw it. Skip it only if the user says the file is a reference, not the app. "
+    "An empty prototype leaves the user's preview pane blank. Then fill manifest.json (screens "
     "and roles from the page's own navigation and personas), add one small part that calls "
     "ZAS.ready({go}) with the page's own router, and write the YAML from what the page shows."
 )

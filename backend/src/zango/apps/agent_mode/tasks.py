@@ -529,10 +529,30 @@ def _execute(run, tenant, creds, ws_root, build_app_context) -> dict:
             hook_sink=stream.hook_sink,
             stderr_sink=recorder.emit_stderr,
             template_build=template_build,
+            tool_push=stream.push if studio is not None else None,
         )
 
+        def _on_tool_call(call) -> None:
+            # studio_tools: the build agent's slice checks run here, on the tenant connection.
+            from .studio_tools import handle_call
+
+            handle_call(
+                call,
+                studio=studio,
+                tenant=tenant,
+                service_account=service_account,
+                emit=_studio_emit,
+            )
+            recorder.flush_if_stale()
+
         def _drive(agent_stream, run_state) -> dict:
-            return _drive_stream(agent_stream, run_state, run=run, recorder=recorder)
+            return _drive_stream(
+                agent_stream,
+                run_state,
+                run=run,
+                recorder=recorder,
+                on_tool_call=_on_tool_call if studio is not None else None,
+            )
 
         extra = _drive(stream, state)
 
@@ -700,8 +720,20 @@ def _conclude(run, status, extra, recorder) -> dict:
     return {"status": run.status, "events": recorder.seq}
 
 
-def _drive_stream(agent_stream, run_state, *, run, recorder) -> dict:
-    """Run one agent stream to its end; returns error fields, or {}."""
+def _handle_build_tool(call, studio, tenant, emit) -> None:
+    from .studio_build import service_account
+    from .studio_tools import handle_call
+
+    handle_call(
+        call, studio=studio, tenant=tenant, service_account=service_account, emit=emit
+    )
+
+
+def _drive_stream(agent_stream, run_state, *, run, recorder, on_tool_call=None) -> dict:
+    """Run one agent stream to its end; returns error fields, or {}.
+
+    ``on_tool_call`` runs a build tool's call (studio_tools) on this thread; without it a call
+    is answered at once, so the agent never waits on nobody."""
     from .mapper import record_message
     from .models import EventKind, EventLevel
 
@@ -725,6 +757,11 @@ def _drive_stream(agent_stream, run_state, *, run, recorder) -> dict:
             recorder.set_phase(_phase_for_message(item.payload, recorder.phase))
             record_message(item.payload, recorder, run_state)
             recorder.flush_if_stale()
+        elif item.kind == "tool_call":
+            if on_tool_call is not None and not stopping:
+                on_tool_call(item.payload)
+            else:
+                item.payload.reply("Not available in this run; carry on.")
         elif item.kind == "done":
             break
         elif item.kind == "error":
@@ -920,6 +957,7 @@ def _resume_stream(
         hook_sink=stream.hook_sink,
         stderr_sink=recorder.emit_stderr,
         template_build=template_build,
+        tool_push=stream.push,
     )
     options.resume = session_id
     options.fork_session = False
@@ -1362,7 +1400,13 @@ def _continue(run, tenant, creds, ws_root, build_app_context, *, skip=False) -> 
             recorder=recorder,
             emit=emit,
             drive=lambda agent_stream, run_state: _drive_stream(
-                agent_stream, run_state, run=run, recorder=recorder
+                agent_stream,
+                run_state,
+                run=run,
+                recorder=recorder,
+                on_tool_call=lambda call: _handle_build_tool(
+                    call, studio, tenant, emit
+                ),
             ),
             new_stream=new_stream,
             baseline_manifest=_load_baseline(checkpoint.get("baseline", "")),

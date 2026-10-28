@@ -395,7 +395,7 @@ OPEN_CSS_JS = """() => {
   return hits;
 }"""
 
-# The rules picked above, in stylesheet order, as text (group rules keep only their matching children).
+# The rules picked above, in stylesheet order, one string a rule (group rules keep only their matching children).
 OPEN_CSS_TEXT_JS = """(keys) => {
   const want = new Set(keys), out = [];
   const emit = (rules, path) => {
@@ -411,7 +411,7 @@ OPEN_CSS_TEXT_JS = """(keys) => {
     return parts;
   };
   Array.from(document.styleSheets).forEach((sh, si) => { if (sh.ownerNode && sh.ownerNode.hasAttribute('data-zas-probe')) return; try { out.push(...emit(sh.cssRules, [si])); } catch (e) {} });
-  return out.join('\\n');
+  return out;
 }"""
 
 OPEN_GO_JS = """async ([screen, role]) => {
@@ -423,7 +423,8 @@ OPEN_GO_JS = """async ([screen, role]) => {
     if (rows.length) record = rows[0].id;
   }
   const before = (ZAS.errors || []).length;
-  ZAS.go(screen, { role, record, replace: true });
+  // params: what the screen needs besides its record (a wizard step, a link token), from the manifest
+  ZAS.go(screen, { role, record, params: meta.params || {}, replace: true });
   await new Promise(r => setTimeout(r, 250));
   try { await document.fonts.ready; } catch (e) {}
   window.scrollTo(0, 0);
@@ -474,38 +475,51 @@ def open_capture(html_path: str, out_dir: str) -> int:
             device_scale_factor=1,
             service_workers="block",
         )
-        page = context.new_page()
 
         def route(r):
             host = urlparse(r.request.url).hostname or ""
             if host in PROTO_HOSTS:
                 r.continue_()
             else:
-                if len(summary["blocked"]) < 20:
+                if (
+                    len(summary["blocked"]) < 20
+                    and r.request.url[:200] not in summary["blocked"]
+                ):
                     summary["blocked"].append(r.request.url[:200])
                 r.abort()
 
-        page.route("**/*", route)
-        page.on(
-            "pageerror",
-            lambda e: summary["load_errors"].append(str(e)[:300])
-            if len(summary["load_errors"]) < 20
-            else None,
-        )
-        try:
-            page.set_content(html, wait_until="load", timeout=30000)
-        except Exception:  # noqa: BLE001 - a slow CDN still leaves the inline parts running
-            pass
-        if not page.evaluate(
-            "typeof window.ZAS === 'object' && typeof ZAS.go === 'function'"
-        ):
+        def on_error(e):
+            msg = str(e)[:300]
+            if len(summary["load_errors"]) < 20 and msg not in summary["load_errors"]:
+                summary["load_errors"].append(msg)
+
+        # Every screen x role gets a fresh page: a prototype script that throws on one screen
+        # leaves the page broken, and reusing it blanked every screen after it.
+        def fresh():
+            pg = context.new_page()
+            pg.route("**/*", route)
+            pg.on("pageerror", on_error)
+            try:
+                pg.set_content(html, wait_until="load", timeout=30000)
+            except Exception:  # noqa: BLE001 - a slow CDN still leaves the inline parts running
+                pass
+            if not pg.evaluate(
+                "typeof window.ZAS === 'object' && typeof ZAS.go === 'function'"
+            ):
+                pg.close()
+                return None
+            # The persona switcher and toasts are the prototype's own tooling, not the app.
+            pg.add_style_tag(
+                content=".z-persona,.z-toast{display:none!important}"
+            ).evaluate("n => n.setAttribute('data-zas-probe', '')")
+            return pg
+
+        page = fresh()
+        if page is None:
             _send({"ok": False, "error": "The prototype has no ZAS runtime."})
             return 2
-        # The persona switcher and toasts are the prototype's own tooling, not the app.
-        page.add_style_tag(
-            content=".z-persona,.z-toast{display:none!important}"
-        ).evaluate("n => n.setAttribute('data-zas-probe', '')")
         manifest = page.evaluate("ZAS.M")
+        page.close()
         roles = list((manifest.get("roles") or {}).keys())
         for screen in manifest.get("screens") or []:
             sid = screen.get("id")
@@ -518,8 +532,14 @@ def open_capture(html_path: str, out_dir: str) -> int:
                 if screen.get(key):
                     entry[key] = screen[key]
             seen: dict = {}
-            css_keys: list = []
+            css_rules: list = []
             for role in screen.get("roles") or roles:
+                page = fresh()
+                if page is None:
+                    entry["roles"].append(
+                        {"role": role, "error": "The prototype did not load."}
+                    )
+                    continue
                 try:
                     state = page.evaluate(OPEN_GO_JS, [sid, role])
                     dom = page.evaluate(OPEN_DOM_JS)
@@ -527,6 +547,7 @@ def open_capture(html_path: str, out_dir: str) -> int:
                     entry["roles"].append(
                         {"role": role, "error": f"{type(exc).__name__}: {exc}"[:300]}
                     )
+                    page.close()
                     continue
                 item = {
                     "role": role,
@@ -536,6 +557,7 @@ def open_capture(html_path: str, out_dir: str) -> int:
                 if digest in seen:
                     item["same_as"] = seen[digest]
                     entry["roles"].append(item)
+                    page.close()
                     continue
                 seen[digest] = role
                 with open(
@@ -549,30 +571,98 @@ def open_capture(html_path: str, out_dir: str) -> int:
                     type="png",
                     timeout=20000,
                 )
-                page.set_viewport_size({"width": OPEN_WIDTH, "height": 900})
-                for k in page.evaluate(OPEN_CSS_JS):
-                    if k not in css_keys:
-                        css_keys.append(k)
+                # Rule indexes are only stable within one page: take the rules' text here.
+                for rule in page.evaluate(OPEN_CSS_TEXT_JS, page.evaluate(OPEN_CSS_JS)):
+                    if rule and rule not in css_rules:
+                        css_rules.append(rule)
+                page.close()
                 item["files"] = [f"dom.{role}.html", f"shot.{role}.png"]
                 entry["roles"].append(item)
-            if css_keys:
+            if css_rules:
                 with open(
                     os.path.join(folder, "css.used.css"), "w", encoding="utf-8"
                 ) as fh:
-                    fh.write(page.evaluate(OPEN_CSS_TEXT_JS, css_keys))
+                    fh.write("\n".join(css_rules))
             opened = next((r["role"] for r in entry["roles"] if "error" not in r), None)
             if opened and not screen.get("record") and not screen.get("only"):
+                page = fresh()
                 try:  # where this screen's list rows go (the coverage check compares row_click)
-                    page.evaluate(OPEN_GO_JS, [sid, opened])
-                    goes = page.evaluate(ROW_PROBE_JS)
-                    if goes:
-                        entry["row_opens"] = goes
+                    if page is not None:
+                        page.evaluate(OPEN_GO_JS, [sid, opened])
+                        goes = page.evaluate(ROW_PROBE_JS)
+                        if goes:
+                            entry["row_opens"] = goes
                 except Exception:  # noqa: BLE001 - a screen without a clickable list
                     pass
+                finally:
+                    if page is not None:
+                        page.close()
             summary["screens"].append(entry)
         browser.close()
+    did_not_open(summary, out_dir, manifest)
     _send(summary)
     return 0
+
+
+SAME_SCREEN = 0.9  # share of visible text lines two captures have in common to count as one screen
+
+
+def _text_lines(html: str) -> set:
+    import re
+
+    text = re.sub(r"<(script|style)\b.*?</\1>", " ", html, flags=re.S | re.I)
+    return {
+        t.strip()
+        for t in re.sub(r"<[^>]+>", "\n", text).split("\n")
+        if len(t.strip()) > 1
+    }
+
+
+def did_not_open(summary: dict, out_dir: str, manifest: dict) -> None:
+    """A screen the prototype could not open shows another screen instead (its router fell back to
+    home, or it only showed a toast). Its capture is that other screen, so it is no reference: mark it
+    with an error, and the parity check skips it instead of asking the build for the wrong screen.
+    Of captures that show the same page, the role's home (else the first listed) keeps it."""
+    import os
+
+    homes = manifest.get("home") or {}
+    by_role: dict = {}
+    for entry in summary["screens"]:
+        for item in entry["roles"]:
+            if "files" not in item:
+                continue
+            path = os.path.join(
+                out_dir, "screens", entry["id"], f"dom.{item['role']}.html"
+            )
+            try:
+                with open(path, encoding="utf-8") as fh:
+                    lines = _text_lines(fh.read())
+            except OSError:
+                continue
+            by_role.setdefault(item["role"], []).append((entry["id"], item, lines))
+    for role, caps in by_role.items():
+        home = homes.get(role) if isinstance(homes, dict) else None
+        caps.sort(
+            key=lambda c: c[0] != home
+        )  # the home first: it keeps a page others fell back to
+        owners: list = []
+        for sid, item, lines in caps:
+            match = next(
+                (
+                    o
+                    for o, ol in owners
+                    if lines and ol and len(lines & ol) / len(lines | ol) >= SAME_SCREEN
+                ),
+                None,
+            )
+            if match is None:
+                owners.append((sid, lines))
+                continue
+            item["error"] = (
+                f"the prototype did not open {sid}: it showed {match} instead "
+                f"(the screen needs a record or params the manifest does not give, or is not a page)"
+            )
+            item["shows"] = match
 
 
 if __name__ == "__main__":

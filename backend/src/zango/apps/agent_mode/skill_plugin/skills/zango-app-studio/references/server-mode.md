@@ -55,6 +55,34 @@ and `.zas/test_users.json` are yours from the previous build: keep them and rege
 4. **Phase 7 step 1**: `.zas/test_fixtures.py` and `.zas/test_scenarios.py` from `.zas/test_plan.md`.
 5. Finish with a summary: modules written, holes and their status, anything you could not do and why.
 
+## Build in slices, and check each one yourself
+
+Don't write the whole app and hand it over untested. You have a tool, `studio_verify`, that brings
+the app up and runs the platform's checks (API, UI flows, prototype parity, scenarios) on **one
+slice**: the spec paths you name. Use it like this:
+
+1. **Foundation first**: step 1 for every module (all models together, so the migrations and
+   foreign keys are right), the `app` module and shell, `test_fixtures.py`, then type-check, build
+   and deploy once (step 3). **Free design** (an approved prototype): the foundation also builds the
+   app's kit from the prototype (`references/open-mode.md`, "The kit"); check it with
+   `{"paths": ["kit"]}` before the first record slice, since every page draws with it.
+2. **Then one slice at a time**, starting with the app's main record (the one with the workflow,
+   or the first role's landing page), then the records it depends on, then the rest in `plan.md`
+   order. A slice is a record with everything that shows it: `entities.<code>`, its
+   `pages.<code>` and its `detail_views.<code>`. For each slice:
+   - write its holes (step 2), its slots and custom pages (step 3) and its scenarios (step 4);
+   - type-check, build and deploy;
+   - call `studio_verify` with the slice's paths, e.g.
+     `{"paths": ["entities.case", "pages.my_cases", "detail_views.case_360"]}`;
+   - fix what it reports and call it again on the same paths, at most three times. Then move on;
+     what still fails goes to the fix rounds.
+3. **A failure that is not the app's**: when a check fails because of `backend/zas_core/`, zas_test
+   or a package (you can point to the line), call `report_platform_issue` with the check id, what is
+   wrong and where. Never patch the runtime or work around it in app code: the platform refuses
+   writes under `backend/zas_core/` and assignments to names imported from it.
+
+The main record's create flow is the first thing the user tries; prove it in the first slice.
+
 ## What the platform does after you finish
 
 In this order, each step recorded on the run:
@@ -72,5 +100,6 @@ In this order, each step recorded on the run:
 If a bring-up step, the hole audit or a test layer fails, the platform resumes your session with a
 short digest: the failing step or check ids, their spec paths and details. Fix the cause where it is
 (generated code, hook, slot, fixture), never by editing a test, the runtime in `backend/zas_core/`,
-`packages/` or the spec. Then stop; the platform re-runs only the failing groups. There are at most
-a couple of rounds, so fix everything the digest lists in one go.
+`packages/` or the spec; report a platform bug with `report_platform_issue`. Then stop; the platform
+re-runs only the failing groups. There are at most a couple of rounds, so fix everything the digest
+lists in one go. A check that fails the same way after your fix is not sent again.

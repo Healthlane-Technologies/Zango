@@ -798,7 +798,14 @@ class SpecWorkbench:
         """The YAML says everything the prototype shows (prototype_coverage.py), or says why not.
 
         Skipped, with a note, when the prototype can't be rendered here (no Playwright)."""
-        from .prototype_coverage import GUIDE, coverage, ensure_capture, format_gaps
+        from .prototype_coverage import (
+            GUIDE,
+            RENDER_GUIDE,
+            coverage,
+            ensure_capture,
+            format_gaps,
+            render_gaps,
+        )
 
         try:
             bundle, why = ensure_capture(self.proto.parts, design=design)
@@ -806,6 +813,14 @@ class SpecWorkbench:
             bundle, why = None, str(exc)
         if bundle is None:
             return f"\n(Prototype coverage not checked: {why}.)"
+        broken = render_gaps(bundle, doc)
+        if broken:
+            raise ToolRefused(
+                "Not ready — these prototype screens don't draw when opened on their own. "
+                + RENDER_GUIDE
+                + "\n"
+                + "\n".join(broken)
+            )
         result = coverage(doc, bundle)
         if result["menu"] or result["screens"]:
             raise ToolRefused(

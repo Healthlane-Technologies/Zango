@@ -26,6 +26,9 @@ Design checks. No human approves anything: every check compares against a fixed 
            Standard screens in the bundle too: a list page in each declared view (the switcher's
            place) and the app shell (the shell-brand / shell-user / shell-top markers), each with
            its screenshot pair.
+  kit      open mode: each piece of src/custom/kit/map.json cropped from the live prototype next to the
+           app's piece on /app/__zas?kit=mockup (zas_test/kit.py). Over 5% different fails the piece;
+           the build's kit rounds take those, and leftovers are report gaps, never the verdict.
 Results: <ws>/.zas/test_results.json (layer "design"). Exit 1 when a blocking check fails.
 """
 
@@ -36,9 +39,9 @@ import os
 import re
 import sys
 
-from . import auth, browser, load_json, print_summary, save_results
+from . import auth, browser, in_scope, kit, load_json, print_summary, save_results
 
-GROUPS = ["lint", "gallery", "tokens", "tree", "layout", "parity"]
+GROUPS = ["lint", "gallery", "tokens", "tree", "layout", "parity", "kit"]
 HERE = os.path.dirname(os.path.abspath(__file__))
 if os.path.dirname(HERE) not in sys.path:
     sys.path.insert(0, os.path.dirname(HERE))  # scripts/: proto_landmarks
@@ -67,6 +70,8 @@ class D:
                              "status": status, "detail": str(detail)[:700]})
 
     def check(self, id, title, path, fn, role=None):
+        if not in_scope(path):
+            return
         try:
             good, detail = fn()
             if good is None:
@@ -121,8 +126,19 @@ def open_shell_problems(ws):
     except OSError:
         return ["open mode: no frontend/src/custom/Shell.tsx (the approved prototype's shell on makeShell)"]
     probs = []
-    if "makeShell(" not in shell:
-        probs.append("frontend/src/custom/Shell.tsx: build the shell with makeShell from ../zas, options only")
+    code = re.sub(r"//[^\n]*|/\*.*?\*/", "", shell, flags=re.S)
+    if "makeShell(" not in code:
+        # a shell ported from the prototype: the prototype's markup around the platform's menu and user
+        missing = [what for what, ok in (
+            ("the platform menu (shellMenu(menu, role, soon) from ../zas)", "shellMenu(" in code),
+            ("the platform's user card and menu (UserCard from ../zas)", "UserCard" in code),
+            ('data-zas="shell"', 'data-zas="shell"' in code),
+            ('data-zas="shell-nav" on each menu link', 'data-zas="shell-nav"' in code),
+            ("{children} (the page)", "children" in code),
+        ) if not ok]
+        if missing:
+            probs.append("frontend/src/custom/Shell.tsx: use makeShell from ../zas, or port the prototype's shell "
+                         "around the platform's menu and user card; it lacks " + "; ".join(missing))
     try:
         app = open(os.path.join(src, "App.tsx"), encoding="utf-8").read()
     except OSError:
@@ -130,6 +146,10 @@ def open_shell_problems(ws):
     if not re.search(r"Layout\s*:\s*Shell\b", app):
         probs.append("frontend/src/App.tsx: pass the shell as customComponents={{ Layout: Shell }}")
     return probs
+
+
+# a standard page drawn with the app's kit ("theme": specs checked before the kit)
+STANDARD_CLASSES = ("kit", "theme")
 
 
 def themed_page_problems(Dx):
@@ -144,12 +164,12 @@ def themed_page_problems(Dx):
     probs = []
     for r in rows:
         P = pages.get(r.get("page") or "") or {}
-        if r.get("cls") != "theme" or r.get("kind") != "page" or P.get("type") != "crud":
+        if r.get("cls") not in STANDARD_CLASSES or r.get("kind") != "page" or P.get("type") != "crud":
             continue
         m = re.search(rf"export const Page_{re.escape(r['page'])}\s*=\s*([^;\n]+)", index)
         if m and not re.match(rf"""make(List|Views)Page\(\s*["']{re.escape(r['page'])}["']""", m.group(1).strip()):
-            probs.append(f"pages/index.ts: Page_{r['page']} is themed (prototype screen {r['id']}): export "
-                         f"makeListPage(\"{r['page']}\") or makeViewsPage, not custom code")
+            probs.append(f"pages/index.ts: Page_{r['page']} is a kit page (prototype screen {r['id']}): export "
+                         f"makeListPage(\"{r['page']}\") or makeViewsPage, not custom code; make the kit match")
     return probs
 
 
@@ -158,9 +178,9 @@ def screen_css_problems(Dx, path, rel):
     (references/open-mode.md, "Screens")."""
     page = os.path.splitext(os.path.basename(path))[0]
     proto = (Dx.M.get("prototype") or {}).get("screens") or []
-    themed = {r.get("page") for r in proto if r.get("cls") == "theme"}
+    themed = {r.get("page") for r in proto if r.get("cls") in STANDARD_CLASSES}
     if page not in themed:
-        return [f"{rel}: a screen stylesheet is only for a themed page in prototype.screens (no themed page {page!r})"]
+        return [f"{rel}: a screen stylesheet is only for a kit page in prototype.screens (no kit page {page!r})"]
     css = re.sub(r"/\*.*?\*/", "", open(path, encoding="utf-8").read(), flags=re.S)
     probs = []
     scope = f'[data-zas-key="{page}"]'
@@ -187,7 +207,11 @@ class OpenDesign:
     app as app.design tokens (spec.ui.json), so src/custom spells colours as var(--…) and fonts as the
     families app.design lists. Every mapped screen follows them; there are no sketch palettes."""
 
-    def __init__(self, Dx):
+    def __init__(self, Dx, allowed=(), fonts=()):
+        # allowed: colours code may spell as they are (the approved prototype's own palette); fonts: its
+        # font families. Ported code keeps the prototype's literals and inline styles (open-mode.md, "Port").
+        self.allowed = {colour_key(c) for c in allowed}
+        self.ported = bool(self.allowed)
         design = ((Dx.M or {}).get("app") or {}).get("design") or {}
         tokens = design.get("tokens") or {}
         self.vars = {}
@@ -205,9 +229,12 @@ class OpenDesign:
                 target = (DESIGN_MAP.get(name) or [f"--p-{name}"])[0]
                 self.vars.setdefault(colour_key(str(value).strip()), (name, f"var({target})"))
         self.fonts = {str(f).strip().strip("'\"").lower() for f in (design.get("fonts") or {}).values() if f}
+        self.fonts |= {str(f).strip().strip("'\"").lower() for f in fonts}
 
     def colour(self, c):
         hit = self.vars.get(colour_key(c))
+        if self.ported:
+            return f"colour `{c}` is not in the approved prototype (use its colours, or a token)"
         return (f"colour `{c}`: it is app.design's `{hit[0]}`, write {hit[1]}" if hit
                 else f"colour `{c}` (use a token: var(--z-*), var(--p-*), var(--t-*))")
 
@@ -224,7 +251,8 @@ class OpenDesign:
         probs = []
         for i, line in enumerate(code.splitlines(), 1):
             for m in COLOUR.finditer(line):
-                probs.append(f"{rel}:{i}: {self.colour(m.group(0))}")
+                if colour_key(m.group(0)) not in self.allowed:
+                    probs.append(f"{rel}:{i}: {self.colour(m.group(0))}")
         for block in re.finditer(r"style=\{\{(.*?)\}\}", code, re.S):
             line = code[:block.start()].count("\n") + 1
             for prop, value in STYLE_PROP.findall(block.group(1)):
@@ -232,6 +260,8 @@ class OpenDesign:
                     bad = self.font(value)
                     if bad:
                         probs.append(f"{rel}:{line}: {bad}")
+                elif self.ported:
+                    continue  # ported markup keeps the prototype's inline styles; literals are checked above
                 elif not re.search(r"var\(--|^\s*[\"'](transparent|inherit|currentColor|none)[\"']", value) \
                         and not COLOUR.search(value):  # literals are reported above
                     probs.append(f"{rel}:{line}: inline `{prop}` must be a token: {value.strip()[:40]}")
@@ -241,6 +271,80 @@ class OpenDesign:
         return [f"{rel}: {bad}" for v in re.findall(r"font-family\s*:\s*([^;}]+)", css) if (bad := self.font(v))]
 
 
+def prototype_palette(ws):
+    """Every colour the approved prototype uses: its page (styles and scripts, prototype.html), its
+    screens' css.used.css and its design.json file."""
+    proto = os.path.join(ws, ".zas", "bundle", "prototype")
+    out = set()
+    for path in glob.glob(os.path.join(proto, "screens", "*", "css.used.css")) + [
+            os.path.join(proto, "design.json"), os.path.join(proto, "prototype.html")]:
+        try:
+            out |= {colour_key(c) for c in COLOUR.findall(open(path, encoding="utf-8").read())}
+        except OSError:
+            continue
+    return out
+
+
+def prototype_fonts(ws):
+    """The font families the prototype's stylesheets name (frontend/src/custom/prototype.css)."""
+    try:
+        css = open(os.path.join(ws, "frontend", "src", "custom", "prototype.css"), encoding="utf-8").read()
+    except OSError:
+        return set()
+    return {f.strip().strip("'\"") for v in re.findall(r"font-family\s*:\s*([^;}]+)", css) for f in v.split(",")
+            if f.strip() and "var(" not in f}
+
+
+def prototype_css_problems(ws, path, rel):
+    """frontend/src/custom/prototype.css is the platform's (proto_port.py): present only in open mode,
+    never edited (the next build writes it again, and an edit would be lost)."""
+    scripts = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if scripts not in sys.path:
+        sys.path.insert(0, scripts)
+    import proto_port
+
+    html = proto_port.prototype_html(ws)
+    if html is None:
+        return [f"{rel}: the prototype's stylesheet is for Free design (an approved prototype)"]
+    if open(path, encoding="utf-8").read() != proto_port.stylesheet(html):
+        return [f"{rel}: edited; it is the prototype's stylesheet as the platform wrote it. Style a screen "
+                "with the prototype's classes and inline styles instead"]
+    return []
+
+
+KIT_SELECTOR = re.compile(r"\.zas\b|\.zas-|\.zk-|\[data-zas")
+KIT_BAD_IMPORT = re.compile(r"""from\s+["']\.\./\.\./zas(?:/index|/kit)?["']""")
+
+
+def kit_problems(Dx, path, rel, code, palette):
+    """Open mode, the app's kit (src/custom/kit/): the prototype's palette may be spelled as it is, a
+    stylesheet only restyles kit markup (.zas*, .zk-*, [data-zas…]), and the base pieces come from
+    zas/ui, zas/ZasTable or zas/Shell: zas/index and zas/kit re-export the kit itself (a loop)."""
+    od = OpenDesign(Dx, palette)
+    if path.endswith(".css"):
+        css = re.sub(r"/\*.*?\*/", "", code, flags=re.S)
+        probs = []
+        for sel in re.findall(r"([^{}]+)\{", css):
+            if sel.strip().startswith("@"):
+                continue
+            for one in sel.split(","):
+                if one.strip() and not KIT_SELECTOR.search(one):
+                    probs.append(f"{rel}: selector `{one.strip()[:60]}` is not kit markup (.zas*, .zk-*, [data-zas…])")
+        for m in COLOUR.finditer(css):
+            if colour_key(m.group(0)) not in od.allowed:
+                probs.append(f"{rel}: {od.colour(m.group(0))} (or a colour the prototype's CSS uses)")
+        probs += od.css(rel, css)
+        if "url(" in css or "@import" in css:
+            probs.append(f"{rel}: url() / @import (fonts and images come from app.design)")
+        return probs
+    probs = od.tsx(rel, code)
+    for i, line in enumerate(code.splitlines(), 1):
+        if KIT_BAD_IMPORT.search(line):
+            probs.append(f"{rel}:{i}: import the base pieces from ../../zas/ui (or ZasTable, Shell), not "
+                         f"{line.strip()[:60]}: that re-exports the kit itself")
+    return probs
+
+
 def is_open_mode(ws):
     return os.path.isfile(os.path.join(ws, ".zas", "bundle", "prototype", "manifest.json"))
 
@@ -248,13 +352,31 @@ def is_open_mode(ws):
 def g_lint(Dx, b=None):
     root = os.path.join(Dx.ws, "frontend", "src", "custom")
     files = [f for f in glob.glob(os.path.join(root, "**", "*"), recursive=True) if os.path.isfile(f)]
-    open_design = OpenDesign(Dx) if is_open_mode(Dx.ws) else None
+    open_mode = is_open_mode(Dx.ws)
+    palette = prototype_palette(Dx.ws) if open_mode else set()
+    open_design = OpenDesign(Dx, palette, prototype_fonts(Dx.ws)) if open_mode else None
     palettes = {} if open_design else approved_palettes(Dx)
     # a helper a ported slot imports (no marker of its own) may use any approved sketch's colours
     any_approved = set().union(*(p[0] for p in palettes.values())) if palettes else set()
     probs = []
+    kit_root = os.path.join(root, "kit") + os.sep
     for f in files:
         rel = os.path.relpath(f, Dx.ws)
+        if os.path.normpath(f) == os.path.join(root, "prototype.css"):
+            probs += prototype_css_problems(Dx.ws, f, rel)
+            continue
+        if f.startswith(kit_root) and f.endswith((".css", ".ts", ".tsx")):
+            src = open(f, encoding="utf-8").read()
+            if open_design:
+                code = src if f.endswith(".css") else re.sub(r"//[^\n]*|/\*.*?\*/", "", src, flags=re.S)
+                probs += kit_problems(Dx, f, rel, code, palette)
+                if "<style" in code:
+                    probs.append(f"{rel}: <style> tag")
+            elif re.search(r"export\s+(?:const|function)\s|export\s*\{\s*\w", re.sub(r"//[^\n]*|/\*.*?\*/", "", src, flags=re.S)) \
+                    or f.endswith(".css"):
+                probs.append(f"{rel}: the app's own kit is for Free design (an approved prototype); "
+                             "default design keeps the default kit")
+            continue
         if f.endswith(".css") and os.path.dirname(f) == os.path.join(root, "screens"):
             probs += screen_css_problems(Dx, f, rel)
             continue
@@ -654,23 +776,66 @@ def parity_target(Dx, hole):
     return None, (m.group(1) if m else None), f'[data-zas="panel"][data-zas-key="{key}"]', V.get("hero")
 
 
-def look_score(built, approved, width=1280, height=900):
-    """How different two screenshots look, 0 (same) to 1, or None without PIL: the top `height` px at
-    `width`, both scaled down to 320 px and compared in grey. A report figure, not a gate: the prototype
-    shows demo data, so the score never reaches 0."""
+def look_score(built, approved, width=1280, height=900, edge_cut=40, slack=7):
+    """How differently two screens are laid out, 0 (same) to 1, or None without PIL: the first screen
+    (`width` x `height`, a short page padded with white) at half size, as edge maps, so a box, a rule
+    or a line of text in a different place counts and a colour or a demo value barely does. The score
+    is 1 - F1 of the edges that have a match within `slack` px in the other shot.
+
+    Mean grey difference, the old score, could not tell a different layout from the same one: on a
+    mostly white page both came out near 5%. A report figure and a sort key, not a gate."""
     try:
-        from PIL import Image, ImageChops, ImageStat
+        from PIL import Image, ImageChops, ImageFilter, ImageStat
     except ImportError:
         return None
-    out = []
-    for path in (built, approved):
+
+    def shot(path):
         im = Image.open(path).convert("L")
         if im.width != width:
             im = im.resize((width, round(im.height * width / im.width)))
-        out.append(im.crop((0, 0, width, min(height, im.height))))
-    h = min(out[0].height, out[1].height)
-    a, c = (im.crop((0, 0, width, h)).resize((320, max(1, h // 4))) for im in out)
-    return round(ImageStat.Stat(ImageChops.difference(a, c)).mean[0] / 255, 3)
+        im = im.crop((0, 0, width, min(height, im.height)))
+        if im.height < height:
+            pad = Image.new("L", (width, height), 255)
+            pad.paste(im, (0, 0))
+            im = pad
+        im = im.resize((width // 2, height // 2))
+        return im.filter(ImageFilter.FIND_EDGES).point(lambda v: 255 if v > edge_cut else 0)
+
+    def ink(im):
+        return ImageStat.Stat(im).sum[0] / 255
+
+    a, c = shot(approved), shot(built)
+    if not ink(a) and not ink(c):
+        return 0.0
+    near_a, near_c = a.filter(ImageFilter.MaxFilter(slack)), c.filter(ImageFilter.MaxFilter(slack))
+    precision = ink(ImageChops.multiply(c, near_a)) / max(1.0, ink(c))
+    recall = ink(ImageChops.multiply(a, near_c)) / max(1.0, ink(a))
+    if precision + recall == 0:
+        return 1.0
+    return round(1 - 2 * precision * recall / (precision + recall), 3)
+
+
+CHROME_SHARE = 1 / 3  # a label on this share of a persona's screens (and on 3 or more) is the shell's
+
+
+def shell_chrome(proto, capture, PL):
+    """Per persona, the labels its prototype shows around the screens (menu, top bar, the prototype's
+    own screen jumper): the shell's, checked by app_shell, not each screen's content. Not "on every
+    screen": a persona's pages without the shell (an emailed link, a print view) would leave nothing."""
+    import collections
+
+    seen, count = collections.defaultdict(collections.Counter), collections.Counter()
+    for sc in capture.values():
+        for pr in sc.get("roles") or []:
+            if pr.get("error") or pr.get("blank"):
+                continue
+            f = os.path.join(proto, "screens", sc["id"], f"dom.{pr.get('same_as') or pr['role']}.html")
+            if os.path.isfile(f):
+                lm = PL.landmarks(open(f, encoding="utf-8").read())
+                seen[pr["role"]].update({PL.norm(x) for k in PL.CONTENT for x in lm.get(k, [])})
+                count[pr["role"]] += 1
+    return {role: {lab for lab, n in c.items() if n >= 3 and n >= CHROME_SHARE * count[role]}
+            for role, c in seen.items()}
 
 
 def open_parity(Dx, b):
@@ -716,16 +881,7 @@ def open_parity(Dx, b):
             if os.path.isfile(f):
                 w = PL._words(PL.subtitle(open(f, encoding="utf-8").read()) or "")
                 sub_words[sc["id"]] = w if sc["id"] not in sub_words else sub_words[sc["id"]] & w
-    # shell chrome: what a persona's prototype shows on every screen (menu, top bar) is the shell's,
-    # checked by app_shell, not each screen's content
-    chrome = {}
-    for sc in capture.values():
-        for pr in sc.get("roles") or []:
-            f = os.path.join(proto, "screens", sc["id"], f"dom.{pr.get('same_as') or pr['role']}.html")
-            if os.path.isfile(f):
-                lm = PL.landmarks(open(f, encoding="utf-8").read())
-                labels = {PL.norm(x) for k in PL.CONTENT for x in lm.get(k, [])}
-                chrome[pr["role"]] = labels if pr["role"] not in chrome else chrome[pr["role"]] & labels
+    chrome = shell_chrome(proto, capture, PL)
 
     def login(role):
         if role in failed:
@@ -750,6 +906,17 @@ def open_parity(Dx, b):
             slug = re.sub(r"[^a-z0-9]+", "_", (role or persona).lower())
             rid = f"design.parity.proto.{r['id']}.{slug}"
             title = f"prototype screen {r['id']} opens and looks like the approved one"
+            ref = capture[r["id"]]["roles"]
+            ref = next((x for x in ref if x["role"] == shot_of), pr)
+            if ref.get("blank") or ref.get("error") or not os.path.isfile(approved):
+                # A blank reference is nothing to compare with: never a score, never a pass. Not the
+                # app's to fix either, so a skip (the report lists it), not a fail for the fix rounds.
+                why = ref.get("error") or "; ".join(ref.get("errors") or []) or "the approved screen captured blank"
+                Dx.add(rid, title, where, "skip", f"no reference: {why[:200]}")
+                looks.append({"screen": f"prototype/{r['id']}", "where": where, "role": role, "kind": "prototype",
+                              "class": r.get("cls"), "score": None, "approved": None, "no_reference": True,
+                              "built": None, "hand_written": False})
+                continue
 
             def t(r=r, role=role, persona=persona, approved=approved, slug=slug, where=where):
                 if not role:
@@ -764,6 +931,10 @@ def open_parity(Dx, b):
                 else:
                     sess = login(role)
                     path = (Dx.M["pages"].get(r.get("page")) or {}).get("route")
+                    if path and "/:" in path:  # /app/cases/:id/review: a record the role can see
+                        path, why = browser.fill_route(Dx.M, path, records, sess)
+                        if why:
+                            return None, why
                 if not path:
                     return None, "no route for this screen"
                 rp = browser.RolePage(b, target, sess, viewport={"width": 1280, "height": 900})
@@ -775,6 +946,8 @@ def open_parity(Dx, b):
                     except Exception:  # noqa: BLE001 - shoot what is there
                         pass
                     probs = list(rp.errors)
+                    if browser.raw_dates(rp.page.inner_text("body")):
+                        probs.append(browser.raw_dates(rp.page.inner_text("body")))
                     state = rp.page.query_selector('[data-zas="empty"][data-zas-key="error"], '
                                                    '[data-zas="empty"][data-zas-key="no_access"]')
                     if state:
@@ -1030,7 +1203,8 @@ def standard_parity(Dx, b, manifest, looks):
             Dx.check(rid, f"{scr['path']} is laid out like the approved preview", where, t, role)
 
 
-RUNNERS = {"lint": g_lint, "gallery": g_gallery, "tokens": g_tokens, "tree": g_tree, "layout": g_layout, "parity": g_parity}
+RUNNERS = {"lint": g_lint, "gallery": g_gallery, "tokens": g_tokens, "tree": g_tree, "layout": g_layout, "parity": g_parity,
+           "kit": lambda Dx, b: kit.g_kit(Dx, b)}
 
 
 def main(argv=None):

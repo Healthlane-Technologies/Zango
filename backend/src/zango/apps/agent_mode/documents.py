@@ -380,7 +380,7 @@ def attachment_note(docs_root, requirement, message) -> str:
         elif row.content_type == KINDS[".html"]:
             lines.append(
                 f"- {row.name}: an HTML page. Its outline is in `{path}.txt`, the source in `{path}`. "
-                f'If the user wants it as the prototype (Free design), call proto_import("{row.name}").'
+                f'In Free design it is the prototype: call proto_import("{row.name}") first, unless the user says it is only a reference.'
             )
         elif row.content_type == KINDS[".pdf"]:
             lines.append(

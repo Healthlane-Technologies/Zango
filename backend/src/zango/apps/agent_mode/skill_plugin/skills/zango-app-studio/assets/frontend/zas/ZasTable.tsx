@@ -12,7 +12,8 @@ import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ChevronsUpDown, Download, El
 import * as api from "./api";
 import { SPEC, date, detailUrl, money, number, pageUrl, parentTabUrl, percent, viewUrl } from "./config";
 import { ConfirmDialog, FormDialog, useDialog } from "./dialogs";
-import { Badge, Banner, Button, Chip, Drawer, EmptyState, Icon, Menu, Nil, Skeleton, Timeline, Value, cx, useToast } from "./ui";
+import { Icon, Menu, Nil, Skeleton, Value, cx, useToast } from "./ui";
+import { Badge, Banner, Button, Chip, Drawer, EmptyState, Timeline } from "./kit";
 import type { MenuItemDef } from "./ui";
 import type { FieldValue, SpecColumn, SpecEntity } from "./types";
 

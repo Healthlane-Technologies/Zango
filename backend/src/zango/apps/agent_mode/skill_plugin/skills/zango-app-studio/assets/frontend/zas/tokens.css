@@ -104,6 +104,10 @@ html[data-zas-density="compact"] { --z-ctl-h: 32px; --z-cell-y: 7px; --z-th-y: 7
 
 /* page */
 .zas-page { padding: var(--z-page-pad); min-height: 100%; background: var(--z-ground); }
+/* open mode: a screen ported from the prototype renders in <div class="zp"> and draws its own page
+   (header band, padding, background from prototype.css): the box around it adds nothing */
+:has(> .zp) { padding: 0 !important; gap: 0 !important; }
+.zp { min-height: 100%; }
 .zas-ph { display: flex; align-items: flex-end; gap: 14px; margin-bottom: 18px; flex-wrap: wrap; }
 .zas-ph h1 { margin: 0; font-size: 22px; font-weight: 650; letter-spacing: -0.02em; color: var(--z-text); }
 .zas-ph p { margin: 4px 0 0; color: var(--z-muted); font-size: 13px; }

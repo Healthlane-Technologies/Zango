@@ -41,8 +41,8 @@ export interface ShellOptions {
 
 export interface SoonItem { label: string; group?: string; icon?: string; roles?: string[]; after?: string }
 
-interface PlatformItem { name?: string; label?: string; url?: string; uri?: string; icon?: string; children?: PlatformItem[]; soon?: boolean }
-interface LayoutProps { menu?: PlatformItem[]; profileInfo?: Record<string, any>; appLogo?: string; children?: React.ReactNode }
+export interface PlatformItem { name?: string; label?: string; url?: string; uri?: string; icon?: string; children?: PlatformItem[]; soon?: boolean }
+export interface LayoutProps { menu?: PlatformItem[]; profileInfo?: Record<string, any>; appLogo?: string; children?: React.ReactNode }
 
 const NAMED: Record<string, string> = {
   card: "var(--z-card)", page: "var(--z-ground)", sunk: "var(--z-sunken)", brand: "var(--brand)",
@@ -76,7 +76,7 @@ function pageTitle(path: string): string {
 
 const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join("") || "U";
 
-function UserCard({ user, up }: { user: Record<string, any>; up: boolean }) {
+export function UserCard({ user, up }: { user: Record<string, any>; up: boolean }) {
   const [pos, setPos] = useState<{ left: number; top?: number; bottom?: number } | null>(null);
   const [drawer, setDrawer] = useState(false);
   const btn = useRef<HTMLButtonElement>(null);
@@ -111,6 +111,30 @@ function UserCard({ user, up }: { user: Record<string, any>; up: boolean }) {
 }
 
 const same = (a?: string, b?: string) => (a || "").trim().toLowerCase() === (b || "").trim().toLowerCase();
+
+/** appbuilder lands on the first menu item, so zango_platform.py lifts each role's landing page out of
+ * its group to the top of the saved menu. Draw it back where the spec's menu has it. */
+export function regrouped(menu: PlatformItem[], role: string): PlatformItem[] {
+  const spec = (SPEC.menus || {})[role] || Object.entries(SPEC.menus || {}).find(([r]) => same(r, role))?.[1];
+  const land = spec?.landing, route = land ? SPEC.pages[land]?.route : undefined;
+  if (!spec || !route) return menu;
+  const group = (spec.items || []).find((g: any) => g.group && (g.items || []).some((i: any) => i.page === land)) as any;
+  const at = menu.findIndex((it) => !it.children?.length && norm(href(it)) === norm(route));
+  const target = group ? menu.find((it) => it.children?.length && same(label(it), group.group)) : undefined;
+  if (at < 0 || !target) return menu;
+  const item = menu[at];
+  const out = menu.filter((_, i) => i !== at).map((it) => (it === target ? { ...it, children: [...it.children!] } : it));
+  const kids = out.find((it) => it.children && same(label(it), group.group))!.children!;
+  kids.splice(Math.min(kids.length, (group.items || []).findIndex((i: any) => i.page === land)), 0, item);
+  return out;
+}
+
+/** The menu a shell draws for the signed-in role: the platform's, landing page back in its group, with
+ * the not-built prototype screens greyed out. A shell ported from the prototype uses it too. */
+export function shellMenu(menu: PlatformItem[], role: string, soon: SoonItem[] = []): PlatformItem[] {
+  const items = regrouped(menu, role);
+  return soon.length ? withSoon(items, soon, role) : items;
+}
 
 /** The platform menu with the role's not-built prototype screens added, greyed out. */
 function withSoon(menu: PlatformItem[], soon: SoonItem[], role: string): PlatformItem[] {
@@ -188,7 +212,7 @@ export function makeShell(options: ShellOptions = {}): React.FC<LayoutProps> {
       </Link>
     );
     const role = String(profileInfo.current_role || profileInfo.user_role || "");
-    const items = o.soon?.length ? withSoon(menu, o.soon, role) : menu;
+    const items = shellMenu(menu, role, o.soon || []);
     const nav = <nav className="zas-sh-nav"><NavItems items={items} groups={o.groups} path={pathname} /></nav>;
     return (
       <div className={cx("zas zas-sh", `is-${o.layout}`, o.tone === "dark" && "dark")} data-zas="shell"

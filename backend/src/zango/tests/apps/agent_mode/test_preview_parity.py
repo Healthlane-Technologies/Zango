@@ -114,7 +114,7 @@ class OpenScreensLintTests(unittest.TestCase):
             self.assertEqual(design.themed_page_problems(Dx), [])
         with tempfile.TemporaryDirectory() as tmp:
             Dx, _ = self.dx(tmp, 'export const Page_vendors = VendorsByHand;\n')
-            self.assertIn("Page_vendors is themed", design.themed_page_problems(Dx)[0])
+            self.assertIn("Page_vendors is a kit page", design.themed_page_problems(Dx)[0])
 
     def test_a_screen_stylesheet_is_scoped_and_token_only(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -128,7 +128,7 @@ class OpenScreensLintTests(unittest.TestCase):
             self.assertEqual(len(probs), 3, probs)
             other = root / "screens" / "orders.css"
             other.write_text('[data-zas-key="orders"] td { gap: 0; }')
-            self.assertIn("only for a themed page", design.screen_css_problems(Dx, str(other), "orders.css")[0])
+            self.assertIn("only for a kit page", design.screen_css_problems(Dx, str(other), "orders.css")[0])
 
 
 class OpenDesignLintTests(unittest.TestCase):

@@ -228,6 +228,22 @@ def cmd_sync(P, M, log):
         log(f"tasks sync: {e} (no tasks.py yet is fine)")
 
 
+def persona_name(ws, role):
+    """Open mode: the prototype's persona for a spec role (manifest roles label = role name), so the
+    test user is the person the approved screens greet ("Good afternoon, Dr. Mehta"); else None."""
+    try:
+        with open(os.path.join(ws, ".zas", "bundle", "prototype", "manifest.json"), encoding="utf-8") as f:
+            man = json.load(f)
+    except (OSError, ValueError):
+        return None
+    for code, label in (man.get("roles") or {}).items():
+        if role.lower() in (str(label).lower(), str(code).lower()):
+            p = (man.get("personas") or {}).get(code)
+            name = p.get("name") if isinstance(p, dict) else None
+            return str(name).strip() or None if name else None
+    return None
+
+
 def cmd_users(P, M, log):
     roles = P.roles()
     data = zauth.load_users(P.ws)
@@ -261,7 +277,7 @@ def cmd_users(P, M, log):
                 f"reset it in App Panel, or delete the user and re-run")
             continue
         pwd = zauth.generate_password()
-        u = u or {"name": f"Test {name}", "email": email, "roles": [name]}
+        u = u or {"name": persona_name(P.ws, name) or f"Test {name}", "email": email, "roles": [name]}
         u["password"] = pwd
         if u not in users:
             users.append(u)

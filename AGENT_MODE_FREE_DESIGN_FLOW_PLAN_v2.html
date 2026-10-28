@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Free Design Build Flow</title>
+<style>
+:root {
+  --bg: #f4f1ea; --paper: #fffdf8; --ink: #1d1b16; --ink-2: #4a463d; --ink-3: #807a6c;
+  --line: #e4ddcd; --chip: #efe9dc;
+  --a: #c2410c; --a-soft: #fde7d9;   /* A unblock */
+  --b: #0f766e; --b-soft: #d5f0ec;   /* B mockup check */
+  --c: #6d28d9; --c-soft: #ebe1fb;   /* C links */
+  --d: #b45309; --d-soft: #fcefd2;   /* D kit */
+  --e: #1d4ed8; --e-soft: #dde7fc;   /* E slices */
+  --f: #be123c; --f-soft: #fbe0e6;   /* F routing */
+  --ok: #15803d; --warn: #a16207;
+  --shadow: 0 1px 0 rgba(29,27,22,.04), 0 8px 24px -12px rgba(29,27,22,.18);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #15140f; --paper: #1e1c16; --ink: #f2eee4; --ink-2: #c9c3b4; --ink-3: #8e8878;
+    --line: #34312a; --chip: #2a2720;
+    --a-soft: #3a2116; --b-soft: #13302d; --c-soft: #2a1f42; --d-soft: #3a2a12; --e-soft: #18264a; --f-soft: #3c1823;
+    --a: #fb923c; --b: #2dd4bf; --c: #a78bfa; --d: #fbbf24; --e: #60a5fa; --f: #fb7185; --ok: #4ade80; --warn: #facc15;
+    --shadow: 0 8px 24px -12px rgba(0,0,0,.6);
+  }
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--ink); line-height: 1.6;
+  font: 15px/1.6 ui-sans-serif, -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif; }
+code, .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: .86em; }
+code { background: var(--chip); padding: 1px 6px; border-radius: 5px; color: var(--ink); word-break: break-word; }
+.wrap { max-width: 1040px; margin: 0 auto; padding: 48px 20px 96px; }
+.eyebrow { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+h1 { font-family: ui-serif, "Iowan Old Style", Georgia, serif; font-weight: 600; font-size: clamp(30px, 5vw, 46px);
+  line-height: 1.1; letter-spacing: -.01em; margin: 10px 0 14px; }
+h1 em { font-style: italic; color: var(--d); }
+.lede { color: var(--ink-2); font-size: 17px; max-width: 720px; }
+.byline { margin-top: 14px; font-size: 13px; color: var(--ink-3); }
+h2 { font-family: ui-serif, Georgia, serif; font-size: 26px; font-weight: 600; margin: 64px 0 6px; letter-spacing: -.01em; }
+.sub { color: var(--ink-3); margin-bottom: 22px; }
+
+/* stats */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 32px; }
+.stat { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; box-shadow: var(--shadow); }
+.stat b { display: block; font-family: ui-serif, Georgia, serif; font-size: 32px; line-height: 1.1; }
+.stat span { font-size: 13px; color: var(--ink-3); }
+.stat.bad b { color: var(--f); }
+
+/* flow */
+.flow { display: flex; align-items: stretch; gap: 0; overflow-x: auto; padding: 6px 2px 14px; }
+.node { flex: 1 0 150px; background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 14px;
+  box-shadow: var(--shadow); position: relative; }
+.node .k { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.node .t { font-weight: 600; margin: 4px 0 2px; }
+.node .d { font-size: 13px; color: var(--ink-3); }
+.node.gate { border: 2px solid var(--ok); }
+.node.gate::after { content: "Creator approves"; position: absolute; top: -11px; left: 12px; background: var(--ok);
+  color: #fff; font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 99px; }
+.node.auto { border-style: dashed; border-color: var(--d); }
+.node.auto::after { content: "Automatic gate"; position: absolute; top: -11px; left: 12px; background: var(--d);
+  color: #fff; font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 99px; }
+.arr { flex: 0 0 28px; display: grid; place-items: center; color: var(--ink-3); font-size: 20px; }
+.note { margin-top: 14px; padding: 14px 16px; border-radius: 12px; background: var(--paper); border: 1px solid var(--line);
+  color: var(--ink-2); font-size: 14px; }
+
+/* findings */
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+.card { background: var(--paper); border: 1px solid var(--line); border-radius: 16px; padding: 18px 20px; box-shadow: var(--shadow); }
+.card h3 { font-size: 16px; margin-bottom: 6px; }
+.card p { color: var(--ink-2); font-size: 14px; }
+.card .who { display: inline-block; margin-top: 10px; font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 99px; background: var(--chip); color: var(--ink-2); }
+
+/* phases */
+.phase { background: var(--paper); border: 1px solid var(--line); border-radius: 18px; margin: 18px 0; overflow: hidden; box-shadow: var(--shadow); }
+.phase-head { display: flex; gap: 16px; align-items: center; padding: 18px 22px; background: var(--soft); border-bottom: 1px solid var(--line); }
+.letter { flex: 0 0 44px; height: 44px; border-radius: 12px; background: var(--c1); color: #fff; display: grid; place-items: center;
+  font: 700 20px ui-serif, Georgia, serif; }
+.phase-head h3 { font-size: 18px; }
+.phase-head .why { font-size: 13px; color: var(--ink-2); }
+.phase-head .side { margin-left: auto; font-size: 12px; font-weight: 600; color: var(--c1); white-space: nowrap; }
+.step { display: grid; grid-template-columns: 52px 1fr; gap: 14px; padding: 16px 22px; border-top: 1px solid var(--line); }
+.step:first-of-type { border-top: 0; }
+.num { font: 600 13px ui-monospace, Menlo, monospace; color: var(--c1); padding-top: 2px; }
+.step h4 { font-size: 15px; margin-bottom: 3px; }
+.step p { font-size: 14px; color: var(--ink-2); }
+.files { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
+.files code { background: var(--soft); }
+.pa { --c1: var(--a); --soft: var(--a-soft); } .pb { --c1: var(--b); --soft: var(--b-soft); }
+.pc { --c1: var(--c); --soft: var(--c-soft); } .pd { --c1: var(--d); --soft: var(--d-soft); }
+.pe { --c1: var(--e); --soft: var(--e-soft); } .pf { --c1: var(--f); --soft: var(--f-soft); }
+
+/* timeline */
+.tl { position: relative; margin-left: 10px; padding-left: 28px; border-left: 2px solid var(--line); }
+.tl-item { position: relative; margin-bottom: 22px; }
+.tl-item::before { content: ""; position: absolute; left: -36px; top: 4px; width: 14px; height: 14px; border-radius: 50%;
+  background: var(--paper); border: 3px solid var(--c1); }
+.tl-item .when { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--c1); }
+.tl-item h4 { font-size: 16px; margin: 2px 0; }
+.tl-item p { font-size: 14px; color: var(--ink-2); }
+.tl-item .done { font-size: 13px; margin-top: 4px; color: var(--ink-3); }
+.tl-item .done b { color: var(--ok); font-weight: 600; }
+
+/* table */
+.tbl { width: 100%; border-collapse: separate; border-spacing: 0; background: var(--paper); border: 1px solid var(--line);
+  border-radius: 14px; overflow: hidden; font-size: 14px; box-shadow: var(--shadow); }
+.tbl th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-3);
+  padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--chip); }
+.tbl td { padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; color: var(--ink-2); }
+.tbl tr:last-child td { border-bottom: 0; }
+.pill { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 99px; margin: 1px 3px 1px 0; color: #fff; }
+.new { background: var(--ok); } .mod { background: var(--e); }
+.tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 0 7px; border-radius: 6px; margin-right: 3px; color: var(--c1); background: var(--soft); }
+.scroll { overflow-x: auto; }
+
+/* risks */
+.risk { border-radius: 14px; padding: 16px 18px; background: var(--paper); border: 1px solid var(--line); border-top: 4px solid var(--warn); box-shadow: var(--shadow); }
+.risk h4 { font-size: 15px; margin-bottom: 4px; }
+.risk p { font-size: 14px; color: var(--ink-2); }
+footer { margin-top: 64px; font-size: 13px; color: var(--ink-3); border-top: 1px solid var(--line); padding-top: 18px; }
+@media (max-width: 640px) {
+  .flow { flex-direction: column; } .arr { transform: rotate(90deg); height: 28px; flex-basis: auto; }
+  .phase-head { flex-wrap: wrap; } .phase-head .side { margin-left: 60px; }
+  .step { grid-template-columns: 1fr; gap: 2px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="eyebrow">Agent Mode · Implementation plan</div>
+  <h1>Free design that actually <em>looks like the mockup</em></h1>
+  <p class="lede">The YAML stays the spec. Free design gets the structure default design already has: a checked mockup, a kit built from it, and a build that proves each slice before moving on.</p>
+  <div class="byline">Harsh Shah · 27 Oct 2026 · Draft · <span class="mono">feat/agent-mode-open-prototype</span></div>
+
+  <div class="stats">
+    <div class="stat bad"><b>20 / 24</b><span>reference screens captured blank</span></div>
+    <div class="stat bad"><b>9</b><span>screens forced onto the standard page</span></div>
+    <div class="stat bad"><b>0%</b><span>"difference" between a blank reference and an error page</span></div>
+    <div class="stat"><b>160</b><span>agent turns over 2 runs</span></div>
+    <div class="stat"><b>$25</b><span>spent; create case still broken</span></div>
+  </div>
+
+  <h2>The new flow</h2>
+  <p class="sub">One approval for the creator. Everything after it is checked automatically.</p>
+  <div class="flow">
+    <div class="node"><div class="k" style="color:var(--c)">Analyst</div><div class="t">YAML + mockup</div><div class="d">Screen links written into the YAML</div></div>
+    <div class="arr">→</div>
+    <div class="node" style="border-color:var(--b)"><div class="k" style="color:var(--b)">Check</div><div class="t">Every screen renders</div><div class="d">Fresh page per screen, no blanks</div></div>
+    <div class="arr">→</div>
+    <div class="node gate"><div class="k" style="color:var(--ok)">Approve</div><div class="t">Spec + mockup</div><div class="d">The only approval</div></div>
+    <div class="arr">→</div>
+    <div class="node auto"><div class="k" style="color:var(--d)">Kit</div><div class="t">Pieces from the mockup</div><div class="d">Compared against crops of the mockup, up to 5% difference</div></div>
+    <div class="arr">→</div>
+    <div class="node" style="border-color:var(--e)"><div class="k" style="color:var(--e)">Slices</div><div class="t">Build → verify → next</div><div class="d">Case first, so create case is proven early</div></div>
+  </div>
+  <div class="note"><b>Without a mockup:</b> the check and kit steps are skipped and the default kit is used. The only change to the default path is building in slices.</div>
+
+  <h2>Why Free design broke</h2>
+  <p class="sub">From the <span class="mono">zango_isn_hcp</span> build. Only one of these was something the agent could fix.</p>
+  <div class="grid2">
+    <div class="card"><h3>Blank references</h3><p>The capture reused one browser page. Screen 5 crashed inside the imported script, and every screen after it came out as <code>&lt;div id="root"&gt;</code>. On fresh pages, <code>detail</code>, <code>admin-dash</code> and <code>admin-cases</code> render fully.</p><span class="who">Platform</span></div>
+    <div class="card"><h3>No mapping from design to components</h3><p>Default design maps every spec element to a kit component. Free design asked the agent to redraw 24 screens freehand, and classed 9 of them as "theme", which can never match.</p><span class="who">Flow</span></div>
+    <div class="card"><h3>Create case blocked</h3><p><code>expr.py</code> can't compare two fields on a form record, so <code>bp_systolic &gt; bp_diastolic</code> always fails. The UI test can't pick a date more than 10 years back.</p><span class="who">Platform</span></div>
+    <div class="card"><h3>Built blind, fixed in bulk</h3><p>51 turns written without running anything, then 2 fix rounds fed every failure together, including ones only the platform team can fix. The agent monkey-patched the runtime.</p><span class="who">Flow</span></div>
+  </div>
+
+  <h2>Phases</h2>
+  <p class="sub">Six phases, each step tied to the files it changes. <span class="mono">skill…</span> = <span class="mono">agent_mode/skill_plugin/skills/zango-app-studio</span></p>
+
+  <section class="phase pa">
+    <div class="phase-head"><div class="letter">A</div><div><h3>Unblock</h3><div class="why">Platform bugs that break every app</div></div><div class="side">Small · first</div></div>
+    <div class="step"><div class="num">A1</div><div><h4>Field-vs-field rules on forms</h4><p><code>expr.py:526</code> only resolves the right-hand field when the record has <code>_meta</code>, and <code>_FormRecord</code> doesn't. Give it the form's model, then remove the workaround from the app's <code>cases/forms.py</code>.</p><div class="files"><code>zas_core/expr.py</code><code>zas_core/mixins.py</code></div></div></div>
+    <div class="step"><div class="num">A2</div><div><h4>Date picking in UI tests</h4><p><code>fill_date</code> steps one month at a time, at most 120 times. Jump by year first, then by month.</p><div class="files"><code>zas_test/flows.py</code></div></div></div>
+    <div class="step"><div class="num">A3</div><div><h4>Scenario runner</h4><p>Put <code>.zas/</code> on the import path (<code>No module named 'test_fixtures'</code>) and fix the crash on the row-actions shape.</p><div class="files"><code>zas_test/scenarios.py</code></div></div></div>
+    <div class="step"><div class="num">A4</div><div><h4>Cron in platform:schedule</h4><p>Already fixed in <code>94e7703c</code>. Keep it on the re-run checklist.</p></div></div>
+  </section>
+
+  <section class="phase pb">
+    <div class="phase-head"><div class="letter">B</div><div><h3>Mockup check</h3><div class="why">No build starts from a broken reference</div></div><div class="side">Analyst side</div></div>
+    <div class="step"><div class="num">B1</div><div><h4>Fresh page per screen</h4><p>Load the prototype on a new page for every screen (same browser), so one crash can't blank the rest.</p><div class="files"><code>preview_probe_worker.py</code></div></div></div>
+    <div class="step"><div class="num">B2</div><div><h4>Sample record per screen</h4><p><code>form</code> and <code>sp</code> crash even on a fresh page, because the capture passes the store's first row. For record screens of imported prototypes, the analyst must set the manifest's <code>sample</code>.</p></div></div>
+    <div class="step"><div class="num">B3</div><div><h4>Gate the approval</h4><p>The readiness check requires every screen that will be built to capture non-blank with no errors. The analyst fixes the screen or marks it prototype-only. As a backstop, the build refuses to start on a blank screen.</p><div class="files"><code>spec_tools.py</code><code>approval_bundle.py</code></div></div></div>
+    <div class="step"><div class="num">B4</div><div><h4>No reference means no pass</h4><p>Parity reports a blank reference as "no reference", never as a 0% difference.</p><div class="files"><code>zas_test/design.py</code></div></div></div>
+  </section>
+
+  <section class="phase pc">
+    <div class="phase-head"><div class="letter">C</div><div><h3>Screen links in the YAML</h3><div class="why">The mapping is written down, not guessed</div></div><div class="side">Analyst side</div></div>
+    <div class="step"><div class="num">C1</div><div><h4><code>prototype:</code> on pages and detail views</h4><p>The analyst writes <code>pages.&lt;code&gt;.prototype: &lt;screen&gt;</code> while writing the page. <code>spec_check</code> validates it instead of inferring it.</p><div class="files"><code>spec_check.py</code><code>references/spec/</code><code>requirements.py</code></div></div></div>
+    <div class="step"><div class="num">C2</div><div><h4>Field coverage</h4><p>The labels a linked screen shows must match fields or actions in the spec. A mismatch becomes a question in the chat, before approval.</p><div class="files"><code>proto_landmarks.py</code><code>prototype.py</code></div></div></div>
+  </section>
+
+  <section class="phase pd">
+    <div class="phase-head"><div class="letter">D</div><div><h3>Kit from the mockup</h3><div class="why">The mockup's own pieces, with the default kit's interface</div></div><div class="side">Automatic · no approval</div></div>
+    <div class="step"><div class="num">D1</div><div><h4>Same interface as the default kit</h4><p><code>frontend/src/custom/kit/</code> overrides the pieces the mockup shows: Button, Badge, Panel, StatTile, Tabs, Timeline, FieldGrid, Drawer, <code>ZasTable</code>, <code>makeShell</code>. A Vite alias falls back to the default kit for everything else.</p><div class="files"><code>assets/frontend/zas/ui.tsx</code><code>Vite config template</code></div></div></div>
+    <div class="step"><div class="num">D2</div><div><h4>Kit map</h4><p><code>.zas/kit.map.json</code>: each component → mockup screen + CSS selector of one instance, so it can be cropped from the mockup.</p></div></div>
+    <div class="step"><div class="num">D3</div><div><h4>Kit gallery (internal)</h4><p><code>/app/__zas</code> gets a mockup-kit mode: each piece next to its crop. It's a debugging page for us, never shown to the creator.</p><div class="files"><code>Gallery.tsx</code></div></div></div>
+    <div class="step"><div class="num">D4</div><div><h4>Automatic diff gate</h4><p>Anything over 5% gets fixed and compared again, up to <code>AGENT_MODE_KIT_ROUNDS</code> (3). Remaining gaps go to the internal report. The creator sees progress only.</p><div class="files"><code>studio_build.py</code><code>zas_test/design.py</code></div></div></div>
+    <div class="step"><div class="num">D5</div><div><h4>Drop "theme" in Free design</h4><p>Every screen is built from kit pieces, so list pages use the mockup's table. Slots only for layouts the standard page can't express.</p><div class="files"><code>spec_check.py:1825</code><code>references/open-mode.md</code></div></div></div>
+  </section>
+
+  <section class="phase pe">
+    <div class="phase-head"><div class="letter">E</div><div><h3>Build in slices</h3><div class="why">Each slice is proven before the next one starts</div></div><div class="side">Both modes</div></div>
+    <div class="step"><div class="num">E1</div><div><h4>Slice plan</h4><p><code>.zas/slices.json</code>: 0 shell + kit → 1 hero record (model, forms, list, create, its screens) → its 360 → dashboards and custom pages → other records.</p><div class="files"><code>spec_check.py</code></div></div></div>
+    <div class="step"><div class="num">E2</div><div><h4><code>studio_verify(slice)</code> tool</h4><p>Incremental bring-up, then that slice's tests and screen comparisons, returned as a short digest. <code>verify(only=…)</code> already takes groups.</p><div class="files"><code>studio_verify_tool.py</code> <span class="pill new">NEW</span></div></div></div>
+    <div class="step"><div class="num">E3</div><div><h4>Build order in the skill</h4><p>Write → verify → fix (at most 3 tries) → next. A slice that won't pass is recorded, and the build moves on.</p><div class="files"><code>SKILL.md</code></div></div></div>
+    <div class="step"><div class="num">E4</div><div><h4>Final loop stays</h4><p>The existing loop runs once at the end, mainly to catch regressions across slices.</p><div class="files"><code>studio_build.py:1856</code></div></div></div>
+  </section>
+
+  <section class="phase pf">
+    <div class="phase-head"><div class="letter">F</div><div><h3>Failure routing</h3><div class="why">Each failure goes to whoever can fix it</div></div><div class="side">Both modes</div></div>
+    <div class="step"><div class="num">F1</div><div><h4>Owner per failure</h4><p>Frames in <code>zas_test/</code>, <code>scripts/</code> or vendored <code>zas_core/</code> mean platform; workspace modules or <code>src/custom</code> mean app. Only app failures reach the agent. Platform failures go to <code>studio_report.platform_issues</code>.</p><div class="files"><code>studio_build.py · digest()</code></div></div></div>
+    <div class="step"><div class="num">F2</div><div><h4>Repeat detector</h4><p>A failure is identified by check id plus a hash of its message. If it's still there after a fix attempt, it gets no more rounds and is escalated.</p></div></div>
+    <div class="step"><div class="num">F3</div><div><h4>No runtime patching</h4><p>Deny agent writes to <code>backend/zas_core/**</code>. The agent reports with <code>report_platform_issue</code> instead of working around the bug.</p><div class="files"><code>guards.py</code></div></div></div>
+  </section>
+
+  <section class="phase pd">
+    <div class="phase-head"><div class="letter">G</div><div><h3>Copy list pages, keep their behaviour</h3><div class="why">The mockup's markup on the standard page's behaviour</div></div><div class="side">Planned · not started</div></div>
+    <div class="step"><div class="num">G1</div><div><h4><code>useListPage(page)</code> hook</h4><p>Everything the standard list page does, from the spec, without drawing it: server-side search, filters, sort and paging, quick filters with counts, export, Add / Edit / Delete forms, row actions and workflow moves with permission checks, the view switcher. It returns data and handlers; <code>makeListPage</code> is rebuilt on it, so the two can't drift.</p><div class="files"><code>assets/frontend/zas/ListPage.tsx</code><code>assets/frontend/zas/ZasTable.tsx</code></div></div></div>
+    <div class="step"><div class="num">G2</div><div><h4>Copy by default in Free design</h4><p><code>spec_check</code> classes a mapped crud list page (and its 360) as rebuild in open mode; <code>kit: true</code> on the screen keeps the standard page. The hole text says to port the screen's component onto <code>useListPage</code>, not to filter rows in the browser.</p><div class="files"><code>spec_check.py:1825</code><code>references/open-mode.md</code></div></div></div>
+    <div class="step"><div class="num">G3</div><div><h4>Same markers, same checks</h4><p>Copied markup carries the standard page's markers (<code>data-zas="quick-filter"</code>, the Add action, row actions). The UI tests check Add, quick filters and row actions on copied pages too: remove the <code>if not browser.rebuilt(...)</code> skip in <code>ui.py</code>.</p><div class="files"><code>zas_test/ui.py</code><code>zas_test/flows.py</code></div></div></div>
+    <div class="step"><div class="num">G4</div><div><h4>Lint the shortcut</h4><p>A copied list page that loads every row (<code>useTableRows</code> with a large <code>length</code>) and filters in the browser fails the lint: it must page and filter through the hook.</p><div class="files"><code>zas_test/design.py</code></div></div></div>
+    <div class="step"><div class="num">G5</div><div><h4>Prove it</h4><p>Port <code>called_isn_hcp</code>'s My cases onto the hook (it now filters 500 rows in the browser and its pager does nothing), then a fresh build from another mockup.</p></div></div>
+    <div class="step"><div class="num">G6</div><div><h4>Why not copy without the hook</h4><p>Each copied page would rewire search, paging, filters, forms and actions by hand: it doesn't scale past one page of rows, drifts from the spec's filters, and is tested less (the UI checks skip copied pages). The backend stays as it is either way; only the list page's frontend changes. About 2 days.</p></div></div>
+  </section>
+
+  <h2>Order of work</h2>
+  <p class="sub">Rebuild <span class="mono">zango_isn_hcp</span> from the same YAML and mockup after each stage, and log the result in <span class="mono">AGENT_MODE_MEASURING_RUNS.md</span>.</p>
+  <div class="tl">
+    <div class="tl-item pa"><div class="when">Stage 1</div><h4>A1–A3, B1, B4</h4><p>Unblocks create case on every app and makes the references real.</p><div class="done"><b>Done when</b> case create passes in the API and UI tests, and 22 of 24 screens capture non-blank.</div></div>
+    <div class="tl-item pb"><div class="when">Stage 2</div><h4>B2, B3, C1, C2</h4><p>The analyst can't hand over a broken mockup, and the screen links live in the YAML.</p><div class="done"><b>Done when</b> approval is blocked for a blank or crashing screen to build.</div></div>
+    <div class="tl-item pe"><div class="when">Stage 3</div><h4>E1–E4, F1–F3</h4><p>Builds prove themselves slice by slice, in both modes.</p><div class="done"><b>Done when</b> a default design build proves its create flow in slice 1, and platform failures never reach the agent.</div></div>
+    <div class="tl-item pd"><div class="when">Stage 4</div><h4>D1–D5</h4><p>The change that makes Free design match the mockup.</p><div class="done"><b>Done when</b> kit pieces are within 5%, and built screens' median parity difference is within the agreed limit.</div></div>
+    <div class="tl-item pd"><div class="when">Stage 6 · planned</div><h4>G1–G6</h4><p>Standard list pages copied from the mockup on a behaviour hook, checked like standard pages.</p><div class="done"><b>Done when</b> a copied list page pages, filters and acts through the spec, passes the same UI checks as a standard page, and scores within the look limit.</div></div>
+  </div>
+
+  <h2>File manifest</h2>
+  <div class="scroll">
+  <table class="tbl">
+    <tr><th>File</th><th></th><th>Steps</th></tr>
+    <tr><td><code>skill…/assets/backend/zas_core/expr.py</code>, <code>mixins.py</code></td><td><span class="pill mod">MODIFY</span></td><td><span class="tag pa">A1</span></td></tr>
+    <tr><td><code>skill…/scripts/zas_test/flows.py</code>, <code>scenarios.py</code></td><td><span class="pill mod">MODIFY</span></td><td><span class="tag pa">A2</span><span class="tag pa">A3</span></td></tr>
+    <tr><td><code>agent_mode/preview_probe_worker.py</code></td><td><span class="pill mod">MODIFY</span></td><td><span class="tag pb">B1</span><span class="tag pb">B2</span></td></tr>
+    <tr><td><code>agent_mode/spec_tools.py</code>, <code>prototype.py</code></td><td><span class="pill mod">MODIFY</span></td><td><span class="tag pb">B3</span><span class="tag pc">C2</span></td></tr>
+    <tr><td><code>agent_mode/approval_bundle.py</code>, <code>studio_build.py</code></td><td><span class="pill mod">MODIFY</span></td><td><span class="tag pb">B3</span><span class="tag pd">D4</span><span class="tag pe">E2</span><span class="tag pf">F1</span><span class="tag pf">F2</span></td></tr>
+    <tr><td><code>skill…/scripts/zas_test/design.py</code></td><td><span class="pill mod">MODIFY</span></td><td><span class="tag pb">B4</span><span class="tag pd">D3</span><span class="tag pd">D4</span></td></tr>
+    <tr><td><code>skill…/scripts/spec_check.py</code></td><td><span class="pill mod">MODIFY</span></td><td><span class="tag pc">C1</span><span class="tag pd">D5</span><span class="tag pe">E1</span></td></tr>
+    <tr><td><code>skill…/assets/frontend/zas/Gallery.tsx</code>, Vite config template</td><td><span class="pill mod">MODIFY</span></td><td><span class="tag pd">D1</span><span class="tag pd">D3</span></td></tr>
+    <tr><td><code>agent_mode/studio_verify_tool.py</code></td><td><span class="pill new">CREATE</span></td><td><span class="tag pe">E2</span><span class="tag pf">F3</span></td></tr>
+    <tr><td><code>agent_mode/guards.py</code></td><td><span class="pill mod">MODIFY</span></td><td><span class="tag pf">F3</span></td></tr>
+    <tr><td><code>skill…/SKILL.md</code>, <code>references/open-mode.md</code>, <code>references/spec/</code></td><td><span class="pill mod">MODIFY</span></td><td><span class="tag pc">C1</span><span class="tag pd">D5</span><span class="tag pe">E3</span></td></tr>
+    <tr><td><code>agent_mode/requirements.py</code> (open-mode prompt)</td><td><span class="pill mod">MODIFY</span></td><td><span class="tag pb">B2</span><span class="tag pc">C1</span><span class="tag pc">C2</span></td></tr>
+    <tr><td><code>zango_isn_hcp/backend/cases/forms.py</code></td><td><span class="pill mod">MODIFY</span></td><td><span class="tag pa">A1</span> remove the workaround</td></tr>
+  </table>
+  </div>
+
+  <h2>Risks</h2>
+  <p class="sub">What could make this harder than it looks.</p>
+  <div class="grid2">
+    <div class="risk"><h4>Kit coverage</h4><p><code>ui.tsx</code> has about 35 components. Pieces the mockup doesn't show fall back to the default and may look off-brand. List the fallbacks in the internal report.</p></div>
+    <div class="risk"><h4>Imported prototypes are arbitrary apps</h4><p>Some screens need state that only a click path creates. If <code>sample</code> isn't enough, allow a short recorded click path, or mark the screen reference-only.</p></div>
+    <div class="risk"><h4>Diff noise</h4><p>Dynamic text, fonts and data make pixel diffs flaky. Use fixed content, wait for fonts, and compare single-component crops rather than whole pages.</p></div>
+    <div class="risk"><h4>Session time</h4><p>Each slice adds a bring-up (about 30–60 s) plus browser tests. Keep verify incremental and limit tries per slice.</p></div>
+    <div class="risk"><h4>Threading</h4><p>Tools run on the SDK pump and must not touch the ORM. Route <code>studio_verify</code> through the <code>stream.py</code> queue and let the turn loop run the steps.</p></div>
+    <div class="risk"><h4>Misrouted failures</h4><p>An app bug can surface inside platform frames. When a traceback also contains workspace frames, send the failure to the agent too.</p></div>
+  </div>
+
+  <footer>Industry patterns behind this plan: GitHub Spec Kit and Kiro (gated spec → plan → tasks), Figma Code Connect and Builder.io Visual Copilot (design-to-component mapping and tokens), and visual feedback loops for coding agents (render → compare → fix before done).</footer>
+</div>
+</body>
+</html>

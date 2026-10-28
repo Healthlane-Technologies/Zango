@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Free Design Build Flow</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; font-size: 13px;
+       background: #f6f8fa; color: #24292f; line-height: 1.6; }
+.doc { max-width: 900px; margin: 40px auto; padding: 0 24px 80px; }
+header { border-bottom: 2px solid #d0d7de; padding-bottom: 20px; margin-bottom: 32px; }
+.doc-type { font-size: 11px; text-transform: uppercase; letter-spacing: .1em;
+            color: #0969da; margin-bottom: 8px; }
+h1 { font-size: 22px; color: #1f2328; font-weight: 700; }
+.meta { font-size: 11px; color: #656d76; margin-top: 6px; }
+h2 { font-size: 12px; font-weight: 700; color: #1f2328; margin: 28px 0 10px;
+     text-transform: uppercase; letter-spacing: .08em; border-bottom: 1px solid #d0d7de;
+     padding-bottom: 6px; }
+h3 { font-size: 13px; font-weight: 600; color: #24292f; margin: 18px 0 6px; }
+p { color: #57606a; margin-bottom: 8px; }
+ul, ol { padding-left: 20px; }
+li { color: #57606a; margin-bottom: 4px; }
+code { background: #eaeef2; color: #0550ae; padding: 2px 5px;
+       border-radius: 3px; font-size: 12px; }
+pre { background: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px;
+      padding: 14px; overflow-x: auto; margin: 10px 0; }
+pre code { background: none; padding: 0; color: #24292f; }
+.section { margin-bottom: 32px; }
+.tag { display: inline-block; padding: 2px 8px; border-radius: 3px;
+       font-size: 11px; font-weight: 600; margin-right: 4px; }
+.tag-blue { background: #ddf4ff; color: #0969da; border: 1px solid #b6e3ff; }
+.tag-green { background: #dcffe4; color: #116329; border: 1px solid #a7f0b5; }
+.tag-yellow { background: #fff8c5; color: #7d4e00; border: 1px solid #e3b341; }
+.tag-red { background: #ffebe9; color: #cf222e; border: 1px solid #ff818266; }
+table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+th { text-align: left; font-size: 11px; text-transform: uppercase; color: #656d76;
+     border-bottom: 2px solid #d0d7de; padding: 6px 10px; background: #f6f8fa; }
+td { padding: 8px 10px; border-bottom: 1px solid #eaeef2; color: #57606a; vertical-align: top; }
+td:first-child { color: #24292f; }
+hr { border: none; border-top: 1px solid #eaeef2; margin: 24px 0; }
+.risk { border-left: 3px solid #e3b341; padding: 8px 12px; background: #fff8c5; margin: 6px 0;
+        color: #57606a; border-radius: 0 4px 4px 0; }
+ol.steps > li { margin-bottom: 12px; }
+ol.steps > li > span { display: block; }
+.phase { font-size: 11px; color: #0969da; text-transform: uppercase; letter-spacing: .08em; margin: 22px 0 6px; }
+</style>
+</head>
+<body>
+<div class="doc">
+  <header>
+    <div class="doc-type">Implementation plan · Agent Mode</div>
+    <h1>Free design build flow: spec + mockup → kit → slices</h1>
+    <div class="meta">Harsh Shah · 2026-10-27 · Draft · branch feat/agent-mode-open-prototype</div>
+  </header>
+
+  <div class="section">
+    <h2>Overview</h2>
+    <p>Default design works because every spec element maps to a known kit component. Free design has no such mapping: the build agent redraws arbitrary HTML into React freehand, in one long pass, without running it. The <code>zango_isn_hcp</code> build (2 runs, 160 turns, about $25) showed every failure this causes: 20 of 24 reference screens captured blank, 9 admin screens forced onto the standard page, the custom pages returning HTTP 500, and design parity reporting 0% difference between a blank reference and an error page. Create case was blocked by platform bugs the agent could not fix.</p>
+    <p>The new flow follows the industry pattern for spec-driven builds (Spec Kit, Kiro: gated phases, small testable tasks; Figma Code Connect: map design to components before writing code; agents check their own screens before saying done).</p>
+<pre><code>Analyst: YAML (+ screen links) + mockup ── mockup check gate ──▶ <b>creator approves</b> (the only approval)
+   ▼
+Build:  kit from mockup ── automatic diff gate (no approval) ──▶ slice 1 (hero record) ─ verify ─▶ slice 2 … ─▶ final verify
+   ▼
+Failures: app code → agent · platform/test code → us · same failure twice → stop</code></pre>
+    <p>The YAML stays the spec. Without a mockup, the kit phase is skipped and the default kit is used, so the default path is unchanged apart from building in slices.</p>
+  </div>
+
+  <div class="section">
+    <h2>Steps</h2>
+
+    <div class="phase">Phase A: unblock (platform bugs found in the build)</div>
+    <ol class="steps">
+      <li><strong>A1. Field-vs-field rules on forms</strong><span><code>zas_core/expr.py:526</code> resolves the right-hand word (<code>bp_systolic &gt; bp_diastolic</code>) only when the record has <code>_meta</code>. <code>_FormRecord</code> (<code>mixins.py:60</code>) has none, so every such rule fails on every create form. Fix: <code>_FormRecord</code> takes the form's model and exposes <code>_meta</code>, or <code>_operand</code> checks the record's values first. Then remove the class-swap workaround from <code>zango_isn_hcp/backend/cases/forms.py</code>.</span></li>
+      <li><strong>A2. Date picking in UI flows</strong><span><code>zas_test/flows.py:161</code> steps month by month, at most 120 times, so a 1976 date of birth can never be picked. Jump by year (react-calendar's double-arrow buttons or its decade view), then by month.</span></li>
+      <li><strong>A3. Scenario runner</strong><span>Generated <code>.zas/test_scenarios.py</code> fails with <code>No module named 'test_fixtures'</code>: put <code>.zas/</code> on <code>sys.path</code>. Also fix the crash on the row-actions shape (<code>'list' object has no attribute 'get'</code>).</span></li>
+      <li><strong>A4. Cron in platform:schedule</strong><span>Already fixed in <code>94e7703c</code>. Keep it in the re-run checklist.</span></li>
+    </ol>
+
+    <div class="phase">Phase B: mockup check gate (analyst side, before approval)</div>
+    <ol class="steps">
+      <li><strong>B1. Fresh page per screen</strong><span><code>preview_probe_worker.open_capture</code> reuses one page, so a crash on screen 5 blanked every screen after it. Load the prototype on a new page for each screen (same browser and context). Verified: on fresh pages <code>detail</code>, <code>admin-dash</code> and <code>admin-cases</code> render fully.</span></li>
+      <li><strong>B2. Sample record per screen</strong><span><code>form</code> and <code>sp</code> still crash on a fresh page, because the capture passes <code>ZAS.store</code>'s first row and the imported script expects its own state. The manifest's <code>sample</code> becomes required for record screens of an imported prototype, and the analyst sets it.</span></li>
+      <li><strong>B3. Gate the approval</strong><span>Add to the readiness check in <code>spec_tools.py</code> (around line 739, "Not ready"): every screen that will be built captures with <code>blank=false</code> and no errors. The analyst fixes the screen or marks it prototype-only. As a backstop, <code>write_prototype_bundle</code> refuses to start a build when a screen to build is blank.</span></li>
+      <li><strong>B4. No reference means no pass</strong><span>Design parity reports a blank reference as "no reference" (an internal failure), never as a 0% difference.</span></li>
+    </ol>
+
+    <div class="phase">Phase C: screen links in the YAML (analyst)</div>
+    <ol class="steps">
+      <li><strong>C1. <code>prototype:</code> on pages and detail views</strong><span>The analyst writes <code>pages.&lt;code&gt;.prototype: &lt;screen id&gt;</code> while writing the page. <code>spec_check</code> validates the link instead of inferring it (today's "Maps" column).</span></li>
+      <li><strong>C2. Field coverage</strong><span>For each linked screen, the labels it shows (<code>proto_landmarks.py</code>) must match fields or actions in the spec. A mismatch becomes an analyst question in the chat, before approval.</span></li>
+    </ol>
+
+    <div class="phase">Phase D: kit from the mockup (build side, automatic gate)</div>
+    <ol class="steps">
+      <li><strong>D1. Same interface as the default kit</strong><span>The agent writes <code>frontend/src/custom/kit/</code>, overriding a subset of the default exports: <code>ui.tsx</code> (Button, Badge, Chip, Panel, StatTile, Tabs, Timeline, FieldGrid, Modal, Drawer…), <code>ZasTable</code> and <code>makeShell</code>. A Vite alias resolves <code>zas/ui</code> to the custom kit, which re-exports defaults for everything it doesn't override. Tokens come from <code>app.design</code> as today.</span></li>
+      <li><strong>D2. Kit map</strong><span>The agent declares <code>.zas/kit.map.json</code>: each component → mockup screen + CSS selector of a representative instance. The capture crops that element from the mockup.</span></li>
+      <li><strong>D3. Kit gallery</strong><span><code>Gallery.tsx</code> (<code>/app/__zas</code>) gains a "mockup kit" mode that renders each overridden component with the mockup's sample content, next to its crop.</span></li>
+      <li><strong>D4. Automatic gate</strong><span>Diff each pair. If it's over the threshold (start at 5%), the agent fixes it and the pair is diffed again, up to <code>AGENT_MODE_KIT_ROUNDS</code> (default 3). Remaining gaps go to the internal build report only. The creator sees progress, nothing else.</span></li>
+      <li><strong>D5. Drop "theme" in open mode</strong><span>Every screen is built from kit pieces, so standard list pages use the kit's table and match. Use "rebuild" (slot) only for layouts the standard page can't express, and compose those from kit pieces too. Update <code>references/open-mode.md</code> ("Screens: theme or rebuild") and <code>spec_check.py:1825</code>.</span></li>
+    </ol>
+
+    <div class="phase">Phase E: build in slices, checked inside the session (both modes)</div>
+    <ol class="steps">
+      <li><strong>E1. Slice plan</strong><span><code>spec_check</code> writes <code>.zas/slices.json</code>: slice 0 = shell + kit; slice 1 = the hero record (model, forms, list, create flow, its screens); then its 360; then dashboards and custom pages; then the remaining records. Each slice lists its layer groups and screens.</span></li>
+      <li><strong>E2. <code>studio_verify(slice)</code> tool</strong><span>The build agent calls it after each slice. It runs an incremental <code>bring_up</code>, then <code>verify(only=…)</code> for that slice's groups (<code>verify</code> already takes groups) plus parity for the slice's screens, and returns a short digest. It runs off the SDK pump like the other studio steps.</span></li>
+      <li><strong>E3. Build order in SKILL.md</strong><span>For each slice: write → verify → fix (at most 3 tries) → next. A slice that won't pass is recorded and the build moves on. Create case is proven in slice 1, minutes into the build.</span></li>
+      <li><strong>E4. Final loop stays</strong><span>The existing post-build loop (<code>studio_build.py:1856</code>) runs once at the end, mainly to catch regressions across slices.</span></li>
+    </ol>
+
+    <div class="phase">Phase F: failure routing and stop rules</div>
+    <ol class="steps">
+      <li><strong>F1. Owner per failure</strong><span>Classify by traceback and path: frames in <code>zas_test/</code>, <code>scripts/</code> or vendored <code>zas_core/</code> mean platform; workspace <code>backend/&lt;module&gt;</code> or <code>frontend/src/custom</code> mean app. <code>digest()</code> sends only app failures to the agent. Platform failures go into the run's <code>studio_report.platform_issues</code> for us.</span></li>
+      <li><strong>F2. Repeat detector</strong><span>A failure is identified by check id plus a hash of its message. If the same failure is still there after a fix attempt, it gets no more rounds and is escalated.</span></li>
+      <li><strong>F3. No runtime patching</strong><span><code>guards.py</code> denies agent writes to <code>backend/zas_core/**</code>, and monkey-patching runtime classes from app code. A <code>report_platform_issue</code> tool replaces workarounds like the one in <code>cases/forms.py</code>.</span></li>
+    </ol>
+  </div>
+
+  <div class="section">
+    <h2>File manifest</h2>
+    <table>
+      <tr><th>File</th><th>Action</th><th>Purpose</th></tr>
+      <tr><td><code>skill…/assets/backend/zas_core/expr.py</code>, <code>mixins.py</code></td><td><span class="tag tag-blue">MODIFY</span></td><td>A1 field-vs-field rules on forms</td></tr>
+      <tr><td><code>skill…/scripts/zas_test/flows.py</code></td><td><span class="tag tag-blue">MODIFY</span></td><td>A2 year jump in <code>fill_date</code></td></tr>
+      <tr><td><code>skill…/scripts/zas_test/scenarios.py</code></td><td><span class="tag tag-blue">MODIFY</span></td><td>A3 import path, row-actions shape</td></tr>
+      <tr><td><code>agent_mode/preview_probe_worker.py</code></td><td><span class="tag tag-blue">MODIFY</span></td><td>B1 fresh page per screen, B2 required sample</td></tr>
+      <tr><td><code>agent_mode/spec_tools.py</code>, <code>prototype.py</code></td><td><span class="tag tag-blue">MODIFY</span></td><td>B3 readiness gate, C2 field coverage questions</td></tr>
+      <tr><td><code>agent_mode/approval_bundle.py</code>, <code>studio_build.py</code></td><td><span class="tag tag-blue">MODIFY</span></td><td>B3 backstop, D4 kit gate, E2 verify entry, F1/F2 routing in <code>digest()</code></td></tr>
+      <tr><td><code>skill…/scripts/zas_test/design.py</code></td><td><span class="tag tag-blue">MODIFY</span></td><td>B4 no-reference status, D3/D4 kit diffs</td></tr>
+      <tr><td><code>skill…/scripts/spec_check.py</code></td><td><span class="tag tag-blue">MODIFY</span></td><td>C1 validate <code>prototype:</code> links, D5 drop theme, E1 slices</td></tr>
+      <tr><td><code>skill…/assets/frontend/zas/Gallery.tsx</code>, Vite config template</td><td><span class="tag tag-blue">MODIFY</span></td><td>D1 kit alias with fallback, D3 mockup-kit mode</td></tr>
+      <tr><td><code>agent_mode/studio_verify_tool.py</code></td><td><span class="tag tag-green">CREATE</span></td><td>E2 <code>studio_verify(slice)</code>, F3 <code>report_platform_issue</code></td></tr>
+      <tr><td><code>agent_mode/guards.py</code></td><td><span class="tag tag-blue">MODIFY</span></td><td>F3 deny writes to <code>zas_core/**</code></td></tr>
+      <tr><td><code>skill…/SKILL.md</code>, <code>references/open-mode.md</code>, <code>references/spec/</code></td><td><span class="tag tag-blue">MODIFY</span></td><td>Kit phase, slice order, <code>prototype:</code> key in the schema</td></tr>
+      <tr><td><code>agent_mode/requirements.py</code> (open-mode prompt, ~553)</td><td><span class="tag tag-blue">MODIFY</span></td><td>Analyst writes links and samples, answers coverage questions</td></tr>
+      <tr><td><code>zango_isn_hcp/backend/cases/forms.py</code></td><td><span class="tag tag-blue">MODIFY</span></td><td>Remove the <code>_FormRecord</code> swap after A1</td></tr>
+    </table>
+    <p><code>skill…</code> = <code>backend/src/zango/apps/agent_mode/skill_plugin/skills/zango-app-studio</code></p>
+  </div>
+
+  <div class="section">
+    <h2>Dependencies &amp; order</h2>
+    <table>
+      <tr><th>Order</th><th>Work</th><th>Needs</th><th>Done when</th></tr>
+      <tr><td>1</td><td>A1–A3, B1, B4</td><td>none</td><td>Re-run tests on <code>zango_isn_hcp</code>: case create passes in API and UI; 22 of 24 screens capture non-blank</td></tr>
+      <tr><td>2</td><td>B2, B3, C1, C2</td><td>1</td><td>The analyst cannot approve with a blank or crashing screen to build; links live in the YAML</td></tr>
+      <tr><td>3</td><td>E1–E4, F1–F3</td><td>1</td><td>A default design build proves its hero create flow in slice 1; platform failures never reach the agent</td></tr>
+      <tr><td>4</td><td>D1–D5</td><td>2, 3</td><td>Fresh <code>zango_isn_hcp</code> Free design build: kit pieces within 5%; built screens' median parity diff within an agreed limit</td></tr>
+    </table>
+    <p>Benchmark: rebuild <code>zango_isn_hcp</code> from the same YAML and mockup after each stage. Track turns, cost, and pass/fail per layer in <code>AGENT_MODE_MEASURING_RUNS.md</code>.</p>
+  </div>
+
+  <div class="section">
+    <h2>Risk notes</h2>
+    <div class="risk">⚠ Kit coverage: <code>ui.tsx</code> exports about 35 components. The kit overrides only what the mockup shows; the rest falls back to the default and may look off-brand. The kit map should list the fallbacks in the internal report.</div>
+    <div class="risk">⚠ Imported prototypes are arbitrary apps: some screens need state that only a click path creates. If <code>sample</code> isn't enough, allow a short recorded click path per screen; otherwise mark it reference-only.</div>
+    <div class="risk">⚠ Diff noise: dynamic text, fonts and data make pixel diffs flaky. Render the kit with fixed fixture content, wait for fonts, and compare crops of single components rather than whole pages.</div>
+    <div class="risk">⚠ Session time: verifying in the session adds a bring-up (about 30–60 s) plus browser tests per slice. Keep verify incremental (only that slice's groups) and limit tries per slice.</div>
+    <div class="risk">⚠ Threading: <code>studio_verify</code> is called from a tool on the SDK pump, which must not touch the ORM. Route it through the same queue the spec tools use (<code>stream.py</code>) and let the turn loop run the steps.</div>
+    <div class="risk">⚠ Owner classification can be wrong: an app bug can surface inside platform frames. When a platform-classified failure's traceback also contains workspace frames, send it to the agent as well.</div>
+  </div>
+</div>
+</body>
+</html>

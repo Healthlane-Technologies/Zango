@@ -4,7 +4,8 @@ import React from "react";
 import * as api from "./api";
 import { SPEC } from "./config";
 import * as SLOTS from "../custom/slots";
-import { EmptyState, ToastHost } from "./ui";
+import { ToastHost } from "./ui";
+import { EmptyState } from "./kit";
 
 const pages: Record<string, React.FC> = {};
 

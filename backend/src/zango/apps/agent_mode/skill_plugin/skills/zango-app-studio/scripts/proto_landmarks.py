@@ -277,6 +277,14 @@ def _words(text):
     return set(_WORD.findall(norm(text)))
 
 
+# a greeting that follows the clock: captured in the afternoon, the app may be shot in the morning
+_GREETING = re.compile(r"\bgood (?:morning|afternoon|evening)\b")
+
+
+def _clockless(n: str) -> str:
+    return _GREETING.sub("good day", n)
+
+
 def content_gaps(approved_dom: str, built_dom: str, built_text: str, skip=(), record=False,
                  ignore_words=(), drawn_cells=(), subtitle_words=None) -> list:
     """What the approved screen shows that the built one doesn't, as problems for the fix round.
@@ -292,7 +300,7 @@ def content_gaps(approved_dom: str, built_dom: str, built_text: str, skip=(), re
     first-row cells (a second line, an icon or initials)."""
     want, got = landmarks(approved_dom), landmarks(built_dom)
     # "Open48": a chip's count drawn right after its label is a separate word
-    text = " " + norm(re.sub(r"(?<=[A-Za-z])(?=\d)", " ", built_text or "")) + " "
+    text = " " + _clockless(norm(re.sub(r"(?<=[A-Za-z])(?=\d)", " ", built_text or ""))) + " "
     skip = {norm(x) for x in skip}
     ignore = {w for x in ignore_words for w in norm(x).split()}
     probs, seen = [], set()
@@ -310,7 +318,7 @@ def content_gaps(approved_dom: str, built_dom: str, built_text: str, skip=(), re
             if n in skip or n in seen:
                 continue
             seen.add(n)
-            if f" {n} " not in text:
+            if f" {_clockless(n)} " not in text:
                 probs.append(f"missing {kind} {label!r}")
     counted = {norm(x) for x in got.get("counted", [])}
     for label in want.get("counted", []):

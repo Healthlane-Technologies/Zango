@@ -8,11 +8,9 @@ import { ArrowLeft, ArrowRight, ArrowRightCircle, CircleX, Pencil, Tag as TagIco
 import * as api from "./api";
 import { SPEC, detailUrl, pageUrl, tone, viewUrl } from "./config";
 import { ConfirmDialog, FormDialog, useDialog } from "./dialogs";
-import { ZasTable } from "./ZasTable";
 import * as SLOTS from "../custom/slots";
-import {
-  Badge, Banner, Button, CopyButton, EmptyState, FieldGrid, Icon, Menu, Panel, Skeleton, StatTile, StateBox, Tabs, Timeline, ToastHost, Value, cx, useStuck,
-} from "./ui";
+import { CopyButton, Icon, Menu, Skeleton, StateBox, ToastHost, Value, cx, useStuck } from "./ui";
+import { Badge, Banner, Button, EmptyState, FieldGrid, Panel, StatTile, Tabs, Timeline, ZasTable } from "./kit";
 import type { DetailResponse, SpecTab, SpecView, ZasPayload } from "./types";
 import type { MenuItemDef } from "./ui";
 

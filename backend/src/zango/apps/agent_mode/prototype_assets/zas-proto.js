@@ -134,7 +134,7 @@
   function go(screen, opts) {
     opts = opts || {};
     if (opts.role && M.roles[opts.role] !== undefined) state.role = opts.role;
-    if (custom) { custom.go(screen, { role: state.role, record: opts.record }); state.screen = screen; locate(); return; }
+    if (custom) { custom.go(screen, { role: state.role, record: opts.record, params: opts.params || {} }); state.screen = screen; locate(); return; }
     if (!screen || !screens[screen] || !allowed(screen, state.role)) screen = home(state.role);
     if (!opts.replace && state.screen) history.push({ screen: state.screen, record: state.record, params: state.params });
     state.screen = screen; state.record = opts.record == null ? null : opts.record; state.params = opts.params || {};

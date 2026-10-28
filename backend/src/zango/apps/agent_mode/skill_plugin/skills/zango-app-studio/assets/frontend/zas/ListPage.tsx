@@ -8,8 +8,8 @@ import * as api from "./api";
 import { SPEC } from "./config";
 import * as SLOTS from "../custom/slots";
 import { getDetailComponent } from "./Detail360";
-import { EmptyState, ToastHost } from "./ui";
-import { ZasTable } from "./ZasTable";
+import { ToastHost } from "./ui";
+import { EmptyState, ZasTable } from "./kit";
 
 function detailUuid(params: Record<string, string | undefined>): string | null {
   // AppBuilder registers "<route>" and matches "<route>/*": the tail arrives in params["*"]

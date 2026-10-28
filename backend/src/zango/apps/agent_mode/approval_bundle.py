@@ -570,10 +570,14 @@ def prototype_index_md(capture: dict, manifest: dict, design=None) -> str:
         f"Source: {capture.get('source')} prototype · hash {capture.get('prototype_hash', '')[:12]} · "
         f"probe: {capture.get('probe')}",
         "",
-        "What the user approved, screen by screen. Port the look from `dom.<role>.html` (the "
-        "rendered markup, scripts removed) and `shot.<role>.png`, with the rules in "
-        "`css.used.css`; never from `prototype.html`'s scripts. Behaviour comes from the spec.",
-        "Screens marked prototype-only are not built.",
+        "What the user approved, screen by screen: `shot.<role>.png` (how it looks) and "
+        "`dom.<role>.html` (what it rendered). Port, don't redraw (`references/open-mode.md`): each "
+        "screen's component is in the prototype's source (`source/index.md`: each script, what it "
+        'defines by line); copy its markup, classes and inline styles under <div className="zp">, '
+        "which `frontend/src/custom/prototype.css` (the prototype's stylesheets, scoped) styles, with the "
+        "app's data. Its router, store and timers are not used. Behaviour comes from the spec.",
+        "Screens marked prototype-only are not built. The app's kit is for kit pages "
+        '(`references/open-mode.md`, "The kit"); rebuild screens are ported and need none.',
         "",
         "Design (`design.json`, from `app.design`): "
         + (
@@ -619,6 +623,21 @@ def prototype_index_md(capture: dict, manifest: dict, design=None) -> str:
             + ("; ".join(problems[:3]).replace("|", "/") or "")
             + " |"
         )
+    no_ref = [
+        s["id"]
+        for s in capture.get("screens") or []
+        if s.get("only") != "prototype"
+        and any(r.get("blank") or r.get("error") for r in s.get("roles") or [])
+    ]
+    if no_ref:
+        lines += [
+            "",
+            "**No reference** for: "
+            + ", ".join(f"`{x}`" for x in no_ref)
+            + ". Their snapshot is "
+            "blank, so there is no look to port: build them from the spec in the look of the screens "
+            "that have one, and don't read their blank `shot.*.png` as the design.",
+        ]
     if capture.get("load_errors"):
         lines += [
             "",

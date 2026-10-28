@@ -27,7 +27,7 @@ import os
 import re
 import sys
 
-from . import auth, browser, load_json, print_summary, save_results
+from . import auth, browser, in_scope, load_json, print_summary, save_results
 
 GROUPS = ["login", "pages", "detail", "flows"]
 
@@ -57,6 +57,8 @@ class UI:
                              "status": status, "detail": str(detail)[:600]})
 
     def check(self, id, title, role, path, fn):
+        if not in_scope(path):
+            return
         try:
             good, detail = fn()
             self.add(id, title, role, path, "pass" if good else "fail", "" if good else detail)
@@ -122,6 +124,8 @@ def g_pages(U, b):
                     if "is not implemented yet" in body:
                         return False, "a hole is shown as not implemented"
                     probs = list(rp.errors)
+                    if browser.raw_dates(body):
+                        probs.append(browser.raw_dates(body))
                     if P.get("type") == "crud" and not browser.rebuilt(U.M, "page", code):
                         E = U.M["entities"][P["entity"]]
                         add_label = (E.get("table") or {}).get("add_button") or E["names"].get("add_label") or f"Add {E['name']}"
@@ -208,6 +212,8 @@ def g_detail(U, b):
                         body = rp.page.locator('[data-zas="page"]').first.inner_text()
                         if "is not implemented yet" in body:
                             probs.append(f"tab {code}: hole not implemented")
+                        if browser.raw_dates(body):
+                            probs.append(f"tab {code}: {browser.raw_dates(body)}")
                         if rp.errors:
                             probs.append(f"tab {code}: {rp.errors[:2]}")
                         rp.shot(U.ws, slug(role), f"{vcode}__{code}")

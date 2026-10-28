@@ -38,7 +38,7 @@ import sys
 import time
 import traceback
 
-from . import load_json, print_summary, save_results
+from . import in_scope, load_json, print_summary, save_results
 from .api import Ctx, Skip
 
 _REGISTRY = []
@@ -145,6 +145,10 @@ def load(ws):
     _registry().clear()
     if not os.path.exists(p):
         return False
+    # Scenarios import their neighbours (`from test_fixtures import …`), as testing.md shows.
+    here = os.path.dirname(p)
+    if here not in sys.path:
+        sys.path.insert(0, here)
     spec = importlib.util.spec_from_file_location("zas_test_scenarios", p)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
@@ -174,6 +178,8 @@ def main(argv=None):
         if only and s["hole"] not in only:
             continue
         h = holes.get(s["hole"], {})
+        if not in_scope(h.get("where", s["hole"])):
+            continue
         res = {"layer": "scenarios", "id": f"scenario.{s['hole']}.{s['fn'].__name__}", "title": s["title"],
                "role": None, "spec_path": h.get("where", s["hole"]), "hole": s["hole"], "status": "pass", "detail": ""}
         t0 = time.time()

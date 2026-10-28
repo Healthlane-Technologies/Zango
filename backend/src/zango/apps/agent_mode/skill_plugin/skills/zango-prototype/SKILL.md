@@ -56,7 +56,9 @@ or the write is refused. Paths are lower-case: `screens/request.view.js`.
   `group` (nav section), `roles` (who can open it; all when absent), `record` (a record page:
   opened with a record id, kept out of the nav; `sample` names the id of a typical record, which
   the build's snapshots open it with: required on imported pages, else the first row of the
-  `record` collection is used), `parent` (highlights its list in the nav),
+  `record` collection is used), `params` (what else the screen needs to draw, passed to `go` as
+  `params`: a wizard step `{"step": 1}`, a link screen's referral; `sample` works on non-record screens
+  too), `parent` (highlights its list in the nav),
   `nav: false`, and `only: "prototype"` for screens the real app will not have (sign-in,
   onboarding tours, fake integrations).
 - `fonts`: Google Fonts CSS URLs only. `libraries`: scripts from cdnjs, cdn.jsdelivr.net/npm or
@@ -97,7 +99,7 @@ ZAS.on('approve', (data, el, event, ctx) => { ... })        // data-act="approve
 - Each screen's HTML is wrapped in `<div data-zas-screen="<id>">`. The runtime's `z-` classes are
   plain on purpose: restyle them in `app.css`.
 - You may skip all of this and write your own app, as long as the manifest is right and the page
-  calls `ZAS.ready({go(screen, {role, record}) {...}})` and reports `ZAS.at(screen, {role, record})`
+  calls `ZAS.ready({go(screen, {role, record, params}) {...}})` and reports `ZAS.at(screen, {role, record})`
   after each navigation.
 
 ## The first draft
@@ -222,13 +224,15 @@ When the user uploaded their app as an `.html` file, it is the prototype. Do not
 2. Read how the page navigates (`proto_find` for its nav items, its render function, its persona
    or role state). Fill `manifest.json`: `screens` (ids and titles from its nav sections; record pages
    with `record` and a `sample` id of a real record in its data; sign-in, tours and fake integrations with `"only": "prototype"`), `roles` from its
-   personas.
+   personas. Find how the page itself opens each screen (`proto_find` for `go("<id>"`): when it passes
+   more than an id (`{id, step: 1}`, a pending referral's case), copy that into the screen's `sample`
+   and `params`, so every screen draws when opened on its own.
 3. Write one small part, `zas-bridge.js`, that connects the page to the preview:
 
    ```js
-   ZAS.ready({go(screen, {role, record}) {
+   ZAS.ready({go(screen, {role, record, params}) {
      // use the page's own state and render function, e.g.:
-     if (role) S.who = role; secn = screen; render();
+     if (role) S.who = role; secn = screen; secp = {id: record, ...params}; render();
    }});
    // after the page's own navigation, report where the user is:
    // ZAS.at(secn, {role: S.who})

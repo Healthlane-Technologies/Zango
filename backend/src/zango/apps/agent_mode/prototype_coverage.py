@@ -818,6 +818,59 @@ def ensure_capture(parts: dict, design=None) -> tuple[Path | None, str]:
     return out, ""
 
 
+RENDER_GUIDE = (
+    "The build ports each screen from its snapshot, so a screen that draws blank, throws, or shows "
+    "another screen when opened on its own has nothing to port. Find how the page itself opens it "
+    '(proto_find `go("<id>"`) and give the screen that `sample` and `params` in manifest.json; make '
+    "zas-bridge.js pass `params` on to the page's router; or, for a screen the app will not have as a "
+    "page (a toast, a dialog, a demo-only view), mark it `only: prototype` with a `why` in the YAML's "
+    'prototype.screens (or `"only": "prototype"` in manifest.json).'
+)
+
+
+def spec_only(doc) -> set:
+    """Screen ids the YAML's prototype.screens marks `only: prototype` (not built)."""
+    screens = (
+        ((doc or {}).get("prototype") or {}).get("screens")
+        if isinstance(doc, dict)
+        else None
+    )
+    return {
+        str(sc.get("id"))
+        for sc in screens or []
+        if isinstance(sc, dict) and sc.get("only") == "prototype" and sc.get("id")
+    }
+
+
+def render_gaps(bundle_dir, doc=None) -> list[str]:
+    """Screens the build will port whose snapshot is blank, threw or showed another screen, one line
+    per screen x role.
+
+    Prototype-only screens are left out, whether the manifest or the YAML (``doc``) says so: they are
+    not built."""
+    try:
+        capture = json.loads(
+            (Path(bundle_dir) / "capture.json").read_text(encoding="utf-8")
+        )
+    except (OSError, ValueError):
+        return []
+    out, skip = [], spec_only(doc)
+    for sc in capture.get("screens") or []:
+        if sc.get("only") == "prototype" or sc.get("id") in skip:
+            continue
+        for r in sc.get("roles") or []:
+            why = r.get("error") or "; ".join(r.get("errors") or [])
+            if r.get("blank") or why:
+                what = (
+                    "draws blank" + (f" ({why[:160]})" if why else "")
+                    if r.get("blank")
+                    else why[:160]
+                )
+                record = f", record {r['record']}" if r.get("record") else ""
+                out.append(f"- {sc['id']} as {r.get('role')}{record}: {what}")
+    return out
+
+
 def coverage_issues(doc: dict, parts: dict) -> list:
     """The coverage gaps as approval issues (``{level, path, message}``), for Commit. Empty when
     the YAML covers the prototype or it can't be rendered here."""
@@ -830,8 +883,16 @@ def coverage_issues(doc: dict, parts: dict) -> list:
         return []
     if bundle is None:
         return []
-    result = coverage(doc, bundle)
     out = [
+        {
+            "level": "error",
+            "path": "/prototype/screens",
+            "message": f"prototype screen {line[2:]}",
+        }
+        for line in render_gaps(bundle, doc)
+    ]
+    result = coverage(doc, bundle)
+    out += [
         {
             "level": "error",
             "path": "/roles" if g.startswith("menu") else "/modules",

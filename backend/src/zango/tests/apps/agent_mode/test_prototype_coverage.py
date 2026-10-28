@@ -355,6 +355,47 @@ class MarkReadyTests(unittest.TestCase):
             note = self.bench()._check_prototype_coverage(spec(), None)
         self.assertIn("not checked: unavailable", note)
 
+    def test_a_screen_that_draws_blank_refuses_with_how_to_fix_it(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            bundle = write_bundle(Path(tmp))
+            cap = json.loads((bundle / "capture.json").read_text())
+            sample = next(s for s in cap["screens"] if s["id"] == "sample")
+            sample["roles"][0].update(blank=True, record="S-1", errors=["imported/script-02.js: Uncaught TypeError"])
+            (bundle / "capture.json").write_text(json.dumps(cap))
+            with mock.patch.object(pc, "ensure_capture", return_value=(bundle, "")):
+                with self.assertRaises(ToolRefused) as ctx:
+                    self.bench()._check_prototype_coverage(spec(), None)
+        msg = str(ctx.exception)
+        self.assertIn("don't draw when opened on their own", msg)
+        self.assertIn("- sample as ", msg)
+        self.assertIn("record S-1: draws blank (imported/script-02.js", msg)
+        self.assertIn("`params`", msg)
+
+    def test_a_blank_prototype_only_screen_is_not_built_so_not_a_gap(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            bundle = write_bundle(Path(tmp))
+            cap = json.loads((bundle / "capture.json").read_text())
+            tour = next(s for s in cap["screens"] if s["id"] == "tour")
+            tour["only"] = "prototype"
+            tour["roles"][0]["blank"] = True
+            (bundle / "capture.json").write_text(json.dumps(cap))
+            self.assertEqual(pc.render_gaps(bundle), [])
+
+    def test_a_screen_the_yaml_marks_prototype_only_is_not_a_gap(self):
+        # the capture found it showed another screen (a toast, a router fallback); the analyst says
+        # the app won't have it as a page, in the YAML, and the spec step lets it through
+        with tempfile.TemporaryDirectory() as tmp:
+            bundle = write_bundle(Path(tmp))
+            cap = json.loads((bundle / "capture.json").read_text())
+            tour = next(s for s in cap["screens"] if s["id"] == "tour")
+            tour["roles"][0]["error"] = "the prototype did not open tour: it showed home instead"
+            (bundle / "capture.json").write_text(json.dumps(cap))
+            self.assertIn("did not open tour", pc.render_gaps(bundle)[0])
+            doc = {"prototype": {"screens": [{"id": "tour", "only": "prototype", "why": "a toast, not a page"}]}}
+            self.assertEqual(pc.render_gaps(bundle, doc), [])
+            with mock.patch.object(pc, "ensure_capture", return_value=(bundle, "")):
+                self.assertFalse(any("did not open" in i["message"] for i in pc.coverage_issues(doc, {"x": "y"})))
+
 
 class CommitTests(unittest.TestCase):
     """Commit for build runs the same check, so the coverage gate can't be skipped."""
