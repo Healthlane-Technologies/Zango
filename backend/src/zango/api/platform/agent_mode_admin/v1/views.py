@@ -404,6 +404,12 @@ class AgentAppScaffoldCreateView(ZangoGenericPlatformAPIView):
                 prompt=prompt,
                 reference_id=reference if template_version else "",
                 template_version=template_version,
+                preview_mode=(
+                    "open"
+                    if (request.data.get("preview_mode") or "") == "open"
+                    and getattr(dj_settings, "AGENT_MODE_OPEN_PROTOTYPE", True)
+                    else "kit"
+                ),
                 created_by_label=(getattr(user, "email", "") or str(user or ""))[:255],
             )
             from zango.apps.shared.agent_mode.models import AgentScaffoldDocument

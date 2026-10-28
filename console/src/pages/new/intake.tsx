@@ -8,12 +8,15 @@ import './intake.css';
 
 export const MAX_FILES = 10;
 export const MAX_TOTAL_BYTES = 25 * 1024 * 1024;
-export const ACCEPTED = ['pdf', 'docx', 'xlsx', 'csv', 'txt', 'md'] as const;
+export const ACCEPTED = [
+	'pdf', 'docx', 'xlsx', 'csv', 'txt', 'md', 'html', 'htm', 'png', 'jpg', 'jpeg', 'gif', 'webp',
+] as const;
+export const IMAGE_EXTS = ['png', 'jpg', 'jpeg', 'gif', 'webp'];
 
 export const DRAFT_GUIDANCE =
 	'Who uses it, the programs, eligibility, documents, dispensing and schemes, consent, reports — or just upload your SOP or RFP.';
 
-const extOf = (name: string) => name.split('.').pop()?.toLowerCase() ?? '';
+export const extOf = (name: string) => name.split('.').pop()?.toLowerCase() ?? '';
 
 export function formatBytes(n: number): string {
 	if (n < 1024) return `${n} B`;
@@ -96,7 +99,7 @@ export function DocumentDrop({
 			>
 				<Icon name="clip" />
 				<span>
-					<b>Drop SOPs, RFPs or process documents</b>, or click to choose
+					<b>Drop SOPs, RFPs, process documents or screenshots</b>, or click to choose
 					<small>
 						{ACCEPTED.map((a) => a.toUpperCase()).join(', ')} · up to {MAX_FILES} files,{' '}
 						{formatBytes(MAX_TOTAL_BYTES)} in total

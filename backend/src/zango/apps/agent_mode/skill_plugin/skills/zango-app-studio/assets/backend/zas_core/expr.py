@@ -369,7 +369,7 @@ def _resolve_value(v, model, path, ctx):
 
 
 def _status_q(model, prefix, values, ctx):
-    """Q for '<prefix>.status in values' via the workflow state table."""
+    """Q for '<prefix>.status in values' via the workflow state table (values None: any status)."""
     from django.contrib.contenttypes.models import ContentType
     from django.db.models import Q
     WorkflowState, _ = _wf_models()
@@ -378,7 +378,9 @@ def _status_q(model, prefix, values, ctx):
         for part in prefix.split("."):
             target = target._meta.get_field(part).related_model
     ct = ContentType.objects.get_for_model(target)
-    uuids = WorkflowState.objects.filter(content_type=ct, current_state__in=list(values)).values("obj_uuid")
+    states = WorkflowState.objects.filter(content_type=ct)
+    states = states.filter(current_state__isnull=False) if values is None else states.filter(current_state__in=list(values))
+    uuids = states.values("obj_uuid")
     lookup = (prefix.replace(".", "__") + "__" if prefix else "") + "object_uuid__in"
     return Q(**{lookup: uuids})
 
@@ -451,6 +453,9 @@ def to_q(node, model, ctx=None):
 
     if op == "test":
         t = node["test"]
+        if is_status and t in ("is_set", "is_empty"):  # status is no column: the workflow state table
+            q = _status_q(model, prefix, None, ctx)
+            return q if t == "is_set" else ~q
         if t in ("is_true", "is_false"):
             return Q(**{lk: t == "is_true"})
         empty = Q(**{lk + "__isnull": True})

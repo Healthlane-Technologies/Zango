@@ -104,6 +104,10 @@ html[data-zas-density="compact"] { --z-ctl-h: 32px; --z-cell-y: 7px; --z-th-y: 7
 
 /* page */
 .zas-page { padding: var(--z-page-pad); min-height: 100%; background: var(--z-ground); }
+/* open mode: a screen ported from the prototype renders in <div class="zp"> and draws its own page
+   (header band, padding, background from prototype.css): the box around it adds nothing */
+:has(> .zp) { padding: 0 !important; gap: 0 !important; }
+.zp { min-height: 100%; }
 .zas-ph { display: flex; align-items: flex-end; gap: 14px; margin-bottom: 18px; flex-wrap: wrap; }
 .zas-ph h1 { margin: 0; font-size: 22px; font-weight: 650; letter-spacing: -0.02em; color: var(--z-text); }
 .zas-ph p { margin: 4px 0 0; color: var(--z-muted); font-size: 13px; }
@@ -134,6 +138,16 @@ html[data-zas-density="compact"] { --z-ctl-h: 32px; --z-cell-y: 7px; --z-th-y: 7
 .zas-nil { color: var(--z-ghost); }
 .zas-link { color: var(--brand); font-weight: 550; cursor: pointer; text-decoration: none; }
 .zas-link:hover { text-decoration: underline; }
+.zas-cell2 { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.zas-cell-ico { flex: none; display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%;
+  border: 1px solid var(--z-bd); background: var(--z-sunken); color: var(--z-faint); }
+.zas-cell-ico .zi { width: 14px; height: 14px; }
+.zas-cell-ico.ini { font-size: 11px; font-weight: 600; letter-spacing: .02em; }
+.zas-cell-txt { min-width: 0; max-width: 300px; }
+.zas-cell-main { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 550; color: var(--z-text); }
+.zas-cell-main .zas-link { color: inherit; }  /* the row opens the record; the title reads as text */
+.zas-cell-sub { margin-top: 2px; font-size: 12px; color: var(--z-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.zas .zas-cell-sub.mono { font-size: 11.5px; }
 .zas-yes { color: var(--t-green-fg); font-weight: 550; }
 .zas-no { color: var(--z-faint); }
 
@@ -150,6 +164,8 @@ html[data-zas-density="compact"] { --z-ctl-h: 32px; --z-cell-y: 7px; --z-th-y: 7
 .zas-chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 .zas-qf { height: 30px; padding: 0 11px; border-radius: 999px; border: 1px solid var(--z-bd); background: var(--z-head); font-size: 12.5px; font-weight: 550; color: var(--z-sub); }
 .zas-qf.on { background: var(--b50); border-color: var(--b100); color: var(--b600); }
+.zas-qf-n { margin-left: 6px; font-weight: 500; color: var(--z-muted); font-variant-numeric: tabular-nums; }
+.zas-qf.on .zas-qf-n { color: inherit; opacity: .75; }
 
 /* 360 header */
 .zas-dhead { background: var(--z-card); border: 1px solid var(--z-bd); border-radius: var(--z-r-head); padding: 20px 22px; box-shadow: var(--z-shadow); }
@@ -304,6 +320,64 @@ table.zas-t { width: 100%; border-collapse: separate; border-spacing: 0; font-si
 .zas-note.bad { background: #fef3f2; border-color: #fecdca; color: #912018; }
 .zas-note.info { background: var(--z-head); border-color: var(--z-bd); color: var(--z-sub); }
 
+/* ───────── app shell (Shell.tsx, appbuilder's Layout slot) ───────── */
+.zas-sh { --zas-sh-fg: var(--z-text2); --zas-sh-strong: var(--z-text); --zas-sh-muted: var(--z-faint);
+  --zas-sh-hover: var(--z-head); --zas-sh-on: var(--b50); --zas-sh-on-fg: var(--b600); --zas-sh-line: var(--z-bd);
+  display: flex; height: 100dvh; min-height: 100dvh; overflow: hidden; background: var(--z-ground); }
+.zas-sh.dark { --zas-sh-fg: rgba(255, 255, 255, 0.8); --zas-sh-strong: #fff; --zas-sh-muted: rgba(255, 255, 255, 0.55);
+  --zas-sh-hover: rgba(255, 255, 255, 0.08); --zas-sh-on: rgba(255, 255, 255, 0.15); --zas-sh-on-fg: #fff; --zas-sh-line: rgba(255, 255, 255, 0.14); }
+.zas-sh-side { width: var(--zas-sh-w, 240px); flex: none; display: flex; flex-direction: column; gap: 2px; padding: 18px 12px 12px;
+  background: var(--zas-sh-bg, var(--z-card)); color: var(--zas-sh-fg); border-right: 1px solid var(--zas-sh-line); overflow-y: auto; }
+.zas-sh.dark .zas-sh-side { border-right: 0; }
+.zas-sh-brand { display: flex; align-items: center; gap: 10px; padding: 4px 8px 10px; color: var(--zas-sh-strong); font-weight: 700; line-height: 1.2; text-decoration: none; min-width: 0; }
+.zas-sh-brand img { max-height: 28px; max-width: 100%; }
+.zas-sh-mark { width: 30px; height: 30px; flex: none; display: grid; place-items: center; border-radius: var(--z-r-ctl); background: var(--zas-sh-on); color: var(--zas-sh-on-fg); font-size: 18px; font-weight: 700; }
+.zas-sh-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.zas-sh-name small { display: block; font-weight: 500; font-size: 11.5px; color: var(--zas-sh-muted); }
+.zas-sh-nav { display: flex; flex-direction: column; gap: 2px; }
+.zas-sh-g { font-size: 10.5px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--zas-sh-muted); padding: 16px 10px 4px; }
+.zas-sh-a { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border-radius: var(--z-r-ctl); color: inherit; text-decoration: none; font-size: 13.5px; text-align: left; cursor: pointer; }
+.zas-sh-a .zi { font-size: 18px; }
+.zas-sh-a:hover { background: var(--zas-sh-hover); color: var(--zas-sh-strong); }
+.zas-sh-a.on { background: var(--zas-sh-on); color: var(--zas-sh-on-fg); font-weight: 600; }
+.zas-sh-a.in { color: var(--zas-sh-strong); }
+.zas-sh-a.soon, .zas-sh-a.soon:hover { opacity: .5; cursor: default; background: none; color: inherit; }
+.zas-sh-a > span:not(.zi) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.zas-sh-svg { display: inline-grid; place-items: center; }
+.zas-sh-svg svg { width: 1em; height: 1em; }
+.zas-sh-chev { font-size: 14px; transition: transform 0.15s; }
+.zas-sh-chev.up { transform: rotate(180deg); }
+.zas-sh-sub { padding-left: 14px; display: flex; flex-direction: column; gap: 2px; }
+.zas-sh-foot { margin-top: auto; padding-top: 10px; border-top: 1px solid var(--zas-sh-line); }
+.zas-sh-user { display: flex; align-items: center; gap: 10px; width: 100%; padding: 6px 8px; border-radius: var(--z-r-ctl); color: inherit; text-align: left; }
+.zas-sh-user:hover { background: var(--zas-sh-hover); }
+.zas-sh-av { width: 32px; height: 32px; flex: none; border-radius: 50%; display: grid; place-items: center; object-fit: cover;
+  background: var(--b50); color: var(--b600); font-size: 12px; font-weight: 700; }
+.zas-sh-who { flex: 1; min-width: 0; display: flex; flex-direction: column; font-size: 13px; line-height: 1.3; }
+.zas-sh-who b { color: var(--zas-sh-strong); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.zas-sh-who small { font-size: 12px; color: var(--zas-sh-muted); }
+.zas-sh-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.zas-sh-top { flex: none; display: flex; align-items: center; gap: 16px; min-height: 56px; padding: 0 20px;
+  background: var(--z-card); border-bottom: 1px solid var(--z-bd); color: var(--z-text2); }
+.zas-sh-top .zas-sh-user { width: auto; margin-left: auto; }
+.zas-sh-title { font-size: 15px; font-weight: 600; color: var(--z-text); margin: 0; }
+.zas-sh.is-side .zas-sh-top { --zas-sh-fg: var(--z-text2); --zas-sh-strong: var(--z-text); --zas-sh-muted: var(--z-faint); --zas-sh-hover: var(--z-head); }
+.zas-sh.is-top .zas-sh-top { background: var(--zas-sh-bg, var(--z-card)); color: var(--zas-sh-fg); border-bottom-color: var(--zas-sh-line); }
+.zas-sh-top .zas-sh-brand { padding: 0; }
+.zas-sh-top .zas-sh-nav { flex-direction: row; gap: 4px; overflow-x: auto; }
+.zas-sh-top .zas-sh-nav .zas-sh-g { display: none; }
+.zas-sh-top .zas-sh-a { width: auto; white-space: nowrap; }
+.zas-sh-main { flex: 1; min-height: 0; overflow-y: auto; position: relative; }
+@media (max-width: 760px) {
+  .zas-sh.is-side { flex-direction: column; }
+  .zas-sh.is-side > .zas-sh-side { width: 100%; flex-direction: row; align-items: center; padding: 8px; overflow-x: auto; border-right: 0; }
+  .zas-sh.is-side > .zas-sh-side .zas-sh-nav { flex-direction: row; }
+  .zas-sh.is-side > .zas-sh-side .zas-sh-name, .zas-sh.is-side > .zas-sh-side .zas-sh-g,
+  .zas-sh.is-side > .zas-sh-side .zas-sh-who, .zas-sh.is-side > .zas-sh-side .zas-sh-chev { display: none; }
+  .zas-sh.is-side > .zas-sh-side .zas-sh-a { width: auto; white-space: nowrap; }
+  .zas-sh.is-side > .zas-sh-side .zas-sh-foot { margin: 0 0 0 auto; padding: 0; border: 0; }
+}
+
 /* sketch kit: the Studio preview's ctx.ui blocks (ui-*, pv-*, d-stat), rule for rule, so a custom
    screen ported from its preview sketch looks the same. Components: Stack, Grid, Kpis, Bars, List,
    MiniTable, Board, Progress, KitEmpty, KitBadge in ui.tsx. */
@@ -338,6 +412,7 @@ table.zas-t { width: 100%; border-collapse: separate; border-spacing: 0; font-si
 .zas-kmuted { color: var(--z-muted); font-size: 12px; }
 .zas-kbadge { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 999px; font-size: 11.5px; font-weight: 600; background: var(--tb); color: var(--tf); width: fit-content; white-space: nowrap; }
 .zas-stat .zas-khint { margin-top: 2px; font-size: 11.5px; }
+
 
 @media (prefers-reduced-motion: reduce) {
   .zas *, .zas-mo, .zas-dw, .zas-toast { animation: none; transition: none; }

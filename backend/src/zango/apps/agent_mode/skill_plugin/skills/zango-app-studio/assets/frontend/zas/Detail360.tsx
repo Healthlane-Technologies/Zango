@@ -8,11 +8,9 @@ import { ArrowLeft, ArrowRight, ArrowRightCircle, CircleX, Pencil, Tag as TagIco
 import * as api from "./api";
 import { SPEC, detailUrl, pageUrl, tone, viewUrl } from "./config";
 import { ConfirmDialog, FormDialog, useDialog } from "./dialogs";
-import { ZasTable } from "./ZasTable";
 import * as SLOTS from "../custom/slots";
-import {
-  Badge, Banner, Button, CopyButton, EmptyState, FieldGrid, Icon, Menu, Panel, Skeleton, StatTile, StateBox, Tabs, Timeline, ToastHost, Value, cx, useStuck,
-} from "./ui";
+import { CopyButton, Icon, Menu, Skeleton, StateBox, ToastHost, Value, cx, useStuck } from "./ui";
+import { Badge, Banner, Button, EmptyState, FieldGrid, Panel, StatTile, Tabs, Timeline, ZasTable } from "./kit";
 import type { DetailResponse, SpecTab, SpecView, ZasPayload } from "./types";
 import type { MenuItemDef } from "./ui";
 
@@ -239,7 +237,8 @@ function Page({ viewCode, uuid, initial }: { viewCode: string; uuid: string; ini
   const navigate = useNavigate();
   const [data, setData] = useState<DetailResponse | null>(initial?.zas ? initial : null);
   const [err, setErr] = useState<string | null>(null);
-  const [tab, setTab] = useState<string | null>(null);
+  // ?tab=<code> opens a tab (a list row whose row_click is "<view>#<tab>")
+  const [tab, setTab] = useState<string | null>(() => new URLSearchParams(window.location.search).get("tab"));
 
   const load = useCallback(() => {
     api.fetchDetail(hero.endpoint, uuid).then((r) => { setData(r); setErr(null); }).catch((e) => setErr(String(e)));
@@ -249,6 +248,9 @@ function Page({ viewCode, uuid, initial }: { viewCode: string; uuid: string; ini
   const back = view.back_to && pageUrl(view.back_to);
   const backBtn = back ? <Button icon={<ArrowLeft />} onClick={() => navigate(back)}>Back to {SPEC.pages[view.back_to as string]?.title}</Button> : undefined;
 
+  if (err && /\b403\b/.test(err)) {
+    return <div className="zas zas-page"><StateBox kind="no_access" title="No access" text={view.states?.no_access?.text || `You don't have access to this ${hero.name.toLowerCase()}.`} /></div>;
+  }
   if (err) return <div className="zas zas-page"><StateBox kind="error" title="This page could not load" text={err} action={backBtn} /></div>;
   if (!data || !data.zas) return <div className="zas zas-page" aria-busy="true"><div className="zas-dhead"><Skeleton lines={4} /></div></div>;
   const z = data.zas;
@@ -261,6 +263,18 @@ function Page({ viewCode, uuid, initial }: { viewCode: string; uuid: string; ini
   }
   if (z.error) return <div className="zas zas-page"><StateBox kind="error" title="This page could not load" text={z.error} action={backBtn} /></div>;
 
+  if (view.rebuild) {
+    // open mode: the approved prototype screen, ported onto a slot over the same 360 payload
+    const R = (SLOTS as Record<string, React.ComponentType<any>>)[view.rebuild];
+    return (
+      <DetailCtx.Provider value={{ view, viewCode, zas: z, endpoint: hero.endpoint, uuid, refresh: load, goTab: setTab }}>
+        <div className="zas zas-page" data-zas="page" data-zas-key={view.page || viewCode} data-zas-rebuild={view.rebuild}>
+          {R ? <R api={api} zas={z} record={z.record} refresh={load} />
+            : <EmptyState title="This page is not built yet" text={`Add ${view.rebuild} to src/custom/slots.`} zasKey={viewCode} />}
+        </div>
+      </DetailCtx.Provider>
+    );
+  }
   const tabs = view.tabs.filter((t) => z.tabs.some((x) => x.code === t.code));
   const cur = tabs.find((t) => t.code === tab) || tabs[0];
   const counts = Object.fromEntries(z.tabs.map((t) => [t.code, t]));

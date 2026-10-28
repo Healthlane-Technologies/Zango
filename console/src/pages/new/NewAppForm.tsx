@@ -20,6 +20,7 @@ import {
 	Page,
 	PageHeader,
 	Skeleton,
+	SwitchField,
 	Textarea,
 } from '@/ui';
 import { DocumentDrop, DRAFT_GUIDANCE, ReferencePicker } from './intake';
@@ -81,6 +82,9 @@ export function NewAppForm({ onStarted }: { onStarted: (s: Scaffold) => void }) 
 	const [prompt, setPrompt] = useState(() => params.get('prompt') ?? '');
 	const [files, setFiles] = useState<File[]>([]);
 	const [reference, setReference] = useState(() => params.get('reference') ?? '');
+	// Free design: the agent writes a working prototype of the app in any look (open mode).
+	const [freeDesign, setFreeDesign] = useState(params.get('design') === 'free');
+	const previewMode = freeDesign ? ('open' as const) : undefined;
 	const { data: availability, isLoading: checking } = useAgentAvailability();
 	const templates = useTemplates();
 	const create = useApiMutation({ fn: createScaffold, onSuccess: (s) => onStarted(s) });
@@ -122,8 +126,9 @@ export function NewAppForm({ onStarted }: { onStarted: (s: Scaffold) => void }) 
 						template_slug: template.slug,
 						reference: reference || undefined,
 						documents: files,
+						preview_mode: previewMode,
 					}
-				: { prompt: trimmed, documents: files },
+				: { prompt: trimmed, documents: files, preview_mode: previewMode },
 		);
 
 	return (
@@ -234,6 +239,15 @@ export function NewAppForm({ onStarted }: { onStarted: (s: Scaffold) => void }) 
 								</div>
 							)}
 						</Section>
+						<Section n={3} title="Design" hint="How the preview is drawn.">
+							<SwitchField
+								checked={freeDesign}
+								onChange={setFreeDesign}
+								disabled={create.isPending}
+								label="Free design"
+								hint="The agent designs a working prototype of your app in its own look, with personas, sample records and working actions, instead of the standard Zango screens."
+							/>
+						</Section>
 					</div>
 					<aside className="sticky top-0">
 						<Card>
@@ -275,6 +289,7 @@ export function NewAppForm({ onStarted }: { onStarted: (s: Scaffold) => void }) 
 								<SummaryRow label="Analyst model">
 									{checking ? <Skeleton width={90} /> : (availability?.config.analyst_model ?? '—')}
 								</SummaryRow>
+								<SummaryRow label="Design">{freeDesign ? 'Free design' : 'Standard'}</SummaryRow>
 								<SummaryRow label="First step">
 									{source === 'template' ? 'One-pass draft' : 'Requirements chat'}
 								</SummaryRow>

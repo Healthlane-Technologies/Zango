@@ -18,6 +18,7 @@ from .prompt import PLUGIN_NAME
 
 
 ANALYST_SKILL = f"{PLUGIN_NAME}:zango-requirements-analyst"
+PROTOTYPE_SKILL = f"{PLUGIN_NAME}:zango-prototype"
 
 # The analyst signals "ready for review" by emitting the spec in this fence.
 _SPEC_FENCE = re.compile(r"```zango-spec[ \t]*\n(.*?)```", re.DOTALL | re.IGNORECASE)
@@ -65,6 +66,14 @@ ANALYST_DISALLOWED = [
     "Bash",
     "WebFetch",
     "WebSearch",
+    # A turn has no later session to wake up into.
+    "ScheduleWakeup",
+    "CronCreate",
+    "CronDelete",
+    "CronList",
+    "Monitor",
+    "RemoteTrigger",
+    "PushNotification",
 ]
 
 
@@ -540,6 +549,65 @@ _PREVIEW_TOOLS_APPEND = (
 )
 
 
+_OPEN_PROTOTYPE_APPEND = (
+    '\n\nOPEN PROTOTYPE MODE. The user turned on "Free design": next to the YAML you '
+    "write a working HTML prototype of their app, in any look, and that prototype is the "
+    "preview they see. Load the zango-prototype skill before your first prototype write "
+    "and follow it.\n"
+    "- Write the prototype in parts with the mcp__spec__proto_* tools, never as one big "
+    "file; change it later with proto_patch. Call proto_outline first in any turn that "
+    "touches it.\n"
+    "- First draft: as soon as the interview tells you who uses the app, what moves "
+    "through it and who decides, write manifest.json, tokens.css, app.css, data.js, "
+    "shell.js and the home screen yourself, so the user sees their app within minutes. "
+    "Then hand every other screen to the screen-writer agent (Agent tool, subagent_type "
+    '"screen-writer"), several in ONE message so they run in parallel, each with a '
+    "brief: screen id, purpose, personas, records and fields, actions and their outcomes, "
+    "states to show. Review what they report and fix shared parts yourself.\n"
+    "- Keep the YAML in step in the same turn: every persona is a role, every screen maps "
+    'to a page (or is marked "only": "prototype" in the manifest, like a sign-in '
+    "screen), every action is a transition or a custom requirement.\n"
+    "- Runtime first, however custom a screen looks: the build draws record screens with the "
+    "standard runtime and themes them with the prototype's tokens. So every screen that shows "
+    "records maps to a crud page (lists, boards, filters, forms), a detail_views page (record "
+    "pages, tabs) or a dashboard. Use type: custom only for what none of those can show, and "
+    "give it a `reason` saying what (spec_mark_ready refuses a custom page without one and "
+    "lists the rest for the user).\n"
+    "- Record the mapping in the YAML's top-level `prototype.screens`: one entry per manifest "
+    "screen, `{id, maps: /pages/@<code>}` or `/detail_views/@<code>`, or `{id, only: prototype, "
+    "why}` (SCHEMA.md, prototype). The build themes standard pages and rebuilds custom ones from "
+    "their screen.\n"
+    "- The user approves the preview as the app: what it shows is what gets built, exactly, "
+    "and nothing it doesn't show. Never rename what the preview says; a record screen of an "
+    "uploaded page is `rebuild: true`; leave something out only when the user agreed, and then "
+    "take it out of the preview too.\n"
+    "- The build follows the YAML, so the YAML says everything each screen shows, in the "
+    "prototype's own words: menu items, labels, groups and order per role (a screen not built "
+    "stays in the menu through its entry's `menu`), page titles, list columns, status tabs "
+    "(quick_filters), 360 tabs, sections, sidebar panels, dashboard blocks, buttons and field "
+    "labels. A 360 has the prototype's tabs and no others; a section heading is a section's or "
+    "panel's `title`, not a field of that name. Each persona's menu in the prototype is its "
+    "role's `roles[].menu`, exactly; when a role gets less than the prototype's menu shows, "
+    "patch the prototype's menu for that persona (never widen the role). "
+    "Where the YAML can't say it (a stage tracker, a custom row layout), add `rebuild: "
+    "true` with a `why` naming it. Only what the user agreed to leave out goes in the entry's "
+    "`not_built` with a why, and it comes out of the preview too. spec_mark_ready renders the prototype and lists anything left out.\n"
+    "- Once tokens.css (or the imported stylesheet) is settled, call proto_design to record the "
+    "look in app.design; call it again whenever the tokens change.\n"
+    "- The look is free in this mode: the template's theme/ui limits and its \"fonts and "
+    'layouts are not offered" rule do not apply. Custom pages need no `preview` sketch; '
+    "their screen in the prototype is the sketch. Contracts (data, acceptance) still apply.\n"
+    "- A [Preview: …] note names the screen and persona the user was on; locate the text "
+    "with proto_find, then patch only what they asked for.\n"
+    "- If the user uploaded an HTML file (their app, or a prototype to match), that file IS the "
+    "prototype: call proto_import with its name in your first turn, before writing the spec, "
+    "and never redraw it. Skip it only if the user says the file is a reference, not the app. "
+    "An empty prototype leaves the user's preview pane blank. Then fill manifest.json (screens "
+    "and roles from the page's own navigation and personas), add one small part that calls "
+    "ZAS.ready({go}) with the page's own router, and write the YAML from what the page shows."
+)
+
+
 def build_analyst_options(
     *, ctx, creds, requirement, spec_server=None, docs_dir="", preview=False
 ):
@@ -629,6 +697,29 @@ def build_analyst_options(
             "append": kwargs["system_prompt"]["append"]
             + _SPEC_TOOLS_APPEND
             + (_PREVIEW_TOOLS_APPEND if preview else ""),
+        }
+    if spec_server is not None and getattr(requirement, "preview_mode", "") == "open":
+        from .prototype import is_drafting, screen_writer_agent
+
+        kwargs["allowed_tools"] = [*kwargs["allowed_tools"], "Agent", "Task"]
+        kwargs["skills"] = [*kwargs["skills"], PROTOTYPE_SKILL]
+        kwargs["agents"] = {"screen-writer": screen_writer_agent()}
+        # The CLI starts sub-agents in the background by default, and the turn ends (and
+        # kills them) as soon as the analyst stops. Run them in the foreground: an Agent
+        # call then returns only once its screen is written. AgentDefinition(background=
+        # False) alone did not do this (CLI 0.2.152).
+        kwargs["env"] = {**kwargs["env"], "CLAUDE_CODE_DISABLE_BACKGROUND_TASKS": "1"}
+        if is_drafting(requirement.prototype_parts):
+            # The first draft (or one that left screens unwritten) writes the whole app: many tool calls, and the
+            # screen writers' cost counts towards this turn's budget.
+            kwargs["max_turns"] = max(kwargs["max_turns"], 250)
+            kwargs["max_budget_usd"] = float(
+                getattr(dj, "AGENT_MODE_ANALYST_PROTO_BUDGET_USD", 0)
+                or max(kwargs["max_budget_usd"], 15.0)
+            )
+        kwargs["system_prompt"] = {
+            **kwargs["system_prompt"],
+            "append": kwargs["system_prompt"]["append"] + _OPEN_PROTOTYPE_APPEND,
         }
     if cfg.analyst_model:
         kwargs["model"] = cfg.analyst_model

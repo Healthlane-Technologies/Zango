@@ -1,0 +1,32 @@
+/* Runtime base for open-mode prototypes. Deliberately plain: the prototype's tokens.css and
+   app.css set the look, and may restyle every z- class. Colours come from --z-* with fallbacks. */
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0}
+.zi{display:inline-block;vertical-align:-0.15em;flex:none}
+.z-pill{display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:999px;font-size:12px;line-height:18px;background:var(--z-pill-bg,rgba(0,0,0,.06));color:var(--z-pill-fg,inherit);white-space:nowrap}
+.z-pill.z-ok{background:var(--z-ok-bg,#e8f3ea);color:var(--z-ok,#2f6b3a)}
+.z-pill.z-warn{background:var(--z-warn-bg,#fdf3e2);color:var(--z-warn,#91490d)}
+.z-pill.z-bad{background:var(--z-bad-bg,#fbecee);color:var(--z-bad,#a3222e)}
+.z-pill.z-info{background:var(--z-info-bg,#eef1fe);color:var(--z-info,#3938b5)}
+.z-table-wrap{overflow-x:auto}
+.z-table{width:100%;border-collapse:collapse}
+.z-table th,.z-table td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--z-line,rgba(0,0,0,.08));vertical-align:middle}
+.z-row{cursor:pointer}
+.z-row:hover{background:var(--z-hover,rgba(0,0,0,.025))}
+.z-tabs{display:flex;gap:4px;flex-wrap:wrap}
+.z-tab{border:0;background:none;padding:8px 10px;cursor:pointer;font:inherit;color:inherit;opacity:.7;border-bottom:2px solid transparent}
+.z-tab.on{opacity:1;border-bottom-color:currentColor}
+.z-field{display:grid;gap:4px}
+.z-label{font-size:12.5px;font-weight:500}
+.z-hint{font-size:12px;opacity:.65}
+.z-empty{padding:32px 16px;text-align:center;opacity:.65}
+.z-error{margin:16px;padding:14px 16px;border-radius:8px;background:#fbecee;color:#7a1420;font-size:13px}
+.z-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#14161b;color:#fff;padding:9px 16px;border-radius:8px;font-size:13px;z-index:1000;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+.z-drawer,.z-modal{position:fixed;inset:0;z-index:900}
+.z-drawer-back,.z-modal-back{position:absolute;inset:0;background:rgba(10,12,20,.32)}
+.z-drawer-panel{position:absolute;top:0;right:0;bottom:0;width:min(520px,100%);overflow:auto;background:var(--z-surface,#fff);box-shadow:-12px 0 40px rgba(0,0,0,.18)}
+.z-modal-panel{position:absolute;left:50%;top:10vh;transform:translateX(-50%);width:min(560px,calc(100% - 32px));max-height:80vh;overflow:auto;background:var(--z-surface,#fff);border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.z-persona{position:fixed;left:12px;bottom:12px;z-index:800;display:flex;align-items:center;gap:6px;padding:4px 6px 4px 10px;border-radius:999px;background:rgba(20,22,27,.88);color:#fff;font:12px/1.2 system-ui,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.2)}
+.z-persona select{font:inherit;color:#14161b;border:0;border-radius:999px;padding:3px 8px}
+.zas-soon{opacity:.45!important;cursor:not-allowed!important}
+.zas-soon:hover{background:transparent!important}

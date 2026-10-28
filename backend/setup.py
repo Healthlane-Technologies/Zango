@@ -88,6 +88,7 @@ setup(
             "apps/agent_mode/skill_plugin/**/*",
             "apps/shared/app_templates/packs/**/*",
             "apps/agent_mode/skill_plugin/.claude-plugin/*",
+            "apps/agent_mode/prototype_assets/*",
         ],
     },
     include_package_data=True,

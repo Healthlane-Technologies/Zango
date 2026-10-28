@@ -456,7 +456,18 @@ def _execute(run, tenant, creds, ws_root, build_app_context) -> dict:
             with service_account(tenant, emit=_studio_emit):
                 pass
             try:
-                studio.prepare(emit=_studio_emit, template=template_build.template)
+                requirement = getattr(run, "requirement", None)
+                studio.prepare(
+                    emit=_studio_emit,
+                    template=template_build.template,
+                    # Open mode: the approved prototype, for .zas/bundle/prototype/.
+                    prototype=(
+                        dict(requirement.prototype_parts or {})
+                        if requirement is not None
+                        and requirement.preview_mode == "open"
+                        else None
+                    ),
+                )
             finally:
                 run.post_steps = [r.to_dict() for r in studio.steps]
                 run.save(update_fields=["post_steps", "modified_at"])
@@ -518,10 +529,30 @@ def _execute(run, tenant, creds, ws_root, build_app_context) -> dict:
             hook_sink=stream.hook_sink,
             stderr_sink=recorder.emit_stderr,
             template_build=template_build,
+            tool_push=stream.push if studio is not None else None,
         )
 
+        def _on_tool_call(call) -> None:
+            # studio_tools: the build agent's slice checks run here, on the tenant connection.
+            from .studio_tools import handle_call
+
+            handle_call(
+                call,
+                studio=studio,
+                tenant=tenant,
+                service_account=service_account,
+                emit=_studio_emit,
+            )
+            recorder.flush_if_stale()
+
         def _drive(agent_stream, run_state) -> dict:
-            return _drive_stream(agent_stream, run_state, run=run, recorder=recorder)
+            return _drive_stream(
+                agent_stream,
+                run_state,
+                run=run,
+                recorder=recorder,
+                on_tool_call=_on_tool_call if studio is not None else None,
+            )
 
         extra = _drive(stream, state)
 
@@ -689,8 +720,20 @@ def _conclude(run, status, extra, recorder) -> dict:
     return {"status": run.status, "events": recorder.seq}
 
 
-def _drive_stream(agent_stream, run_state, *, run, recorder) -> dict:
-    """Run one agent stream to its end; returns error fields, or {}."""
+def _handle_build_tool(call, studio, tenant, emit) -> None:
+    from .studio_build import service_account
+    from .studio_tools import handle_call
+
+    handle_call(
+        call, studio=studio, tenant=tenant, service_account=service_account, emit=emit
+    )
+
+
+def _drive_stream(agent_stream, run_state, *, run, recorder, on_tool_call=None) -> dict:
+    """Run one agent stream to its end; returns error fields, or {}.
+
+    ``on_tool_call`` runs a build tool's call (studio_tools) on this thread; without it a call
+    is answered at once, so the agent never waits on nobody."""
     from .mapper import record_message
     from .models import EventKind, EventLevel
 
@@ -714,6 +757,11 @@ def _drive_stream(agent_stream, run_state, *, run, recorder) -> dict:
             recorder.set_phase(_phase_for_message(item.payload, recorder.phase))
             record_message(item.payload, recorder, run_state)
             recorder.flush_if_stale()
+        elif item.kind == "tool_call":
+            if on_tool_call is not None and not stopping:
+                on_tool_call(item.payload)
+            else:
+                item.payload.reply("Not available in this run; carry on.")
         elif item.kind == "done":
             break
         elif item.kind == "error":
@@ -909,6 +957,7 @@ def _resume_stream(
         hook_sink=stream.hook_sink,
         stderr_sink=recorder.emit_stderr,
         template_build=template_build,
+        tool_push=stream.push,
     )
     options.resume = session_id
     options.fork_session = False
@@ -965,6 +1014,22 @@ def _finish_studio(
         return not failure and not fix_state.get("is_error")
 
     more = {"checkpoint": checkpoint, "skip": skip} if checkpoint is not None else {}
+
+    def card(layers, bring_up_ok, active=True):
+        """The chat's status card, kept current while the build checks and fixes (studio_status)."""
+        from .studio_status import user_status
+
+        status = user_status(
+            studio.workspace,
+            layers,
+            bring_up_ok,
+            active=active,
+            app_url=_app_url(studio),
+        )
+        run.studio_report = {**(run.studio_report or {}), "user_status": status}
+        run.save(update_fields=["studio_report", "modified_at"])
+        return status
+
     try:
         with service_account(tenant, emit=emit) as platform_creds:
             outcome = studio.finish(
@@ -972,6 +1037,7 @@ def _finish_studio(
                 resume_agent=resume_agent,
                 rounds=rounds,
                 emit=emit,
+                progress=card,
                 **more,
             )
     finally:
@@ -990,7 +1056,33 @@ def _finish_studio(
     ]
     # Skipped checks are never presented as passed: the run says what it could not verify.
     not_verified = [s["layer"] for s in skipped]
+    try:
+        final_card = card(outcome.layers, outcome.bring_up_ok, active=False)
+    except Exception:  # noqa: BLE001 - the card is a view; the run's outcome stands
+        logger.exception("agent_mode: the build's status card could not be made")
+        final_card = None
+    from .studio_status import sort_failures
+
+    left = sort_failures(outcome.layers)
+    if left["harness"]:
+        # our own test code broke: the team's to fix, never the user's or the agent's
+        logger.warning(
+            "agent_mode: run %s: %d check(s) failed inside the test harness: %s",
+            run.pk,
+            len(left["harness"]),
+            "; ".join(
+                f"{f.get('id')}: {str(f.get('detail'))[:120]}"
+                for f in left["harness"][:10]
+            ),
+        )
     run.studio_report = {
+        "user_status": final_card,
+        "internal": {
+            "harness": [f.get("id") for f in left["harness"]],
+            "test": [f.get("id") for f in left["test"]],
+            "core": [f.get("id") for f in left["core"]],
+            "polish": [f.get("id") for f in left["polish"]],
+        },
         "ok": outcome.ok,
         "bring_up_ok": outcome.bring_up_ok,
         "frontend": studio.frontend_ready,
@@ -1103,6 +1195,20 @@ def _finish_studio(
         "error_type": "StudioChecksFailed",
         "error_message": message[:8000],
     }
+
+
+def _app_url(studio) -> str:
+    """Where the built app opens: the test users' target plus /app/."""
+    import json
+
+    try:
+        data = json.loads(
+            (studio.zas_dir / "test_users.json").read_text(encoding="utf-8")
+        )
+    except (OSError, ValueError):
+        return ""
+    target = str(data.get("target") or "").rstrip("/")
+    return f"{target}/app/" if target else ""
 
 
 def _save_baseline(run_dir: str, manifest) -> str:
@@ -1294,7 +1400,13 @@ def _continue(run, tenant, creds, ws_root, build_app_context, *, skip=False) -> 
             recorder=recorder,
             emit=emit,
             drive=lambda agent_stream, run_state: _drive_stream(
-                agent_stream, run_state, run=run, recorder=recorder
+                agent_stream,
+                run_state,
+                run=run,
+                recorder=recorder,
+                on_tool_call=lambda call: _handle_build_tool(
+                    call, studio, tenant, emit
+                ),
             ),
             new_stream=new_stream,
             baseline_manifest=_load_baseline(checkpoint.get("baseline", "")),
@@ -1514,7 +1626,7 @@ def agent_requirement_turn(self, requirement_uuid: str, tenant_name: str) -> dic
     bench = None
     try:
         ctx = build_app_context(tenant)
-        from .documents import write_docs_dir
+        from .documents import attachment_note, write_docs_dir
         from .preview_focus import focus_note
 
         # The user's documents, where the analyst can read them.
@@ -1523,7 +1635,9 @@ def agent_requirement_turn(self, requirement_uuid: str, tenant_name: str) -> dic
         prompt = compose_analyst_prompt(
             req,
             ctx,
-            last_user.content + focus_note(last_user.preview_focus, _plain_spec(req)),
+            last_user.content
+            + attachment_note(str(docs_path) if docs_path else "", req, last_user)
+            + focus_note(last_user.preview_focus, _plain_spec(req)),
             docs_dir=str(docs_path) if docs_path else "",
         )
         stream = AgentStream(options=None, prompt=prompt)
@@ -1537,6 +1651,22 @@ def agent_requirement_turn(self, requirement_uuid: str, tenant_name: str) -> dic
             from .preview_probe import probe_for
             from .spec_tools import SpecWorkbench, build_spec_server
 
+            proto = None
+            if req.preview_mode == "open":
+                from .prototype import PrototypeBench
+
+                # Open mode: the analyst writes the prototype itself; the template's
+                # kit preview and its sketch probe do not apply.
+                # Uploaded HTML files, for proto_import (read here: the tools can't use the ORM).
+                html_docs = {
+                    d.name: bytes(d.data).decode("utf-8", "replace")
+                    for d in req.documents.filter(content_type="text/html")
+                }
+                proto = PrototypeBench(
+                    req.prototype_parts,
+                    emit=lambda edit: stream.push("spec", edit),
+                    documents=html_docs,
+                )
             bench = SpecWorkbench(
                 req.spec_markdown,
                 template,
@@ -1544,8 +1674,9 @@ def agent_requirement_turn(self, requirement_uuid: str, tenant_name: str) -> dic
                 flags=req.spec_flags,
                 open_decisions=req.open_decisions,
                 workflows=req.workflows,
-                probe=probe_for(template),
+                probe=None if proto is not None else probe_for(template),
                 sketch_looks=req.sketch_looks,
+                proto=proto,
             )
             spec_server = build_spec_server(bench)
         stream.options = build_analyst_options(
@@ -1645,6 +1776,11 @@ def _record_spec_edit(req, edit: dict) -> None:
     if "sketch_looks" in edit:
         req.sketch_looks = dict(edit["sketch_looks"] or {})
         fields.append("sketch_looks")
+    if "prototype_parts" in edit:
+        req.prototype_parts = dict(edit["prototype_parts"] or {})
+        req.prototype_hash = edit.get("prototype_hash") or ""
+        req.prototype_revision += 1
+        fields += ["prototype_parts", "prototype_hash", "prototype_revision"]
     if len(fields) > 1:
         req.save(update_fields=fields)
 

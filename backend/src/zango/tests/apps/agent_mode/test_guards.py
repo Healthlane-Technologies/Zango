@@ -623,3 +623,48 @@ class ApprovedScreenGateTests(unittest.TestCase):
             self.assertEqual(res, {})
         finally:
             shutil.rmtree(other, ignore_errors=True)
+
+
+class OpenModeScreenGateTests(unittest.TestCase):
+    """Open mode: a rebuild slot waits for its prototype screen's screenshots and DOM snapshots, and
+    src/custom/Shell.tsx for each role's home screenshot (.zas/bundle/prototype/)."""
+
+    def setUp(self):
+        import json
+
+        self.root = tempfile.mkdtemp(prefix="ws-")
+        proto = os.path.join(self.root, ".zas", "bundle", "prototype")
+        for folder, files in (("home", ("shot.a.png", "dom.a.html")), ("orders", ("shot.a.png", "dom.a.html", "css.used.css"))):
+            os.makedirs(os.path.join(proto, "screens", folder))
+            for f in files:
+                open(os.path.join(proto, "screens", folder, f), "w").write("x")
+        json.dump({"home": {"a": "home", "b": "home"}}, open(os.path.join(proto, "manifest.json"), "w"))
+        json.dump({"screens": [{"id": "home", "roles": [{"role": "a", "files": ["shot.a.png"]}, {"role": "b", "same_as": "a"}]}]},
+                  open(os.path.join(proto, "capture.json"), "w"))
+        json.dump({"holes": [{"slot": "RebuildOrders", "bundle": ".zas/bundle/prototype/screens/orders/"}]},
+                  open(os.path.join(self.root, ".zas", "spec.resolved.json"), "w"))
+        self.guard = make_pre_tool_use_guard(self.root)
+
+    tearDown = ApprovedScreenGateTests.tearDown
+    _run = ApprovedScreenGateTests._run
+    _denied = ApprovedScreenGateTests._denied
+    _abs = ApprovedScreenGateTests._abs
+
+    def test_a_rebuild_slot_waits_for_its_screenshots_and_dom(self):
+        slot = self._abs("frontend/src/custom/slots/RebuildOrders.tsx")
+        res = self._run("Write", file_path=slot, content="x")
+        self.assertTrue(self._denied(res))
+        reason = res["hookSpecificOutput"]["permissionDecisionReason"]
+        self.assertIn("shot.a.png", reason)
+        self.assertIn("dom.a.html", reason)
+        self.assertNotIn("css.used.css", reason)
+        self._run("Read", file_path=self._abs(".zas/bundle/prototype/screens/orders/shot.a.png"))
+        self.assertTrue(self._denied(self._run("Write", file_path=slot, content="x")))
+        self._run("Read", file_path=self._abs(".zas/bundle/prototype/screens/orders/dom.a.html"))
+        self.assertEqual(self._run("Write", file_path=slot, content="x"), {})
+
+    def test_the_shell_waits_for_each_roles_home(self):
+        shell = self._abs("frontend/src/custom/Shell.tsx")
+        self.assertTrue(self._denied(self._run("Write", file_path=shell, content="x")))
+        self._run("Read", file_path=self._abs(".zas/bundle/prototype/screens/home/shot.a.png"))
+        self.assertEqual(self._run("Write", file_path=shell, content="x"), {})

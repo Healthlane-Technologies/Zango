@@ -3,6 +3,7 @@ import { isRunActive, type RunStatus } from '@/api/agentMode';
 import { useAbortRun, useRunDetail, type RunDetail } from '@/api/agentRuns';
 import { Button, cx, ErrorState, Icon, Skeleton, Tabs } from '@/ui';
 import { checksOf } from '@/api/agentRuns';
+import { BuildCard } from '../BuildCard';
 import { AppReady } from './AppReady';
 import { filesWritten, latestActivity, relativePath } from './events';
 import { clock, PHASES, runCost, runStatus, timeOfDay } from './format';
@@ -293,11 +294,13 @@ export function RunView({
 	const report = d?.report ?? null;
 	const checks = checksOf(report);
 	const actions = waiting ? (d?.pending_actions ?? []) : [];
+	// Once checked, the person who made the app is told progress, never failures (studio_status).
+	const card = !live ? (report?.user_status ?? null) : null;
 
 	return (
 		<div className="grid gap-3">
 			<div className="rp-stat">
-				<StatusIcon status={status} />
+				<StatusIcon status={card && card.state !== 'building' ? 'success' : status} />
 				<div className="min-w-0">
 					<b>
 						{waiting
@@ -310,7 +313,11 @@ export function RunView({
 										: status === 'syncing'
 											? 'Applying changes'
 											: 'Building your app'
-									: status === 'partial' && report && checks?.failed
+									: card
+										? card.state === 'building'
+											? 'Still building'
+											: 'Built'
+										: status === 'partial' && report && checks?.failed
 										? 'Built, with failing checks'
 										: status === 'partial' && report?.frontend === false
 											? 'Built without a frontend'
@@ -325,7 +332,7 @@ export function RunView({
 				</div>
 				<div className="r">
 					{/* While a build is live or paused the report is partial: a count would mislead. */}
-					{checks && !live && <ChecksChip checks={checks} onClick={() => setTab('checks')} />}
+					{checks && !live && !card && <ChecksChip checks={checks} onClick={() => setTab('checks')} />}
 					{!waiting && (
 						<span className="num">{clock(d?.started_at, live ? null : d?.ended_at)}</span>
 					)}
@@ -375,7 +382,8 @@ export function RunView({
 				</p>
 			)}
 
-			{ready && <AppReady appName={appName} run={d} />}
+			{card && <BuildCard status={card} actions={!ready} />}
+			{ready && <AppReady appName={appName} run={d} quiet={!!card} />}
 
 			<div className="card">
 				<Tabs
@@ -389,7 +397,7 @@ export function RunView({
 										value: 'checks' as const,
 										label: 'Checks',
 										count: checks?.total,
-										attention: !!checks?.failed,
+										attention: !card && !!checks?.failed,
 									},
 								]
 							: []),

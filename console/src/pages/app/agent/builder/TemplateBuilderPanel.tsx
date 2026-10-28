@@ -17,6 +17,7 @@ import {
 import { ChecksList, type CheckRow } from './ChecksList';
 import { customWork } from './customWork';
 import { EmbeddedBuilder } from './EmbeddedBuilder';
+import { PrototypeFrame } from './PrototypeFrame';
 import { GeneratingPreview, UpdatingPreview } from './GeneratingPreview';
 import { starterIsPlaceholder, usePreviewStage } from './generating';
 import { BuilderContext, type BuilderCtx } from './context';
@@ -87,8 +88,10 @@ export function TemplateBuilderPanel({
 	const draft = useSpecDraft({ appId, reqId: requirement.uuid, server: serverSpec });
 	// The page that renders the app from the spec (Journey Studio, App Studio…). With one, the
 	// pane is just the live preview; the spec, workflows and checks open from its ⋯ menu.
+	// Free design: the preview is the agent's own prototype, not the template's page.
+	const isOpen = requirement.preview_mode === 'open';
 	const previewUrl = builder.preview_url ?? builder.builder_url ?? null;
-	const previewMode = !!previewUrl;
+	const previewMode = !!previewUrl || isOpen;
 	// Where the user is in the preview: it goes with their next message, and the full-page
 	// preview opens there.
 	const [place, setPlace] = useState<PreviewFocus | null>(null);
@@ -109,11 +112,13 @@ export function TemplateBuilderPanel({
 	const [inBuilder, setInBuilder] = useState(false);
 	// What the page says it can do; older adapters don't say, and only builders had an editor.
 	const [caps, setCaps] = useState<string[] | undefined>();
-	const canEditInBuilder = caps
-		? caps.includes('edit')
-		: builder.preview_source !== 'generic' &&
-			!!builder.builder_url &&
-			previewUrl === builder.builder_url;
+	const canEditInBuilder = isOpen
+		? false
+		: caps
+			? caps.includes('edit')
+			: builder.preview_source !== 'generic' &&
+				!!builder.builder_url &&
+				previewUrl === builder.builder_url;
 	useEffect(() => onController?.(draft.controller), [onController, draft.controller]);
 	// What's on screen: the agent's version while reviewing a conflict, else the draft/newest.
 	const spec = draft.shown;
@@ -487,8 +492,9 @@ export function TemplateBuilderPanel({
 	if (previewMode) {
 		const warnings = issues.length - errors;
 		// The first version of the app is still being written: the preview has nothing to show.
-		const awaiting = stage === 'awaiting';
-		const generating = stage !== 'ready';
+		const awaiting = isOpen ? false : stage === 'awaiting';
+		// Open mode: covered only while the first version of the prototype is being written.
+		const generating = isOpen ? thinking && !requirement.prototype_revision : stage !== 'ready';
 		const writtenSections = [
 			...new Set(
 				(spec.changed_paths ?? []).map((p) => sectionFor(p)?.id).filter((id): id is string => !!id),
@@ -594,7 +600,8 @@ export function TemplateBuilderPanel({
 										>
 											<Icon name="pen" size={12} />
 											{[
-												custom.screens && `${custom.screens} custom screen${custom.screens > 1 ? 's' : ''}`,
+												custom.screens &&
+													`${custom.screens} custom screen${custom.screens > 1 ? 's' : ''}`,
 												custom.requirements &&
 													`${custom.requirements} custom rule${custom.requirements > 1 ? 's' : ''}`,
 											]
@@ -676,15 +683,25 @@ export function TemplateBuilderPanel({
 								</Button>
 							</div>
 						)}
-						<EmbeddedBuilder
-							url={previewUrl!}
-							text={draft.text}
-							readOnly={locked || !!draft.incoming}
-							onChange={draft.type}
-							preview={!inBuilder}
-							onReady={setCaps}
-							onFocus={onFocus}
-						/>
+						{isOpen ? (
+							<PrototypeFrame
+								appId={appId}
+								reqId={requirement.uuid}
+								revision={requirement.prototype_revision}
+								soon={requirement.prototype_soon}
+								onFocus={onFocus}
+							/>
+						) : (
+							<EmbeddedBuilder
+								url={previewUrl!}
+								text={draft.text}
+								readOnly={locked || !!draft.incoming}
+								onChange={draft.type}
+								preview={!inBuilder}
+								onReady={setCaps}
+								onFocus={onFocus}
+							/>
+						)}
 					</div>
 					{!sheet && saveBar}
 				</div>

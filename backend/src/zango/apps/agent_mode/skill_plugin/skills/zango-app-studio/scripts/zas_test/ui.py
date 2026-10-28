@@ -27,7 +27,7 @@ import os
 import re
 import sys
 
-from . import auth, browser, load_json, print_summary, save_results
+from . import auth, browser, in_scope, load_json, print_summary, save_results
 
 GROUPS = ["login", "pages", "detail", "flows"]
 
@@ -57,6 +57,8 @@ class UI:
                              "status": status, "detail": str(detail)[:600]})
 
     def check(self, id, title, role, path, fn):
+        if not in_scope(path):
+            return
         try:
             good, detail = fn()
             self.add(id, title, role, path, "pass" if good else "fail", "" if good else detail)
@@ -122,7 +124,9 @@ def g_pages(U, b):
                     if "is not implemented yet" in body:
                         return False, "a hole is shown as not implemented"
                     probs = list(rp.errors)
-                    if P.get("type") == "crud":
+                    if browser.raw_dates(body):
+                        probs.append(browser.raw_dates(body))
+                    if P.get("type") == "crud" and not browser.rebuilt(U.M, "page", code):
                         E = U.M["entities"][P["entity"]]
                         add_label = (E.get("table") or {}).get("add_button") or E["names"].get("add_label") or f"Add {E['name']}"
                         cr = (E.get("form") or {}).get("create") or {}
@@ -132,9 +136,16 @@ def g_pages(U, b):
                         if want_add != has_add:
                             probs.append(f"Add button {'missing' if want_add else 'shown'} (looked for {add_label!r})")
                         qfs = [q["label"] for q in (E.get("table") or {}).get("quick_filters", []) if not q.get("roles") or role in q["roles"]]
-                        chips = rp.page.locator('[data-zas="quick-filter"]').all_inner_texts()
-                        if [c.strip() for c in chips] != qfs:
+                        chips = [re.sub(r"\s*\d[\d,]*$", "", c.strip())  # "Open 7": the count is not the label
+                                 for c in rp.page.locator('[data-zas="quick-filter"]').all_inner_texts()]
+                        if chips != qfs:
                             probs.append(f"quick filters {chips} != spec {qfs}")
+                        for i, label in enumerate(chips):  # each chip lists rows (run 8: "All" was a 500)
+                            rp.page.locator('[data-zas="quick-filter"]').nth(i).click()
+                            rp.page.wait_for_timeout(600)
+                            if rp.page.locator('[data-zas="load-error"]').count():
+                                probs.append(f"the {label!r} chip fails to list: "
+                                             f"{rp.page.locator('[data-zas=load-error]').first.inner_text()[:120]}")
                     return not probs, "; ".join(probs)
                 U.check(f"ui.page.{code}.{slug(role)}", f"{label} renders", role, path, t_page)
 
@@ -147,9 +158,11 @@ def g_pages(U, b):
                         rp.page.wait_for_timeout(300)
                     except Exception:
                         pass
-                text = rp.page.inner_text("body")
-                missing = [lbl for _, lbl in pages if lbl not in text]
-                missing += [g for g in groups if g not in text]
+                # inner_text applies CSS text-transform: a group heading styled uppercase reads
+                # "LIBRARY", so compare without case.
+                text = rp.page.inner_text("body").casefold()
+                missing = [lbl for _, lbl in pages if lbl.casefold() not in text]
+                missing += [g for g in groups if g.casefold() not in text]
                 return not missing, f"not on screen: {missing}"
             if pages:
                 U.check(f"ui.menu.{slug(role)}", "menu items on screen", role, f"roles.{role}.menu", t_menu)
@@ -199,6 +212,8 @@ def g_detail(U, b):
                         body = rp.page.locator('[data-zas="page"]').first.inner_text()
                         if "is not implemented yet" in body:
                             probs.append(f"tab {code}: hole not implemented")
+                        if browser.raw_dates(body):
+                            probs.append(f"tab {code}: {browser.raw_dates(body)}")
                         if rp.errors:
                             probs.append(f"tab {code}: {rp.errors[:2]}")
                         rp.shot(U.ws, slug(role), f"{vcode}__{code}")

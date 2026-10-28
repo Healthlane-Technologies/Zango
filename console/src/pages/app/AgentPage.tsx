@@ -5,6 +5,7 @@ import { parse as parseYaml } from 'yaml';
 import {
 	agentKeys,
 	requirementQuery,
+	documentUrl,
 	useApproveRequirement,
 	useAvailability,
 	useCommitRequirement,
@@ -171,6 +172,8 @@ export function AgentPage() {
 		draft: active?.draft_revision,
 		version: active?.spec_version,
 		status: active?.status,
+		turns: active?.turns,
+		thinking: active?.is_thinking,
 	});
 	const decisions = activeSpec.data?.open_decisions ?? [];
 	const openDecisions = decisions.length;
@@ -208,8 +211,10 @@ export function AgentPage() {
 		};
 		return () => channel.close();
 	}, [activeId]);
-	const sendReply = async (content: string) => {
-		const ok = await attempt(sendMessage.mutateAsync({ content, focus: pointer ?? place.current }));
+	const sendReply = async (content: string, documents: File[] = []) => {
+		const ok = await attempt(
+			sendMessage.mutateAsync({ content, focus: pointer ?? place.current, documents }),
+		);
 		if (ok) setPointer(null);
 		return ok;
 	};
@@ -313,17 +318,25 @@ export function AgentPage() {
 			const detail = ((raw?.response as Record<string, unknown> | undefined) ?? raw ?? {}) as {
 				open_decisions?: unknown[];
 				issues?: unknown[];
+				agent_prompt?: string;
+				message?: string;
 			};
 			const unfinished = status === 409 && !detail.open_decisions?.length && !!detail.issues?.length;
 			if (unfinished && !autoCommitted.current) {
-				// Unfinished custom work (no sketch, no contract): the agent finishes it, not the user.
+				// Unfinished custom work (no sketch, no contract), or what the approved prototype shows and
+				// the spec leaves out: the agent finishes it, not the user.
 				const items = (detail.issues as { path?: string; message?: string }[])
 					.map((i) => `- ${i.path}: ${i.message}`)
 					.join('\n');
 				autoCommitted.current = true;
-				if (await sendReply(`Before building, finish these custom parts:\n${items}`)) {
+				const brief = detail.agent_prompt ?? 'Before building, finish these custom parts:';
+				if (await sendReply(`${brief}\n${items}`)) {
 					commitAfterTurn.current = 'waiting';
-					toast.success('The agent is finishing a few custom parts. The commit will go through when it is done.');
+					toast.success(
+						detail.agent_prompt
+							? 'The agent is adding what the spec leaves out of the prototype. The commit will go through when it is done.'
+							: 'The agent is finishing a few custom parts. The commit will go through when it is done.',
+					);
 				}
 				return;
 			}
@@ -595,10 +608,13 @@ export function AgentPage() {
 						active={active}
 						enabled={!blocked}
 						sending={sendMessage.isPending || create.isPending}
-						onSend={async (c) =>
-							(!active?.template || (await flushTemplate())) && sendReply(c)
+						onSend={async (c, files) =>
+							(!active?.template || (await flushTemplate())) && sendReply(c, files)
 						}
-						onNewRound={newChange}
+						onNewRound={(prompt, files) =>
+							newChange(files.length ? { prompt, documents: files } : prompt)
+						}
+						documentUrl={(reqUuid, id) => documentUrl(appId, reqUuid, id)}
 						onOpenBuild={(uuid) => setView({ round: uuid, tab: 'builds' })}
 						focusSignal={focusSignal}
 						pointer={pointer}

@@ -464,3 +464,220 @@ def standard_md(screens: list) -> list:
             )
         lines.append("")
     return lines
+
+
+# --- open mode (Free design): the approved prototype ---------------------------------------------
+# The build follows the prototype, so it gets what each screen looks like for each role: the
+# rendered markup (scripts removed) and a screenshot, captured in the probe worker. It ports from
+# these, never from the prototype's own code (an imported page is one big script).
+
+PROTOTYPE_CAPTURE_TIMEOUT = 600
+_URL_RE = re.compile(
+    r"https://(?:cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net|unpkg\.com)/[^\s\"'<>)]+"
+)
+
+
+def prototype_libraries(parts: dict) -> list:
+    """Every external script the prototype loads: the manifest's libraries and any CDN URL in a part."""
+    from .prototype import LUCIDE_URL, manifest_of
+
+    manifest, _ = manifest_of(parts)
+    found = [str(u) for u in manifest.get("libraries") or []]
+    for path, text in sorted(parts.items()):
+        if path == "manifest.json":
+            continue
+        for url in _URL_RE.findall(text or ""):
+            if url not in found and url != LUCIDE_URL:
+                found.append(url)
+    return found
+
+
+def write_prototype_bundle(
+    parts: dict, out_dir, *, design=None, python=None, soon=None
+) -> dict:
+    """``out_dir`` (``.zas/bundle/prototype``) for an open-mode requirement; returns capture.json.
+
+    prototype.html, manifest.json, design.json, libraries.json, index.md, and per manifest screen
+    ``screens/<id>/dom.<role>.html``, ``shot.<role>.png`` and ``css.used.css``.
+    """
+    import os
+    import signal
+    import subprocess
+    import sys
+
+    from .preview_probe import WORKER, playwright_available
+    from .prototype import assemble, manifest_of, parts_hash
+
+    out = Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    manifest, _ = manifest_of(parts)
+    (out / "prototype.html").write_text(assemble(parts, soon), encoding="utf-8")
+    (out / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    (out / "design.json").write_text(
+        json.dumps(design or {}, indent=2), encoding="utf-8"
+    )
+    (out / "libraries.json").write_text(
+        json.dumps(prototype_libraries(parts), indent=2), encoding="utf-8"
+    )
+    capture = {
+        "version": 1,
+        "prototype_hash": parts_hash(parts),
+        "source": manifest.get("source") or "generated",
+        "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "probe": "ok",
+        "screens": [],
+    }
+    python = python or sys.executable
+    if not playwright_available(python):
+        capture["probe"] = "unavailable: Playwright is not installed"
+    else:
+        proc = subprocess.Popen(
+            [python, str(WORKER), "--open", str(out / "prototype.html"), str(out)],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            encoding="utf-8",
+            start_new_session=True,  # killing its group takes Chromium too
+        )
+        try:
+            stdout, _ = proc.communicate(timeout=PROTOTYPE_CAPTURE_TIMEOUT)
+            lines = [line for line in (stdout or "").splitlines() if line.strip()]
+            result = json.loads(lines[-1]) if lines else {}
+            if not result.get("ok", False) and "screens" not in result:
+                capture["probe"] = f"failed: {result.get('error') or 'no result'}"
+            for key in ("screens", "load_errors", "blocked"):
+                capture[key] = result.get(key) or capture.get(key) or []
+        except subprocess.TimeoutExpired:
+            os.killpg(proc.pid, signal.SIGKILL)
+            proc.communicate()
+            capture["probe"] = f"failed: took longer than {PROTOTYPE_CAPTURE_TIMEOUT} s"
+        except (ValueError, OSError) as exc:
+            capture["probe"] = f"failed: {exc}"
+    (out / "capture.json").write_text(json.dumps(capture, indent=2), encoding="utf-8")
+    (out / "index.md").write_text(
+        prototype_index_md(capture, manifest, design), encoding="utf-8"
+    )
+    return capture
+
+
+def prototype_index_md(capture: dict, manifest: dict, design=None) -> str:
+    """The table the build reads first: every prototype screen, its roles and its files."""
+    tokens = (design or {}).get("tokens") or {}
+    fonts = (design or {}).get("fonts") or {}
+    lines = [
+        "# Approved prototype",
+        "",
+        f"Source: {capture.get('source')} prototype · hash {capture.get('prototype_hash', '')[:12]} · "
+        f"probe: {capture.get('probe')}",
+        "",
+        "What the user approved, screen by screen: `shot.<role>.png` (how it looks) and "
+        "`dom.<role>.html` (what it rendered). Port, don't redraw (`references/open-mode.md`): each "
+        "screen's component is in the prototype's source (`source/index.md`: each script, what it "
+        'defines by line); copy its markup, classes and inline styles under <div className="zp">, '
+        "which `frontend/src/custom/prototype.css` (the prototype's stylesheets, scoped) styles, with the "
+        "app's data. Its router, store and timers are not used. Behaviour comes from the spec.",
+        "Screens marked prototype-only are not built. The app's kit is for kit pages "
+        '(`references/open-mode.md`, "The kit"); rebuild screens are ported and need none.',
+        "",
+        "Design (`design.json`, from `app.design`): "
+        + (
+            f"brand {tokens.get('brand', '?')}, fonts "
+            + ", ".join(f"{k} {v}" for k, v in fonts.items())
+            + f", {len(tokens)} tokens."
+            if tokens
+            else "not recorded in the spec; read the `:root` variables in `prototype.html`."
+        ),
+        "",
+        "| Screen | Title | Roles | Record | Files | Problems |",
+        "|---|---|---|---|---|---|",
+    ]
+    for s in capture.get("screens") or []:
+        shot_roles = [r["role"] for r in s.get("roles") or [] if r.get("files")]
+        shared = [
+            f"{r['role']}={r['same_as']}"
+            for r in s.get("roles") or []
+            if r.get("same_as")
+        ]
+        problems = []
+        for r in s.get("roles") or []:
+            if r.get("error"):
+                problems.append(f"{r['role']}: did not open ({r['error'][:120]})")
+            for e in r.get("errors") or []:
+                problems.append(f"{r['role']}: {e[:120]}")
+            if r.get("blank"):
+                problems.append(f"{r['role']}: blank")
+        roles = ", ".join(shot_roles) + (
+            f" (same: {', '.join(shared)})" if shared else ""
+        )
+        record = (
+            f"{s.get('record')} ({next((r['record'] for r in s.get('roles') or [] if r.get('record')), 'none')})"
+            if s.get("record")
+            else ""
+        )
+        title = (s.get("title") or "").replace("|", "/")
+        if s.get("only") == "prototype":
+            title += " · prototype-only"
+        files = f"screens/{s['id']}/" if shot_roles else "none"
+        lines.append(
+            f"| `{s['id']}` | {title} | {roles or '-'} | {record} | {files} | "
+            + ("; ".join(problems[:3]).replace("|", "/") or "")
+            + " |"
+        )
+    no_ref = [
+        s["id"]
+        for s in capture.get("screens") or []
+        if s.get("only") != "prototype"
+        and any(r.get("blank") or r.get("error") for r in s.get("roles") or [])
+    ]
+    if no_ref:
+        lines += [
+            "",
+            "**No reference** for: "
+            + ", ".join(f"`{x}`" for x in no_ref)
+            + ". Their snapshot is "
+            "blank, so there is no look to port: build them from the spec in the look of the screens "
+            "that have one, and don't read their blank `shot.*.png` as the design.",
+        ]
+    if capture.get("load_errors"):
+        lines += [
+            "",
+            "Errors while the page loaded:",
+            *[f"- {e}" for e in capture["load_errors"][:10]],
+        ]
+    if capture.get("blocked"):
+        lines += [
+            "",
+            "Blocked requests (not on the allowed hosts):",
+            *[f"- {u}" for u in capture["blocked"][:10]],
+        ]
+    # The shell is in every snapshot; each role's home shows it with that role's menu.
+    homes = manifest.get("home") if isinstance(manifest.get("home"), dict) else {}
+    shot = {
+        (s["id"], r["role"]): r.get("same_as") or r["role"]
+        for s in capture.get("screens") or []
+        for r in s.get("roles") or []
+        if r.get("files") or r.get("same_as")
+    }
+    shell_refs = [
+        f"{role} `screens/{home}/shot.{shot[(home, role)]}.png`"
+        for role, home in homes.items()
+        if (home, role) in shot
+    ]
+    lines += [
+        "",
+        "Shell (sidebar or top bar, app name, menu groups, user card): build it as "
+        "`src/custom/Shell.tsx` on the runtime's `makeShell` (references/open-mode.md, "
+        '"The shell"). Only its look comes from here; the menu is the spec\'s per role.'
+        + (
+            " Read it on each role's home: " + ", ".join(shell_refs) + "."
+            if shell_refs
+            else ""
+        ),
+    ]
+    lines += [
+        "",
+        "Libraries the prototype loads are in `libraries.json`: use the npm package of the same "
+        "library, or redraw with zas / SVG, and say which in the build report.",
+        "",
+    ]
+    return "\n".join(lines)

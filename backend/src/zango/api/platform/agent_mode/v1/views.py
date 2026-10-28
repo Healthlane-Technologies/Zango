@@ -108,6 +108,11 @@ class AgentModeAvailabilityView(ZangoGenericPlatformAPIView, TenantMixin):
                 if in_flight
                 else None
             )
+            from django.conf import settings as dj
+
+            payload["open_prototype"] = bool(
+                getattr(dj, "AGENT_MODE_OPEN_PROTOTYPE", True)
+            )
             last = AgentRun.objects.order_by("-queued_at").first()
             payload["last_run"] = (
                 {
@@ -824,14 +829,20 @@ def _dispatch_turn(requirement, tenant):
     """Queue one analyst turn after the outer transaction commits."""
     from django.conf import settings as dj
 
+    from zango.apps.agent_mode.prototype import is_drafting
     from zango.apps.agent_mode.tasks import agent_requirement_turn
+
+    seconds = 600
+    if requirement.preview_mode == "open" and is_drafting(requirement.prototype_parts):
+        # An open prototype's first draft (or the rest of it) writes many screens in one turn.
+        seconds = int(getattr(dj, "AGENT_MODE_OPEN_FIRST_TURN_SECONDS", 1500) or 1500)
 
     def _go():
         result = agent_requirement_turn.apply_async(
             args=[str(requirement.object_uuid), tenant.name],
             queue=getattr(dj, "AGENT_MODE_QUEUE", "") or None,
-            soft_time_limit=600,
-            time_limit=660,
+            soft_time_limit=seconds,
+            time_limit=seconds + 60,
         )
         with _in_tenant(tenant):
             AgentRequirement.objects.filter(pk=requirement.pk).update(
@@ -839,6 +850,33 @@ def _dispatch_turn(requirement, tenant):
             )
 
     transaction.on_commit(_go)
+
+
+def _seed_preview_mode(requirement, asked) -> None:
+    """Open prototype or kit preview for a new (template) requirement.
+
+    An explicit choice wins; otherwise a change keeps the mode of the app's last
+    approved requirement, and starts from its prototype.
+    """
+    from django.conf import settings as dj
+
+    from zango.apps.agent_mode.models import RequirementStatus
+
+    if not getattr(dj, "AGENT_MODE_OPEN_PROTOTYPE", True):
+        return
+    previous = (
+        AgentRequirement.objects.filter(status=RequirementStatus.APPROVED)
+        .order_by("-approved_at", "-created_at")
+        .only("preview_mode", "prototype_parts", "prototype_hash")
+        .first()
+    )
+    asked = (asked or "").strip().lower()
+    if asked not in ("open", "kit"):
+        asked = previous.preview_mode if previous and previous.preview_mode else "kit"
+    requirement.preview_mode = asked
+    if asked == "open" and previous and previous.prototype_parts:
+        requirement.prototype_parts = dict(previous.prototype_parts)
+        requirement.prototype_hash = previous.prototype_hash
 
 
 def _append_user_message(requirement, content: str, focus=None):
@@ -954,17 +992,18 @@ class AgentRequirementListCreateView(
                     requirement.mode = (
                         "draft" if wants_draft(prompt, len(documents)) else "interview"
                     )
+                    _seed_preview_mode(requirement, request.data.get("preview_mode"))
                 requirement.save()
-                for doc in documents:
-                    AgentRequirementDocument.objects.create(
-                        requirement=requirement, **doc.model_fields()
-                    )
                 from zango.apps.agent_mode.preview_focus import clean_focus
 
                 # What the user pointed at in the preview starts the change.
-                _append_user_message(
+                first = _append_user_message(
                     requirement, prompt, clean_focus(request.data.get("focus"))
                 )
+                for doc in documents:
+                    AgentRequirementDocument.objects.create(
+                        requirement=requirement, message=first, **doc.model_fields()
+                    )
 
             _dispatch_turn(requirement, tenant)
             return get_api_response(
@@ -982,10 +1021,20 @@ class AgentRequirementDetailView(ZangoGenericPlatformAPIView, TenantMixin):
     """GET requirements/{uuid}/ — the conversation, spec and status."""
 
     def get(self, request, app_uuid, requirement_uuid, *args, **kwargs):
+        from django.db.models import Prefetch
+
         try:
             _bind_tenant(self, app_uuid)
             try:
-                requirement = AgentRequirement.objects.get(object_uuid=requirement_uuid)
+                # attachments without their bytes: one query, not one per message
+                requirement = AgentRequirement.objects.prefetch_related(
+                    Prefetch(
+                        "messages__attachments",
+                        queryset=AgentRequirementDocument.objects.only(
+                            "pk", "name", "content_type", "size", "message_id"
+                        ).order_by("pk"),
+                    )
+                ).get(object_uuid=requirement_uuid)
             except AgentRequirement.DoesNotExist:
                 return get_api_response(False, {"message": "not found"}, 404)
             return get_api_response(
@@ -1023,12 +1072,35 @@ class AgentRequirementMessageView(ZangoGenericPlatformAPIView, TenantMixin):
                     False, {"message": "The agent is still replying."}, 409
                 )
 
+            from zango.apps.agent_mode.documents import (
+                MAX_REQUIREMENT_FILES,
+                DocumentError,
+                read_uploads,
+            )
             from zango.apps.agent_mode.template_spec import decisions_message
+
+            # Files attached in the chat: reference material for this turn.
+            try:
+                documents = read_uploads(request)
+            except DocumentError as exc:
+                return get_api_response(False, {"message": str(exc)}, 400)
+            if documents and (
+                requirement.documents.count() + len(documents) > MAX_REQUIREMENT_FILES
+            ):
+                return get_api_response(
+                    False,
+                    {
+                        "message": f"An app can have at most {MAX_REQUIREMENT_FILES} files."
+                    },
+                    400,
+                )
 
             # Answers to the Review tab's open decisions arrive as one batch.
             content, answered = decisions_message(
                 request.data.get("content") or "", request.data.get("answers")
             )
+            if not content and documents:
+                content = "Files for reference."
             if not content:
                 return get_api_response(False, {"message": "Message is empty."}, 400)
             if len(content) > MAX_MESSAGE_CHARS:
@@ -1037,9 +1109,13 @@ class AgentRequirementMessageView(ZangoGenericPlatformAPIView, TenantMixin):
             from zango.apps.agent_mode.preview_focus import clean_focus
 
             with transaction.atomic():
-                _append_user_message(
+                message = _append_user_message(
                     requirement, content, clean_focus(request.data.get("focus"))
                 )
+                for doc in documents:
+                    AgentRequirementDocument.objects.create(
+                        requirement=requirement, message=message, **doc.model_fields()
+                    )
                 requirement.is_thinking = True
                 requirement.error_message = ""
                 update = ["is_thinking", "error_message", "modified_at"]
@@ -1282,12 +1358,84 @@ class AgentRequirementDocumentFileView(ZangoGenericPlatformAPIView, TenantMixin)
             if doc is None:
                 return get_api_response(False, {"message": "not found"}, 404)
             response = HttpResponse(bytes(doc.data), content_type=doc.content_type)
-            # Always a download: an uploaded file must never render as a page.
-            response["Content-Disposition"] = f'attachment; filename="{doc.name}"'
+            # A download, so an uploaded file never renders as a page. Raster images
+            # (magic bytes checked at upload; no SVG) may be shown inline as chat thumbnails.
+            inline = request.GET.get("inline") == "1" and doc.content_type in (
+                "image/png",
+                "image/jpeg",
+                "image/gif",
+                "image/webp",
+            )
+            response["Content-Disposition"] = (
+                f'{"inline" if inline else "attachment"}; filename="{doc.name}"'
+            )
             response["X-Content-Type-Options"] = "nosniff"
+            if inline:
+                response["Content-Security-Policy"] = "default-src 'none'; sandbox"
             return response
         except Exception as exc:  # noqa: BLE001
             log.exception("agent_mode: document download failed")
+            return get_api_response(False, {"message": str(exc)}, 500)
+
+
+@method_decorator(set_app_schema_path, name="dispatch")
+class AgentRequirementPrototypeView(ZangoGenericPlatformAPIView, TenantMixin):
+    """GET requirements/{uuid}/prototype/[?v=N]: the open prototype as one HTML page.
+
+    The console shows it in a sandboxed frame (no same-origin); the CSP is in the page
+    and repeated here, so a direct open is as locked down as the frame.
+    """
+
+    def get(self, request, app_uuid, requirement_uuid, *args, **kwargs):
+        from django.http import HttpResponse
+
+        from zango.apps.agent_mode.models import AgentRequirementVersion
+        from zango.apps.agent_mode.prototype import (
+            CSP,
+            assemble,
+            soon_digest,
+            soon_menu,
+        )
+
+        try:
+            _bind_tenant(self, app_uuid)
+            req = AgentRequirement.objects.filter(object_uuid=requirement_uuid).first()
+            if req is None:
+                return get_api_response(False, {"message": "not found"}, 404)
+            parts, digest = req.prototype_parts, req.prototype_hash
+            spec_text = req.spec_markdown
+            version = request.GET.get("v")
+            if version:
+                row = AgentRequirementVersion.objects.filter(
+                    requirement=req, version=int(version)
+                ).first()
+                if row is None:
+                    return get_api_response(False, {"message": "not found"}, 404)
+                parts, digest = row.prototype_parts, row.prototype_hash
+                spec_text = row.spec_markdown
+            if not parts:
+                return get_api_response(
+                    False, {"message": "There is no prototype yet."}, 404
+                )
+            # The not-built menu items come from the YAML: they change the page too.
+            soon = soon_menu(spec_text)
+            etag = f'"{digest}{soon_digest(soon)}"'
+            if request.headers.get("If-None-Match") == etag:
+                return HttpResponse(status=304)
+            response = HttpResponse(
+                assemble(parts, soon), content_type="text/html; charset=utf-8"
+            )
+            response["Content-Security-Policy"] = (
+                CSP + "; sandbox allow-scripts allow-popups allow-forms"
+            )
+            response["X-Content-Type-Options"] = "nosniff"
+            response["ETag"] = etag
+            response["Cache-Control"] = "private, no-cache"
+            return response
+        except (TypeError, ValueError):
+            return get_api_response(False, {"message": "bad version"}, 400)
+        except Exception as exc:  # noqa: BLE001
+            log.exception("agent_mode: prototype failed")
             return get_api_response(False, {"message": str(exc)}, 500)
 
 

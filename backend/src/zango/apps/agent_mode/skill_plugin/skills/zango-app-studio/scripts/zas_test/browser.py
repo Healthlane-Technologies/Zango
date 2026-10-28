@@ -9,6 +9,7 @@ collected per page so a check can fail on them.
 
 import contextlib
 import os
+import re
 import sys
 
 from . import auth
@@ -101,6 +102,51 @@ def visible_uid(M, entity, session, uids):
     except Exception:
         pass
     return uid
+
+
+def rebuilt(M, kind, code):
+    """A page ("page") or 360 ("view") the build rebuilt from the prototype (`rebuild: true`): the
+    mockup is its truth, so the kit-layout checks skip it and the look round compares it."""
+    return any(sc.get("cls") == "rebuild" and sc.get("kind") == kind and sc.get("code") == code
+               for sc in (M.get("prototype") or {}).get("screens") or [])
+
+
+RAW_DATE = re.compile(r"\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?")
+
+
+def raw_dates(text):
+    """A problem line when the page prints a machine timestamp (2026-10-28T03:45:48.33+00:00) where a
+    person reads a date, else None."""
+    hits = sorted(set(RAW_DATE.findall(text or "")))
+    return f"shows raw timestamps ({', '.join(hits[:2])}): format them as dates" if hits else None
+
+
+def route_entity(M, route, param):
+    """The entity a route's `:param` names a record of: the crud page whose route is the part before
+    it (`/app/cases/:id/review` → the page at `/app/cases` → its entity), else None."""
+    head = route.split("/:" + param, 1)[0].rstrip("/")
+    for p in M["pages"].values():
+        if p.get("type") == "crud" and p.get("entity") and (p.get("route") or "").rstrip("/") == head:
+            return p["entity"]
+    return None
+
+
+def fill_route(M, route, records, session):
+    """(path, None) with each `:param` set to a record the session can see, or (None, why) when a
+    param names no entity (a link token) or there is no record for it."""
+    import re
+
+    path = route
+    for param in re.findall(r":(\w+)", route):
+        ent = route_entity(M, route, param)
+        if not ent:
+            return None, f"the route {route} takes :{param}, which names no record (a token or code): not opened"
+        uids = (records or {}).get(ent) or []
+        uid = visible_uid(M, ent, session, uids) if uids else None
+        if not uid:
+            return None, f"no {ent} record to open {route} with: run zas_test.api first"
+        path = path.replace(":" + param, str(uid), 1)
+    return path, None
 
 
 def detail_path(M, entity, uuid):

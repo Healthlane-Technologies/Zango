@@ -85,6 +85,50 @@
               ]
             }
           }
+        },
+        "design": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Open mode (Free design): the prototype's look, for the build to theme the app with (SCHEMA.md, app.design).",
+          "properties": {
+            "source": {
+              "type": "string",
+              "enum": [
+                "prototype"
+              ]
+            },
+            "fonts": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "body": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "display": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "mono": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "tokens": {
+              "type": "object",
+              "maxProperties": 150,
+              "propertyNames": {
+                "pattern": "^[a-z][a-z0-9-]*$"
+              },
+              "additionalProperties": {
+                "type": [
+                  "string",
+                  "number"
+                ]
+              }
+            }
+          }
         }
       }
     },
@@ -137,6 +181,130 @@
       "title": "Detail (360) views",
       "items": {
         "$ref": "#/$defs/detailView"
+      }
+    },
+    "prototype": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Open mode (Free design): which declared page each prototype screen is (SCHEMA.md, prototype).",
+      "properties": {
+        "hash": {
+          "type": "string"
+        },
+        "screens": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "maps": {
+                "type": "string",
+                "pattern": "^/(pages|detail_views)/@[A-Za-z0-9_]+$"
+              },
+              "only": {
+                "type": "string",
+                "enum": [
+                  "prototype"
+                ]
+              },
+              "why": {
+                "type": "string"
+              },
+              "rebuild": {
+                "type": "boolean"
+              },
+              "menu": {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "A screen that is not built (only: prototype) still shows in the menu, greyed out, where the prototype has it.",
+                "properties": {
+                  "label": {
+                    "type": "string"
+                  },
+                  "group": {
+                    "type": "string"
+                  },
+                  "icon": {
+                    "type": "string"
+                  },
+                  "roles": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "not_built": {
+                "type": "array",
+                "description": "What this screen shows in the prototype that the build leaves out, each with why (the user sees these).",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "text",
+                    "why"
+                  ],
+                  "properties": {
+                    "text": {
+                      "type": "string"
+                    },
+                    "why": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "required": [
+                    "only"
+                  ]
+                },
+                "then": {
+                  "required": [
+                    "why"
+                  ],
+                  "not": {
+                    "required": [
+                      "maps"
+                    ]
+                  }
+                },
+                "else": {
+                  "required": [
+                    "maps"
+                  ]
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "rebuild": {
+                      "const": true
+                    }
+                  },
+                  "required": [
+                    "rebuild"
+                  ]
+                },
+                "then": {
+                  "required": [
+                    "why"
+                  ]
+                }
+              }
+            ]
+          }
+        }
       }
     }
   },
@@ -1339,6 +1507,11 @@
         },
         "refs": {
           "$ref": "#/$defs/refs"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Custom pages in open mode: what no crud, detail or dashboard page can show here."
         }
       },
       "allOf": [
@@ -1400,6 +1573,25 @@
             "not": {
               "required": [
                 "blocks"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "custom"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "reason"
               ]
             }
           }

@@ -33,11 +33,41 @@ def _hook(entity_code, fn):
     return zs.hook(zs.entity(entity_code)["module"], fn)
 
 
-class _FormRecord:
-    """Lets expressions read live form values (and fall back to the instance)."""
+def _cell_text(E, obj, path):
+    """One part of a cell's second line: the field's display text, formatted like a cell."""
+    from . import records as zr
 
-    def __init__(self, values, instance=None):
+    v = zr.field_value(E, obj, path)
+    if v["display"] is None:
+        return ""
+    if v["type"] in ("money", "number", "percent", "days", "date", "datetime"):
+        return zr.display(v["value"], v["type"]) or v["display"]
+    return v["display"]
+
+
+def _cell_icon(obj, icon):
+    """`icon` normalised by spec_check: {by, map, default}."""
+    if not icon:
+        return None
+    if not icon.get("by"):
+        return icon.get("default")
+    from . import records as zr
+
+    raw = zr.value_of(obj, icon["by"])
+    return (icon.get("map") or {}).get(str(raw), icon.get("default"))
+
+
+class _FormRecord:
+    """Lets expressions read live form values (and fall back to the instance).
+
+    Carries the model's ``_meta`` so a rule comparing two fields (``bp_systolic > bp_diastolic``)
+    reads the right-hand word as a field value, as it does on a saved record (expr._eval_value)."""
+
+    def __init__(self, values, instance=None, model=None):
         self._v, self._i = values or {}, instance
+        model = model or (type(instance) if instance is not None else None)
+        if getattr(model, "_meta", None) is not None:
+            self._meta = model._meta
 
     def __getattr__(self, name):
         if name.startswith("_"):
@@ -81,13 +111,22 @@ class ZasTableMixin:
         try:
             req = self._zas_request()
             role = access.role_name(req)
-            qfs = (zs.entity(self.zas_entity).get("table") or {}).get("quick_filters", [])
+            qfs = [q for q in (zs.entity(self.zas_entity).get("table") or {}).get("quick_filters", [])
+                   if not q.get("roles") or role in q["roles"]]
+            counted = [q for q in qfs if q.get("count")]
+            page = next((p for p in (zs.load().get("pages") or {}).values()
+                         if p.get("type") == "crud" and p.get("entity") == self.zas_entity
+                         and (p.get("subtitle") or {}).get("stat")), None)
+            base = self._zas_base_queryset(req) if counted or page else None
             meta["zas"] = {
                 "entity": self.zas_entity, "role": role,
-                "quick_filters": [{"key": q["key"], "label": q["label"], "default": bool(q.get("default"))}
-                                  for q in qfs if not q.get("roles") or role in q["roles"]],
+                "quick_filters": [{"key": q["key"], "label": q["label"], "default": bool(q.get("default")),
+                                   **({"count": self._zas_count(base, q, req)} if q.get("count") else {})}
+                                  for q in qfs],
                 "filter_options": self._zas_filter_options(req),
             }
+            if page:
+                meta["zas"]["subtitle_stat"] = self._zas_stat(base, page["subtitle"]["stat"], req)
         except Exception:
             logger.exception("zas: table metadata for %s", self.zas_entity)
         return meta
@@ -95,15 +134,17 @@ class ZasTableMixin:
     def post_process_data(self, data):
         """Rows as crud serializes them, plus `zas` for the React table (contracts §8b):
         `links` = object_uuid of each linked record shown in a column (so a `link_to` cell can
-        open the linked 360), `status` / `tags` = codes (the crud cells are HTML labels)."""
+        open the linked 360) or that is a parent link (a `<view>#<tab>` row click opens the parent),
+        `status` / `tags` = codes (the crud cells are HTML labels)."""
         rows = super().post_process_data(data)
         try:
-            cols = set(self.get_columns())
-            fks = [f for f in data[0]["obj"]._meta.fields if f.is_relation and f.name in cols] if data else []
             E = zs.entity(self.zas_entity)
+            cols = set(self.get_columns()) | {p.get("fk") for p in (E.get("parents") or {}).values() if p.get("fk")}
+            fks = [f for f in data[0]["obj"]._meta.fields if f.is_relation and f.name in cols] if data else []
             has_wf = bool((E.get("workflow") or {}).get("statuses"))
             hls = [(c["key"], c["highlight"]) for c in (E.get("table") or {}).get("columns", [])
                    if (c.get("highlight") or {}).get("ast")]
+            cells = [c for c in (E.get("table") or {}).get("columns", []) if c.get("secondary") or c.get("icon")]
             ctx = access.expr_ctx(self._zas_request())
             for row, d in zip(rows, data):
                 obj = d["obj"]
@@ -125,6 +166,16 @@ class ZasTableMixin:
                         logger.exception("zas: highlight %s.%s", self.zas_entity, key)
                 if hl:
                     z["hl"] = hl
+                for c in cells:  # table.columns[].secondary / icon: the cell's second line and icon
+                    try:
+                        sub = [t for t in (_cell_text(E, obj, p) for p in c.get("secondary") or []) if t]
+                        if sub:
+                            z.setdefault("sub", {})[c["key"]] = " · ".join(sub)
+                        icon = _cell_icon(obj, c.get("icon"))
+                        if icon:
+                            z.setdefault("icon", {})[c["key"]] = icon
+                    except Exception:
+                        logger.exception("zas: cell %s.%s", self.zas_entity, c["key"])
                 row["zas"] = z
         except Exception:
             logger.exception("zas: row extras for %s", self.zas_entity)
@@ -173,6 +224,33 @@ class ZasTableMixin:
         except Exception:
             logger.exception("zas: filter options for %s", self.zas_entity)
         return out
+
+    def _zas_base_queryset(self, req):
+        """The rows this viewer may list, before search, filters and the quick filter."""
+        qs = super().get_table_data_queryset()
+        qs = access.scope_queryset(self.zas_entity, qs, req)
+        return access.parent_filter(self.zas_entity, qs, req)
+
+    def _zas_count(self, base, q, req):
+        """quick_filters[].count: how many of the viewer's rows the chip shows."""
+        try:
+            return (base.filter(zx.to_q(q["ast"], base.model, access.expr_ctx(req))) if q.get("ast") else base).count()
+        except Exception:
+            logger.exception("zas: count for quick filter %s.%s", self.zas_entity, q.get("key"))
+            return None
+
+    def _zas_stat(self, base, st, req):
+        """pages[].subtitle.stat: a count or a sum over the viewer's rows (where narrows them)."""
+        from django.db.models import Sum
+
+        try:
+            qs = base.filter(zx.to_q(st["ast"], base.model, access.expr_ctx(req))) if st.get("ast") else base
+            if st.get("sum"):
+                return float(qs.aggregate(v=Sum(st["sum"]))["v"] or 0)  # Decimal is not JSON
+            return qs.count()
+        except Exception:
+            logger.exception("zas: subtitle stat for %s", self.zas_entity)
+            return None
 
     def _zas_quick_filter(self, qs, req):
         key = req.GET.get("qf")
@@ -285,7 +363,7 @@ class ZasFormMixin:
         self._zas_is_edit = bool(inst is not None and getattr(inst, "pk", None))
         values = self._zas_values()
         ctx = access.expr_ctx(self._zas_req, form=values)
-        rec = _FormRecord(values, inst if self._zas_is_edit else None)
+        rec = _FormRecord(values, inst if self._zas_is_edit else None, model=getattr(getattr(self, "_meta", None), "model", None))
 
         # 1. parent preset (360 tab): preset + hide the FK, on a COPY of the ModelField
         if self._zas_req is not None and not self._zas_is_edit:
@@ -415,7 +493,7 @@ class ZasFormMixin:
         E = self._E
         req = self._zas_req
         confirmed = bool(cleaned.get(self.CONFIRM))
-        rec = _FormRecord(cleaned, self.instance if self._zas_is_edit else None)
+        rec = _FormRecord(cleaned, self.instance if self._zas_is_edit else None, model=getattr(getattr(self, "_meta", None), "model", None))
         ctx = access.expr_ctx(req, form=cleaned)
         warnings = []
         v = E.get("validation") or {}
@@ -488,6 +566,14 @@ class ZasActionFormMixin:
     (contracts §6), then keeps the cleaned data for the hook."""
 
     zas_entity = None
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # workflow 1.0.1 builds a transition form from request.POST only and stores the upload
+        # afterwards: without the request's files a required file field always fails validation.
+        req = getattr(getattr(self, "crud_view_instance", None), "request", None)
+        if not self.files and getattr(req, "FILES", None):
+            self.files = req.FILES
 
     def save(self, *args, **kwargs):
         obj = (getattr(self, "initial", {}) or {}).get("object_instance") or getattr(self, "instance", None)

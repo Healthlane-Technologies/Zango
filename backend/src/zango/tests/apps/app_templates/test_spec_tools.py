@@ -216,3 +216,69 @@ class ManualEditTests(AppTemplatesTestBase):
         self.assertEqual(code, 200, payload)
         self.assertFalse(payload["is_draft"])
         self.assertEqual(payload["status"], "ready")
+
+
+class OpenModeSpecTests(AppTemplatesTestBase):
+    """Free design: app.design follows the prototype, custom pages carry a reason."""
+
+    def setUp(self):
+        super().setUp()
+        import_pack(PACKS_DIR / "zango_app", publish_now=True)
+        catalogue.clear_caches()
+        self.template = catalogue.get_template("zango-app")
+
+    def bench(self):
+        from zango.apps.agent_mode.prototype import PrototypeBench
+        from zango.apps.agent_mode.spec_tools import SpecWorkbench
+
+        from .test_prototype import EXAMPLE
+
+        parts = {
+            str(p.relative_to(EXAMPLE)): p.read_text()
+            for p in EXAMPLE.rglob("*")
+            if p.is_file() and p.suffix in (".css", ".js", ".json")
+        }
+        return SpecWorkbench(
+            (PACKS_DIR / "zango_app" / "example.yaml").read_text(),
+            self.template,
+            emit=lambda e: None,
+            proto=PrototypeBench(parts, lambda e: None),
+        )
+
+    def test_proto_design_sets_app_design_and_ready_checks_it(self):
+        from zango.apps.agent_mode.spec_tools import ToolRefused
+
+        bench = self.bench()
+        with self.assertRaisesRegex(ToolRefused, "no app.design"):
+            bench._check_open_mode_ready()
+        out = _call(_handlers(bench)["proto_design"], {})
+        self.assertIn("/app/design", str(out))
+        design = bench._plain(bench.doc)["app"]["design"]
+        self.assertEqual(design["source"], "prototype")
+        self.assertTrue(design["tokens"].get("brand", "").startswith("#"))
+        self.assertIn("body", design.get("fonts", {}))
+        bench.set("/app/design/tokens/brand", "#000000")
+        with self.assertRaisesRegex(ToolRefused, "no longer matches"):
+            bench._check_open_mode_ready()
+
+    def test_custom_page_needs_a_reason_in_open_mode(self):
+        from zango.apps.agent_mode.spec_tools import ToolRefused
+
+        bench = self.bench()
+        bench.apply_design()
+        pages = bench._plain(bench.doc).get("pages") or []
+        bench.add("/pages", {"code": "visit_map", "type": "custom", "title": "Visit map",
+                             "acceptance": ["Shows visits on a map."]})
+        with self.assertRaisesRegex(ToolRefused, "/pages/@visit_map"):
+            bench._check_open_mode_ready()
+        bench.set("/pages/@visit_map/reason", "A map; no declared page draws one.")
+        for p in pages:
+            if p.get("type") == "custom":
+                bench.set(f"/pages/@{p['code']}/reason", "Example reason.")
+        note = bench._check_open_mode_ready()
+        self.assertIn("visit_map: A map", note)
+        self.assertTrue(pages)
+        # reason is only for custom pages
+        crud = next(p["code"] for p in pages if p.get("type") == "crud")
+        with self.assertRaises(ToolRefused):
+            bench.set(f"/pages/@{crud}/reason", "no")

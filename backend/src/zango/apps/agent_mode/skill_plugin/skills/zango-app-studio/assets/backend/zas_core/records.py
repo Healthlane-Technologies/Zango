@@ -279,6 +279,10 @@ def field_value(E, obj, path, label=None, fmt=None):
             out.update(value=name, display=name.rsplit("/", 1)[-1], url=url)
     elif t == "boolean":
         out.update(value=bool(raw), display="Yes" if raw else "No")
+    elif isinstance(raw, datetime.date) or t in ("date", "datetime") or fmt in ("money", "percent", "number", "days"):
+        # created_at / modified_at have no field def: a date is still shown as a date, never as ISO text
+        kind = fmt or (t if t in ("date", "datetime") else "datetime" if isinstance(raw, datetime.datetime) else "date")
+        out.update(value=_jsonable(raw), display=display(raw, kind))
     else:
         out.update(value=_jsonable(raw), display=str(_jsonable(raw)))
     return out
@@ -355,6 +359,10 @@ def display(value, fmt=None):
         if fmt in ("date", "datetime"):
             if isinstance(value, str):
                 value = datetime.datetime.fromisoformat(value)
+            if isinstance(value, datetime.datetime) and value.tzinfo is not None:
+                from django.utils import timezone
+
+                value = timezone.localtime(value)  # stored in UTC, read in the app's time zone
             return value.strftime("%d %b %Y" if fmt == "date" else "%d %b %Y, %H:%M")
     except Exception:
         logger.debug("zas: display(%r, %r) fell back to str", value, fmt)

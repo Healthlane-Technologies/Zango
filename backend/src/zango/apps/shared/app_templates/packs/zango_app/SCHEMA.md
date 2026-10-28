@@ -108,6 +108,7 @@ roles: [...]
 pages: [...]
 modules: [...]
 detail_views: [...]     # optional
+prototype: {...}        # open mode only
 ```
 
 ## `app`
@@ -124,6 +125,73 @@ built app make the same way: `radius` sharp · rounded (default) · soft and
 `density: comfortable`; "make it look sharper" is `radius: sharp`. Anything
 more (fonts, layouts) is not offered: say so rather than writing it as a
 custom requirement.
+
+**Open mode ("Free design") only: `app.design`.** The look lives in the
+prototype, and `app.design` records it for the build, which themes the
+standard screens with it:
+
+```yaml
+app:
+  design:
+    source: prototype
+    fonts: { body: Inter, display: Inter, mono: JetBrains Mono }   # Google Fonts families
+    tokens:              # concrete values, no var(); canonical names first
+      brand: "#458261"
+      accent: "#B58812"
+      page: "#F7F7FA"
+      card: "#FFFFFF"
+      text: "#14171F"
+      border: "#E2E4E9"
+      radius: 10px
+      shadow: "0 2px 4px rgba(16,18,30,.04)"
+```
+
+Don't type it by hand: `proto_design` fills it from the prototype's `:root`
+tokens. Canonical names (what the build maps): brand, brand-strong,
+brand-soft, accent, accent-soft, page, card, sunk, nav, text-strong, text,
+text-2, text-3, text-faint, border-faint, border, border-strong, ok, ok-bg,
+warn, warn-bg, bad, bad-bg, info, info-bg, radius-sm, radius, radius-lg,
+shadow-sm, shadow, shadow-lg. Other tokens keep their own names. Keep
+`theme.primary` equal to `tokens.brand`.
+
+**Open mode only: `prototype`.** Which declared page each prototype screen
+is. The build reads it to decide, per screen, whether the standard page is
+themed with `app.design` or rebuilt from the approved prototype:
+
+```yaml
+prototype:
+  screens:
+    - { id: requests, maps: /pages/@requests }                 # themed list page
+    - { id: request,  maps: /detail_views/@request_360 }       # themed 360
+    - { id: home,     maps: /pages/@home }                     # a custom page: rebuilt
+    - { id: board,    maps: /pages/@requests, rebuild: true,
+        why: "User wants the exact lane layout the table can't show" }
+    - { id: signin,   only: prototype, why: "The platform's sign-in is used" }
+    - { id: agents,   only: prototype, why: "AI helpers come in a later version",
+        menu: { group: AI, label: Agents, icon: bot } }      # greyed out in the menu
+    - id: request
+      maps: /detail_views/@request_360
+      not_built:
+        - { text: Run AI review, why: "The AI review is a later custom requirement" }
+```
+
+- Every manifest screen is listed once. `maps` is `/pages/@<code>` or
+  `/detail_views/@<code>`. A screen that is not built is `only: prototype`
+  with a `why`.
+- Standard pages (crud, detail) are **themed**: the runtime page in the
+  prototype's tokens. Custom pages are **rebuilt** from their screen.
+- The YAML says everything each screen shows, in the prototype's words:
+  menu items, labels, groups and order (`roles[].menu`), page titles,
+  columns, status tabs (`quick_filters`), 360 tabs, sections, sidebar
+  panels, dashboard blocks, buttons and field labels. `spec_mark_ready`
+  renders the prototype and refuses while any of these is missing.
+- `rebuild: true` (with `why`) rebuilds a standard page from its screen:
+  when it shows what the YAML can't say (a stage tracker, a custom list
+  row). The page keeps its data, actions and permissions.
+- `menu` on an `only: prototype` screen keeps it in the menu, greyed out,
+  under `group` (`roles` limits it to those roles).
+- `not_built: [{text, why}]` lists what the build leaves out of a screen.
+  The user sees each one before approving.
 
 ## `choice_sets`
 
@@ -284,6 +352,24 @@ Every count, sum and list is scoped to the signed-in role's rows, as on list
 pages. Rows open `go` (a 360 page gets the row's id) or else the record's own
 360 page. What the blocks cannot say — "this month", trends by month, numbers
 from two entities combined — is a `custom` page.
+
+### Custom pages in open mode: `reason`
+
+A free-design prototype makes every screen look custom; the build still
+draws record screens with the runtime and themes them. So every prototype
+screen that shows records maps to a crud page, a `detail_views` page or a
+dashboard, however it looks. A `type: custom` page is for what none of those
+can show, and says why:
+
+```yaml
+  - code: territory_map
+    type: custom
+    reason: A map of HCP visits by territory; no list, record page or dashboard block draws a map.
+    acceptance: [...]
+```
+
+`spec_mark_ready` lists every custom page with its reason in open mode, and
+refuses a custom page without one.
 
 ### Contracts for custom work
 
@@ -477,7 +563,7 @@ table:
   page_size: 25
   quick_filters:
     - { label: Pending my approval, where: status == pending_approval, roles: [Procurement Manager], default: true }
-  row_click: vendor_360              # a detail_view code | drawer | none
+  row_click: vendor_360              # a detail_view code | <view>#<tab> | drawer | none
   add_button: Add Vendor
   row_actions:
     - { key: edit, label: Edit, type: edit, show_when: status == draft }
@@ -488,6 +574,10 @@ table:
   footer_totals: [amount]
   group_by: doc_type
 ```
+
+`row_click: <view>#<tab>` opens the row's parent on its 360, on the tab that
+lists this entity (`request_360#agreement`: an agreement row opens its request
+on the Agreement tab). The tab must be a related_table of this entity.
 
 Column `source`: field (default), status, tags, computed (describe it in
 `shows`) or a `path`. Workflow transitions and tag toggles are added to the

@@ -152,6 +152,9 @@ faithfully, keeping its structure and its inline styles (`style="background:line
 
 ## The app shell (sidebar header, user card, top bar)
 
+Open mode (`.zas/bundle/prototype/`) builds the shell differently: `src/custom/Shell.tsx` on `makeShell`,
+see `references/open-mode.md` §The shell. This section is for the kit preview's `/shell` screen.
+
 The shell comes from `@zango-core/appbuilder`'s `ZangoApp`; the preview draws its own. When
 `.zas/bundle/index.md` has a `/shell` screen, **Read its screenshot first**, then make the shell
 look like it through `ZangoApp`'s props in `src/App.tsx` (`references/zango/frontend/appbuilder.md`,
@@ -184,6 +187,11 @@ directly under the `# zas:hole H-NN` marker:
 @shared_task
 def site__tag_at_risk__sync(): ...
 ```
+
+A note never drops something the approved screen or the spec asks for. "Out of scope", "left out",
+"not built", "instead of …" or "falls back to the plain form" on a note fails the build's parity check
+unless the item is in that screen's `not_built` (which the user saw and agreed to). If the spec can't
+express it, build it in the slot.
 
 The build report shows them on the item. Never put notes in `holes.md`: `spec_check` regenerates that file
 and keeps only each row's status.

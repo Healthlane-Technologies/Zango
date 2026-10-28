@@ -54,6 +54,8 @@ NPM_TIMEOUT = 900
 TEST_TIMEOUT = 1800
 REPORT_SUMMARY_CHARS = 6_000
 DIGEST_MAX_ITEMS = 40
+# Checks the agent traced to the platform (studio_tools.report_platform_issue), in .zas/.
+PLATFORM_ISSUES = "platform_issues.json"
 DEFAULT_PLATFORM_URL = "http://localhost:8000"
 PLAYWRIGHT_REASON = (
     "Playwright is not installed in the platform environment "
@@ -86,11 +88,13 @@ LAYERS = (
     ("design", "zas_test.design", True, True),
     ("scenarios", "zas_test.scenarios", False, True),
 )
-DESIGN_BROWSER_GROUPS = ("gallery", "tokens", "tree", "layout", "parity")
+DESIGN_BROWSER_GROUPS = ("gallery", "tokens", "tree", "layout", "parity", "kit")
 # Look-only failures (preview parity, screenshot goldens, layout) go to the fix rounds, then stay in
 # the report as gaps, never failing the build. Kept equal to zas_test/report.py NON_BLOCKING, so the
 # run status and the report's verdict agree.
-NON_FAILING = ("design.layout", "design.gallery", "design.parity")
+NON_FAILING = ("design.layout", "design.gallery", "design.parity", "design.kit")
+# The app's kit against the prototype (zas_test/kit.py): its own rounds (kit_rounds), not the fix rounds.
+KIT_CHECK = "design.kit"
 APP_LAYERS = tuple(name for name, _, _, needs_app in LAYERS if needs_app)
 BROWSER_LAYERS = tuple(name for name, _, browser, _ in LAYERS if browser)
 # The one bring-up step that needs the app reachable on its own domain.
@@ -139,17 +143,76 @@ def blocking(layers: dict) -> bool:
     )
 
 
+def _signature(failure: dict) -> str:
+    """A failure as the repeat detector compares it: its check and the start of its message, with
+    record numbers and ids taken out (a retried create gets a new ZC-2026-0042)."""
+    import re
+
+    detail = re.sub(
+        r"[0-9a-f]{8}-[0-9a-f-]{27,}|\d+", "#", str(failure.get("detail") or "")
+    )
+    return f"{failure.get('id')}|{detail[:200]}"
+
+
+def _in_scope(path, scope) -> bool:
+    """Same rule as zas_test.in_scope: no scope, or no path, or a prefix on a segment boundary."""
+    if not scope or not path:
+        return True
+    path = str(path)
+    return any(
+        path == p or path.startswith(p + ".") or path.startswith(p + "[") for p in scope
+    )
+
+
 def fix_rounds() -> int:
     from django.conf import settings
 
     return max(0, int(getattr(settings, "AGENT_MODE_STUDIO_FIX_ROUNDS", 2)))
 
 
+def polish_rounds() -> int:
+    """Extra fix rounds for finishing touches once the core steps work (the user already has the app)."""
+    from django.conf import settings
+
+    return max(0, int(getattr(settings, "AGENT_MODE_STUDIO_POLISH_ROUNDS", 2)))
+
+
+def kit_rounds() -> int:
+    """How many times the agent fixes the kit pieces that differ from the prototype (Free design)."""
+    from django.conf import settings
+
+    return max(0, int(getattr(settings, "AGENT_MODE_KIT_ROUNDS", 3)))
+
+
 def look_rounds() -> int:
-    """How many times the agent compares its custom screens with the approved preview."""
+    """How many times the agent compares its custom screens with the approved preview (default
+    design). 0 turns the look rounds off in both modes."""
     from django.conf import settings
 
     return max(0, int(getattr(settings, "AGENT_MODE_STUDIO_LOOK_ROUNDS", 2)))
+
+
+def look_limit() -> float:
+    """Free design: a screen whose look difference (zas_test.design look_score) is over this goes to
+    the look rounds. A faithful port with demo data scores about 0.10-0.17, a different layout 0.40+."""
+    from django.conf import settings
+
+    return float(getattr(settings, "AGENT_MODE_LOOK_LIMIT", 0.25))
+
+
+def look_max_rounds() -> int:
+    """Free design: the most look rounds a build runs; the score usually stops them sooner."""
+    from django.conf import settings
+
+    return max(0, int(getattr(settings, "AGENT_MODE_LOOK_MAX_ROUNDS", 5)))
+
+
+def look_min_gain() -> float:
+    """Free design: a round in which no screen sent gets this much closer (and no parity problem is
+    fixed) is the last: more rounds would not help."""
+    from django.conf import settings
+
+    return float(getattr(settings, "AGENT_MODE_LOOK_MIN_GAIN", 0.03))
 
 
 # ---------------------------------------------------------------------------
@@ -466,6 +529,56 @@ class StudioBuild:
     def build_state(self) -> dict:
         return {name: getattr(self, name) for name in self.CHECKPOINT_FIELDS}
 
+    # -- failures that are not the agent's to fix --------------------------
+
+    def platform_issues(self) -> list:
+        """What the agent traced to the platform (studio_tools.report_platform_issue)."""
+        try:
+            data = json.loads(
+                (self.zas_dir / PLATFORM_ISSUES).read_text(encoding="utf-8")
+            )
+        except (OSError, ValueError):
+            return []
+        return data if isinstance(data, list) else []
+
+    def platform_issue_ids(self) -> list:
+        return [i.get("check_id") for i in self.platform_issues() if i.get("check_id")]
+
+    def add_platform_issue(self, issue: dict) -> None:
+        issues = [
+            i
+            for i in self.platform_issues()
+            if i.get("check_id") != issue.get("check_id")
+        ]
+        self.zas_dir.mkdir(parents=True, exist_ok=True)
+        (self.zas_dir / PLATFORM_ISSUES).write_text(
+            json.dumps([*issues, issue], indent=1), encoding="utf-8"
+        )
+
+    def _for_agent(self, layers: dict, stuck=()) -> dict:
+        """The layers as a fix round sees them: without our test-code bugs (studio_status
+        "harness"), the checks the agent reported as the platform's, and the ones a fix round
+        already failed to move (``stuck``). The build's verdict still counts all of them."""
+        from .studio_status import without_harness
+
+        drop = set(self.platform_issue_ids()) | set(stuck)
+        out = {}
+        for name, layer in without_harness(layers).items():
+            keep = [
+                f
+                for f in layer.failures
+                if f.get("id") not in drop
+                and not str(f.get("id", "")).startswith(KIT_CHECK)
+            ]
+            if len(keep) == len(layer.failures):
+                out[name] = layer
+                continue
+            clone = LayerResult(**{**layer.__dict__, "failures": keep})
+            if not keep and clone.status == "fail":
+                clone.status = "pass"
+            out[name] = clone
+        return out
+
     @classmethod
     def from_checkpoint(cls, checkpoint: dict):
         """The build as it was when it paused (in a fresh worker: nothing is cached)."""
@@ -729,7 +842,7 @@ class StudioBuild:
 
     # -- before the agent ------------------------------------------------
 
-    def prepare(self, emit=None, template=None) -> None:
+    def prepare(self, emit=None, template=None, prototype=None) -> None:
         """Phases 0-2 and the frontend prep of Phase 6. Raises StudioError.
 
         ``template``: the requirement's App Studio template; with it the approval bundle (what the
@@ -745,7 +858,7 @@ class StudioBuild:
         self.check_spec = self._write_check_spec()
         if template is not None:
             # Before spec_check: it points each custom screen's hole at its bundle folder.
-            self.write_bundle(template, emit)
+            self.write_bundle(template, emit, prototype=prototype)
         checked = self.script(
             "spec_check",
             "spec_check.py",
@@ -761,7 +874,7 @@ class StudioBuild:
         self.prepare_frontend(emit)
         self.prepare_views(emit)
 
-    def write_bundle(self, template, emit=None) -> dict | None:
+    def write_bundle(self, template, emit=None, prototype=None) -> dict | None:
         """.zas/bundle/ (approval_bundle.py): each custom screen's sketch, contract, kit trees and
         screenshots, from the approved spec in the same preview the user saw. Never fails the build:
         without it the agent builds from the hole text, as before."""
@@ -819,7 +932,64 @@ class StudioBuild:
                 f"(list views, shell), {shots} screenshot(s).",
                 level="sys",
             )
+        if prototype:
+            self.write_prototype_bundle(prototype, out / "prototype", emit)
         return manifest
+
+    def write_prototype_bundle(self, parts: dict, out: Path, emit=None) -> dict | None:
+        """.zas/bundle/prototype/ (open mode): the approved prototype, per screen x role. Never fails
+        the build."""
+        import time
+
+        from zango.apps.shared.app_templates.services.spec import yamlio
+
+        from .approval_bundle import write_prototype_bundle
+
+        started = time.monotonic()
+        try:
+            from .prototype import soon_menu
+
+            spec_text = Path(self.spec_path).read_text(encoding="utf-8")
+            doc = yamlio.load(spec_text) or {}
+            design = (
+                (doc.get("app") or {}).get("design") if isinstance(doc, dict) else None
+            )
+            capture = write_prototype_bundle(
+                parts, out, design=design, soon=soon_menu(spec_text)
+            )
+        except Exception as exc:  # noqa: BLE001 - the bundle is an aid, not a gate
+            logger.warning("agent_mode: prototype bundle failed: %s", exc)
+            self.steps.append(
+                StepResult(
+                    step=STEP_PREFIX + "prototype_bundle",
+                    duration_ms=int((time.monotonic() - started) * 1000),
+                    skipped_reason=f"prototype bundle failed: {exc}"[:300],
+                )
+            )
+            return None
+        screens = capture.get("screens") or []
+        shots = sum(1 for s in screens for r in s.get("roles") or [] if r.get("files"))
+        broken = sum(
+            1
+            for s in screens
+            for r in s.get("roles") or []
+            if r.get("error") or r.get("errors") or r.get("blank")
+        )
+        summary = (
+            f"{len(screens)} prototype screens, {shots} snapshots"
+            + (f", {broken} with problems" if broken else "")
+            + f"; probe: {capture.get('probe')}"
+        )
+        self.steps.append(
+            StepResult(
+                step=STEP_PREFIX + "prototype_bundle",
+                duration_ms=int((time.monotonic() - started) * 1000),
+                stdout_tail=summary,
+            )
+        )
+        if emit:
+            emit("sys", f"Prototype bundle: {summary}.", level="sys")
+        return capture
 
     def _write_check_spec(self) -> str:
         """The approved spec as plain YAML the skill's PyYAML reads exactly as the platform did.
@@ -1001,10 +1171,34 @@ class StudioBuild:
         shutil.copyfile(
             self.zas_dir / "spec.ui.json", fe / "src" / "custom" / "spec.ui.json"
         )
+        # zas/kit.tsx imports the app's kit; an app without one keeps the empty stub (never overwritten)
+        kit, stubs = (
+            fe / "src" / "custom" / "kit",
+            skill / "assets" / "templates" / "frontend" / "kit",
+        )
+        kit.mkdir(exist_ok=True)
+        for stub in stubs.iterdir() if stubs.is_dir() else ():
+            if not (kit / stub.name).exists():
+                shutil.copyfile(stub, kit / stub.name)
         shutil.copyfile(
             skill / "assets" / "templates" / "frontend" / "index.css",
             fe / "src" / "index.css",
         )
+        if (self.zas_dir / "bundle" / "prototype" / "prototype.html").is_file():
+            # open mode: the prototype's stylesheets (scoped under .zp) and its source, for porting
+            ported = self.script(
+                "frontend:prototype",
+                "proto_port.py",
+                "--workspace",
+                self.workspace,
+                emit=emit,
+            )
+            if ported.returncode != 0 and emit:
+                emit(
+                    "sys",
+                    "The prototype's stylesheet could not be extracted; screens fall back to the zas kit.",
+                    level="warn",
+                )
         if failed(
             self.script(
                 "frontend:icons",
@@ -1378,11 +1572,17 @@ class StudioBuild:
         return run
 
     def verify(
-        self, emit=None, only: dict | None = None, bring_up_ok: bool = True, hold=()
+        self,
+        emit=None,
+        only: dict | None = None,
+        bring_up_ok: bool = True,
+        hold=(),
+        scope=(),
     ) -> dict:
         """Run the hole audit and the test layers; ``only`` = {layer: [groups]} re-runs just those.
 
-        Layers in ``hold`` are left out altogether: they wait for the user.
+        Layers in ``hold`` are left out altogether: they wait for the user. ``scope`` (spec paths,
+        e.g. ``entities.case``) runs and reports only the checks on those paths: a build slice.
         """
         layers = {}
         playwright = self.has_playwright()
@@ -1423,10 +1623,49 @@ class StudioBuild:
                 self.skip(f"test:{name}", reason, emit)
                 layers[name] = LayerResult(name=name, status="skip", reason=reason)
                 continue
-            layers[name] = self._run_layer(name, runner, groups, emit)
+            demo = self.load_demo_data(emit) if name == "design" else None
+            layers[name] = self._run_layer(name, runner, groups, emit, scope=scope)
+            if demo:  # the screens were compared on test records: the loader's failure is the build's to fix
+                layers[name].failures.append(demo)
+                layers[name].status = "fail"
+        if any(
+            layers.get(n) and layers[n].status != "skip" for n in ("api", "scenarios")
+        ):
+            self.load_demo_data(
+                emit
+            )  # the tests left their records: the creator opens the demo data
         return layers
 
-    def _run_layer(self, name, runner, groups, emit) -> LayerResult:
+    def load_demo_data(self, emit=None) -> dict | None:
+        """Open mode: ``backend/demo_data.py`` replaces the app's records with the prototype's sample data
+        (management command agent_mode_demo_data). None when it loaded or there is none; else the
+        failure, as a design check the fix round gets."""
+        if not (Path(self.workspace) / "backend" / "demo_data.py").is_file():
+            return None
+        result = self.manage(
+            "demo_data",
+            [
+                "agent_mode_demo_data",
+                self.app_name,
+                "--users",
+                str(self.zas_dir / "test_users.json"),
+            ],
+            emit,
+        )
+        if result.returncode == 0:
+            return None
+        return {
+            "id": "design.demo_data",
+            "title": "the prototype's demo data loads",
+            "role": None,
+            "spec_path": "backend/demo_data.py",
+            "detail": (
+                "backend/demo_data.py load(users) failed: "
+                + (result.stderr_tail or result.stdout_tail or "")[-600:]
+            ),
+        }
+
+    def _run_layer(self, name, runner, groups, emit, scope=()) -> LayerResult:
         if runner == "app_shell":
             return self.check_app_shell(emit)
         if runner == "views":
@@ -1465,11 +1704,18 @@ class StudioBuild:
         elif groups:
             args += ["--only", ",".join(groups)]
         result = self.module(
-            f"test:{name}", runner, *args, timeout=TEST_TIMEOUT, emit=emit
+            f"test:{name}",
+            runner,
+            *args,
+            timeout=TEST_TIMEOUT,
+            emit=emit,
+            extra_env={"ZAS_TEST_SCOPE": ",".join(scope)} if scope else None,
         )
         layer_key = "design" if name in ("design", "design_lint") else name
         records = [
-            r for r in _load_results(self.workspace) if r.get("layer") == layer_key
+            r
+            for r in _load_results(self.workspace)
+            if r.get("layer") == layer_key and _in_scope(r.get("spec_path"), scope)
         ]
         if name == "design_lint":
             records = [
@@ -1700,7 +1946,19 @@ class StudioBuild:
             lines.append("")
         return "\n".join(lines).strip() + "\n"
 
-    def finish(
+    # The build account's credentials while finish() holds it open: a slice check the agent asks
+    # for in a fix round (studio_tools) uses them; opening the account again would reset its
+    # password and disable it on exit, under finish().
+    live_creds = None  # not a dataclass field: set only while finish() runs
+
+    def finish(self, creds: dict, **kw) -> StudioOutcome:
+        self.live_creds = creds
+        try:
+            return self._finish(creds, **kw)
+        finally:
+            self.live_creds = None
+
+    def _finish(
         self,
         creds: dict,
         resume_agent=None,
@@ -1708,6 +1966,7 @@ class StudioBuild:
         emit=None,
         checkpoint=None,
         skip=False,
+        progress=None,
     ) -> StudioOutcome:
         """Bring-up, checks, fix rounds, report — pausing for the user when it has to.
 
@@ -1720,7 +1979,14 @@ class StudioBuild:
         ``checkpoint`` continues such a build: only what was held runs.
         ``skip`` continues without it: those checks are recorded as skipped by
         the user, never as passed.
+
+        Failures of our own test code (studio_status "harness") go neither to the agent nor into
+        the verdict. Once the core steps work, up to ``polish_rounds()`` more rounds finish the
+        details while the user already has the app; they stop when a round fixes nothing.
+        ``progress(layers, bring_up_ok)`` is told after the checks and after every round.
         """
+        from .studio_status import sort_failures, without_harness
+
         cp = checkpoint or {}
         layers = {
             n: LayerResult.from_checkpoint(d)
@@ -1771,19 +2037,53 @@ class StudioBuild:
         parity_stale = (
             checkpoint is not None
         )  # a resumed build did not shoot this session
-        while (
-            done < rounds
-            and resume_agent is not None
-            and (not bring_up_ok or any(x.status == "fail" for x in layers.values()))
+
+        def tell():
+            if progress is not None:
+                try:
+                    progress(layers, bring_up_ok)
+                except Exception:  # noqa: BLE001 - the card is a view; the build goes on
+                    logger.exception("agent_mode: build progress callback failed")
+
+        tell()
+        polish_left = None
+        # A failure a fix round was sent and did not move (same check, same message) is not
+        # sent again: another round would spend the same turns on it. It stays in the verdict.
+        sent: dict = {}
+        stuck: set = set()
+        while resume_agent is not None and (
+            not bring_up_ok
+            or any(x.status == "fail" for x in self._for_agent(layers, stuck).values())
         ):
+            if done >= rounds:
+                left = sort_failures(self._for_agent(layers, stuck))
+                if (
+                    not bring_up_ok
+                    or left["core"]
+                    or done >= rounds + polish_rounds()
+                    or (polish_left is not None and len(left["polish"]) >= polish_left)
+                ):
+                    break
+                polish_left = len(left["polish"])
             done += 1
             if emit:
                 emit(
                     "sys",
-                    f"Fix round {done} of {rounds}: sending the failures back to the agent.",
+                    (
+                        f"Fix round {done} of {rounds}: sending the failures back to the agent."
+                        if done <= rounds
+                        else f"Finishing round {done - rounds}: the app works; sending the details back."
+                    ),
                     level="sys",
                 )
-            if not resume_agent(self.digest(bring_up_ok, layers)):
+            brief = self._for_agent(layers, stuck)
+            sent = {
+                f.get("id"): _signature(f)
+                for x in brief.values()
+                for f in x.failures
+                if f.get("id")
+            }
+            if not resume_agent(self.digest(bring_up_ok, brief)):
                 if emit:
                     emit(
                         "sys",
@@ -1801,6 +2101,21 @@ class StudioBuild:
                 emit, only=only, bring_up_ok=bring_up_ok, hold=held_layers
             )
             layers.update(fresh)
+            again = {
+                f.get("id")
+                for x in layers.values()
+                for f in x.failures
+                if sent.get(f.get("id")) == _signature(f)
+            }
+            if again - stuck and emit:
+                emit(
+                    "sys",
+                    f"{len(again - stuck)} check(s) failed the same way after a fix round; "
+                    "not sending them again.",
+                    level="sys",
+                )
+            stuck |= again
+            tell()
             # the agent changed files: the built-screen shots are stale unless parity just re-ran
             design_groups = (only or {}).get("design") or []
             parity_stale = not (
@@ -1837,11 +2152,16 @@ class StudioBuild:
                 self.verify(emit, only={n: [] for n in held_layers}, bring_up_ok=False)
             )
         elif resume_agent is not None and bring_up_ok:
+            before = self.custom_fingerprint()
+            bring_up_ok = self.kit_rounds(layers, creds, resume_agent, emit, hold_steps)
+            # a kit round restyles every screen: the built-screen shots are stale
+            parity_stale = parity_stale or self.custom_fingerprint() != before
+        if not actions and resume_agent is not None and bring_up_ok:
             bring_up_ok = self.look_rounds(
                 layers, creds, resume_agent, emit, parity_stale, hold_steps, held_layers
             )
         report = self.report(emit)
-        ok = bring_up_ok and not blocking(layers)
+        ok = bring_up_ok and not blocking(without_harness(layers))
         return StudioOutcome(
             ok=ok, bring_up_ok=bring_up_ok, layers=layers, rounds=done, report=report
         )
@@ -1855,6 +2175,13 @@ class StudioBuild:
         It stops when the agent changes nothing (it says the screens match), when the agent
         cannot continue, or after ``look_rounds()``. Updates ``layers``; returns bring_up_ok.
         """
+        if (
+            look_rounds()
+            and (self.zas_dir / "bundle" / "prototype" / "manifest.json").is_file()
+        ):
+            return self.prototype_look_rounds(
+                layers, creds, resume_agent, emit, parity_stale, hold_steps, held_layers
+            )
         total = look_rounds()
 
         def reshoot():
@@ -1903,6 +2230,216 @@ class StudioBuild:
             reshoot()
         return True
 
+    def look_scores(self) -> dict:
+        """{(screen, role): look difference} from the latest parity run (.zas/parity_looks.json)."""
+        try:
+            looks = json.loads(
+                (self.zas_dir / "parity_looks.json").read_text(encoding="utf-8")
+            )
+        except (OSError, ValueError):
+            return {}
+        return {
+            (x.get("screen"), x.get("role")): x["score"]
+            for x in looks
+            if x.get("kind") == "prototype"
+            and x.get("built")
+            and isinstance(x.get("score"), (int, float))
+        }
+
+    def prototype_look_rounds(
+        self, layers, creds, resume_agent, emit, parity_stale, hold_steps, held_layers
+    ) -> bool:
+        """Free design: look rounds driven by the score. Each round sends the screens still over
+        ``look_limit()`` and the ones with a parity problem, worst first, and re-shoots after. It stops
+        when every screen is within the limit with no problem left, when a round brings no screen
+        ``look_min_gain()`` closer and fixes no problem, when the agent changes nothing or cannot
+        continue, or after ``look_max_rounds()``. Each round's scores go to .zas/look_rounds.json
+        (the build report shows them). Updates ``layers``; returns bring_up_ok."""
+        limit, total, min_gain = look_limit(), look_max_rounds(), look_min_gain()
+        history = []
+
+        def reshoot():
+            design = layers.get("design")
+            groups = sorted(set(design.groups if design else []) | {"parity"})
+            layers.update(
+                self.verify(
+                    emit,
+                    only={"design": groups, "design_lint": []},
+                    bring_up_ok=True,
+                    hold=held_layers,
+                )
+            )
+
+        def gaps_now():
+            design = layers.get("design")
+            return [
+                f
+                for f in (design.failures if design else [])
+                if str(f.get("id", "")).startswith("design.parity")
+            ]
+
+        def record(n, sent=()):
+            history.append(
+                {
+                    "round": n,
+                    "limit": limit,
+                    "sent": sorted({s for s, _ in sent}),
+                    "scores": {
+                        f"{s}|{r}": v
+                        for (s, r), v in sorted(self.look_scores().items())
+                    },
+                }
+            )
+            try:
+                (self.zas_dir / "look_rounds.json").write_text(
+                    json.dumps(history, indent=1), encoding="utf-8"
+                )
+            except OSError:
+                pass
+
+        def say(text):
+            if emit:
+                emit("sys", text, level="sys")
+
+        if parity_stale and total:
+            reshoot()
+        record(0)
+        prev_scores, prev_gaps, sent = None, None, set()
+        for n in range(1, total + 1):
+            scores, gaps = self.look_scores(), gaps_now()
+            over = {k for k, v in scores.items() if v > limit}
+            if not over and not gaps:
+                say(
+                    f"Look: every screen is within {limit:.0%} of the approved prototype."
+                )
+                break
+            if prev_scores is not None:
+                gain = max(
+                    (
+                        prev_scores[k] - scores.get(k, prev_scores[k])
+                        for k in sent
+                        if k in prev_scores
+                    ),
+                    default=0.0,
+                )
+                if gain < min_gain and len(gaps) >= len(prev_gaps):
+                    say(
+                        f"Look: the last round brought no screen {min_gain:.0%} closer; "
+                        "what still differs goes to the report."
+                    )
+                    break
+            gap_screens = {
+                "prototype/" + str(g.get("id", "")).split(".")[3]
+                for g in gaps
+                if len(str(g.get("id", "")).split(".")) > 3
+            }
+            keep = {s for s, _ in over} | gap_screens
+            look = self.look_digest(n, total, gaps, keep=keep, limit=limit)
+            if not look:
+                break
+            say(
+                f"Look {n} of up to {total}: {len(keep)} screen(s) still differ from the approved prototype "
+                f"(over {limit:.0%}, or a parity problem)."
+            )
+            before = self.custom_fingerprint()
+            if not resume_agent(look):
+                break
+            if self.custom_fingerprint() == before:
+                say(
+                    "The agent changed nothing after looking: what still differs goes to the report."
+                )
+                break
+            prev_scores, prev_gaps, sent = (
+                scores,
+                gaps,
+                {k for k in scores if k[0] in keep},
+            )
+            if not self.bring_up(creds, emit, hold=hold_steps):
+                record(n, sent)
+                return False
+            reshoot()
+            record(n, sent)
+        return True
+
+    def kit_rounds(self, layers, creds, resume_agent, emit, hold_steps) -> bool:
+        """Free design: send the kit pieces over the limit back to the agent, compare again.
+
+        Automatic, never a creator approval: up to ``kit_rounds()`` rounds, stopping when every
+        piece is within the limit, when the agent changes nothing, or when it cannot continue.
+        What still differs stays a non-failing gap for the internal report. Updates ``layers``.
+        """
+        total = kit_rounds()
+        for n in range(1, total + 1):
+            design = layers.get("design")
+            gaps = [
+                f
+                for f in (design.failures if design else [])
+                if str(f.get("id", "")).startswith(KIT_CHECK)
+            ]
+            if not gaps:
+                break
+            if emit:
+                emit(
+                    "sys",
+                    f"Kit {n} of {total}: {len(gaps)} piece(s) still differ from the prototype.",
+                    level="sys",
+                )
+            before = self.custom_fingerprint()
+            if not resume_agent(self.kit_digest(n, total, gaps)):
+                break
+            if self.custom_fingerprint() == before:
+                if emit:
+                    emit(
+                        "sys",
+                        "The agent changed nothing in the kit; the rest goes to the report.",
+                        level="sys",
+                    )
+                break
+            if not self.bring_up(creds, emit, hold=hold_steps):
+                return False
+            fresh = self.verify(
+                emit, only={"design": ["kit"]}, bring_up_ok=True, scope=("kit",)
+            ).get("design")
+            if fresh is not None:
+                layers["design"] = _merge_scoped(design, fresh, KIT_CHECK)
+        return True
+
+    def kit_digest(self, n: int, total: int, gaps) -> str:
+        """A kit round's message: each piece over the limit, the prototype's crop next to the app's."""
+        try:
+            looks = {
+                x.get("id"): x
+                for x in json.loads(
+                    (self.zas_dir / "kit_looks.json").read_text(encoding="utf-8")
+                )
+            }
+        except (OSError, ValueError):
+            looks = {}
+        lines = [
+            f"Kit round {n} of {total}. These pieces of your kit (frontend/src/custom/kit/) differ from the "
+            "same piece in the approved prototype by more than 5%. For each one, Read both images, fix the "
+            "piece (its component or kit.css) or its map.json entry (selector, props), rebuild and deploy "
+            'the frontend, then check with studio_verify(["kit"]). Compare the look, not the data.',
+            "",
+        ]
+        for f in gaps:
+            pid = str(f.get("id", ""))[len(KIT_CHECK) + 1 :]
+            x = looks.get(pid) or {}
+            pair = (
+                f" Prototype: {x['mockup']}; yours: {x['built']}."
+                if x.get("mockup") and x.get("built")
+                else ""
+            )
+            lines.append(
+                f"- {pid or f.get('id')}: {f.get('detail') or f.get('title')}.{pair}"
+            )
+        if n == total:
+            lines += [
+                "",
+                "This is the last kit round: what still differs goes to the build report as a gap.",
+            ]
+        return "\n".join(lines)
+
     def custom_fingerprint(self) -> tuple:
         """What a look round can change: the custom frontend sources and the deployed build."""
         ws = Path(self.workspace)
@@ -1915,7 +2452,9 @@ class StudioBuild:
                         out.append((str(p), st.st_size, st.st_mtime_ns))
         return tuple(out)
 
-    def look_digest(self, n: int = 1, total: int = 1, gaps=()) -> str:
+    def look_digest(
+        self, n: int = 1, total: int = 1, gaps=(), keep=None, limit=None
+    ) -> str:
         """A look round's message: each custom screen as built next to the approved one, or "".
 
         zas_test.design parity writes the pairs (.zas/parity_looks.json), shot from the current
@@ -1930,6 +2469,14 @@ class StudioBuild:
         pairs = [x for x in looks if x.get("approved") and x.get("built")]
         if not pairs:
             return ""
+        if any(x.get("kind") == "prototype" for x in pairs):
+            if (
+                keep is not None
+            ):  # the score-driven rounds: only the screens still over the limit
+                pairs = [x for x in pairs if x.get("screen") in keep]
+                if not pairs and not gaps:
+                    return ""
+            return self.prototype_look_digest(pairs, n, total, gaps, limit=limit)
         lines = [
             f"## Look {n} of {total}: your custom screens next to what the user approved",
             "",
@@ -1954,7 +2501,7 @@ class StudioBuild:
             ]
         else:
             lines += [
-                "This is the last look: what still differs goes to the build report as a gap, so name it.",
+                "This may be the last look: what still differs goes to the build report as a gap, so name it.",
                 "",
             ]
         if gaps:
@@ -1985,6 +2532,79 @@ class StudioBuild:
             lines.append(
                 f"- `{x['screen']}` as {x['role']}{note}: approved `{x['approved']}`, "
                 f"built `{x['built']}`, sketch `{sketch}`"
+            )
+        return "\n".join(lines) + "\n"
+
+    @staticmethod
+    def prototype_look_digest(pairs, n, total, gaps=(), limit=None) -> str:
+        """Open mode's look round: each screen still over the limit next to the approved prototype
+        screen, worst first."""
+        pairs = sorted(pairs, key=lambda x: -(x.get("score") or 0))
+        lines = [
+            f"## Look {n} of up to {total}: your screens next to the approved prototype",
+            "",
+        ]
+        if limit is not None:
+            lines += [
+                f"These screens are still more than {limit:.0%} different from the approved one (or the parity "
+                "check found a problem on them); the others already match. Rounds go on while a screen gets "
+                "closer, so fix the biggest differences first.",
+                "",
+            ]
+        lines += [
+            "The user approved the prototype; the app has to look like it. For each pair, Read the approved "
+            "screenshot, then the screen you built (shot from your latest build). The score is how differently "
+            "they are laid out (0% = the same; a faithful port sits near 10-15%, a different layout at 40% and "
+            "more); values differ where the app's data differs from the demo: compare the look.",
+            "",
+            "1. List every visible part of the approved screen and mark each **matches** or **differs**.",
+            "2. Fix what differs with the lever its class allows (references/open-mode.md):",
+            "   - **kit**: the app's kit (`src/custom/kit/`: the piece's component, `kit.css`, its map.json "
+            "entry), `app.design` (re-run spec_check), the shell options, or the page's "
+            "`src/custom/screens/<page>.css`. Never replace the runtime page with custom code.",
+            "   - **rebuild**: the screen's slot, ported from the prototype's own component "
+            "(`.zas/bundle/prototype/source/index.md`): its markup, classes and inline styles under "
+            '`<div className="zp">`, not a redraw on the zas kit. A part the slot lacks is copied from the '
+            "source; a value the API lacks is added to the API.",
+            "   - **shell**: options, or the prototype's shell ported around `shellMenu` / `UserCard` "
+            '(open-mode.md, "The shell").',
+            "   Then type-check, rebuild and deploy as in Phase 6.",
+            "3. If every part already matches, or what is left needs a different class, change nothing and "
+            "say so: the platform stops comparing when a round changes no files.",
+            "",
+        ]
+        lines += (
+            [
+                "After your changes the platform rebuilds, re-shoots and shows you the result again.",
+                "",
+            ]
+            if n < total
+            else [
+                "This is the last look: what still differs goes to the build report as a gap, so name it.",
+                "",
+            ]
+        )
+        if gaps:
+            lines += ["The parity check found these problems; fix each one:", ""]
+            lines += [
+                f"- `{g.get('id')}`: {(g.get('detail') or g.get('title') or '')[:300]}"
+                for g in gaps
+            ]
+            lines.append("")
+        for x in pairs:
+            score = (
+                f"{x['score']:.0%}"
+                if isinstance(x.get("score"), (int, float))
+                else "n/a"
+            )
+            lines.append(
+                f"- `{x['screen']}` as {x['role']} ({x.get('class') or '?'}, difference {score}): "
+                f"approved `{x['approved']}`, built `{x['built']}`"
+                + (
+                    f", snapshot `{x['dom']}`"
+                    if x.get("class") == "rebuild" and x.get("dom")
+                    else ""
+                )
             )
         return "\n".join(lines) + "\n"
 
@@ -2027,6 +2647,26 @@ class StudioBuild:
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+def _merge_scoped(old, new, prefix: str):
+    """``old`` with its ``prefix`` checks replaced by ``new``'s (a scoped re-run of only those)."""
+    if old is None:
+        return new
+    if new.status == "skip":
+        return old
+    keep = [f for f in old.failures if not str(f.get("id", "")).startswith(prefix)]
+    failures = keep + list(new.failures)
+    return LayerResult(
+        **{
+            **old.__dict__,
+            "failures": failures,
+            "status": "fail" if failures else "pass",
+            "groups": sorted(
+                {g for g in (_group_of(old.name, f["id"]) for f in failures) if g}
+            ),
+        }
+    )
 
 
 def _frontend_failure(result) -> str:
@@ -2090,7 +2730,8 @@ def _group_of(layer: str, result_id: str) -> str:
     if layer == "ui" and len(parts) > 1:
         return UI_GROUP.get(parts[1], parts[1])
     if layer == "design" and len(parts) > 1:
-        return parts[1]
+        # the demo loader runs before the design layer: re-running parity loads it again
+        return "parity" if parts[1] == "demo_data" else parts[1]
     if layer == "scenarios" and len(parts) > 1 and re.match(r"^H-\d+", parts[1]):
         return parts[1]
     return ""

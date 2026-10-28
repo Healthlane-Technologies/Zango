@@ -10,9 +10,10 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ChevronsUpDown, Download, EllipsisVertical, Inbox, Paperclip, Plus, Search } from "lucide-react";
 import * as api from "./api";
-import { SPEC, date, detailUrl, number, pageUrl, viewUrl } from "./config";
+import { SPEC, date, detailUrl, money, number, pageUrl, parentTabUrl, percent, viewUrl } from "./config";
 import { ConfirmDialog, FormDialog, useDialog } from "./dialogs";
-import { Badge, Banner, Button, Chip, Drawer, EmptyState, Menu, Nil, Skeleton, Timeline, Value, cx, useToast } from "./ui";
+import { Icon, Menu, Nil, Skeleton, Value, cx, useToast } from "./ui";
+import { Badge, Banner, Button, Chip, Drawer, EmptyState, Timeline } from "./kit";
 import type { MenuItemDef } from "./ui";
 import type { FieldValue, SpecColumn, SpecEntity } from "./types";
 
@@ -20,11 +21,13 @@ import type { FieldValue, SpecColumn, SpecEntity } from "./types";
 type Meta = {
   columns: { name: string; sortable?: boolean; choices?: { id: string; label: string }[] | null }[];
   has_add_perm?: boolean; has_download_perm?: boolean;
-  zas?: { quick_filters: { key: string; label: string; default: boolean }[]; filter_options?: Record<string, string[]> };
+  zas?: { quick_filters: { key: string; label: string; default: boolean; count?: number | null }[];
+    filter_options?: Record<string, string[]>; subtitle_stat?: number | null };
 };
-type Row = Record<string, any> & { object_uuid: string; zas?: { links: Record<string, string>; status?: string; tags?: string[]; hl?: Record<string, string> } };
+type Row = Record<string, any> & { object_uuid: string; zas?: { links: Record<string, string>; status?: string; tags?: string[]; hl?: Record<string, string>; sub?: Record<string, string>; icon?: Record<string, string> } };
 
 const NA = (v: any) => v === null || v === undefined || v === "" || v === "NA";
+const fmtValue = (v: any, f?: string | null) => (f === "money" ? money(v) : f === "percent" ? percent(v) : number(v));
 const strip = (v: any) => (typeof v === "string" ? v.replace(/<[^>]*>/g, "").trim() : v);
 const hrefOf = (v: any): string | null => (typeof v === "string" ? v.match(/href=['"]([^'"]+)['"]/)?.[1] || null : v?.url || null);
 
@@ -43,7 +46,29 @@ function useMeta(endpoint: string) {
 }
 
 // ───────── cells ─────────
-function Cell({ E, col, row, onOpen }: { E: SpecEntity; col: SpecColumn; row: Row; onOpen: (url: string) => void }) {
+const initialsOf = (t: string) => t.split(/\s+/).filter((w) => /^[A-Za-z]/.test(w)).slice(0, 2).map((w) => w[0].toUpperCase()).join("");
+
+type CellProps = { E: SpecEntity; col: SpecColumn; row: Row; onOpen: (url: string) => void };
+
+/** table.columns[].secondary / icon: an icon, the value, and a muted second line under it. */
+function Cell(p: CellProps) {
+  const sub = p.row.zas?.sub?.[p.col.key];
+  const icon = p.row.zas?.icon?.[p.col.key];
+  if (!sub && !icon) return <CellValue {...p} />;
+  return (
+    <div className="zas-cell2" data-zas="cell" data-zas-key={p.col.key}>
+      {icon === "initials"
+        ? <span className="zas-cell-ico ini">{initialsOf(String(strip(p.row[p.col.key]) ?? ""))}</span>
+        : icon && <span className="zas-cell-ico"><Icon name={icon} /></span>}
+      <div className="zas-cell-txt">
+        <div className="zas-cell-main"><CellValue {...p} /></div>
+        {sub && <div className={cx("zas-cell-sub", p.col.secondary_style === "mono" && "mono")}>{sub}</div>}
+      </div>
+    </div>
+  );
+}
+
+function CellValue({ E, col, row, onOpen }: CellProps) {
   const v = row[col.key];
   if (col.source === "status") {
     const code = row.zas?.status;
@@ -70,7 +95,11 @@ function Cell({ E, col, row, onOpen }: { E: SpecEntity; col: SpecColumn; row: Ro
     if (opt?.tone) return <Badge label={opt.label} tone={opt.tone} />;
   }
   if (col.link_to) {
-    const uuid = col.type === "link" ? row.zas?.links?.[col.key] : row.object_uuid;
+    // A plain column linking to a parent's 360 (an agreement's ID → request_360) opens the
+    // parent, through the row's parent link; the row's own uuid would be the wrong record.
+    const hero = SPEC.detail_views[col.link_to]?.hero;
+    const up = Object.values(E.parents || {}).find((p) => p.hero === hero && p.fk)?.fk;
+    const uuid = col.type === "link" ? row.zas?.links?.[col.key] : up ? row.zas?.links?.[up] : row.object_uuid;
     const url = uuid ? viewUrl(col.link_to, uuid) : null;
     if (url) return <a className="zas-link" href={url} onClick={(e) => { e.preventDefault(); e.stopPropagation(); onOpen(url); }}>{text}</a>;
   }
@@ -113,7 +142,9 @@ export function ZasTable(p: ZasTableProps) {
   const [busy, setBusy] = useState(false);
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
-  const [drawer, setDrawer] = useState<string | null>(null);
+  // ?record=<uuid> opens that row's drawer: the way to a record with no 360 of its own (an
+  // agreement on the request's tab) when it is not on the first page.
+  const [drawer, setDrawer] = useState<string | null>(() => new URLSearchParams(window.location.search).get("record"));
   const refetch = useCallback(() => setTick((t) => t + 1), []);
 
   useEffect(() => { const t = setTimeout(() => { setDq(q); setPageNo(1); }, 300); return () => clearTimeout(t); }, [q]);
@@ -126,6 +157,11 @@ export function ZasTable(p: ZasTableProps) {
     return meta ? base.filter((c) => metaIdx.has(c.key)) : base;
   }, [E, p.columns, meta, metaIdx]);
   const quick = meta?.zas?.quick_filters || [];
+  // pages[].subtitle: its text, then " · " and the stat ("$366,000 requested") once the metadata has it
+  const sub = p.page ? SPEC.pages[p.page.code]?.subtitle : undefined;
+  const figure = sub?.stat && meta?.zas?.subtitle_stat != null
+    ? [fmtValue(meta.zas.subtitle_stat, sub.stat.format), sub.stat.suffix].filter(Boolean).join(" ") : "";
+  const subtitle = sub ? [sub.text, figure].filter(Boolean).join(" · ") || null : null;
   const activeQf = qf === undefined ? (quick.find((x) => x.default)?.key ?? null) : qf;
   const filterCols = cols.filter((c) => c.filterable);
 
@@ -170,6 +206,12 @@ export function ZasTable(p: ZasTableProps) {
       const field = E.field_links?.[rc] || E.field_links?.preview;
       const url = field ? hrefOf(r[field]) : null;
       if (url) { window.open(url, "_blank", "noopener"); return; }
+    }
+    if (rc.includes("#")) {
+      // on that very tab (the request 360's Evidence tab listing evidence) the row opens its drawer
+      const u = parentTabUrl(p.entity, rc, r.zas?.links);
+      const here = window.location.pathname.replace(/\/$/, "");
+      if (u && !here.endsWith(u.split("?")[0].replace(/\/$/, ""))) { navigate(u); return; }
     }
     const V = SPEC.detail_views[rc];
     if (V && V.hero === p.entity) { const u = viewUrl(rc, r.object_uuid); if (u) { navigate(u); return; } }
@@ -229,7 +271,7 @@ export function ZasTable(p: ZasTableProps) {
     <>
       {p.page && (
         <div className="zas-ph">
-          <div><h1>{p.page.title}</h1><p>{rows ? `${number(total)} ${total === 1 ? "record" : "records"}` : " "}</p></div>
+          <div><h1>{p.page.title}</h1><p>{subtitle ?? (rows ? `${number(total)} ${total === 1 ? "record" : "records"}` : " ")}</p></div>
           <span className="zas-sp" />
           {addBtn}
         </div>
@@ -246,7 +288,8 @@ export function ZasTable(p: ZasTableProps) {
               {quick.map((x, i) => (
                 <button key={x.key} type="button" className={cx("zas-qf", activeQf === x.key && "on")} aria-pressed={activeQf === x.key}
                   data-zas="quick-filter" data-zas-key={x.key} data-zas-order={i}
-                  onClick={() => { setQf(activeQf === x.key ? null : x.key); setPageNo(1); }}>{x.label}</button>
+                  onClick={() => { setQf(activeQf === x.key ? null : x.key); setPageNo(1); }}>
+                  {x.label}{x.count != null && <span className="zas-qf-n">{number(x.count)}</span>}</button>
               ))}
             </div>
           )}
@@ -255,7 +298,7 @@ export function ZasTable(p: ZasTableProps) {
           {meta?.has_download_perm && !p.footer?.length && <Button icon={<Download />} onClick={exportRows} zasKey="export">Export</Button>}
           {!p.page && addBtn}
         </div>
-        {err || loadErr ? <div style={{ padding: 14 }}><Banner tone="danger">{err || loadErr}</Banner></div>
+        {err || loadErr ? <div style={{ padding: 14 }} data-zas="load-error"><Banner tone="danger">{err || loadErr}</Banner></div>
           : rows === null ? <div style={{ padding: "8px 16px" }}><Skeleton lines={5} /></div>
           : rows.length === 0 ? (
             <EmptyState zasKey={p.zasKey || p.entity} icon={<Inbox />}
@@ -282,7 +325,7 @@ export function ZasTable(p: ZasTableProps) {
                       <React.Fragment key={group ?? "_"}>
                         {group !== null && <tr className="grp"><td colSpan={cols.length + (hasActs ? 1 : 0)}>{group} · {rs.length}</td></tr>}
                         {rs.map((r) => (
-                          <tr key={r.object_uuid} className={(p.rowClick || E.row_click) !== "none" ? "click" : undefined} onClick={() => onRow(r)}>
+                          <tr key={r.object_uuid} data-zas="row" data-zas-key={r.object_uuid} className={(p.rowClick || E.row_click) !== "none" ? "click" : undefined} onClick={() => onRow(r)}>
                             {cols.map((c) => <td key={c.key} className={r.zas?.hl?.[c.key] ? `hl-${r.zas.hl[c.key] === "amber" ? "amber" : "red"}` : undefined}>
                               <Cell E={E} col={c} row={r} onOpen={navigate} /></td>)}
                             {hasActs && <td className="act" onClick={(e) => e.stopPropagation()}>

@@ -1692,7 +1692,13 @@ function lint(M){
     const formKeys = fc => fc ? (fc.sections ? fc.sections.flatMap(s => kv(s.fields)) : kv(fc.fields)).map(x => x.key) : [];
     ['create', 'edit'].forEach(k => formKeys(E.form[k]).forEach(key => { if (!E.fmap[key]) err(`${w}.form.${k}`, `field "${key}" not found`); }));
     E.cols.forEach(c => { if (c.source === 'field' && !E.fmap[c.key] && !BUILTIN.includes(c.key)) err(`${w}.table`, `column "${c.key}" is not a field`); if ((c.source === 'status' || c.source === 'tags') && !E.wf) err(`${w}.table`, `column "${c.key}" needs a workflow`); });
-    if (E.table.row_click && E.table.row_click !== 'none' && E.table.row_click !== 'drawer' && !M.dvs[E.table.row_click]) err(`${w}.table.row_click`, `detail view "${E.table.row_click}" not found`);
+    const rc = E.table.row_click;
+    if (rc && String(rc).includes('#')){
+      // <view>#<tab>: the row's parent 360, on the tab that lists this entity
+      const [vc, tc] = String(rc).split('#'); const dv = M.dvs[vc]; const tb = dv && arr(dv.tabs).find(t => t.code === tc);
+      if (!dv) err(`${w}.table.row_click`, `detail view "${vc}" not found`);
+      else if (!tb || tb.type !== 'related_table' || tb.entity !== E.code) err(`${w}.table.row_click`, `${vc} has no related_table tab "${tc}" listing ${E.code}`);
+    } else if (rc && rc !== 'none' && rc !== 'drawer' && !M.dvs[rc]) err(`${w}.table.row_click`, `detail view "${rc}" not found`);
     E.ractions.forEach(a => { if (a.roles) chkRoles(`${w}.row_actions.${a.key}`, a.roles); });
   });
   Object.values(M.dvs).forEach(v => {
@@ -2324,6 +2330,11 @@ function renderTable(cfg){
 function rowClickFor(E, target){
   target = target || E.table.row_click || (E.dv ? E.dv.code : 'drawer');
   if (target === 'none') return null;
+  if (String(target).includes('#')){
+    const [vc, tc] = String(target).split('#'); const dv = S.M.dvs[vc]; const tb = dv && arr(dv.tabs).find(t => t.code === tc);
+    if (dv && tb && dv.page && canPage(dv.page)) return r => { const pid = rp(E, r, tb.via).v; return pid ? go(dv.page.code, pid, tc) : openDrawer(E, r); };
+    return r => openDrawer(E, r);
+  }
   if (S.M.dvs[target]){ const dv = S.M.dvs[target]; if (dv.page && canPage(dv.page) && dv.hero === E.code) return r => go(dv.page.code, r.id); return r => openDrawer(E, r); }
   const ra = E.ractions.find(a => a.key === target); if (ra) return r => runRowAction(E, r, ra);
   return r => openDrawer(E, r);

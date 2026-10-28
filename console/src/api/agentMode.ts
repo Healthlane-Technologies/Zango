@@ -58,6 +58,8 @@ export interface RequirementMessage {
 	questions: AnalystQuestion[];
 	/** Where the user was in the preview when they wrote it (user messages only). */
 	preview_focus?: PreviewFocus | Record<string, never>;
+	/** Files the user attached to this message (reference material for the agent). */
+	attachments?: UploadedDocument[];
 }
 
 /**
@@ -75,10 +77,23 @@ export interface PreviewFocus {
 	pointed?: { path: string; label: string; text?: string };
 }
 
+/** The chat's build card (backend studio_status.user_status): progress, never failures. */
+export interface BuildCardStatus {
+	state: 'building' | 'finishing' | 'ready';
+	headline: string;
+	body: string;
+	finishing: string | null;
+	active: boolean;
+	app_url: string;
+	roles: { role: string; steps: string[] }[];
+	tried: { steps: number; roles: number; screens: number };
+}
+
 export interface RunRef {
 	uuid: string;
 	status: RunStatus;
 	queued_at?: string | null;
+	user_status?: BuildCardStatus | null;
 }
 
 export interface RequirementSummary {
@@ -122,6 +137,13 @@ export interface Requirement {
 	spec_is_draft?: boolean;
 	/** The last validation result for a template spec. */
 	validation_issues?: SpecIssue[];
+	/** 'open': the agent writes a free HTML prototype (Free design); 'kit': the template draws it. */
+	preview_mode?: 'open' | 'kit';
+	/** Bumped on every prototype write; the frame reloads when it changes. */
+	prototype_revision?: number;
+	/** Digest of the YAML's not-built menu items, which the preview greys; reloads the frame too. */
+	prototype_soon?: string;
+	prototype_hash?: string;
 }
 
 /** One validation finding on a template spec. `path` is an RFC 6901 pointer into the YAML. */
@@ -281,6 +303,8 @@ export interface Availability {
 		ended_at: string | null;
 		requires_restart: boolean;
 	} | null;
+	/** Free design (open prototypes) is switched on for this platform. */
+	open_prototype?: boolean;
 }
 
 interface Paginated<T> {
@@ -355,7 +379,13 @@ export function useRequirement(appId: string, reqId: string | undefined) {
  */
 export type NewRoundInput =
 	| string
-	| { prompt?: string; reference?: string; documents?: File[]; focus?: PreviewFocus | null };
+	| {
+			prompt?: string;
+			reference?: string;
+			documents?: File[];
+			focus?: PreviewFocus | null;
+			preview_mode?: 'open' | 'kit';
+	  };
 
 export function useCreateRequirement(appId: string, onCreated: (uuid: string) => void) {
 	return useApiMutation({
@@ -367,6 +397,7 @@ export function useCreateRequirement(appId: string, onCreated: (uuid: string) =>
 			if (input.prompt) body.append('prompt', input.prompt);
 			if (input.reference) body.append('reference', input.reference);
 			if (input.focus) body.append('focus', JSON.stringify(input.focus));
+			if (input.preview_mode) body.append('preview_mode', input.preview_mode);
 			for (const file of input.documents ?? []) body.append('documents', file, file.name);
 			return api<{ uuid: string; status: RequirementStatus }>(url, 'POST', body);
 		},
@@ -377,14 +408,23 @@ export function useCreateRequirement(appId: string, onCreated: (uuid: string) =>
 
 export function useSendMessage(appId: string, reqId: string) {
 	return useApiMutation({
-		fn: (message: string | { content: string; focus?: PreviewFocus | null }) =>
-			api<{ status: RequirementStatus }>(
-				`${base(appId)}/requirements/${reqId}/messages/`,
-				'POST',
-				typeof message === 'string'
-					? { content: message }
-					: { content: message.content, ...(message.focus ? { focus: message.focus } : {}) },
-			),
+		fn: (
+			message: string | { content: string; focus?: PreviewFocus | null; documents?: File[] },
+		) => {
+			const url = `${base(appId)}/requirements/${reqId}/messages/`;
+			if (typeof message === 'string') return api<{ status: RequirementStatus }>(url, 'POST', { content: message });
+			if (!message.documents?.length)
+				return api<{ status: RequirementStatus }>(url, 'POST', {
+					content: message.content,
+					...(message.focus ? { focus: message.focus } : {}),
+				});
+			// Attachments go as multipart, like a new change's documents.
+			const body = new FormData();
+			body.append('content', message.content);
+			if (message.focus) body.append('focus', JSON.stringify(message.focus));
+			for (const file of message.documents) body.append('documents', file, file.name);
+			return api<{ status: RequirementStatus }>(url, 'POST', body);
+		},
 		invalidate: [agentKeys.requirement(appId, reqId)],
 	});
 }
@@ -444,14 +484,17 @@ export function useCommitRequirement(appId: string, reqId: string) {
 export function useRequirementSpec(
 	appId: string,
 	reqId: string | undefined,
-	revision: { draft?: number; version?: number; status?: string },
+	revision: { draft?: number; version?: number; status?: string; turns?: number; thinking?: boolean },
 ) {
 	return useQuery({
+		// Open decisions and flags change without a draft revision: the turn's end refetches them.
 		queryKey: [
 			...agentKeys.spec(appId, reqId ?? ''),
 			revision.draft ?? 0,
 			revision.version ?? 0,
 			revision.status ?? '',
+			revision.turns ?? 0,
+			!!revision.thinking,
 		],
 		queryFn: () => api<RequirementSpec>(`${base(appId)}/requirements/${reqId}/spec/`),
 		enabled: !!reqId,
@@ -506,6 +549,32 @@ export function specErrorBody(err: unknown): { current?: RequirementSpec; issues
  * A template's own builder page (e.g. Journey Studio), composed by the server with the
  * platform adapter already injected. Immutable per template version.
  */
+/** The open prototype, assembled into one page; `version` pins an approved version. */
+export const prototypeUrl = (appId: string, reqId: string, version?: number) =>
+	`${base(appId)}/requirements/${reqId}/prototype/${version ? `?v=${version}` : ''}`;
+
+/** The prototype page at a revision: refetched when the agent writes a part. */
+export function usePrototypeHtml(
+	appId: string,
+	reqId: string,
+	revision: number | undefined,
+	soon?: string,
+) {
+	return useQuery({
+		queryKey: ['agent-prototype', appId, reqId, revision ?? 0, soon ?? ''],
+		queryFn: async () => {
+			const res = await fetch(prototypeUrl(appId, reqId), { credentials: 'same-origin' });
+			if (res.status === 404) return null;
+			if (!res.ok) throw new Error(`The prototype could not be loaded (${res.status}).`);
+			return res.text();
+		},
+		enabled: !!revision,
+		staleTime: Infinity,
+		placeholderData: keepPreviousData,
+		retry: 1,
+	});
+}
+
 export function useBuilderHtml(url: string | null | undefined) {
 	return useQuery({
 		queryKey: ['template-builder-html', url ?? ''],

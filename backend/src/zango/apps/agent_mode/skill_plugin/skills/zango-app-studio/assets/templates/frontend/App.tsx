@@ -5,6 +5,8 @@ import { ZasLogin } from "./zas";
 
 // When .zas/bundle/index.md has a /shell screen, add navbarConfig / topbarConfig here with the
 // components in src/custom/shell/ (references/custom-code.md, "The app shell").
+// Open mode (.zas/bundle/prototype/): `import Shell from "./custom/Shell";` and
+// customComponents={{ Layout: Shell }} instead (references/open-mode.md, "The shell").
 // The shipped appbuilder .d.ts lags the runtime props (customPages, authConfig).
 const ZApp: any = ZangoApp;
 

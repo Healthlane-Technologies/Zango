@@ -205,3 +205,30 @@ class ValidateTests(unittest.TestCase):
         self.assertIsNone(doc)
         self.assertEqual(issues[0]["code"], "yaml")
         self.assertIsNotNone(issues[0]["line"])
+
+    def test_yaml_pyyaml_cannot_read_is_an_error(self):
+        # YAML 1.2 (ruamel) reads a `?` inside a flow mapping; PyYAML, which the build uses, does not.
+        text = "actions:\n  - {name: submit, confirm: Submit this?, on_done: Notify}\n"
+        doc, issues = validate.validate_text(text, self.view)
+        self.assertEqual(doc["actions"][0]["confirm"], "Submit this?")
+        self.assertEqual(issues[0]["code"], "yaml_compat")
+        self.assertEqual(issues[0]["line"], 2)
+
+
+class PyYAMLCompatTests(unittest.TestCase):
+    def test_dump_rt_quotes_flow_scalars_pyyaml_cannot_read(self):
+        import yaml
+
+        text = (
+            "# kept\n"
+            "actions:\n"
+            "  - {name: submit, confirm: Submit this?, roles: [A, B], note: 'x: y'}\n"
+            "  - name: close\n"
+            "    confirm: Close this?\n"
+        )
+        out = yamlio.dump_rt(yamlio.load_rt(text))
+        self.assertIsNone(yamlio.pyyaml_problem(out))
+        self.assertEqual(yaml.safe_load(out), yamlio.load(text))
+        self.assertIn('confirm: "Submit this?"', out)
+        self.assertIn("confirm: Close this?", out)  # block style is fine unquoted
+        self.assertIn("# kept", out)

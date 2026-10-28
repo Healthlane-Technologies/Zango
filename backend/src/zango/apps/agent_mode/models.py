@@ -236,6 +236,15 @@ class AgentRequirement(FullAuditMixin):
     # wants a look at every sketched screen since it last changed.
     sketch_looks = models.JSONField(default=dict, blank=True)
 
+    # Open prototype (prototype.py): "open" lets the analyst write a free HTML
+    # prototype, in parts, next to the YAML; "kit" keeps the template-drawn
+    # preview. The parts are the working copy ({path: text}), versioned with
+    # the spec by record_spec; the revision lets the console reload cheaply.
+    preview_mode = models.CharField(max_length=8, blank=True, default="kit")
+    prototype_parts = models.JSONField(default=dict, blank=True)
+    prototype_hash = models.CharField(max_length=64, blank=True, default="")
+    prototype_revision = models.PositiveIntegerField(default=0)
+
     # SDK session, so each conversational turn resumes rather than restarts.
     session_id = models.CharField(max_length=128, blank=True, default="")
 
@@ -337,6 +346,8 @@ class AgentRequirement(FullAuditMixin):
             spec_format=self.spec_format,
             template_version=self.template_version,
             source=source,
+            prototype_parts=dict(self.prototype_parts or {}),
+            prototype_hash=self.prototype_hash,
         )
 
     def __str__(self) -> str:
@@ -384,6 +395,14 @@ class AgentRequirementDocument(models.Model):
     requirement = models.ForeignKey(
         AgentRequirement, on_delete=models.CASCADE, related_name="documents"
     )
+    # The chat message it was attached to; empty for documents given with the brief.
+    message = models.ForeignKey(
+        "AgentRequirementMessage",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="attachments",
+    )
     name = models.CharField(max_length=160)
     content_type = models.CharField(max_length=120)
     size = models.PositiveIntegerField(default=0)
@@ -422,6 +441,9 @@ class AgentRequirementVersion(models.Model):
     is_draft = models.BooleanField(default=False)
     # JSON Pointers the turn or edit changed, for the panel's highlights.
     changed_paths = models.JSONField(default=list, blank=True)
+    # The open prototype as agreed with this spec version (empty in kit mode).
+    prototype_parts = models.JSONField(default=dict, blank=True)
+    prototype_hash = models.CharField(max_length=64, blank=True, default="")
     ts = models.DateTimeField(auto_now_add=True)
 
     class Meta:

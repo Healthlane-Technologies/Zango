@@ -1,0 +1,13 @@
+{
+  "title": "Lab Sample Tracker",
+  "fonts": ["https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"],
+  "roles": {"tech": "Lab technician", "lead": "Lab lead"},
+  "personas": {"tech": {"name": "Priya Raman"}, "lead": {"name": "Tomás Ortega"}},
+  "default_role": "tech",
+  "home": {"tech": "bench", "lead": "samples"},
+  "screens": [
+    {"id": "bench", "title": "My bench", "icon": "flask-conical", "roles": ["tech"]},
+    {"id": "samples", "title": "Samples", "icon": "test-tubes"},
+    {"id": "sample", "title": "Sample", "record": "samples", "parent": "samples"}
+  ]
+}

@@ -13,6 +13,21 @@ export function applyTheme() {
   const ui = SPEC.app.ui || {};
   root.dataset.zasRadius = ui.radius || "rounded";
   root.dataset.zasDensity = ui.density || "comfortable";
+  // app.design (open mode): the approved prototype's tokens over tokens.css, and its web fonts.
+  const design = SPEC.app.design;
+  if (design?.css && !document.querySelector("style[data-zas-design]")) {
+    const style = document.createElement("style");
+    style.setAttribute("data-zas-design", "");
+    style.textContent = design.css;
+    document.head.appendChild(style);
+  }
+  if (design?.font_url && !document.querySelector("link[data-zas-design]")) {
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = design.font_url;
+    link.setAttribute("data-zas-design", "");
+    document.head.appendChild(link);
+  }
 }
 
 /** URL of an entity's 360 page: served by its list page's CrudHandler (contracts §9). */
@@ -25,9 +40,19 @@ export function detailUrl(entityCode: string, uuid: string): string | null {
   return page ? page.route.replace(/\/:id$/, "") + "/" + uuid : null;
 }
 
-export function viewUrl(viewCode: string, uuid: string): string | null {
+export function viewUrl(viewCode: string, uuid: string, tab?: string): string | null {
   const V = SPEC.detail_views[viewCode];
-  return V ? detailUrl(V.hero, uuid) : null;
+  const u = V ? detailUrl(V.hero, uuid) : null;
+  return u && tab ? `${u}?tab=${encodeURIComponent(tab)}` : u;
+}
+
+/** row_click "<view>#<tab>": the 360 of the row's parent, on the tab that lists the row's entity. */
+export function parentTabUrl(entityCode: string, rowClick: string, links: Record<string, string> | undefined): string | null {
+  const [vc, tc] = rowClick.split("#");
+  const tab = SPEC.detail_views[vc]?.tabs.find((t) => t.code === tc);
+  const fk = tab?.param ? SPEC.entities[entityCode]?.parents?.[tab.param as string]?.fk : null;
+  const parent = fk ? links?.[fk] : null;
+  return parent ? viewUrl(vc, parent, tc) : null;
 }
 
 export function pageUrl(code: string): string | null {

@@ -208,6 +208,72 @@ def resolve_within(path: str, root: str) -> tuple[bool, str]:
         return False, f"could not resolve {path!r}: {type(exc).__name__}: {exc}"
 
 
+_RUNTIME_DIR = os.path.join("backend", "zas_core")
+_RUNTIME_IMPORT = re.compile(
+    r"from\s+[.\w]*zas_core(?:\.\w+)*\s+import\s+\(?([\w\s,]+?)\)?\s*$"
+    r"|import\s+[.\w]*zas_core\.\w+\s+as\s+(\w+)",
+    re.M,
+)
+RUNTIME_REFUSAL = (
+    "the App Studio runtime (backend/zas_core/) is the platform's: it is copied in and must "
+    "not be edited or patched from the app. If a check fails because of it, call "
+    "report_platform_issue with the check id and where the bug is, and carry on."
+)
+
+
+def runtime_tamper(workspace_root: str, path: str, tool_input: dict) -> str:
+    """Why a write changes the App Studio runtime, or "".
+
+    A file under backend/zas_core/, or app code that assigns to something imported from it
+    (``mixins._FormRecord = …``): a runtime bug is the platform's to fix, and a patch in one app
+    hides it from every other app."""
+    try:
+        root = os.path.realpath(workspace_root)
+        path = os.path.realpath(
+            path if os.path.isabs(path) else os.path.join(root, path)
+        )
+        rel = os.path.relpath(path, root)
+    except ValueError:
+        return ""
+    if rel == _RUNTIME_DIR or rel.startswith(_RUNTIME_DIR + os.sep):
+        return RUNTIME_REFUSAL
+    if not rel.endswith(".py"):
+        return ""
+    new = "\n".join(
+        str(x)
+        for x in [
+            tool_input.get("content"),
+            tool_input.get("new_string"),
+            *[
+                e.get("new_string")
+                for e in tool_input.get("edits") or []
+                if isinstance(e, dict)
+            ],
+        ]
+        if x
+    )
+    if not new:
+        return ""
+    try:
+        with open(path, encoding="utf-8") as fh:
+            current = fh.read()
+    except OSError:
+        current = ""
+    names = set()
+    for m in _RUNTIME_IMPORT.finditer(current + "\n" + new):
+        if m.group(1):
+            for part in m.group(1).split(","):
+                bits = part.split()
+                if bits:
+                    names.add(bits[-1])  # `mixins as _zm` → _zm
+        elif m.group(2):
+            names.add(m.group(2))
+    for name in names:
+        if re.search(rf"^\s*{re.escape(name)}(?:\.\w+)+\s*=(?!=)", new, re.M):
+            return RUNTIME_REFUSAL
+    return ""
+
+
 def extract_paths(tool_name: str, tool_input: dict) -> list[str]:
     """Every filesystem path referenced by a tool call."""
     paths: list[str] = []
@@ -540,7 +606,8 @@ def bundle_rules(workspace_root: str) -> tuple[str, list]:
     bundle = os.path.join(ws, ".zas", "bundle")
     mpath = os.path.join(bundle, "manifest.json")
     rpath = os.path.join(ws, ".zas", "spec.resolved.json")
-    stamp = (ws, _mtime(mpath), _mtime(rpath))
+    cpath = os.path.join(bundle, "prototype", "capture.json")
+    stamp = (ws, _mtime(mpath), _mtime(rpath), _mtime(cpath))
     cached = _BUNDLE_RULES.get(ws)
     if cached and cached[0] == stamp:
         return cached[1], cached[2]
@@ -563,6 +630,22 @@ def bundle_rules(workspace_root: str) -> tuple[str, list]:
     # Custom screens: the slot named by the hole that points at the screen's folder.
     for hole in (_json(rpath) or {}).get("holes") or []:
         if not isinstance(hole, dict) or not hole.get("bundle") or not hole.get("slot"):
+            continue
+        if hole["bundle"].startswith(".zas/bundle/prototype/screens/"):
+            # open mode: the screen's screenshots and DOM snapshots (bundle/prototype/index.md)
+            folder = os.path.join(ws, hole["bundle"])
+            need = sorted(
+                os.path.join(folder, f)
+                for f in (os.listdir(folder) if os.path.isdir(folder) else [])
+                if (f.startswith("shot.") and f.endswith(".png"))
+                or (f.startswith("dom.") and f.endswith(".html"))
+            )
+            if need:
+                rel = f"frontend/src/custom/slots/{hole['slot']}.tsx"
+                label = hole["bundle"].rstrip("/").rsplit("/", 1)[-1]
+                rules.append(
+                    (lambda r, rel=rel: r == rel, need, f"prototype screen {label}")
+                )
             continue
         hit = by_folder.get(os.path.realpath(os.path.join(ws, hole["bundle"])))
         if hit and hit[1]:
@@ -592,6 +675,39 @@ def bundle_rules(workspace_root: str) -> tuple[str, list]:
                     or r.startswith("frontend/src/custom/shell/"),
                     need,
                     "the app shell",
+                )
+            )
+    # Open mode: the shell (src/custom/Shell.tsx) needs each role's home screenshot.
+    capture = _json(cpath) or {}
+    homes = (_json(os.path.join(bundle, "prototype", "manifest.json")) or {}).get(
+        "home"
+    )
+    if isinstance(homes, dict):
+        files = {
+            (sc.get("id"), r.get("role")): r.get("same_as") or r.get("role")
+            for sc in capture.get("screens") or []
+            for r in sc.get("roles") or []
+        }
+        need = sorted(
+            {
+                os.path.join(
+                    bundle,
+                    "prototype",
+                    "screens",
+                    home,
+                    f"shot.{files[(home, role)]}.png",
+                )
+                for role, home in homes.items()
+                if (home, role) in files
+            }
+        )
+        need = [f for f in need if os.path.isfile(f)]
+        if need:
+            rules.append(
+                (
+                    lambda r: r == "frontend/src/custom/Shell.tsx",
+                    need,
+                    "the prototype's shell",
                 )
             )
     _BUNDLE_RULES[ws] = (stamp, key, rules)
@@ -701,6 +817,12 @@ def make_pre_tool_use_guard(
                 if not ok:
                     reason = f"{tool_name}: {why}"
                     break
+            if not reason and tool_name in WRITE_TOOLS:
+                for path in paths:
+                    why = runtime_tamper(workspace_root, path, tool_input)
+                    if why:
+                        reason = f"{tool_name}: {why}"
+                        break
             try:
                 if not reason and tool_name in WRITE_TOOLS:
                     for path in paths:
@@ -715,6 +837,9 @@ def make_pre_tool_use_guard(
                         note_read(workspace_root, path)
             except Exception:  # noqa: BLE001 - the gate is an aid; never break the run on it
                 pass
+        elif tool_name == "Bash" and tool_input.get("run_in_background"):
+            # A background shell outlives the turn and nobody collects it.
+            reason = "Bash blocked: run_in_background is not permitted; run it in the foreground"
         elif tool_name == "Bash":
             ok, why = check_bash(
                 tool_input.get("command") or "",

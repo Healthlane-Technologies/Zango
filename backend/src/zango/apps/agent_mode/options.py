@@ -19,6 +19,7 @@ stays importable on installs that do not have it.
 from __future__ import annotations
 
 import os
+import re
 
 from pathlib import Path
 
@@ -55,7 +56,20 @@ ALLOWED_TOOLS = [
 ]
 
 # Bare names remove the tool from Claude's context entirely.
-DISALLOWED_TOOLS = ["WebFetch", "WebSearch", "NotebookEdit"]
+DISALLOWED_TOOLS = [
+    "WebFetch",
+    "WebSearch",
+    "NotebookEdit",
+    # Waiting tools: a run has no later session to wake up into. Run 6 ended
+    # its turn on a ScheduleWakeup to wait for its subagents.
+    "ScheduleWakeup",
+    "CronCreate",
+    "CronDelete",
+    "CronList",
+    "Monitor",
+    "RemoteTrigger",
+    "PushNotification",
+]
 
 SYSTEM_PROMPT_APPEND = """\
 You are running inside the Zango platform as a server-side app developer.
@@ -68,6 +82,14 @@ nested shells, no file manipulation (cp, mv, rm, mkdir, touch, sed -i, tee) -
 use Read, Write, Edit, Glob and Grep instead, and read files one Read call
 each (in parallel) rather than with a loop. Paths outside the app workspace
 are readable only under the skill and the installed zango package.
+No run_in_background on Bash.
+
+Subagents (the Agent tool) run in the background and do not see these
+rules: paste the Bash paragraph above into every Agent prompt. Their results
+arrive as task notifications; the platform keeps the session open until
+every one has reported, then asks you to collect them. Your final summary is
+written only after all of them have finished and you have checked their
+files.
 """
 
 
@@ -84,6 +106,17 @@ def agent_home() -> str:
     )
     os.makedirs(home, exist_ok=True)
     return home
+
+
+def cli_session_dir(home: str, cwd: str) -> str:
+    """The CLI's own folder for sessions started in ``cwd``.
+
+    A tool result too large to return inline is saved under its
+    ``tool-results/`` and the agent is told to Read it there; without this
+    root the guard denied those reads. Only this workspace's folder: HOME is
+    shared by every app's runs.
+    """
+    return os.path.join(home, ".claude", "projects", re.sub(r"[^A-Za-z0-9]", "-", cwd))
 
 
 def build_env(creds, home: str) -> dict:
@@ -122,8 +155,11 @@ def build_agent_options(
     hook_sink=None,
     stderr_sink=None,
     template_build=None,
+    tool_push=None,
 ):
     """Construct ClaudeAgentOptions for a run. Imports the SDK lazily.
+
+    ``tool_push`` is the stream's ``push``: an App Studio build then gets the build tools.
 
     ``template_build`` (a template_build.TemplateBuild) names the build skill
     and lets the agent read the template's plugin and the approved spec
@@ -154,6 +190,7 @@ def build_agent_options(
             SKILL_PLUGIN_DIR,
             # The framework source, read-only, for looking up core helpers.
             ZANGO_PACKAGE_DIR,
+            cli_session_dir(home, ctx.workspace_path),
             *(
                 [
                     template_build.plugin_dir,
@@ -213,6 +250,22 @@ def build_agent_options(
         kwargs["skills"] = [template_build.skill]
         if not is_studio(template_build):
             kwargs["skills"].append(DEVELOPER_SKILL)
+        elif tool_push is not None:
+            # studio_verify / report_platform_issue (studio_tools), answered on the run's thread
+            from .studio_tools import (
+                SERVER_NAME,
+                TOOL_NAMES,
+                VERIFY_TIMEOUT,
+                build_studio_server,
+            )
+
+            kwargs["mcp_servers"] = {SERVER_NAME: build_studio_server(tool_push)}
+            kwargs["allowed_tools"] = [*kwargs["allowed_tools"], *TOOL_NAMES]
+            # A slice check takes minutes; the CLI must not give up on the call first (ms).
+            kwargs["env"] = {
+                **kwargs["env"],
+                "MCP_TOOL_TIMEOUT": str((VERIFY_TIMEOUT + 180) * 1000),
+            }
         kwargs["add_dirs"] = [template_build.spec_dir]
 
     # Per-run override wins; otherwise the platform setting.

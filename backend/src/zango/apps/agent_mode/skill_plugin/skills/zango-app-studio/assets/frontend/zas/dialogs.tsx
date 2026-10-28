@@ -4,7 +4,8 @@ import React, { useState } from "react";
 import { FormRenderer } from "@zango-core/crud/form";
 import { ArrowRightCircle, CircleX, Plus, Pencil, Tag as TagIcon, Zap } from "lucide-react";
 import * as api from "./api";
-import { Button, Modal, useToast } from "./ui";
+import { useToast } from "./ui";
+import { Button, Modal } from "./kit";
 
 export type FormSpec =
   | { kind: "create"; endpoint: string; title: string; params?: Record<string, string> }

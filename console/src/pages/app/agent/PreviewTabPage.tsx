@@ -16,6 +16,7 @@ import {
 } from '@/api/agentMode';
 import { Badge, ErrorState, Icon, Skeleton } from '@/ui';
 import { EmbeddedBuilder } from './builder/EmbeddedBuilder';
+import { PrototypeFrame } from './builder/PrototypeFrame';
 import { PREVIEW_CHANNEL } from './previewChannel';
 import './builder/builder.css';
 
@@ -56,6 +57,8 @@ export function PreviewTabPage() {
 		draft: r?.draft_revision,
 		version: r?.spec_version,
 		status: r?.status,
+		turns: r?.turns,
+		thinking: r?.is_thinking,
 	});
 	const goto = useMemo(placeFromHash, []);
 	const [sent, setSent] = useState<string | null>(null);
@@ -113,6 +116,15 @@ export function PreviewTabPage() {
 					</div>
 				) : r && !r.template ? (
 					<div className="card m-6 p-6 text-t3">This requirement has no preview.</div>
+				) : r?.preview_mode === 'open' ? (
+					<PrototypeFrame
+						appId={appId}
+						reqId={reqId}
+						revision={r.prototype_revision}
+						soon={r.prototype_soon}
+						goto={goto?.page ? { screen: goto.page } : null}
+						className="pvtab-emb"
+					/>
 				) : previewUrl && spec.data ? (
 					<EmbeddedBuilder
 						url={previewUrl}

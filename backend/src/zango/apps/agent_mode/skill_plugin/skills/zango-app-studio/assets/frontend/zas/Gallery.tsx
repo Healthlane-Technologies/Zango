@@ -1,14 +1,21 @@
 // Component gallery at /app/__zas: every component in every state, with FIXED
 // fixture data and the default brand, so its screenshots are identical in every app.
 // The design tests compare it against the skill's golden screenshots (testing.md).
+//
+// /app/__zas?kit=mockup is the app's kit instead (open mode): every piece src/custom/kit/map.json
+// names, drawn by the app's kit with the props the map gives, so zas_test.design --only kit can shoot
+// it next to the same piece cropped from the approved prototype. &piece=<id> draws one piece, &w=<px>
+// sets its width (the crop's). An internal check page; the default gallery stays pinned to ./ui.
 import { useLayoutEffect, useState, type CSSProperties } from "react";
 import { Plus, Pencil } from "lucide-react";
 import { FMT, TONES } from "./config";
 import {
-  Badge, Banner, Bars, Board, Button, Chip, EmptyState, FieldGrid, Grid, Kpis, List, MiniTable, Panel, Progress, Skeleton, Stack,
+  Badge, Banner, Bars, Board, Button, Chip, EmptyState, FieldGrid, Grid, Icon, Kpis, List, MiniTable, Panel, Progress, Skeleton, Stack,
   StatTile, StateBox, Tabs, Timeline, ToastHost,
 } from "./ui";
 import type { FieldValue } from "./types";
+import * as KIT from "./kit";
+import kitMap from "../custom/kit/map.json";
 
 // The goldens are drawn with the default app.ui (rounded, comfortable), whatever the app chose.
 const GALLERY_DEFAULTS = {
@@ -41,13 +48,57 @@ const POS = [
 // fixed formats and clock while the gallery is mounted (set before children render, cleared on unmount)
 const PINNED = { locale: "en-US", currency: "USD", now: Date.parse("2026-10-08T09:00:00Z") };
 
+type KitEntry = { id: string; component: string; props?: Record<string, any>; built?: string };
+
+const noop = () => undefined;
+// pieces whose icon prop is an element: map.json gives a lucide name
+const ICON_ELEMENT = new Set(["Button", "EmptyState", "Modal"]);
+
+function kitProps(p: KitEntry): Record<string, any> {
+  const props = { ...(p.props || {}) };
+  if (ICON_ELEMENT.has(p.component) && typeof props.icon === "string") props.icon = <Icon name={props.icon} />;
+  return props;
+}
+
+function KitGallery({ only, width }: { only: string | null; width: number | null }) {
+  const pieces = (((kitMap as any).pieces || []) as KitEntry[]).filter((p) => !only || p.id === only);
+  return (
+    <ToastHost>
+      <div className="zas zas-page" data-zas="page" data-zas-key="__zas_kit" data-kit-count={pieces.length}>
+        {!only && <div className="zas-ph"><div><h1>App kit</h1><p>Each piece of src/custom/kit/map.json, drawn by this app's kit.</p></div></div>}
+        {pieces.map((p) => {
+          const C = (KIT as Record<string, any>)[p.component];
+          const ok = typeof C === "function" && p.component !== "makeShell";
+          return (
+            <section key={p.id} data-kit-piece={p.id} data-kit-component={p.component} style={{ marginBottom: only ? 0 : 24 }}>
+              {!only && <div style={{ fontSize: 12, marginBottom: 6 }}>{p.id} · {p.component}</div>}
+              <div data-kit-body={p.id} style={width ? { width } : undefined}>
+                {ok ? <C onClose={noop} onChange={noop} {...kitProps(p)} /> : <span data-kit-error="">no kit piece {p.component}</span>}
+              </div>
+            </section>
+          );
+        })}
+      </div>
+    </ToastHost>
+  );
+}
+
 export default function ZasGallery() {
+  const q = new URLSearchParams(window.location.search);
+  if (q.get("kit") === "mockup") {
+    const w = parseInt(q.get("w") || "", 10);
+    return <KitGallery only={q.get("piece")} width={Number.isFinite(w) && w > 0 ? w : null} />;
+  }
+  return <DefaultGallery />;
+}
+
+function DefaultGallery() {
   const [tab, setTab] = useState("one");
   Object.assign(FMT, PINNED);
   useLayoutEffect(() => () => { delete FMT.locale; delete FMT.currency; delete FMT.now; }, []);
   return (
     <ToastHost>
-      <div className="zas zas-page" data-zas="page" data-zas-key="__zas" style={{ ["--brand" as any]: "#4F46E5", ...GALLERY_DEFAULTS }}>
+      <div className="zas zas-page" data-zas="page" data-zas-key="__zas" data-zas-pinned="" style={{ ["--brand" as any]: "#4F46E5", ...GALLERY_DEFAULTS }}>
         <div className="zas-ph"><div><h1>Design system</h1><p>Every component and state, with fixed sample data.</p></div></div>
         <div data-gallery="badges" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
           {TONES.map((t) => <Badge key={t} label={t} tone={t} zasKey={`badge-${t}`} />)}
@@ -102,6 +153,16 @@ export default function ZasGallery() {
           </Stack>
         </div>
         <div data-gallery="states"><StateBox kind="not_found" title="Vendor not found" text="It may have been removed or you may not have access." /></div>
+      </div>
+      {/* Not pinned: the app's own look (app.brand, app.ui, app.design), so the design tests can see
+          that every token reaches a component. No golden: it differs per app. */}
+      <div className="zas zas-page" data-gallery="themed" data-zas-key="__zas_themed">
+        <div className="zas-ph"><div><h1>This app's look</h1><p>The same components with the app's tokens.</p></div></div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+          <Button variant="primary" icon={<Plus />}>Primary</Button><Button>Default</Button>
+          {(["green", "amber", "red", "blue"] as const).map((t) => <Badge key={t} label={t} tone={t} zasKey={`themed-badge-${t}`} />)}
+        </div>
+        <Panel title="Fields" zasKey="themed-fields"><FieldGrid fields={FIELDS} /></Panel>
       </div>
     </ToastHost>
   );

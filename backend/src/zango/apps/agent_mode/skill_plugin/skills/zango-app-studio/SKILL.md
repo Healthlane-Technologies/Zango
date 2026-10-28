@@ -100,8 +100,9 @@ python3 <skill>/scripts/selftest_runtime.py --workspace <ws>      # expression e
 ```
 
 Register `{"name": "zas_core", "path": "backend.zas_core"}` in `settings.json` `modules` (it has
-a model, `ZasSequence`, and no URLs). Never edit files under `zas_core/` in the app. A runtime bug
-is fixed in `<skill>/assets/` and copied again, and the report lists it.
+a model, `ZasSequence`, and no URLs). Never edit files under `zas_core/` in the app, or patch it from app
+code. A runtime bug is fixed in `<skill>/assets/` and copied again, and the report lists it (inside
+the platform: `report_platform_issue`, see `references/server-mode.md`).
 
 ## Phase 3: Backend, module by module (`plan.md` order)
 
@@ -163,7 +164,9 @@ catch backend bugs before the frontend exists.
    `columns` prop, sends no `order[0][…]` and sorts only the loaded page in the browser):
    `mkdir -p patches && cp <skill>/assets/frontend/patches/*.patch patches/ && npm install --save-dev --legacy-peer-deps patch-package`,
    add `"postinstall": "patch-package"` to `package.json` scripts, then `npx patch-package` (prints the applied patch).
-2. `cp -R <skill>/assets/frontend/zas <ws>/frontend/src/zas`,
+2. `cp -R <skill>/assets/frontend/zas <ws>/frontend/src/zas`, `mkdir -p <ws>/frontend/src/custom/kit` and copy
+   `<skill>/assets/templates/frontend/kit/*` into it when missing (the runtime imports the app's kit; the
+   stub keeps the default kit),
    `cp <ws>/.zas/spec.ui.json <ws>/frontend/src/custom/spec.ui.json` and
    `cp <skill>/assets/templates/frontend/index.css <ws>/frontend/src/index.css` (replaces the scaffold's).
    `index.css` makes Tailwind scan `@zango-core/crud/dist`: crud 2.0.0 ships class names, not CSS, so without it
@@ -173,6 +176,15 @@ catch backend bugs before the frontend exists.
 4. `src/custom/pages/index.ts` and `src/App.tsx` from `assets/templates/frontend/` (keep the
    scaffold's `appInitializerEndpoint`; add the shell props when the bundle has a `/shell` screen,
    custom-code.md §The app shell). One export per page (`references/map/pages-menus.md`).
+   **Open mode** (`.zas/bundle/prototype/` exists): **port, don't redraw** (`references/open-mode.md`).
+   The platform wrote the prototype's stylesheet (`src/custom/prototype.css`, scoped under `.zp`) and
+   its source (`.zas/bundle/prototype/source/`). Instead of the shell props, write `src/custom/Shell.tsx`
+   (on `makeShell`, or the prototype's shell ported around `shellMenu` and `UserCard`) and pass it as
+   `customComponents={{ Layout: Shell }}` (§The shell). Each prototype screen is kit or rebuild as
+   `spec_check` classed it (`.zas/bundle/prototype/index.md`, §Screens): kit pages stay `makeListPage` /
+   `makeViewsPage` and match through the app's kit (§The kit); rebuilds are holes, each the prototype's
+   own component copied into its slot with the app's data. Write `backend/demo_data.py` from the
+   prototype's seed data (§Demo data).
 5. Slots for `custom_page` / `custom_tab` / `custom_panel` holes from `Slot.tsx.tmpl`, exported in
    `slots/index.ts` (`references/custom-code.md` §Slots). A hole that names `.zas/bundle/screens/…`
    was approved in the preview: port its `sketch.js` onto the zas kit, block for block
@@ -227,11 +239,14 @@ manual steps) + the HTML path. Rules: `references/report.md`.
   that act on user-supplied ids. Use the scoped queryset.
 - Frontend: compose from `src/zas` only. No hex colours or colour styles in `src/custom/`, except in the
   slot of a screen approved in the preview, which reproduces its sketch (custom-code.md §Porting a sketch).
+  In open mode a literal is fine when the approved prototype uses that colour (ported code keeps it), any
+  other is not (open-mode.md §Lint).
 - Match what the user approved: every screen in `.zas/bundle/index.md` has screenshots, and the platform
   blocks writing its file until you have Read them. Custom screens are ported from their sketch; standard
   screens are arranged with their levers only: the switcher's place (`makeViewsPage(…, { switcher })`,
   views.md §Matching the approved page) and the shell's logo, user card and top bar (`ZangoApp` props in
-  `src/App.tsx`, components in `src/custom/shell/`, custom-code.md §The app shell).
+  `src/App.tsx`, components in `src/custom/shell/`, custom-code.md §The app shell). In open mode screens and
+  shell are ported from the prototype's own code (open-mode.md).
 - Never edit `packages/`, the runtime inside the app, or the database by hand. Fix the generated code,
   the runtime in the skill (`assets/`), or report a spec problem.
 - Never print or commit passwords or tokens. `.zas/test_users.json` is chmod 600.
@@ -247,6 +262,7 @@ manual steps) + the HTML path. Rules: `references/report.md`.
 | prose → hooks and slots | `references/custom-code.md` |
 | 360 pitfalls / child tables | `references/zango/entity-360.md`, `references/zango/child-tables.md` |
 | look and feel | `references/design-system.md` |
+| open mode (an approved prototype in `.zas/bundle/prototype/`) | `references/open-mode.md` |
 | tests / report | `references/testing.md` (layers, intent review, fixtures, scenarios), `references/report.md` |
 | a full worked module | `references/examples/vendors/` |
 | environment, app, running commands | `references/setup.md` |

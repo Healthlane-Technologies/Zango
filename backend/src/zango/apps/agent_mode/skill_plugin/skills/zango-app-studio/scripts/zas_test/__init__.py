@@ -14,6 +14,24 @@ import os
 import time
 
 RESULTS = "test_results.json"
+# A build slice's checks only (studio_verify): comma-separated spec paths, e.g.
+# "entities.case,pages.my_cases,detail_views.case_360". Unset: every check runs.
+SCOPE_ENV = "ZAS_TEST_SCOPE"
+
+
+def scope():
+    return [p.strip() for p in os.environ.get(SCOPE_ENV, "").split(",") if p.strip()]
+
+
+def in_scope(path, prefixes=None):
+    """Whether a check on spec path `path` runs in this scope. A check with no path (sign-in, the
+    shell) always runs; a path matches a prefix on a segment boundary (entities.case is not
+    entities.case_document)."""
+    prefixes = scope() if prefixes is None else prefixes
+    if not prefixes or not path:
+        return True
+    path = str(path)
+    return any(path == p or path.startswith(p + ".") or path.startswith(p + "[") for p in prefixes)
 
 
 def results_path(ws):
@@ -29,9 +47,14 @@ def load_results(ws):
 
 
 def save_results(ws, layer, results, meta=None):
-    """Replace this layer's results in .zas/test_results.json, keep the other layers'."""
+    """Replace this layer's results in .zas/test_results.json, keep the other layers'. In a scope
+    (ZAS_TEST_SCOPE) only the layer's results inside it are replaced."""
     data = load_results(ws)
-    data["results"] = [r for r in data.get("results", []) if r.get("layer") != layer] + results
+    prefixes = scope()
+    if prefixes:
+        results = [r for r in results if in_scope(r.get("spec_path"), prefixes)]
+    data["results"] = [r for r in data.get("results", []) if r.get("layer") != layer
+                       or (prefixes and r.get("spec_path") and not in_scope(r["spec_path"], prefixes))] + results
     data.setdefault("runs", {})[layer] = {"at": time.strftime("%Y-%m-%d %H:%M:%S"), **(meta or {}),
                                           "counts": counts(results)}
     os.makedirs(os.path.dirname(results_path(ws)), exist_ok=True)

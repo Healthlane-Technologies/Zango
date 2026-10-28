@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/ui';
-import { agentKeys, type RunStatus } from './agentMode';
+import { agentKeys, type BuildCardStatus, type RunStatus } from './agentMode';
 import { api, ApiError } from './client';
 
 // Agent Mode, phase 2: development runs. Endpoints under /api/v1/apps/<uuid>/agent-mode/runs/
@@ -81,6 +81,8 @@ export interface StudioReport {
 	report?: { summary_md?: string; md_path?: string; html_path?: string; verdict?: string };
 	/** The full HTML report (runs/<run>/report.html), or null when none was written. */
 	html_url?: string | null;
+	/** What the person who made the app is told (studio_status.user_status). */
+	user_status?: BuildCardStatus | null;
 }
 
 export interface TestUser {

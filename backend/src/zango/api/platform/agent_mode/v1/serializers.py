@@ -182,6 +182,8 @@ class AgentRunDetailSerializer(serializers.ModelSerializer):
                 "verdict": report.get("verdict", ""),
             },
             "html_url": None,
+            # the Builds pane's status card (studio_status.user_status): progress, never failures
+            "user_status": data.get("user_status"),
             # Kept for older clients.
             "summary_md": report.get("summary_md", ""),
             "html_path": report.get("html_path", ""),
@@ -217,6 +219,10 @@ class AgentRunCreateSerializer(serializers.Serializer):
 
 
 class AgentRequirementMessageSerializer(serializers.ModelSerializer):
+    # Files the user attached to this message (chips in the chat; the file itself is
+    # served by requirements/{uuid}/documents/{id}/).
+    attachments = serializers.SerializerMethodField()
+
     class Meta:
         model = AgentRequirementMessage
         fields = (
@@ -227,7 +233,14 @@ class AgentRequirementMessageSerializer(serializers.ModelSerializer):
             "is_question",
             "questions",
             "preview_focus",
+            "attachments",
         )
+
+    def get_attachments(self, obj):
+        return [
+            {"id": d.pk, "name": d.name, "content_type": d.content_type, "size": d.size}
+            for d in obj.attachments.all()
+        ]
 
 
 def _template_payload(obj):
@@ -267,6 +280,9 @@ class AgentRequirementListSerializer(serializers.ModelSerializer):
             "template",
             "spec_format",
             "draft_revision",
+            "preview_mode",
+            "prototype_revision",
+            "prototype_hash",
             "spec_version",
             "turns",
             "total_cost_usd",
@@ -285,7 +301,11 @@ class AgentRequirementListSerializer(serializers.ModelSerializer):
         run = obj.runs.order_by("-queued_at").first()
         if run is None:
             return None
-        return {"uuid": str(run.object_uuid), "status": run.status}
+        return {
+            "uuid": str(run.object_uuid),
+            "status": run.status,
+            "user_status": (run.studio_report or {}).get("user_status"),
+        }
 
 
 class AgentRequirementDetailSerializer(serializers.ModelSerializer):
@@ -294,6 +314,8 @@ class AgentRequirementDetailSerializer(serializers.ModelSerializer):
     messages = AgentRequirementMessageSerializer(many=True, read_only=True)
     runs = serializers.SerializerMethodField()
     template = serializers.SerializerMethodField()
+    # The preview greys the YAML's not-built menu items; the frame reloads when they change.
+    prototype_soon = serializers.SerializerMethodField()
 
     class Meta:
         model = AgentRequirement
@@ -304,11 +326,15 @@ class AgentRequirementDetailSerializer(serializers.ModelSerializer):
             "can_build",
             "template_slug",
             "template",
+            "prototype_soon",
             "initial_prompt",
             "spec_markdown",
             "spec_format",
             "spec_is_draft",
             "draft_revision",
+            "preview_mode",
+            "prototype_revision",
+            "prototype_hash",
             "validation_issues",
             "spec_version",
             "turns",
@@ -325,12 +351,21 @@ class AgentRequirementDetailSerializer(serializers.ModelSerializer):
     def get_template(self, obj):
         return _template_payload(obj)
 
+    def get_prototype_soon(self, obj):
+        from zango.apps.agent_mode.prototype import soon_digest, soon_menu
+
+        if obj.preview_mode != "open":
+            return ""
+        return soon_digest(soon_menu(obj.spec_markdown))
+
     def get_runs(self, obj):
         return [
             {
                 "uuid": str(run.object_uuid),
                 "status": run.status,
                 "queued_at": run.queued_at.isoformat() if run.queued_at else None,
+                # the chat's build card (studio_status.user_status): progress, never failures
+                "user_status": (run.studio_report or {}).get("user_status"),
             }
             for run in obj.runs.order_by("-queued_at")[:10]
         ]

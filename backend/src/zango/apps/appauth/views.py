@@ -5,6 +5,8 @@ from django.shortcuts import redirect
 from django.utils.decorators import method_decorator
 from django.views.generic import View
 
+from zango.core.api import get_api_response
+
 
 @method_decorator(axes_dispatch, name="dispatch")
 class AppLogoutView(View):
@@ -23,3 +25,9 @@ class AppLogoutView(View):
         if request.GET.get("redirect_url"):
             logout_url = request.GET.get("redirect_url")
         return redirect(logout_url)
+
+    def post(self, request, *args, **kwargs):
+        """appbuilder's logout page (/app/logout) signs out with POST /logout and reads JSON: without
+        this it got a 405, showed "Logout Error" and left the session signed in."""
+        logout(request)
+        return get_api_response(True, {"message": "Successfully logged out"}, 200)

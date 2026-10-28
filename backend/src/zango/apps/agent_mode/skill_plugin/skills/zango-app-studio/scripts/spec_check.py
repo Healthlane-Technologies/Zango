@@ -187,6 +187,126 @@ def dashboard_text(P):
     return "\n".join(lines)
 
 
+
+# --- app.design (open mode): the approved prototype's tokens on the runtime ---------------------
+# app.design.tokens uses canonical names (SCHEMA.md, app.design); each maps onto the zas tokens
+# (tokens.css) and the crud package's gray ramp, so standard screens take the prototype's look.
+# config.ts applyTheme() injects the CSS (html:root beats the app.ui radius/density rules) and the
+# Google Fonts link for families the runtime does not embed.
+DESIGN_MAP = {
+    "page": ["--z-ground"],
+    "card": ["--z-card", "--color-base-white"],
+    "sunk": ["--z-sunken", "--color-gray-100"],
+    "text-strong": ["--color-gray-900"],
+    "text": ["--z-text", "--color-gray-900", "--color-gray-800"],
+    "text-2": ["--z-text2", "--z-sub", "--color-gray-700", "--color-gray-600"],
+    "text-3": ["--z-muted", "--color-gray-500"],
+    "text-faint": ["--z-faint", "--color-gray-400"],
+    "border-faint": ["--z-bdf"],
+    "border": ["--z-bd", "--color-gray-200"],
+    "border-strong": ["--z-bds", "--z-ghost", "--color-gray-300"],
+    "brand-strong": ["--b600", "--color-brand-600"],
+    "brand-soft": ["--b50", "--color-brand-50", "--color-primary-light"],
+    "radius-sm": ["--z-r-ctl"],
+    "radius": ["--z-r-card"],
+    "radius-lg": ["--z-r-head"],
+    "shadow-sm": ["--z-shadow"],
+    "shadow": ["--z-shadow"],
+    "shadow-lg": ["--z-shadow-pop"],
+    "ok": ["--t-green-fg"], "ok-bg": ["--t-green-bg"],
+    "warn": ["--t-amber-fg"], "warn-bg": ["--t-amber-bg"],
+    "bad": ["--t-red-fg", "--color-error-500"], "bad-bg": ["--t-red-bg"],
+    "info": ["--t-blue-fg"], "info-bg": ["--t-blue-bg"],
+}
+TONE_OF = {"ok": "green", "warn": "amber", "bad": "red", "info": "blue"}
+EMBEDDED_FONTS = {"inter", "jetbrains mono"}
+_CSS_VALUE = re.compile(r"^[^;{}<>]{1,300}$")
+
+
+def _token_defaults():
+    """{--var: value} from the runtime's tokens.css :root block (the pinned gallery's values)."""
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets", "frontend", "zas", "tokens.css")
+    try:
+        text = open(path, encoding="utf-8").read()
+    except OSError:
+        return {}
+    text = re.sub(r"/\*.*?\*/", "", text, flags=re.S)
+    m = re.search(r":root\s*\{(.*?)\n\}", text, re.S)
+    return {k: " ".join(v.split()) for k, v in re.findall(r"(--[\w-]+)\s*:\s*([^;]+);", m.group(1) if m else "")}
+
+
+def _font_stack(family, fallback):
+    return f'"{family}", {fallback}' if family else None
+
+
+def design_css(design):
+    """(css, google_fonts_url, problems) for app.design; ("", None, []) without tokens."""
+    design = design if isinstance(design, dict) else {}
+    tokens = design.get("tokens") if isinstance(design.get("tokens"), dict) else {}
+    fonts = design.get("fonts") if isinstance(design.get("fonts"), dict) else {}
+    problems, decl = [], OrderedDict()
+    values = {}
+    for name, value in tokens.items():
+        value = str(value).strip()
+        if not _CSS_VALUE.match(value) or "url(" in value.lower():
+            problems.append(f"app.design.tokens.{name}: not a plain CSS value")
+            continue
+        values[name] = value
+    for name, targets in DESIGN_MAP.items():
+        if name in values:
+            for t in targets:
+                if t == "--z-shadow" and name == "shadow-sm" and "shadow" in values:
+                    continue
+                decl[t] = values[name]
+    if "card" in values and "sunk" in values:
+        decl["--z-head"] = f"color-mix(in srgb, {values['sunk']} 50%, {values['card']})"
+        decl["--color-gray-50"] = decl["--z-head"]
+    for name, tone in TONE_OF.items():
+        if name in values and f"{name}-bg" in values:
+            decl[f"--t-{tone}-bd"] = f"color-mix(in srgb, {values[name]} 30%, {values[name + '-bg']})"
+    body = _font_stack(fonts.get("body"), '-apple-system, "Segoe UI", system-ui, sans-serif')
+    mono = _font_stack(fonts.get("mono"), '"SF Mono", ui-monospace, Menlo, monospace')
+    if body:
+        decl["--z-font"] = body
+    if mono:
+        decl["--z-mono"] = mono
+    if fonts.get("display"):
+        decl["--z-display"] = _font_stack(fonts["display"], "var(--z-font)")
+    # every other token stays available to custom screens as --p-<name>
+    for name, value in values.items():
+        if name not in DESIGN_MAP and name not in ("brand", "accent", "accent-soft", "nav"):
+            decl[f"--p-{name}"] = value
+    for name in ("accent", "accent-soft", "nav"):
+        if name in values:
+            decl[f"--p-{name}"] = values[name]
+    css = ""
+    if decl:
+        # The form and crud packages load their own `:root` palettes after tokens.css (FormRenderer's
+        # Submit came out #5048ed). Restating the tokens.css bridge here wins by specificity.
+        for k, v in _token_defaults().items():
+            if k.startswith(("--color-", "--zango-")):
+                decl.setdefault(k, v)
+        css = "html:root {\n" + "".join(f"  {k}: {v};\n" for k, v in decl.items()) + "}\n"
+        # The component gallery keeps the default look for its goldens ([data-zas-pinned]).
+        defaults = _token_defaults()
+        pinned = [(k, defaults[k]) for k in decl if k in defaults]
+        if pinned:
+            css += "html:root [data-zas-pinned] {\n" + "".join(f"  {k}: {v};\n" for k, v in pinned) + "}\n"
+        if body:
+            # @zango-core/appbuilder sets `* { font-family: Inter }`; zero specificity keeps every
+            # runtime font rule (mono, headings) in charge while beating that reset.
+            css += ":where(.zas, .zas *, .zas-login, .zas-login *) { font-family: var(--z-font); }\n"
+    families = []
+    for fam in (fonts.get("body"), fonts.get("display"), fonts.get("mono")):
+        if fam and fam.lower() not in EMBEDDED_FONTS and fam not in families:
+            families.append(fam)
+    url = None
+    if families:
+        url = "https://fonts.googleapis.com/css2?" + "&".join(
+            "family=" + f.replace(" ", "+") + ":wght@400;500;600;700" for f in families
+        ) + "&display=swap"
+    return css, url, problems
+
 def arr(x):
     if x is None:
         return []
@@ -394,6 +514,15 @@ def norm_entity(e, mod, sets):
         if src == "computed" and c.get("path"):
             src = "path"
         f = fm.get(c["key"]) or BUILTIN.get(c["key"])
+        c = dict(c)
+        if c.get("secondary") is not None:  # a second, muted line under the value
+            c["secondary"] = arr(c["secondary"])
+        ic = c.get("icon")
+        if isinstance(ic, str):  # one icon on every row, or one per value of a field
+            c["icon"] = {"by": None, "map": {}, "default": ic}
+        elif isinstance(ic, dict):
+            c["icon"] = {"by": ic.get("by"), "map": {str(k): v for k, v in (ic.get("map") or {}).items()},
+                         "default": ic.get("default")}
         ncols.append({**c, "source": src,
                       "label": c.get("label") or (f or {}).get("label") or titleize(c["key"]),
                       "roles": arr(c.get("roles")) or None})
@@ -488,6 +617,15 @@ class Spec:
         if unknown:
             L.warn("app.ui", f"app.ui does not know {', '.join(unknown)} (only radius and density)")
         app["ui"] = {"radius": ui["radius"], "density": ui["density"]}
+        if app.get("design") is not None:
+            css, font_url, bad = design_css(app.get("design"))
+            for b in bad:
+                L.warn("app.design", b)
+            brand = str(((app.get("design") or {}).get("tokens") or {}).get("brand") or "")
+            if re.match(r"^#[0-9A-Fa-f]{6}$", brand):
+                app["theme"]["primary"] = brand  # the runtime's --brand and every ramp follow it
+            app["design_ui"] = {"css": css, "font_url": font_url,
+                                "fonts": (app.get("design") or {}).get("fonts") or {}}
         sets = {k: norm_choices(v, {}) for k, v in (s.get("choice_sets") or {}).items()}
 
         roles = s.get("roles") or []
@@ -571,7 +709,8 @@ class Spec:
 
         self.M = {"spec_version": 1, "skill_version": SKILL_VERSION, "app": app, "choice_sets": sets,
                   "roles": R, "modules": mods, "entities": ents, "pages": pages, "detail_views": dvs,
-                  "app_custom_requirements": arr(app.get("custom_requirements"))}
+                  "app_custom_requirements": arr(app.get("custom_requirements")),
+                  "prototype_raw": s.get("prototype")}
 
     # ---------- path resolution ----------
     def resolve(self, E, path, allow_form=False, allow_reverse=False, allow_txn=False):
@@ -827,6 +966,23 @@ class Spec:
                 L.warn(w, "custom page has no component name; Page_<code> will be used")
             if t == "custom" and not p.get("text"):
                 L.warn(w, "custom page has no text: the agent has nothing to build from")
+            sub = p.get("subtitle")
+            if isinstance(sub, str):  # the line under the page title; a stat adds a live figure
+                p["subtitle"] = sub = {"text": sub}
+            if sub is not None and not isinstance(sub, dict):
+                L.error(w + ".subtitle", "subtitle is text, or {text, stat: {count | sum, where, format, suffix}}")
+            elif sub and sub.get("stat"):
+                st, E = sub["stat"], ents.get(p.get("entity"))
+                if not isinstance(st, dict) or not E:
+                    L.error(w + ".subtitle.stat", "a stat needs a crud page's entity and {count: true} or {sum: <field>}")
+                else:
+                    if st.get("sum") and E["fmap"].get(st["sum"], {}).get("type") not in ("money", "integer", "decimal", "number"):
+                        L.error(w + ".subtitle.stat", f"sum {st['sum']!r} is not a number field of {E['code']}")
+                    if not st.get("sum") and not st.get("count"):
+                        L.error(w + ".subtitle.stat", "stat needs count: true or sum: <field>")
+                    if st.get("format") not in FORMATS:
+                        L.error(w + ".subtitle.stat", f"unknown format {st.get('format')!r}")
+                    st["ast"] = self.check_expr(E, st.get("where"), w + ".subtitle.stat.where")
             r = p.get("route")
             if not r or not str(r).startswith("/app"):
                 L.error(w, f"route {r!r} must start with /app")
@@ -1248,6 +1404,33 @@ class Spec:
                 T = ents.get((f or {}).get("to"))
                 if not T or (c["display"] not in T["fmap"] and c["display"] not in BUILTIN):
                     L.error(cw, f"display {c['display']!r} does not resolve")
+            for p in c.get("secondary") or []:
+                kk, info = self.resolve(E, p)
+                if kk is None:
+                    L.error(cw + ".secondary", f"{p!r}: {info}")
+            if c.get("secondary_style") not in (None, "plain", "mono"):
+                L.error(cw + ".secondary_style", "secondary_style is plain or mono")
+            ic = c.get("icon")
+            if ic is not None and not isinstance(ic, dict):
+                L.error(cw + ".icon", "icon is a lucide name, or {by: <field>, map: {<value>: <icon>}, default}")
+            elif ic:
+                names = [*ic["map"].values(), ic.get("default")]
+                bad = [n for n in names if n is not None and not re.fullmatch(r"[a-z0-9-]+", str(n))]
+                if bad:
+                    L.error(cw + ".icon", f"not lucide icon names: {bad}")
+                if ic.get("by"):
+                    kk, info = self.resolve(E, ic["by"])
+                    if kk is None:
+                        L.error(cw + ".icon.by", f"{ic['by']!r}: {info}")
+                    elif kk == "field" and info.get("choices"):
+                        ids = {str(ch["id"]) for ch in info["choices"]}
+                        extra = sorted(set(ic["map"]) - ids)
+                        if extra:
+                            L.error(cw + ".icon.map", f"not choices of {ic['by']}: {extra}")
+                        if not ic.get("default") and ids - set(ic["map"]):
+                            L.warn(cw + ".icon", f"no icon for {sorted(ids - set(ic['map']))} and no default")
+                elif not ic.get("default"):
+                    L.error(cw + ".icon", "icon needs a name, or `by` with a `map`")
             if c.get("highlight"):
                 c["highlight"]["ast"] = self.check_expr(E, c["highlight"].get("when"), cw + ".highlight")
             if c.get("roles"):
@@ -1260,8 +1443,18 @@ class Spec:
             if q.get("roles"):
                 chk_roles(f"{tw}.quick_filters.{q['key']}", q["roles"])
         rc = tb.get("row_click")
-        if rc and rc not in ("none", "drawer") and rc not in dvs:
-            L.error(tw + ".row_click", f"{rc!r} is not a detail view, none or drawer")
+        if rc and "#" in str(rc):
+            # <view>#<tab>: the row opens its parent's 360 on the tab that lists this entity
+            vc, tc = str(rc).split("#", 1)
+            V = dvs.get(vc)
+            tab = next((t for t in arr((V or {}).get("tabs")) if t.get("code") == tc), None)
+            if not V:
+                L.error(tw + ".row_click", f"{rc!r}: {vc!r} is not a detail view")
+            elif not tab or tab.get("type") != "related_table" or tab.get("entity") != E["code"]:
+                L.error(tw + ".row_click", f"{rc!r}: {vc} has no related_table tab {tc!r} listing {E['code']}",
+                        f"use <view>#<tab> where the tab lists {E['code']}, or a detail view, drawer or none")
+        elif rc and rc not in ("none", "drawer") and rc not in dvs:
+            L.error(tw + ".row_click", f"{rc!r} is not a detail view, <view>#<tab>, none or drawer")
         for k in tb["footer_totals"]:
             if k not in E["fmap"]:
                 L.error(tw + ".footer_totals", f"{k!r} is not a field")
@@ -1628,7 +1821,90 @@ class Spec:
                            "module": mod, "function": fn, "signature": sig, "target": target,
                            "data_hook": backend, "slot": slot, "scheduled": bool(sched or area == "scheduled")})
 
+    def prototype_screens(self):
+        """Open mode (SCHEMA.md, prototype): each prototype screen's build class. kit = the standard
+        page, drawn with the app's kit built from the prototype (open-mode.md, "The kit"); rebuild = the approved screen ported onto a slot (a custom page, or
+        a standard page the analyst marked rebuild: true with a why); prototype-only = not built."""
+        M, L = self.M, self.L
+        raw = M.get("prototype_raw")
+        if raw is None:
+            M["prototype"] = None
+            return
+        rows, seen = [], set()
+        for i, sc in enumerate(arr((raw or {}).get("screens"))):
+            w = f"prototype.screens[{i}]"
+            sid = str((sc or {}).get("id") or "")
+            if not sid:
+                L.error(w, "a prototype screen has no id")
+                continue
+            if sid in seen:
+                L.error(w, f"screen {sid!r} is listed twice")
+                continue
+            seen.add(sid)
+            why = str(sc.get("why") or "").strip()
+            if sc.get("only") == "prototype":
+                rows.append({"id": sid, "cls": "prototype-only", "reason": why or "not built",
+                             "menu": sc.get("menu") if isinstance(sc.get("menu"), dict) else None})
+                continue
+            m = re.fullmatch(r"/(pages|detail_views)/@([A-Za-z0-9_]+)", str(sc.get("maps") or ""))
+            if not m:
+                L.error(w + ".maps", f"screen {sid!r} maps to {sc.get('maps')!r}",
+                        "use /pages/@<code> or /detail_views/@<code>, or only: prototype with a why")
+                continue
+            kind, code = m.groups()
+            row = {"id": sid, "maps": sc["maps"],
+                   "not_built": [x for x in arr(sc.get("not_built")) if isinstance(x, dict)]}
+            if kind == "pages":
+                P = M["pages"].get(code)
+                if not P:
+                    L.error(w + ".maps", f"screen {sid!r}: page {code!r} not in pages")
+                    continue
+                if P["type"] == "detail" and P.get("detail_view") in M["detail_views"]:
+                    row.update(kind="view", code=P["detail_view"], page=code)
+                else:
+                    row.update(kind="page", code=code, page=code)
+                custom = P["type"] == "custom"
+                what = {"crud": "list page", "detail": "360 page"}.get(P["type"], "dashboard" if P.get("declared") else "custom page")
+            else:
+                V = M["detail_views"].get(code)
+                if not V:
+                    L.error(w + ".maps", f"screen {sid!r}: detail view {code!r} not in detail_views")
+                    continue
+                row.update(kind="view", code=code, page=V.get("page") or M["entities"].get(V.get("hero"), {}).get("list_page"))
+                custom, what = False, "360 page"
+            if custom:
+                row.update(cls="rebuild", reason=f"{what} in the spec")
+            elif sc.get("rebuild"):
+                if not why:
+                    L.error(w, f"screen {sid!r}: rebuild: true needs a why (what the standard {what} can't show)")
+                row.update(cls="rebuild", reason=why or "rebuild: true", forced=True)
+            else:
+                row.update(cls="kit", reason=f"standard {what} drawn with the app's kit")
+            rows.append(row)
+        M["prototype"] = {"hash": (raw or {}).get("hash"), "screens": rows}
+
     def page_holes(self):
+        done = set()
+        for r in (self.M.get("prototype") or {}).get("screens") or []:
+            if not r.get("forced") or (r["kind"], r["code"]) in done:
+                continue
+            done.add((r["kind"], r["code"]))
+            comp = "Rebuild" + pascal(r["code"])
+            if r["kind"] == "page":
+                P = self.M["pages"][r["code"]]
+                kind, where = "rebuild_page", f"pages.{r['code']}"
+                text = (f"Rebuild list page {r['code']} ({P['title']}) from the approved prototype screen: {r['reason']}. "
+                        f"Data: props.data = {{ entity, endpoint, page }}; rows with api.useTableRows(endpoint), "
+                        "row actions and forms through the zas kit (RecordDrawer, ZasTable parts). The 360 route stays standard.")
+            else:
+                kind, where = "rebuild_view", f"detail_views.{r['code']}"
+                text = (f"Rebuild 360 view {r['code']} from the approved prototype screen: {r['reason']}. "
+                        "Data: props.zas (the 360 payload: header, stats, panels, actions), props.record, props.refresh; "
+                        "transitions and actions through api.runTransition / runRowAction.")
+            self.holes.append({"kind": kind, "where": where, "text": text, "entity": None, "module": None,
+                               "function": comp, "signature": "SlotProps", "slot": comp,
+                               "target": f"frontend/src/custom/slots/{comp}.tsx::{comp}", "data_hook": None,
+                               "scheduled": False})
         for p in self.M["pages"].values():
             if p.get("type") == "custom":
                 comp = p.get("component") or "Page_" + p["code"]
@@ -1920,7 +2196,8 @@ class Spec:
     def _ui_column(self, E, c):
         """One list column for the React runtime: display keys plus what the toolbar needs
         (filterable → an inline filter; a link column carries its target entity)."""
-        col = {k: c.get(k) for k in ("key", "label", "source", "format", "link_to", "display")
+        col = {k: c.get(k) for k in ("key", "label", "source", "format", "link_to", "display",
+                                     "secondary", "secondary_style", "icon")
                if c.get(k) is not None}
         for k in ("filterable", "sortable", "searchable"):
             if c.get(k):
@@ -1939,6 +2216,7 @@ class Spec:
         out = {"app": {"code": M["app"].get("code"), "name": M["app"]["name"],
                        "description": M["app"].get("description", ""), "locale": M["app"]["locale"],
                        "currency": M["app"]["currency"], "brand": M["app"]["theme"]["primary"], "ui": M["app"]["ui"],
+                       **({"design": M["app"]["design_ui"]} if M["app"].get("design_ui") else {}),
                        "roles": [{"name": r["name"], "description": r.get("description", "")} for r in M["roles"].values()],
                        "modules": [{"code": m["code"], "name": m["name"], "description": m.get("description", "")}
                                    for m in M["modules"]]},
@@ -1946,6 +2224,11 @@ class Spec:
         for p in pages.values():
             out["pages"][p["code"]] = {k: p.get(k) for k in ("type", "route", "title", "entity", "detail_view", "roles")
                                        if p.get(k) is not None}
+            if p.get("subtitle"):  # the stat's figure comes with the table metadata (zas.subtitle_stat)
+                st = p["subtitle"].get("stat") or {}
+                out["pages"][p["code"]]["subtitle"] = {
+                    "text": p["subtitle"].get("text") or "",
+                    **({"stat": {"format": st.get("format"), "suffix": st.get("suffix")}} if st else {})}
             out["pages"][p["code"]]["export"] = p.get("component") if p.get("type") == "custom" and p.get("component") else p["export"]
         for E in ents.values():
             tb = E["table"]
@@ -2004,6 +2287,11 @@ class Spec:
                 "sticky_header": any("sticky" in str(cr.get("title", "")).lower() for cr in arr(V.get("custom_requirements"))),
             }
         for h in self.holes:
+            if h["kind"] == "rebuild_page" and h["where"][6:] in out["pages"]:
+                out["pages"][h["where"][6:]]["rebuild"] = h["slot"]
+            if h["kind"] == "rebuild_view" and h["where"][13:] in out["detail_views"]:
+                out["detail_views"][h["where"][13:]]["rebuild"] = h["slot"]
+        for h in self.holes:
             if h.get("slot"):
                 out["slots"][h["slot"]] = {"export": h["slot"], "hole": h["id"], "kind": h["kind"],
                                            "data_key": h["function"].split("__custom__")[-1] if "__custom__" in h["function"] else None}
@@ -2059,6 +2347,8 @@ class Spec:
             n[h["kind"]] += 1
         L += ["", f"## Custom code: {len(self.holes)} holes", "",
               ", ".join(f"{k} {v}" for k, v in sorted(n.items())), "", "Details: `holes.md`.", ""]
+        if (M.get("prototype") or {}).get("screens"):
+            L += ["", proto_classes_md(M["prototype"]["screens"], [])]
         return "\n".join(L)
 
     def holes_md(self):
@@ -2100,6 +2390,144 @@ def attach_bundle(holes, out):
         h["text"] += note
 
 
+PROTO_CLASSES_START = "<!-- spec_check: build classes -->"
+
+
+def attach_prototype(S, out):
+    """Open mode (.zas/bundle/prototype/, written by the platform): point each rebuild hole at its approved
+    screen, warn about screens the spec doesn't map, and write the kit / rebuild table into index.md."""
+    bundle = os.path.join(out, "bundle", "prototype")
+    try:
+        with open(os.path.join(bundle, "manifest.json"), encoding="utf-8") as f:
+            manifest = json.load(f)
+    except (OSError, ValueError):
+        return
+    M, L = S.M, S.L
+    proto = M.get("prototype")
+    rows = (proto or {}).get("screens") or []
+    listed = {r["id"] for r in rows}
+    missing = [sc.get("id") for sc in manifest.get("screens") or [] if sc.get("id") and sc["id"] not in listed]
+    if proto is None:
+        L.warn("prototype", "open mode: the spec has no prototype.screens, so no screen is mapped to a page",
+               "add prototype.screens (SCHEMA.md, prototype); until then every page is built standard, with the app's kit")
+    elif missing:
+        L.warn("prototype.screens", f"prototype screens not in prototype.screens: {', '.join(missing)}",
+               "map each to its page, or mark it only: prototype with a why")
+    by_target = {}
+    for h in S.holes:
+        by_target.setdefault(h["where"], h)
+    for r in rows:
+        if r["cls"] != "rebuild":
+            continue
+        where = f"pages.{r['page']}" if r["kind"] == "page" else f"detail_views.{r['code']}"
+        h = by_target.get(where)
+        if r["kind"] == "view" and not r.get("forced"):
+            h = None
+        if not h or h.get("bundle"):
+            continue
+        h["bundle"] = f".zas/bundle/prototype/screens/{r['id']}/"
+        h["text"] += (f" Approved look: `{h['bundle']}` (prototype screen {r['id']}). Port it, don't redraw it:"
+                      " Read its shot.<role>.png and dom.<role>.html, find the screen's component in the prototype's"
+                      " source (`.zas/bundle/prototype/source/index.md`) and copy its markup, class names and inline"
+                      " styles into this slot under <div className=\"zp\"> (the prototype's stylesheet,"
+                      " custom/prototype.css, styles it), with the app's data in place of the demo data; add to the"
+                      " API whatever field the screen shows that it lacks. Keep every data-zas-ref / data-zas-action"
+                      " marker (open-mode.md, \"Port, don't redraw\").")
+        shows = must_show(os.path.join(bundle, "screens", r["id"]), r.get("not_built"))
+        if shows:
+            h["text"] += f" It must show, in these words: {shows}."
+        r["slot"] = h["slot"]
+    idx = os.path.join(bundle, "index.md")
+    try:
+        text = open(idx, encoding="utf-8").read()
+    except OSError:
+        return
+    text = (text.split(PROTO_CLASSES_START)[0].rstrip() + "\n\n" + PROTO_CLASSES_START + "\n"
+            + proto_classes_md(rows, missing) + soon_md(rows, manifest))
+    with open(idx, "w", encoding="utf-8") as f:
+        f.write(text)
+
+
+def must_show(screen_dir, not_built=None):
+    """A rebuilt screen's labels (proto_landmarks.py, over every role's dom), minus what the spec says
+    it leaves out: what the slot must show."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    if here not in sys.path:
+        sys.path.insert(0, here)
+    import proto_landmarks as PL
+
+    skip = {PL.norm(x.get("text")) for x in not_built or []}
+    seen, out = set(), []
+    try:
+        names = sorted(f for f in os.listdir(screen_dir) if f.startswith("dom."))
+    except OSError:
+        return ""
+    for f in names:
+        marks = PL.landmarks(open(os.path.join(screen_dir, f), encoding="utf-8").read())
+        for kind in ("heading", "column", "tab", "button", "label"):
+            for t in marks.get(kind, []):
+                if PL.norm(t) not in seen and PL.norm(t) not in skip:
+                    seen.add(PL.norm(t))
+                    out.append(f"{kind} '{t}'")
+    return ", ".join(out)
+
+
+def soon_items(rows, manifest):
+    """makeShell's `soon` entries: not-built screens kept in the menu (prototype.screens[].menu),
+    in the prototype's order, each new group placed after the group the prototype shows before it."""
+    order = []
+    for sc in manifest.get("screens") or []:
+        g = (sc or {}).get("group")
+        if g and g not in order:
+            order.append(g)
+    titles = {sc.get("id"): sc.get("title") for sc in manifest.get("screens") or [] if isinstance(sc, dict)}
+    # in the prototype's order, whatever order the spec lists its screens in
+    rank = {sc.get("id"): i for i, sc in enumerate(manifest.get("screens") or []) if isinstance(sc, dict)}
+    out = []
+    for r in rows:
+        m = r.get("menu")
+        if r["cls"] != "prototype-only" or not m:
+            continue
+        item = {"label": m.get("label") or titles.get(r["id"]) or r["id"]}
+        for k in ("group", "icon", "roles"):
+            if m.get(k):
+                item[k] = m[k]
+        g = m.get("group")
+        if g in order and order.index(g) > 0:
+            item["after"] = order[order.index(g) - 1]
+        out.append((rank.get(r["id"], len(rank)), item))
+    return [item for _, item in sorted(out, key=lambda x: x[0])]
+
+
+def soon_md(rows, manifest):
+    items = soon_items(rows, manifest)
+    if not items:
+        return ""
+    return ("\n## Shell: screens kept in the menu, greyed out\n\n"
+            "Pass these to `makeShell` as `soon` in `src/custom/Shell.tsx`, exactly as written:\n\n"
+            "```json\n" + json.dumps(items, indent=2) + "\n```\n")
+
+
+def proto_classes_md(rows, missing):
+    L = ["## Build: kit or rebuild (spec_check)", "",
+         "Kit: the standard page, drawn with the app's kit (`src/custom/kit/`, built from the prototype's own "
+         "pieces; plus an optional `src/custom/screens/<page>.css`). Rebuild: port the screen onto its slot. "
+         "Never rebuild a kit screen: make the kit piece match instead (open-mode.md, \"The kit\", \"Screens\").", "",
+         "| Screen | Maps | Class | Reason | Builds as |", "|---|---|---|---|---|"]
+    for r in rows:
+        builds = (f"slot `{r['slot']}`" if r.get("slot") else
+                  "-" if r["cls"] == "prototype-only" else
+                  f"page `{r.get('page')}`" if r.get("kind") == "page" else f"360 `{r.get('code')}`")
+        L.append(f"| `{r['id']}` | {r.get('maps') or '-'} | {r['cls']} | {str(r.get('reason', '')).replace('|', '/')} | {builds} |")
+    for sid in missing:
+        L.append(f"| `{sid}` | - | unmapped | not in the spec's prototype.screens | standard if it has a page; report it |")
+    left = [(r["id"], x) for r in rows for x in r.get("not_built") or []]
+    if left:
+        L += ["", "Not built from the prototype (the spec's not_built; say so in the build report):", ""]
+        L += [f"- `{sid}`: {x.get('text')} ({x.get('why')})" for sid, x in left]
+    return "\n".join(L) + "\n"
+
+
 def read_existing_holes(path):
     out = {}
     if not os.path.exists(path):
@@ -2139,6 +2567,7 @@ def main(argv=None):
     S.build()
     if S.M:
         S.lint()
+        S.prototype_screens()
         S.page_holes()
         S.derive()
         S.intent()
@@ -2149,6 +2578,7 @@ def main(argv=None):
     if out and S.M:
         os.makedirs(out, exist_ok=True)
         attach_bundle(S.holes, out)
+        attach_prototype(S, out)
         S.number_holes(read_existing_holes(os.path.join(out, "holes.md")))
         resolved = strip_internal(S.M)
         resolved["spec_hash"] = spec_hash
