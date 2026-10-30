@@ -11,6 +11,8 @@ import { ZasTable as BaseZasTable } from "./ZasTable";
 import { makeShell as baseMakeShell } from "./Shell";
 import type { ShellOptions } from "./Shell";
 import * as CUSTOM from "../custom/kit";
+// A template app's approved look on the runtime's selectors (proto_port.py writes it; empty otherwise).
+import "./look.gen.css";
 
 const APP = CUSTOM as Record<string, any>;
 

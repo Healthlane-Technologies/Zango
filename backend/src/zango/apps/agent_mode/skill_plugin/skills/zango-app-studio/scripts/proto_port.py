@@ -10,6 +10,10 @@ Reads <ws>/.zas/bundle/prototype/prototype.html (the page the user approved) and
                                       <div className="zp"> and gets the prototype's classes, tokens and
                                       fonts; nothing leaks onto the platform's pages. :root / html /
                                       body rules become the scope itself (their page box is dropped).
+  frontend/src/zas/look.gen.css       a kit-page prototype (a template app): the creator's look (look.css,
+                                      imported/bridge.css) with its kit selectors rewritten to the
+                                      runtime's (kit_vocab.compile_css), so standard pages show it with
+                                      no code. zas/kit.tsx imports it; empty for any other prototype.
   .zas/bundle/prototype/source/       each of the prototype's scripts as its own file (its data-part
                                       name), and index.md: what each file defines, top-level name by
                                       line, so a screen's component can be found and ported.
@@ -172,6 +176,40 @@ def stylesheet(html):
     return HEADER + "\n".join(scope_css(body) for kind, _, body in parts(html) if kind == "style") + "\n"
 
 
+LOOK_PARTS = ("imported/bridge.css", "look.css")
+LOOK_HEADER = ("/* The creator's look from the approved prototype (look.css, imported/bridge.css), on the runtime's\n"
+               "   selectors (proto_port.py, kit_vocab.compile_css). Written by the platform on every build: do not\n"
+               "   edit; adjust in src/custom/kit/kit.css, which design_diff checks the same way. */\n")
+
+
+def is_kit_page(ws):
+    try:
+        with open(os.path.join(ws, ".zas", "bundle", "prototype", "manifest.json"), encoding="utf-8") as f:
+            return bool(json.load(f).get("kit"))
+    except (OSError, ValueError):
+        return False
+
+
+def look_css(html):
+    """(css, skipped): the page's look parts compiled for the runtime."""
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import kit_vocab
+
+    found = {name: body for kind, name, body in parts(html) if kind == "style"}
+    out, skipped = [], []
+    for name in LOOK_PARTS:
+        if found.get(name):
+            css, sk = kit_vocab.compile_css(found[name])
+            if css.strip():
+                out.append(f"/* {name} */\n{css}")
+            skipped += sk
+    text = LOOK_HEADER + "\n".join(out) + "\n"
+    if skipped:
+        text += ("/* Not carried over (the runtime has no such element): "
+                 + "; ".join(sorted(set(skipped)))[:2000].replace("*/", "* /") + " */\n")
+    return text, skipped
+
+
 def run(ws):
     proto = os.path.join(ws, ".zas", "bundle", "prototype")
     html = prototype_html(ws)
@@ -200,7 +238,14 @@ def run(ws):
         index += outline(f"source/{rel}", body) if kind == "script" else [f"## source/{rel}", "", "A stylesheet (in prototype.css, scoped).", ""]
     with open(os.path.join(src, "index.md"), "w", encoding="utf-8") as f:
         f.write("\n".join(index))
-    return {"css_bytes": len(css), "files": files}
+    result = {"css_bytes": len(css), "files": files}
+    zas = os.path.join(ws, "frontend", "src", "zas")
+    if is_kit_page(ws) and os.path.isdir(zas):
+        look, skipped = look_css(html)
+        with open(os.path.join(zas, "look.gen.css"), "w", encoding="utf-8") as f:
+            f.write(look)
+        result.update({"look_bytes": len(look), "look_skipped": skipped})
+    return result
 
 
 def main():

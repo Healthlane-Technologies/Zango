@@ -375,12 +375,24 @@ message below is the first change they want.
   the data: apply it to the prototype (`proto_design`, `proto_patch`) in this turn. Changing only
   labels or fields in the YAML does not apply it.
 - The design is completely open. Do exactly what the user says, in their words, labels and layout.
-  Colours, fonts, radius and density go in `app.design` (proto_design keeps `tokens.css`). Anything
-  else is yours to change in the prototype: proto_patch `imported/bridge.css`, `body.html` or the
-  kit page's scripts, or draw a screen again (screen-writer) when that matches the request better
-  than patching. Never approximate an instruction with the nearest thing the YAML can say. Keep the
-  YAML in step with whatever the prototype now shows. A screen you were not asked about stays as
-  the template builds it.
+  Never approximate an instruction with the nearest thing the YAML can say. A screen you were not
+  asked about stays as the template builds it. Where each kind of change goes:
+  - The look (colours, gradients, borders, radius, shadows, type, spacing, decorations): CSS rules in
+    `look.css` (proto_write it if it isn't there). It loads after every other stylesheet, so its
+    rules win without `!important`. Write them on the kit's own classes, which are also what the
+    built app reproduces and is checked against: `.d-head` (a record's header) and its `h1`, `.d-sub`,
+    `.d-av`, `.d-facts`/`.d-fact`, `.d-stats`/`.d-stat`, `.d-tabs`/`.d-tab`/`.d-tab.on`, `.d-panel`;
+    `.z-card`, `.z-t th`/`.z-t td`, `.z-btn`/`.z-btn.pri`, `.z-qf`/`.z-qf.on`, `.z-chip`, `.z-badge`,
+    `.z-ph h1`; the shell `.z-side`, `.z-ni`/`.z-ni.on`, `.z-top`, `.z-logo`, `.z-user`. Scope a rule
+    with a parent (`.d-head .z-btn`) to change one place only.
+  - The brand colour: `app.theme.primary` in the YAML (the kit sets it on every render; CSS can't
+    override it).
+  - Content and structure (pages, columns, filters, forms, fields, statuses, tabs, panels, facts,
+    stats, dashboard blocks, menus): the YAML. The kit draws only what the YAML says.
+  - `body.html`, `tokens.css` and `imported/styles.css` don't change what the preview shows (the kit
+    redraws the page from its scripts and its own stylesheet): never edit them for the look.
+  - A layout the YAML can't say and CSS can't reach (a widget the kit has no block for): tell the
+    user plainly it can't be shown or built on this template, and offer the nearest thing it can do.
 - They press Commit for build when the preview is right. Never ask whether to finish, mark it
   ready or build.
 """
@@ -508,6 +520,16 @@ def compose_analyst_prompt(
                 + "\n\n## The user's reply\n\n"
                 + user_message.strip()
             )
+        if getattr(requirement, "mode", "") == "template" and requirement.template_slug:
+            # The template's documents move with its version; a path from an earlier turn may be
+            # an old copy that lacks what the kit draws now.
+            current = requirement.template
+            schema = current.file_path("schema") if current is not None else ""
+            if schema:
+                return (
+                    f"[The template's SCHEMA.md this turn: `{schema}`. Read the YAML keys there, "
+                    "not in a copy from an earlier turn.]\n\n" + user_message.strip()
+                )
         return user_message.strip()
 
     packages = (
@@ -677,22 +699,69 @@ _OPEN_PROTOTYPE_APPEND = (
 )
 
 
+# What a kit prototype can show of a reference's layout, and the YAML that says it (zango_app SCHEMA.md).
+_DESIGN_FEATURES = (
+    "DESIGN FEATURES the kit draws (and the build makes), and their YAML:\n"
+    "  - list cell with a second line: `table.columns.<k>.secondary: [paths]` (`secondary_style: "
+    "mono` for codes); avatar of initials or an icon before it: `columns.<k>.icon: initials` | "
+    "<lucide name> | {by, map, default}\n"
+    "  - status tabs with counts: `table.quick_filters: [{label, where, count: true}]`\n"
+    "  - line under a list's title: `pages[].subtitle: text` or `{text, stat: {count: true | sum: "
+    "<field>, where, format, suffix}}`\n"
+    "  - a coloured cell: `columns.<k>.highlight: {when, tone}`; a status or choice as a badge: "
+    "`source: status`, choice `color`\n"
+    "  - record page: `detail_views[].header` (avatar, title, subtitle parts such as the code, "
+    "badges, facts, banners), `stats` (KPI tiles), `tabs` (`count_badge`), `layout: "
+    "header_tabs_sidebar` with `sidebar` cards (fields, timeline, mini_table) for a summary on "
+    "the right, `summary` sections in columns, `timeline`\n"
+    "  - KPI tiles, charts, lists and boards: a `type: dashboard` page's `blocks`\n"
+    "  - KPI tiles above a list: `pages[].stats: [{label, count: true | sum: <number field>, where, "
+    "format, icon, tone, hint}]` (crud pages)\n"
+    "  - a pill next to a cell value: `columns.<k>.badge: {label, when, tone}`; a step bar and "
+    '"Step i of n" under a status: `columns.<k>.progress: true | {steps: [codes]}` (`source: '
+    "status`); a chevron at the end of clickable rows: `table.row_chevron: true`\n"
+    "  - a lifecycle stepper in the record header: `detail_views[].header.stepper: true | {steps: "
+    "[status codes]}` (a status off the steps, like rejected, shows as an end marker)\n"
+    "  - menu: `roles[].menu` with groups (section labels), icons and counts (`count: true | "
+    "{where}` on a crud page's item); the user card at the top of the sidebar: `app.shell: "
+    "{user: top}`\n"
+    "  Not drawn by the kit: a search box in the top bar.\n"
+)
+
+
 _TEMPLATE_MODE_APPEND = (
     "\n\nTEMPLATE MODE. The app opened on a template's own prototype, so it already exists: "
     "edit it. Do not draw the app from scratch, do not run the first-draft steps and do not "
     "interview. The design is completely open: do exactly what the user says, in their words, "
     "labels and layout, and never approximate an instruction with the nearest thing the YAML can "
-    "say. Patch the prototype (proto_patch) or draw a screen again (screen-writer) whichever "
-    "matches the request.\n"
+    "say. The look goes in `look.css` (proto_write / proto_patch it): CSS on the kit's own "
+    "classes (`.d-head`, `.d-fact`, `.d-stat`, `.d-tabs`, `.d-tab.on`, `.d-panel`, `.z-card`, `.z-t th`, "
+    "`.z-btn.pri`, `.z-qf.on`, `.z-side`, `.z-ni.on`, `.z-top`…); it loads last, so its rules win, and the "
+    "built app is checked against exactly these parts. The brand colour is `app.theme.primary` in the "
+    "YAML. Content and structure are the YAML. `body.html`, `tokens.css` and the kit's own stylesheet "
+    "and scripts don't change what the preview shows: never edit them for the look.\n"
     "- References are applied, not just read. A screenshot, photo or sketch, a brand guide, or an "
-    "HTML page the user calls a reference (or does not say what it is for) is a design reference: "
-    "read it, and BEFORE you reply restyle the prototype from it with proto_patch (the stylesheet, "
-    "body.html or the kit page's scripts) and proto_design: the palette, type, radius, density and "
-    "layout it shows. A reply that only changes labels or fields in the YAML has not applied it. "
-    "Change the YAML as well only where the reference shows different content, and keep it in "
-    "step with what the prototype now shows. Say which parts you took from the reference.\n"
-    "- An HTML page the user says is their app, or a screen to redraw, is not a reference: "
+    "HTML page the user calls a reference (or does not say what it is for) is a design reference. "
+    "Apply it to every screen, in this order, before you reply:\n"
+    "  1. See it. An HTML reference: open it with ref_look, once per kind of screen it has (a list, "
+    "a record page, a dashboard), with `steps` to get past a sign-in screen or into a record. Never "
+    "work out its look by grepping the source. An image: Read it.\n"
+    "  2. Its structure, in the YAML, wherever the kit can draw it (DESIGN FEATURES below): two-line "
+    "cells, avatars, counted status tabs, subtitles, record header facts and badges, stats, tabs "
+    "with counts, the side summary card. Keep the app's own entities, fields and data; take the "
+    "reference's way of showing them.\n"
+    "  3. Its look, in `look.css`, with the values ref_look measured (colours, fonts, sizes, "
+    "radii, shadows, row height, padding), never guessed: palette, type, density and decorations.\n"
+    "  4. proto_look each kind of screen you changed, compare it with the reference's screenshot, "
+    "fix what differs and look again.\n"
+    "  5. In your reply, name what you took from it and, plainly, each part of the reference the "
+    "kit can't draw (from the list below), so the user can decide.\n"
+    "A reply that only changes colours has not applied a reference that shows a different layout.\n"
+    + _DESIGN_FEATURES
+    + "- An HTML page the user says is their app, or a screen to redraw, is not a reference: "
     "proto_import it, or draw that screen again, as they ask.\n"
+    '- A request about how something looks ("make the sidebar dark", "rounder cards", "a hero '
+    'header") is a look change even without a reference: it goes in `look.css` in this turn.\n'
     "- Never ask whether to build.\n"
     "- After every visual change, and before you reply, look at the result with proto_look "
     "(the screen you changed, as the persona who sees it): check for overlapping or clipped "

@@ -129,6 +129,20 @@
               }
             }
           }
+        },
+        "shell": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "The app shell: `user` puts the sidebar's user card at its bottom (default) or its top, above the menu.",
+          "properties": {
+            "user": {
+              "type": "string",
+              "enum": [
+                "bottom",
+                "top"
+              ]
+            }
+          }
         }
       }
     },
@@ -947,6 +961,91 @@
         },
         "highlight": {
           "type": "object"
+        },
+        "secondary": {
+          "description": "A muted second line under the value: one field path or a list (joined with ' · ').",
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "secondary_style": {
+          "type": "string",
+          "enum": [
+            "plain",
+            "mono"
+          ]
+        },
+        "icon": {
+          "description": "An icon before the value: 'initials' (an avatar of the value's initials), a lucide icon name, or {by: <field>, map: {value: icon}, default}.",
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "by": {
+                  "type": "string"
+                },
+                "map": {
+                  "type": "object"
+                },
+                "default": {
+                  "type": "string"
+                }
+              }
+            }
+          ]
+        },
+        "badge": {
+          "type": "object",
+          "required": [
+            "label",
+            "when"
+          ],
+          "additionalProperties": false,
+          "description": "A pill after the value, on the rows where `when` holds: {label, when, tone}.",
+          "properties": {
+            "label": {
+              "type": "string",
+              "minLength": 1
+            },
+            "when": {
+              "$ref": "#/$defs/expr"
+            },
+            "tone": {
+              "$ref": "#/$defs/color"
+            }
+          }
+        },
+        "progress": {
+          "description": "On a `source: status` column: a thin step bar and 'Step i of n' under the status, in the workflow's order (true) or the listed steps ({steps: [status codes]}).",
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "steps": {
+                  "type": "array",
+                  "minItems": 2,
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          ]
         }
       }
     },
@@ -969,6 +1068,10 @@
         },
         "default": {
           "type": "boolean"
+        },
+        "count": {
+          "type": "boolean",
+          "description": "Show how many records the chip matches."
         }
       }
     },
@@ -1098,6 +1201,10 @@
         },
         "group_by": {
           "type": "string"
+        },
+        "row_chevron": {
+          "type": "boolean",
+          "description": "A chevron-right in a last cell of the rows that open something."
         }
       }
     },
@@ -1395,9 +1502,49 @@
               },
               "icon": {
                 "type": "string"
+              },
+              "count": {
+                "description": "A number on the menu item: how many rows of the page's entity the role sees (true), or those matching where ({where}). Crud pages only.",
+                "oneOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "where"
+                    ],
+                    "properties": {
+                      "where": {
+                        "$ref": "#/$defs/expr"
+                      }
+                    }
+                  }
+                ]
               }
             }
           }
+        },
+        "count": {
+          "description": "A number on the menu item: how many rows of the page's entity the role sees (true), or those matching where ({where}). Crud pages only.",
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "where"
+              ],
+              "properties": {
+                "where": {
+                  "$ref": "#/$defs/expr"
+                }
+              }
+            }
+          ]
         }
       }
     },
@@ -1512,6 +1659,92 @@
           "type": "string",
           "minLength": 1,
           "description": "Custom pages in open mode: what no crud, detail or dashboard page can show here."
+        },
+        "subtitle": {
+          "description": "The line under a crud page's title: text, or {text, stat} where stat adds a live figure ({count: true | sum: <number field>, where, format, suffix}).",
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "text": {
+                  "type": "string"
+                },
+                "stat": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "count": {
+                      "type": "boolean"
+                    },
+                    "sum": {
+                      "type": "string"
+                    },
+                    "where": {},
+                    "format": {
+                      "type": "string"
+                    },
+                    "suffix": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "stats": {
+          "type": "array",
+          "minItems": 1,
+          "description": "KPI tiles between a crud page's header and its table, over the rows the viewer can see: each {label, count: true | sum: <number field>, where, format, icon, tone, hint}.",
+          "items": {
+            "type": "object",
+            "required": [
+              "label"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "label": {
+                "type": "string",
+                "minLength": 1
+              },
+              "count": {
+                "type": "boolean",
+                "description": "How many rows (matching where)."
+              },
+              "sum": {
+                "type": "string",
+                "description": "A number field of the page's entity to add up."
+              },
+              "where": {
+                "$ref": "#/$defs/expr"
+              },
+              "format": {
+                "type": "string",
+                "enum": [
+                  "money",
+                  "percent",
+                  "number",
+                  "days"
+                ]
+              },
+              "icon": {
+                "type": "string",
+                "description": "A lucide icon name."
+              },
+              "tone": {
+                "$ref": "#/$defs/color"
+              },
+              "hint": {
+                "type": "string",
+                "description": "A short muted line under the figure."
+              }
+            }
+          }
         }
       },
       "allOf": [
@@ -1714,6 +1947,27 @@
                   }
                 }
               }
+            },
+            "stepper": {
+              "description": "The hero's lifecycle under the header: its workflow statuses in order (true) or the listed steps ({steps: [status codes]}); a status off the steps (rejected) ends the line with a marker.",
+              "oneOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "steps": {
+                      "type": "array",
+                      "minItems": 2,
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              ]
             }
           }
         },

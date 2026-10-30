@@ -45,11 +45,13 @@ function steps(
 			: stuck && !handingOff
 				? 'failed'
 				: 'running';
-	return [
-		[naming, 'Choosing a name', s.app_name || undefined],
+	// The creator typed the name: nothing is being chosen, so don't show a naming step.
+	const named = s.name_source === 'creator' || (!s.app_name && !!s.app_label);
+	const rest: Array<[StepState, string, string?]> = [
 		[creating, s.app_label ? `Creating ${s.app_label}` : 'Creating the app'],
 		[opening, 'Opening the requirements conversation'],
 	];
+	return named ? rest : [[naming, 'Choosing a name', s.app_name || undefined], ...rest];
 }
 
 /** Step two: follow the scaffold until the app exists, then hand over to its Agent tab. */

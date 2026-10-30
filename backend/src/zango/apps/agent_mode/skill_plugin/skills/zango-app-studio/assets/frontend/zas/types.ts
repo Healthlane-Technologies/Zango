@@ -7,6 +7,8 @@ export interface SpecColumn {
   filterable?: boolean; sortable?: boolean; searchable?: boolean; type?: string; to?: string;
   // a second, muted line under the value and an icon before it (the row's zas.sub / zas.icon)
   secondary?: string[]; secondary_style?: "plain" | "mono"; icon?: { by: string | null; map: Record<string, string>; default: string | null };
+  // a step bar and "Step i of n" under a status (the row's zas.status in these steps)
+  progress?: { steps: string[] };
 }
 export interface SpecField { key: string; label: string; type: string; to?: string; display?: string }
 export interface SpecEntity {
@@ -17,7 +19,7 @@ export interface SpecEntity {
   choices: Record<string, Record<string, { label: string; tone?: Tone | null }>>;
   columns: SpecColumn[];
   quick_filters: { key: string; label: string; default: boolean }[];
-  row_click: string; add_button: string; footer_totals: string[];
+  row_click: string; add_button: string; footer_totals: string[]; row_chevron?: boolean;
   parents: Record<string, { hero: string; fk: string | null }>;
   navigate: Record<string, string>; field_links: Record<string, string>; downloads?: string[];
   fields?: SpecField[];
@@ -34,13 +36,18 @@ export interface SpecView {
   page?: string; states: Record<string, any>; tabs: SpecTab[];
   sidebar: { type: string; title?: string; key: string; slot?: string }[]; sticky_header?: boolean;
   rebuild?: string;  // open mode: the slot that draws this 360 from the approved prototype
+  // header.stepper: the hero's lifecycle; exits = index of the last step done for a status off the steps
+  stepper?: { steps: string[]; exits: Record<string, number> };
 }
 export interface SpecPage { type: "crud" | "detail" | "custom"; route: string; title: string; entity?: string; detail_view?: string; roles?: string[]; export: string; rebuild?: string;
   // the line under the title; stat's figure arrives with the table metadata (zas.subtitle_stat)
-  subtitle?: { text: string; stat?: { format?: string | null; suffix?: string | null } } }
-export interface MenuItem { page?: string; label?: string; icon?: string; group?: string; items?: MenuItem[] }
+  subtitle?: { text: string; stat?: { format?: string | null; suffix?: string | null } };
+  // KPI tiles over the list; their figures arrive with the table metadata (zas.stats[<page code>])
+  stats?: { key: string; label: string; format?: string; icon?: string; tone?: Tone; hint?: string }[] }
+export interface MenuItem { page?: string; label?: string; icon?: string; group?: string; items?: MenuItem[]; count?: boolean }
 export interface SpecUi {
-  app: { code: string; name: string; description: string; locale: string; currency: string; brand: string; ui?: { radius?: "sharp" | "rounded" | "soft"; density?: "compact" | "comfortable" }; design?: { css?: string; font_url?: string | null; fonts?: Record<string, string> }; roles: { name: string; description: string }[];
+  app: { code: string; name: string; description: string; locale: string; currency: string; brand: string; ui?: { radius?: "sharp" | "rounded" | "soft"; density?: "compact" | "comfortable" }; design?: { css?: string; font_url?: string | null; fonts?: Record<string, string> };
+    shell?: { user?: "bottom" | "top" }; roles: { name: string; description: string }[];
     modules: { code: string; name: string; description: string }[] };
   pages: Record<string, SpecPage>;
   entities: Record<string, SpecEntity>;

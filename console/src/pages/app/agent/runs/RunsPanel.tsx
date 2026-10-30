@@ -131,7 +131,7 @@ export function RunsPanel({
 		);
 
 	return (
-		<div className="grid gap-4">
+		<div className="grid grid-cols-[minmax(0,1fr)] gap-4">
 			<div className="flex items-center gap-2">
 				<h3 className="text-[13.5px]">Builds</h3>
 				<span className="text-[12px] text-t4">{Math.max(refs.length, 1)}</span>

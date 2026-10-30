@@ -24,11 +24,14 @@ import json
 import threading
 
 from collections.abc import Callable
+from pathlib import Path
 
 from .prototype import PROTO_TOOL_NAMES, proto_tool_specs
 
 
 MAX_RESULT_ISSUES = 25
+
+REF_WORKER = Path(__file__).resolve().parent / "reference_look_worker.py"
 
 # Template rules that flag a custom page/tab/panel without a preview sketch.
 UNSKETCHED_RULES = {"custom_page_preview", "custom_tab_preview", "custom_panel_preview"}
@@ -70,8 +73,14 @@ class SpecWorkbench:
         # In open mode custom screens are drawn there, so sketch rules do not apply.
         self.proto = proto
         self._proto_looks = 0
-        # End-of-turn check for a turn that carries a design reference (reference_gap).
+        self._ref_looks = 0
+        # End-of-turn check for a turn that carries a design reference, or asks for a look change in
+        # words (reference_gap).
         self.reference_turn = False
+        self.look_turn = False
+        # This turn's reference is an HTML page: ref_look it before the turn may end.
+        self.reference_html = False
+        self._ref_unavailable = False
         self._looked_at_writes = 0
         self._look_unavailable = False
         # Screenshots an edit took on its own, sent with that edit's result (make_handler).
@@ -83,6 +92,14 @@ class SpecWorkbench:
             # A draft the user broke by hand: only whole-section replacement
             # (or replacing the root) can repair it.
             self.doc = None
+        try:
+            self._theme_at_start = json.dumps(
+                (self.doc or {}).get("app", {}).get("theme"),
+                sort_keys=True,
+                default=str,
+            )
+        except AttributeError:
+            self._theme_at_start = None
         if self.doc is None and not self.text.strip():
             self.doc = {}
         self._screens = self._screen_hashes(self.doc)
@@ -850,21 +867,39 @@ class SpecWorkbench:
         app = (schema.get("properties") or {}).get("app") or {}
         return "design" in (app.get("properties") or {})
 
-    PROTO_MAX_LOOKS = 6
+    PROTO_MAX_LOOKS = 10
 
     def reference_gap(self) -> str | None:
         """What the agent still owes before it may end a turn that carries a design reference.
 
         None when nothing is owed. Read from the stream's thread: plain attributes only."""
-        if not self.reference_turn or self.proto is None:
+        if not (self.reference_turn or self.look_turn) or self.proto is None:
             return None
-        if self.proto.writes == 0:
+        if self.reference_html and self._ref_looks == 0 and not self._ref_unavailable:
             return (
-                "The user attached a design reference and the prototype is unchanged, so it has "
-                "not been applied; changing the YAML does not apply it. Read the reference, "
-                "restyle the prototype from it with proto_patch and proto_design (palette, type, "
-                "radius, density, layout), then look at the result with proto_look. If the user's "
-                "message says the reference is not for the look, say so in your reply instead."
+                "The user attached an HTML page as the design and you have not seen it. Open it "
+                "with ref_look (a list, a record page; `steps` past a sign-in screen), take its "
+                "structure into the YAML and its measured look into look.css, then proto_look the "
+                "result. If the user's message says the page is not for the look, say so instead."
+            )
+        if self.proto.writes == 0:
+            if self.reference_turn:
+                return (
+                    "The user attached a design reference and the prototype is unchanged, so it has "
+                    "not been applied; changing the YAML does not apply it. Read the reference, "
+                    "restyle the prototype from it in look.css (palette, type, radius, shadows, "
+                    "density, decorations, on the kit's classes), then look at the result with "
+                    "proto_look. If the user's message says the reference is not for the look, say "
+                    "so in your reply instead."
+                )
+            if self._theme_changed():
+                return None  # the brand colour is the YAML's app.theme.primary
+            return (
+                "The user asked for a change to how the app looks and the prototype is unchanged; "
+                "the YAML only says content, structure and the brand colour. Put the look in "
+                "look.css (rules on the kit's classes: .d-head, .d-fact, .d-stat, .d-tabs, .z-card, "
+                ".z-t th, .z-btn.pri, .z-side…), then look at the result with proto_look. If the "
+                "request was only about content or the brand colour, say so in your reply instead."
             )
         if self._look_unavailable or self._looked_at_writes >= self.proto.writes:
             return None
@@ -872,6 +907,18 @@ class SpecWorkbench:
             "You changed the prototype but have not looked at the result. Call proto_look on a "
             "screen you changed, check it against the reference and fix what is off, then reply."
         )
+
+    def _theme_changed(self) -> bool:
+        """Whether this turn changed the YAML's app.theme (the kit's brand colour)."""
+        try:
+            now = json.dumps(
+                (self.doc or {}).get("app", {}).get("theme"),
+                sort_keys=True,
+                default=str,
+            )
+        except AttributeError:
+            return False
+        return now != getattr(self, "_theme_at_start", now)
 
     def proto_look(self, screen=None, role=None):
         """Screenshot one prototype screen as one persona sees it, from the current parts."""
@@ -885,8 +932,11 @@ class SpecWorkbench:
             raise ToolRefused(
                 f"That is {self.PROTO_MAX_LOOKS} screenshots this turn; ask the user how it looks."
             )
+        from .prototype_kit import with_spec
+
         try:
-            bundle, why = ensure_capture(self.proto.parts)
+            # a kit page draws the YAML: look at this turn's YAML, not the one the turn started on
+            bundle, why = ensure_capture(with_spec(self.proto.parts, self.text))
         except Exception as exc:  # noqa: BLE001 - the user still sees the preview
             bundle, why = None, str(exc)
         if bundle is None:
@@ -933,6 +983,55 @@ class SpecWorkbench:
             )
         content.append({"type": "text", "text": text})
         return {"content": content}
+
+    REF_MAX_LOOKS = 10
+
+    def ref_look(self, document: str, steps=None, full: bool = False):
+        """Render an uploaded HTML reference (after ``steps``): a screenshot and its measured look."""
+        import subprocess
+        import sys
+
+        docs = (self.proto.documents if self.proto is not None else {}) or {}
+        name = (document or "").strip()
+        match = next(
+            (n for n in docs if n.lower() == name.lower()),
+            next((n for n in docs if name and name.lower() in n.lower()), None),
+        )
+        if match is None:
+            raise ToolRefused(
+                f"No uploaded HTML file `{name}`. HTML files: {', '.join(docs) or 'none'}."
+            )
+        if self._ref_looks >= self.REF_MAX_LOOKS:
+            raise ToolRefused(
+                f"That is {self.REF_MAX_LOOKS} reference screenshots this turn."
+            )
+        steps = [s for s in (steps or []) if isinstance(s, dict)][:12]
+        try:
+            run = subprocess.run(
+                [sys.executable, str(REF_WORKER)],
+                input=json.dumps(
+                    {"html": docs[match], "steps": steps, "full": bool(full)}
+                ),
+                capture_output=True,
+                text=True,
+                timeout=150,
+            )
+            res = json.loads(run.stdout or "{}")
+        except (subprocess.TimeoutExpired, ValueError, OSError) as exc:
+            res = {"ok": False, "error": str(exc)[:200]}
+        if not res.get("ok"):
+            self._ref_unavailable = True
+            return (
+                f"The reference can't be rendered here ({res.get('error') or 'no browser'}). Read its "
+                "source instead, and say in your reply that you could not see it."
+            )
+        self._ref_looks += 1
+        return {
+            "content": [
+                {"type": "image", "data": res.pop("png"), "mimeType": "image/png"},
+                {"type": "text", "text": format_reference(match, res)},
+            ]
+        }
 
     def apply_design(self) -> str:
         """Set app.design from the prototype's tokens (open mode)."""
@@ -1009,6 +1108,103 @@ class SpecWorkbench:
             )
 
 
+# Each measured part of a reference, and where it goes in a kit prototype (look.css class or YAML).
+REF_TARGETS = (
+    ("page", "body / tokens"),
+    ("sidebar", ".z-side"),
+    ("sidebar_item", ".z-ni"),
+    ("sidebar_item_active", ".z-ni.on"),
+    ("topbar", ".z-top"),
+    ("h1", ".z-ph h1"),
+    ("h2", "section titles"),
+    ("table", ".z-card holding the table"),
+    ("table_header", ".z-t th"),
+    ("table_cell", ".z-t td"),
+    ("table_row", ".z-t tr (row height)"),
+    ("input", ".z-in / .z-search"),
+    ("tab", ".z-qf (list) or .d-tab (360)"),
+    ("tab_active", ".z-qf.on or .d-tab.on"),
+    ("button_primary", ".z-btn.pri (colour: app.theme.primary)"),
+    ("button_secondary", ".z-btn"),
+)
+
+
+def _style_line(style: dict) -> str:
+    text = style.get("_text")
+    body = "; ".join(f"{k}: {v}" for k, v in style.items() if not k.startswith("_"))
+    extra = []
+    if style.get("_count"):
+        extra.append(f"×{style['_count']}")
+    if style.get("_size"):
+        extra.append(style["_size"])
+    if text:
+        extra.append(f'"{text}"')
+    return body + (f"  ({', '.join(extra)})" if extra else "")
+
+
+def format_reference(name: str, res: dict) -> str:
+    """What ref_look tells the analyst: the measured look, mapped onto the kit and the YAML."""
+    styles = res.get("styles") or {}
+    lines = [
+        f"{name} at {res.get('url') or '/'} ({res.get('title') or ''}). Measured (computed styles):"
+    ]
+    for key, target in REF_TARGETS:
+        if styles.get(key):
+            lines.append(f"- {key} → {target}: {_style_line(styles[key])}")
+    for key, target in (
+        ("cards", ".z-card / .d-head / .d-panel / .d-stat"),
+        ("pills", ".z-badge / .z-chip (choice colours)"),
+        ("avatars", ".d-av, list avatars (YAML columns.<k>.icon: initials)"),
+    ):
+        for style in styles.get(key) or []:
+            lines.append(f"- {key[:-1]} → {target}: {_style_line(style)}")
+    palette = styles.get("palette") or {}
+    if palette:
+        lines.append(
+            f"- palette: backgrounds {', '.join(palette.get('backgrounds') or [])}; "
+            f"text {', '.join(palette.get('text') or [])}"
+        )
+    if styles.get("fonts"):
+        lines.append(f"- fonts: {', '.join(styles['fonts'])}")
+    for table in res.get("tables") or []:
+        lines.append(
+            f"Table, {table.get('rows')} rows, columns: {' | '.join(table.get('columns') or [])}"
+        )
+        for cell in table.get("first_row") or []:
+            what = " / ".join(cell.get("lines") or [])
+            notes = []
+            if len(cell.get("lines") or []) > 1:
+                notes.append("two lines → columns.<k>.secondary")
+            if cell.get("avatar"):
+                notes.append("avatar → columns.<k>.icon: initials")
+            if cell.get("pills"):
+                notes.append(f"pills {cell['pills']}")
+            if cell.get("progress_bar"):
+                notes.append("progress bar")
+            if cell.get("chevron"):
+                notes.append("row chevron")
+            lines.append(
+                f"  - {cell.get('column') or '(no header)'}: {what}"
+                + (f"  [{'; '.join(notes)}]" if notes else "")
+            )
+    if res.get("clickable"):
+        lines.append(
+            "Clickable here (ref_look steps {click: text}): "
+            + " · ".join(res["clickable"][:40])
+        )
+    if res.get("routes"):
+        lines.append(
+            "Routes in the source (steps {go: route}): " + " · ".join(res["routes"])
+        )
+    if res.get("step_errors"):
+        lines.append("Steps that did not work: " + "; ".join(res["step_errors"]))
+    lines.append(
+        "Use these values, not guesses. Structure (stats, tabs with counts, two-line cells, avatars, "
+        "subtitles, 360 layout) goes in the YAML; the look goes in look.css on the kit's classes."
+    )
+    return "\n".join(lines)
+
+
 def _document_name(value) -> str:
     """The uploaded document's own name, from however the model cited it.
 
@@ -1072,6 +1268,7 @@ TOOL_NAMES = (
     *PROTO_TOOL_NAMES,
     "proto_design",
     "proto_look",
+    "ref_look",
 )
 ALLOWED_TOOL_NAMES = tuple(f"mcp__{SERVER_NAME}__{name}" for name in TOOL_NAMES)
 
@@ -1382,6 +1579,44 @@ def tool_specs(bench: SpecWorkbench) -> list:
                 ),
             ]
             if bench.proto is not None
+            else []
+        )
+        + (
+            [
+                (
+                    "ref_look",
+                    "Open an uploaded HTML reference in a browser and see it: a screenshot, its measured "
+                    "look (colours, fonts, sizes, radii, shadows of its sidebar, headings, table header and "
+                    "cells, buttons, cards, pills, avatars, tabs), how its table cells are built (two lines, "
+                    "avatar, pills, progress) and what can be clicked. Use it before restyling from a "
+                    "reference, on each kind of screen it has (a list, a record, a dashboard), and take "
+                    "values from it, never from grepping the source. `steps` run first: {go: '#/route'}, "
+                    "{click: 'button or row text'} (e.g. past a sign-in screen, into a record), "
+                    "{fill: 'label or placeholder', value: '…'}, {wait: ms}.",
+                    _schema(
+                        {
+                            "document": {
+                                "type": "string",
+                                "description": "The uploaded HTML file's name, as in INDEX.md.",
+                            },
+                            "steps": {
+                                "type": "array",
+                                "items": {"type": "object"},
+                                "description": "Navigation before the screenshot, in order.",
+                            },
+                            "full": {
+                                "type": "boolean",
+                                "description": "Whole page height instead of the first screen.",
+                            },
+                        },
+                        ["document"],
+                    ),
+                    lambda a: bench.ref_look(
+                        a.get("document", ""), a.get("steps"), bool(a.get("full"))
+                    ),
+                ),
+            ]
+            if bench.proto is not None and bench.proto.documents
             else []
         )
     )

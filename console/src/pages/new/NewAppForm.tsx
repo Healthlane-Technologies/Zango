@@ -7,6 +7,7 @@ import {
 	useAgentAvailability,
 	type Scaffold,
 } from '@/api/scaffolds';
+import { useApps } from '@/api/apps';
 import { useApiMutation } from '@/api/hooks';
 import { useTemplate, useTemplates } from '@/api/templates';
 import {
@@ -22,6 +23,7 @@ import {
 	PageHeader,
 	Skeleton,
 	Textarea,
+	useDebounced,
 } from '@/ui';
 import { DocumentDrop, DRAFT_GUIDANCE, ReferencePicker } from './intake';
 import { Section, SourceOption, SummaryRow } from './parts';
@@ -74,6 +76,21 @@ function Unavailable({ reasons }: { reasons: string[] }) {
 }
 
 /** Step one: say what to build. Hands the created scaffold to `onStarted`. */
+const APP_NAME_MIN = 5;
+const APP_NAME_MAX = 30;
+
+// Mirrors the backend tenant-name rule (SQL identifier, not reserved `pg_`).
+function appNameError(raw: string): string | undefined {
+	const v = raw.trim();
+	if (!v) return undefined; // optional
+	if (/^[0-9]/.test(v)) return 'Must start with a letter or underscore.';
+	if (/[^a-zA-Z0-9_]/.test(v)) return 'Only letters, numbers and underscores are allowed.';
+	if (v.length < APP_NAME_MIN) return `Use at least ${APP_NAME_MIN} characters.`;
+	if (v.length > APP_NAME_MAX) return `Use at most ${APP_NAME_MAX} characters.`;
+	if (/^pg_/i.test(v)) return 'Names starting with "pg_" are reserved.';
+	return undefined;
+}
+
 export function NewAppForm({ onStarted }: { onStarted: (s: Scaffold) => void }) {
 	const [params] = useSearchParams();
 	const preselected = params.get('template');
@@ -97,6 +114,25 @@ export function NewAppForm({ onStarted }: { onStarted: (s: Scaffold) => void }) 
 	const fromTemplate = source === 'template' && !!template;
 	const [appName, setAppName] = useState('');
 	const name = appName.trim();
+	const [nameTouched, setNameTouched] = useState(false);
+	const apps = useApps();
+	// Settle for a beat after typing so the check reads as deliberate, not flickery.
+	const settledName = useDebounced(name, 350);
+	const formatError = appNameError(appName);
+	const nameChecking = !!name && !formatError && (apps.isLoading || settledName !== name);
+	const nameTaken =
+		!!name &&
+		!formatError &&
+		!nameChecking &&
+		!!apps.data?.some(
+			(a) =>
+				a.name.toLowerCase() === name.toLowerCase() ||
+				a.schema_name?.toLowerCase() === name.toLowerCase(),
+		);
+	const nameError =
+		formatError ??
+		(nameTaken ? `An app named "${name}" already exists. Choose a different name.` : undefined);
+	const nameAvailable = !!name && !nameError && !nameChecking;
 	// References come with the template's detail, not the catalogue list.
 	const detail = useTemplate(template?.slug);
 	const references = detail.data?.references;
@@ -127,7 +163,13 @@ export function NewAppForm({ onStarted }: { onStarted: (s: Scaffold) => void }) 
 			: !!trimmed;
 	// From scratch the app is written in the generic template's spec, so documents
 	// (an SOP, an RFP) are welcome there too — alongside a sentence or two.
-	const canStart = !blocked && !checking && hasInput && !tooLong && !create.isPending;
+	const canStart =
+		!blocked &&
+		!checking &&
+		hasInput &&
+		!tooLong &&
+		!create.isPending &&
+		!(fromTemplate && (nameError || nameChecking));
 	const start = () =>
 		canStart &&
 		create.mutate(
@@ -235,15 +277,40 @@ export function NewAppForm({ onStarted }: { onStarted: (s: Scaffold) => void }) 
 										: 'The agent starts from the template and agrees the requirements with you in the chat.'
 								}
 							>
-								<Field label="App name (optional)" hint="Leave it empty and the agent suggests a short name.">
+								<Field
+									label="App name (optional)"
+									hint={
+										nameChecking ? (
+											<span className="inline-flex items-center gap-1.5 text-t2">
+												<span className="spin" style={{ width: 10, height: 10 }} />
+												Checking availability…
+											</span>
+										) : nameAvailable ? (
+											<span className="inline-flex items-center gap-1.5 font-[550] text-green-t">
+												<Icon name="check" />
+												&ldquo;{name}&rdquo; is available
+											</span>
+										) : (
+											'Leave it empty and the agent suggests a short name. Letters, numbers and underscores only; 5 to 30 characters.'
+										)
+									}
+									error={nameTouched || nameTaken ? nameError : undefined}
+								>
 									{(p) => (
 										<Input
 											{...p}
 											value={appName}
 											placeholder="Chosen by the agent"
-											maxLength={120}
+											maxLength={APP_NAME_MAX}
+											autoComplete="off"
+											spellCheck={false}
 											disabled={blocked || create.isPending}
-											onChange={(e) => setAppName(e.target.value)}
+											onChange={(e) => {
+												// Spaces and dashes can never be valid: turn them into underscores as they type.
+												setAppName(e.target.value.replace(/[\s-]+/g, '_'));
+												setNameTouched(true);
+											}}
+											onBlur={() => setNameTouched(true)}
 											onKeyDown={(e) => {
 												if (e.key === 'Enter') {
 													e.preventDefault();

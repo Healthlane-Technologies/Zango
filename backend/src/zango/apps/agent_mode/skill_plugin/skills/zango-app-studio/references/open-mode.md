@@ -3,7 +3,13 @@
 An app is in open mode when its approval bundle has `.zas/bundle/prototype/` (the user approved a
 free-form prototype instead of the kit preview). Read `.zas/bundle/prototype/index.md` first: it lists
 every screen, its roles and its files, and names the shell's screenshots. When it has a Change column,
-read §Change map before anything else: it says which screens need work at all.
+read §Change map: it says which screens need structural work.
+
+**The approved page is the contract.** `.zas/bundle/prototype/prototype.html` is exactly what the user
+approved. Every screen of the built app must look like it, on every role. When the prototype is the kit
+page (a template app: `manifest.json` has `"kit": true`), `studio_verify(["style"])` (design_diff,
+§Style parity) compares the computed styles of every part of every screen with that page and fails the
+build on what the user changed until they match. Run it before you finish.
 
 What the user approved is the **look**. Behaviour, data, menus and permissions still come from the spec.
 The prototype's tokens are already in the runtime (`app.design` → `spec.ui.json`), so standard pages
@@ -26,20 +32,51 @@ demo data (§Screens).
 
 When the bundle has `changes.json` (an app on a template, or a change request), the prototype was
 compared with a **baseline**: the template's starting prototype, or the version the app was last built
-from. Each screen has a tag, computed from the parts (the Change column of `index.md`). Do only what the
-tag says; a screen you don't need to touch stays exactly as it is built.
+from. Each screen has a tag, computed from the parts (the Change column of `index.md`): it says what
+**structural** work a screen needs. The look is not in the tags: `changes.json` `look` lists the
+stylesheets that changed (`shared/<part>.diff`, the CSS diff) and the classes they touch, and
+design_diff checks every screen for it (§Style parity), whatever its tag.
 
 | Tag | Means | What you do |
 |---|---|---|
-| `unchanged` | The screen and the shared look are as in the baseline. | Build it the standard way from the spec (a kit page, or its hole as in kit mode). On a change request, don't touch it. No port, no parity work. |
-| `restyled` | The screen is the same; only the shared look changed (`global`: tokens.css, app.css, shell). | Nothing per screen: apply the new look once (the tokens are in `app.design`; the shell and shared CSS as §The shell / §The kit), then check the screen with parity. |
+| `unchanged` | The screen and the shared look are as in the baseline. | Build it the standard way from the spec (a kit page, or its hole as in kit mode). On a change request, don't touch it. |
+| `restyled` | The screen's structure is the same; the shared look changed (`global`; `look` in `changes.json`). | No structural work. Read `shared/<part>.diff` for what changed, carry it to the parts it styles (`kit.css` on the `.zas-…` selectors, §Style parity), then `studio_verify(["style"])`. |
 | `edited` | The screen changed, but most of it is still the baseline. | Port only the change: read `screens/<id>/diff.patch` with the screen's `shot` and `dom`, and edit the existing page or slot. A change the spec says (a column, a status, a button) comes from the spec. |
 | `rewritten`, `new` | Mostly new markup, or a screen the baseline didn't have. | Port it in full, as below (§Screens, rebuild), or build it from the spec when it is a kit page. |
 
 `global` says which shared parts changed (`tokens.css`, `app.css`, `shell.js`, `other`). When only
-`tokens.css` changed, every screen is `restyled`: update the theme, run parity, and you are done.
+`tokens.css` changed, every screen is `restyled`: update the theme, then `studio_verify(["style"])`.
 `removed` lists screens the baseline had and the approved prototype doesn't; their pages are gone from
 the spec too.
+
+## Style parity (design_diff)
+
+For a kit-page prototype, `studio_verify(["style"])` (or `zas_test.design --only style`) opens
+`prototype.html` and the built app on every mapped screen and role, pairs each part of the screen (the
+shell, page title, cards, table headers, buttons, badges, the 360's header, avatar, facts, stat cards,
+tabs and panels: `scripts/kit_vocab.py` PARTS, kit class → `.zas-…` class) and compares their computed
+styles: colours and gradients, borders, radius, shadows, type, spacing, and `::before`/`::after`
+decorations. The data doesn't matter: the two pages show different records, a header's look is the same.
+
+- A difference **blocks** (`design.style.<screen>.<role>` fails, and the build with it) when the user
+  changed that property: the approved page differs there from the baseline (`baseline.html`, the page
+  the user started from). Other differences are listed, never blocking.
+- `.zas/style_diff.md`: every difference, blocking first, as `part (.zas-selector) property: approved X ·
+  built Y`.
+- The platform already carries the creator's look over: `proto_port.py` compiles the prototype's
+  `look.css` and `imported/bridge.css` onto the runtime's selectors into `src/zas/look.gen.css` (imported
+  by `zas/kit.tsx`, rewritten every build: never edit it). design_diff runs with it in place, so what
+  still blocks is what the compile could not carry (a rule on a kit class the runtime has no element
+  for is listed at the end of that file) or what the runtime draws differently.
+- `.zas/style_fix.css`: the approved values on the runtime selectors for every blocking difference
+  (shorthands, decoration placement, colours as `rgb()`). Copy its rules into
+  `frontend/src/custom/kit/kit.css` and adjust; keep the `html ` prefix (kit.css loads before
+  tokens.css). The palette lint accepts its colours.
+- Fix in `kit.css` on the `.zas-…` selector the line names, never in a page's own code: every screen
+  drawing that part gets the fix. A part the runtime has no element for is reported as "the approved
+  screen shows it, the built one doesn't"; build it from the spec, or report it as a gap.
+- After the build's fix rounds the platform runs **style rounds**: what still blocks comes back to you
+  with the same lines. What is left after them fails the build.
 
 ## The shell
 
@@ -78,6 +115,7 @@ Read the shell off each role's home screenshot (index.md lists them), then choos
 | App name, a second line, a mark | `brand: { title, subtitle, icon }` (lucide name; no icon shows the initials), or `logo: true` for the platform's app logo |
 | Small uppercase headings over menu groups / groups that fold | `groups: "headings"` (default) / `"collapsible"` |
 | The signed-in user at the sidebar's bottom / in a top bar | `user: "side"` (default for side) / `"top"` |
+| The sidebar's user card under the brand, above the menu | `sideUser: "top"` (default: the spec's `app.shell.user`, so usually nothing to pass) |
 | A bar over the page with its title | `topbar: true` |
 | A sidebar wider or narrower than 240px | `width` |
 
@@ -86,7 +124,8 @@ Rules:
 - **The menu is the spec's.** `makeShell` draws the platform's menu for the signed-in role
   (`roles[].menu`, saved by `zango_platform.py appbuilder`). A group in the prototype is a menu `group`
   in the spec; a label it shows per role is that role's menu `label`. If the prototype's menu differs
-  from the spec's, report it as a spec problem. Do not hard-code menu items in `Shell.tsx`, except
+  from the spec's, report it as a spec problem. A menu item's `count` in the spec draws its number
+  (`makeShell` fetches it); never hard-code one. Do not hard-code menu items in `Shell.tsx`, except
   the screens not built in this version: `.zas/bundle/prototype/index.md` ("Shell: screens kept in
   the menu, greyed out") lists them, and they go to `makeShell` as `soon`, exactly as written.
 - **The user menu is the platform's.** The prototype's persona or role switcher becomes the user card:
@@ -191,11 +230,13 @@ at the end of `.zas/bundle/prototype/index.md` (and `plan.md`). Follow it; never
 | **rebuild** | a custom page or dashboard, or a standard page marked `rebuild: true` | Its hole's slot, ported from the approved screen. The hole text names the folder. |
 | **prototype-only** | not built | Nothing. |
 
-**Kit.** Compare the built page with `shot.<role>.png`, part by part, including the 360's header,
-facts, stat tiles, tabs and panels (a record page has its own `screens/<id>/`: open it as well as the
-list). What differs is fixed in the kit piece that draws it (every page using that piece gets the fix),
-then in the page's stylesheet. `kit.css` can restyle **any** `.zas-…` element, not only the pieces in
-`map.json`: find the prototype's element in `dom.<role>.html`, copy its declarations from
+**Kit.** A kit page is checked by design_diff (§Style parity) when the prototype is the kit page:
+run `studio_verify(["style"])` and fix what it reports in `kit.css`, starting from `.zas/style_fix.css`.
+For any other prototype, compare the built page with `shot.<role>.png`, part by part, including the
+360's header, facts, stat tiles, tabs and panels (a record page has its own `screens/<id>/`: open it as
+well as the list). What differs is fixed in the kit piece that draws it (every page using that piece
+gets the fix), then in the page's stylesheet. `kit.css` can restyle **any** `.zas-…` element, not only
+the pieces in `map.json`: find the prototype's element in `dom.<role>.html`, copy its declarations from
 `css.used.css` (gradients, borders, shadows, fonts, letter-spacing, `text-transform`) onto the matching
 `.zas-…` selector, and hide what the prototype does not show. A design change can touch any part, so
 check every part, not the ones the pieces list names. `prototype.css` does not style kit pages: its

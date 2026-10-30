@@ -373,6 +373,24 @@ def has_design_reference(requirement, message) -> bool:
     )
 
 
+# Words that make a template-mode message a request about the look, with no reference attached.
+LOOK_WORDS = re.compile(
+    r"\b(colou?rs?|colou?red|dark|darker|lighter|theme|palette|fonts?|typography|rounded|rounder|"
+    r"radius|corners?|shadows?|gradients?|hero|look|looks|styles?|styling|restyle|modern|sleek|"
+    r"spacing|padding|compact|denser|airy|background|borders?|pill|glass|frosted|bolder|"
+    r"design|ui)\b",
+    re.I,
+)
+
+
+def is_look_request(requirement, message) -> bool:
+    """Whether this template-mode message asks for a change to how the app looks (in words, no
+    reference attached): the end-of-turn check (SpecWorkbench.reference_gap) holds the agent to it."""
+    if getattr(requirement, "mode", "") != "template":
+        return False
+    return bool(LOOK_WORDS.search(getattr(message, "content", "") or ""))
+
+
 def attachment_note(docs_root, requirement, message) -> str:
     """What the analyst is told about files attached to this chat message ("" for none)."""
     rows = list(
@@ -396,7 +414,9 @@ def attachment_note(docs_root, requirement, message) -> str:
             where = (
                 f"Read `{path}` to see it."
                 if is_image
-                else f"Its outline is in `{path}.txt`, the source in `{path}`."
+                else f'See it with ref_look("{row.name}") (screenshot and measured look; `steps` '
+                "to get past a sign-in screen or into a record), never by grepping the source; "
+                f"its outline is in `{path}.txt`."
             )
             lines.append(
                 f"- {row.name}: {kind}. {where} What it is for comes from the user's message, "

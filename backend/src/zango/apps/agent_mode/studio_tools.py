@@ -35,7 +35,12 @@ TOOL_NAMES = [
 # Bring-up (~15 s) plus the API, UI, parity and scenario checks of one slice.
 VERIFY_TIMEOUT = 20 * 60
 # The layers a slice is checked with; the shell, views and lint are checked once, at the end.
-SLICE_LAYERS = {"api": [], "ui": [], "design": ["parity", "kit"], "scenarios": []}
+SLICE_LAYERS = {
+    "api": [],
+    "ui": [],
+    "design": ["parity", "kit", "style"],
+    "scenarios": [],
+}
 MAX_PATHS = 12
 
 
@@ -75,7 +80,8 @@ def build_studio_server(push):
         "scenarios) on one build slice: the spec paths you just built, e.g. "
         '["entities.case", "pages.my_cases", "detail_views.case_360"]. Call it after each slice, '
         'fix what it reports, then start the next slice. Free design: ["kit"] compares each kit '
-        "piece with the prototype's. Takes a few minutes.",
+        "piece with the prototype's; [\"style\"] (design_diff) compares every screen's computed "
+        "styles with the approved prototype.html. Takes a few minutes.",
         {
             "type": "object",
             "properties": {
@@ -83,7 +89,8 @@ def build_studio_server(push):
                     "type": "array",
                     "items": {"type": "string"},
                     "description": "Spec paths of the slice: entities.<code>, pages.<code>, "
-                    "detail_views.<code>, or kit (the app's kit pieces, Free design).",
+                    "detail_views.<code>, kit (the app's kit pieces, Free design) or style "
+                    "(design_diff: every screen's styles against the approved prototype).",
                 },
             },
             "required": ["paths"],
@@ -129,7 +136,8 @@ def _paths(args: dict) -> list[str]:
     for p in raw:
         p = str(p).strip().strip("/").replace("/", ".")
         if (
-            p == "kit" or p.startswith(("entities.", "pages.", "detail_views.", "kit."))
+            p in ("kit", "style")
+            or p.startswith(("entities.", "pages.", "detail_views.", "kit.", "style."))
         ) and p not in out:
             out.append(p)
     return out[:MAX_PATHS]

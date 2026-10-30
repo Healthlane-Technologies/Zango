@@ -2,7 +2,7 @@
 Design checks. No human approves anything: every check compares against a fixed reference
 (rules, shipped goldens, tokens.css, or the spec). See references/design-system.md.
 
-    python3 -m zas_test.design --workspace <ws> [--only lint,gallery,tokens,tree,layout]
+    python3 -m zas_test.design --workspace <ws> [--only lint,gallery,tokens,tree,layout,parity,kit,style]
     python3 -m zas_test.design --make-goldens --workspace <ws> --out <skill>/assets/goldens
     python3 -m zas_test.design --make-goldens --gallery-url http://localhost:4173/ --out <skill>/assets/goldens
         (skill author only: re-shoot the goldens after changing the runtime)
@@ -40,11 +40,11 @@ import os
 import re
 import sys
 
-from . import auth, browser, in_scope, kit, load_json, print_summary, save_results
+from . import auth, browser, in_scope, kit, load_json, print_summary, save_results, style
 
 LOOK_FAIL = float(os.environ.get("ZAS_LOOK_FAIL", "0.40"))  # a faithful port sits at 10-15%, a different layout at 40%+
 
-GROUPS = ["lint", "gallery", "tokens", "tree", "layout", "parity", "kit"]
+GROUPS = ["lint", "gallery", "tokens", "tree", "layout", "parity", "kit", "style"]
 HERE = os.path.dirname(os.path.abspath(__file__))
 if os.path.dirname(HERE) not in sys.path:
     sys.path.insert(0, os.path.dirname(HERE))  # scripts/: proto_landmarks
@@ -276,11 +276,13 @@ class OpenDesign:
 
 def prototype_palette(ws):
     """Every colour the approved prototype uses: its page (styles and scripts, prototype.html), its
-    screens' css.used.css and its design.json file."""
+    screens' css.used.css, its design.json file, and the computed values design_diff read off it
+    (.zas/style_fix.css: a color-mix() resolves to a colour no stylesheet spells)."""
     proto = os.path.join(ws, ".zas", "bundle", "prototype")
     out = set()
     for path in glob.glob(os.path.join(proto, "screens", "*", "css.used.css")) + [
-            os.path.join(proto, "design.json"), os.path.join(proto, "prototype.html")]:
+            os.path.join(proto, "design.json"), os.path.join(proto, "prototype.html"),
+            os.path.join(ws, ".zas", "style_fix.css")]:
         try:
             out |= {colour_key(c) for c in COLOUR.findall(open(path, encoding="utf-8").read())}
         except OSError:
@@ -841,6 +843,31 @@ def shell_chrome(proto, capture, PL):
             for role, c in seen.items()}
 
 
+def screen_route(Dx, r, sess, records):
+    """(path, why): where a mapped prototype screen (a spec prototype.screens row) opens in the built
+    app for a signed-in role; a record screen opens a record the role can see."""
+    if r.get("kind") == "view":
+        hero = (Dx.M["detail_views"].get(r["code"]) or {}).get("hero")
+        uids = records.get(hero) or []
+        if not uids:
+            return None, "no record to open: run zas_test.api first"
+        return browser.detail_path(Dx.M, hero, browser.visible_uid(Dx.M, hero, sess, uids)), None
+    path = (Dx.M["pages"].get(r.get("page")) or {}).get("route")
+    if path and "/:" in path:  # /app/cases/:id/review: a record the role can see
+        return browser.fill_route(Dx.M, path, records, sess)
+    return (path, None) if path else (None, "no route for this screen")
+
+
+def open_built(rp, path):
+    """Open a built screen and wait out its loading placeholders."""
+    rp.open(path, wait='[data-zas="page"], [data-zas="header"], [data-zas="empty"]')
+    try:
+        rp.page.wait_for_function(
+            "() => !document.querySelector('[aria-busy=\"true\"], .zas-skel')", timeout=15000)
+    except Exception:  # noqa: BLE001 - use what is there
+        pass
+
+
 def open_parity(Dx, b):
     """Open mode (plan B6): every mapped screen opens as each of its roles without errors and shows
     what the approved screen shows (proto_landmarks.content_gaps: its labels, chip counts, subtitle and
@@ -924,30 +951,13 @@ def open_parity(Dx, b):
             def t(r=r, role=role, persona=persona, approved=approved, slug=slug, where=where):
                 if not role:
                     return None, f"persona {persona!r} is no spec role (manifest roles label = role name)"
-                if r.get("kind") == "view":
-                    hero = (Dx.M["detail_views"].get(r["code"]) or {}).get("hero")
-                    uids = records.get(hero) or []
-                    if not uids:
-                        return None, "no record to open: run zas_test.api first"
-                    sess = login(role)
-                    path = browser.detail_path(Dx.M, hero, browser.visible_uid(Dx.M, hero, sess, uids))
-                else:
-                    sess = login(role)
-                    path = (Dx.M["pages"].get(r.get("page")) or {}).get("route")
-                    if path and "/:" in path:  # /app/cases/:id/review: a record the role can see
-                        path, why = browser.fill_route(Dx.M, path, records, sess)
-                        if why:
-                            return None, why
-                if not path:
-                    return None, "no route for this screen"
+                sess = login(role)
+                path, why = screen_route(Dx, r, sess, records)
+                if why:
+                    return None, why
                 rp = browser.RolePage(b, target, sess, viewport={"width": 1280, "height": 900})
                 try:
-                    rp.open(path, wait='[data-zas="page"], [data-zas="header"], [data-zas="empty"]')
-                    try:
-                        rp.page.wait_for_function(
-                            "() => !document.querySelector('[aria-busy=\"true\"], .zas-skel')", timeout=15000)
-                    except Exception:  # noqa: BLE001 - shoot what is there
-                        pass
+                    open_built(rp, path)
                     probs = list(rp.errors)
                     if browser.raw_dates(rp.page.inner_text("body")):
                         probs.append(browser.raw_dates(rp.page.inner_text("body")))
@@ -1210,7 +1220,7 @@ def standard_parity(Dx, b, manifest, looks):
 
 
 RUNNERS = {"lint": g_lint, "gallery": g_gallery, "tokens": g_tokens, "tree": g_tree, "layout": g_layout, "parity": g_parity,
-           "kit": lambda Dx, b: kit.g_kit(Dx, b)}
+           "kit": lambda Dx, b: kit.g_kit(Dx, b), "style": lambda Dx, b: style.g_style(Dx, b)}
 
 
 def main(argv=None):

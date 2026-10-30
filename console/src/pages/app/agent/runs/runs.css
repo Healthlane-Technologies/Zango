@@ -285,6 +285,8 @@
 	border-radius: 8px;
 	font-size: 12.5px;
 	line-height: 1.5;
+	/* Error text carries long unbroken paths; wrap them instead of widening the pane. */
+	overflow-wrap: anywhere;
 }
 .rp-note.warn {
 	background: var(--amber-soft);

@@ -12,6 +12,8 @@ Node toolchain, none of which exist in server mode.
 
 from __future__ import annotations
 
+import json
+
 
 PLUGIN_NAME = "zango-agent-mode"
 # Builds every app written in the generic Zango app spec (app_spec.yaml).
@@ -363,6 +365,28 @@ def compose_studio_prompt(ctx, template_build, studio) -> str:
             'levers only (`references/views.md` "Matching the approved page", `references/custom-code.md` '
             '"The app shell"). The platform checks the result against the bundle'
         )
+    proto = studio.zas_dir / "bundle" / "prototype"
+    if studio.frontend_ready and (proto / "prototype.html").is_file():
+        frontend_steps += (
+            ". The user approved a prototype: `.zas/bundle/prototype/prototype.html` is the design "
+            "contract and every screen must look like it (`references/open-mode.md`; start from "
+            "`.zas/bundle/prototype/index.md`)"
+        )
+        try:
+            kit_page = bool(
+                json.loads((proto / "manifest.json").read_text(encoding="utf-8")).get(
+                    "kit"
+                )
+            )
+        except (OSError, ValueError):
+            kit_page = False
+        if kit_page:
+            frontend_steps += (
+                '. `studio_verify(["style"])` compares every screen\'s styles with it and fails the '
+                "build on what the user changed until they match; run it before you finish and fix "
+                "what it reports in `frontend/src/custom/kit/kit.css` (`.zas/style_fix.css` has the "
+                "approved values)"
+            )
     rules = _STUDIO_RULES.format(
         skill_dir=template_build.skill_dir, frontend=frontend, npm=npm
     )

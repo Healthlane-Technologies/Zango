@@ -304,15 +304,25 @@ def _esc_attr(value: str) -> str:
     )
 
 
+# The look the creator asked for, after every other stylesheet so its rules win at equal specificity
+# (the kit page's own imported/styles.css would otherwise override them: "b" sorts before "s").
+LOOK_PART = "look.css"
+CSS_TAIL = ("imported/bridge.css", LOOK_PART)
+
+
 def _ordered(parts: dict, manifest: dict) -> tuple[list[str], list[str]]:
     """(css paths, js paths) in load order."""
     screen_ids = [s["id"] for s in manifest.get("screens", [])]
     css_head = [p for p in ("tokens.css", "app.css") if p in parts]
     screen_css = [f"screens/{i}.css" for i in screen_ids if f"screens/{i}.css" in parts]
+    css_tail = [p for p in CSS_TAIL if p in parts]
     other_css = sorted(
         p
         for p in parts
-        if p.endswith(".css") and p not in css_head and p not in screen_css
+        if p.endswith(".css")
+        and p not in css_head
+        and p not in screen_css
+        and p not in css_tail
     )
     js_head = [p for p in ("data.js", "shell.js") if p in parts]
     screen_js = [screen_part(i) for i in screen_ids if screen_part(i) in parts]
@@ -321,7 +331,7 @@ def _ordered(parts: dict, manifest: dict) -> tuple[list[str], list[str]]:
         for p in parts
         if p.endswith(".js") and p not in js_head and not p.startswith("screens/")
     )
-    return css_head + other_css + screen_css, js_head + other_js + screen_js
+    return css_head + other_css + screen_css + css_tail, js_head + other_js + screen_js
 
 
 def soon_menu(spec_text: str) -> list[dict]:

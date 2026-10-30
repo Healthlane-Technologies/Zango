@@ -8,9 +8,9 @@
 // RightActions are not rendered). Its endpoints are reused unchanged.
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ChevronsUpDown, Download, EllipsisVertical, Inbox, Paperclip, Plus, Search } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ChevronRight, ChevronsUpDown, Download, EllipsisVertical, Inbox, Paperclip, Plus, Search } from "lucide-react";
 import * as api from "./api";
-import { SPEC, date, detailUrl, money, number, pageUrl, parentTabUrl, percent, viewUrl } from "./config";
+import { SPEC, date, detailUrl, money, number, pageUrl, parentTabUrl, percent, tone, viewUrl } from "./config";
 import { ConfirmDialog, FormDialog, useDialog } from "./dialogs";
 import { Icon, Menu, Nil, Skeleton, Value, cx, useToast } from "./ui";
 import { Badge, Banner, Button, Chip, Drawer, EmptyState, Timeline } from "./kit";
@@ -22,12 +22,18 @@ type Meta = {
   columns: { name: string; sortable?: boolean; choices?: { id: string; label: string }[] | null }[];
   has_add_perm?: boolean; has_download_perm?: boolean;
   zas?: { quick_filters: { key: string; label: string; default: boolean; count?: number | null }[];
-    filter_options?: Record<string, string[]>; subtitle_stat?: number | null };
+    filter_options?: Record<string, string[]>; subtitle_stat?: number | null;
+    stats?: Record<string, (number | null)[]> };  // pages[].stats figures, per crud page, in order
 };
-type Row = Record<string, any> & { object_uuid: string; zas?: { links: Record<string, string>; status?: string; tags?: string[]; hl?: Record<string, string>; sub?: Record<string, string>; icon?: Record<string, string> } };
+type Row = Record<string, any> & { object_uuid: string; zas?: { links: Record<string, string>; status?: string; tags?: string[]; hl?: Record<string, string>; sub?: Record<string, string>; icon?: Record<string, string>;
+  badge?: Record<string, { label: string; tone: string }> } };
 
 const NA = (v: any) => v === null || v === undefined || v === "" || v === "NA";
 const fmtValue = (v: any, f?: string | null) => (f === "money" ? money(v) : f === "percent" ? percent(v) : number(v));
+const fmtStat = (v: number | null | undefined, f?: string | null) => (v === null || v === undefined ? "—" : f === "days" ? `${v}d` : fmtValue(v, f));
+// a list's KPI tiles cycle the 360 stats' icons and tones when the spec names none
+const TILE_ICONS = ["activity", "wallet", "clock", "gauge", "layers", "target"];
+const TILE_TONES = ["indigo", "teal", "amber", "pink", "blue", "purple"];
 const strip = (v: any) => (typeof v === "string" ? v.replace(/<[^>]*>/g, "").trim() : v);
 const hrefOf = (v: any): string | null => (typeof v === "string" ? v.match(/href=['"]([^'"]+)['"]/)?.[1] || null : v?.url || null);
 
@@ -50,18 +56,40 @@ const initialsOf = (t: string) => t.split(/\s+/).filter((w) => /^[A-Za-z]/.test(
 
 type CellProps = { E: SpecEntity; col: SpecColumn; row: Row; onOpen: (url: string) => void };
 
+/** table.columns[].progress: the status, a thin bar of the workflow's steps and "Step i of n". */
+function StepProgress({ steps, code, children }: { steps: string[]; code?: string; children: React.ReactNode }) {
+  const at = code ? steps.indexOf(code) : -1;
+  if (at < 0) return <>{children}</>;
+  return (
+    <div className="zas-cprog" data-zas="cell-progress" data-zas-key={code}>
+      <span>{children}</span>
+      <div className="zas-cprog-bar">{steps.map((s, i) => <i key={s} className={i <= at ? "on" : undefined} />)}</div>
+      <div className="zas-cprog-t">Step {at + 1} of {steps.length}</div>
+    </div>
+  );
+}
+
+/** The value, then table.columns[].badge's pill on the rows where its `when` holds (row zas.badge). */
+function CellBody(p: CellProps) {
+  const pill = p.row.zas?.badge?.[p.col.key];
+  const value = pill
+    ? <><CellValue {...p} /><span className={cx("zas-cpill", `zt-${tone(pill.tone)}`)} data-zas="cell-badge" data-zas-key={p.col.key}>{pill.label}</span></>
+    : <CellValue {...p} />;
+  return p.col.progress ? <StepProgress steps={p.col.progress.steps} code={p.row.zas?.status}>{value}</StepProgress> : value;
+}
+
 /** table.columns[].secondary / icon: an icon, the value, and a muted second line under it. */
 function Cell(p: CellProps) {
   const sub = p.row.zas?.sub?.[p.col.key];
   const icon = p.row.zas?.icon?.[p.col.key];
-  if (!sub && !icon) return <CellValue {...p} />;
+  if (!sub && !icon) return <CellBody {...p} />;
   return (
     <div className="zas-cell2" data-zas="cell" data-zas-key={p.col.key}>
       {icon === "initials"
         ? <span className="zas-cell-ico ini">{initialsOf(String(strip(p.row[p.col.key]) ?? ""))}</span>
         : icon && <span className="zas-cell-ico"><Icon name={icon} /></span>}
       <div className="zas-cell-txt">
-        <div className="zas-cell-main"><CellValue {...p} /></div>
+        <div className="zas-cell-main"><CellBody {...p} /></div>
         {sub && <div className={cx("zas-cell-sub", p.col.secondary_style === "mono" && "mono")}>{sub}</div>}
       </div>
     </div>
@@ -162,6 +190,11 @@ export function ZasTable(p: ZasTableProps) {
   const figure = sub?.stat && meta?.zas?.subtitle_stat != null
     ? [fmtValue(meta.zas.subtitle_stat, sub.stat.format), sub.stat.suffix].filter(Boolean).join(" ") : "";
   const subtitle = sub ? [sub.text, figure].filter(Boolean).join(" · ") || null : null;
+  // pages[].stats: KPI tiles between the header and the table, figures from the metadata
+  const tiles = p.page ? SPEC.pages[p.page.code]?.stats || [] : [];
+  const tileValues = p.page ? meta?.zas?.stats?.[p.page.code] : undefined;
+  const clickable = (p.rowClick || E.row_click) !== "none";
+  const chev = !!E.row_chevron;  // table.row_chevron: a chevron in a last cell of clickable rows
   const activeQf = qf === undefined ? (quick.find((x) => x.default)?.key ?? null) : qf;
   const filterCols = cols.filter((c) => c.filterable);
 
@@ -276,6 +309,20 @@ export function ZasTable(p: ZasTableProps) {
           {addBtn}
         </div>
       )}
+      {tiles.length > 0 && (
+        <div className="zas-lstats" data-zas="list-stats">
+          {tiles.map((t, i) => (
+            <div key={t.key} className={cx("zas-lstat", `zt-${tone(t.tone || TILE_TONES[i % 6])}`)} data-zas="list-stat" data-zas-key={t.key} data-zas-order={i}>
+              <div className="si"><Icon name={t.icon || TILE_ICONS[i % 6]} /></div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <span>{t.label}</span>
+                <b>{meta ? fmtStat(tileValues?.[i], t.format) : "—"}</b>
+                {t.hint && <span className="zas-lstat-hint">{t.hint}</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
       <div className="zas-card" data-zas="panel" data-zas-key={p.zasKey || p.entity}>
         <div className="zas-tb">
           <label className="zas-search"><Search />
@@ -319,19 +366,21 @@ export function ZasTable(p: ZasTableProps) {
                         : c.label}</th>;
                     })}
                     {hasActs && <th aria-label="Actions" />}
+                    {chev && <th aria-hidden="true" />}
                   </tr></thead>
                   <tbody>
                     {body.map(({ group, rows: rs }) => (
                       <React.Fragment key={group ?? "_"}>
-                        {group !== null && <tr className="grp"><td colSpan={cols.length + (hasActs ? 1 : 0)}>{group} · {rs.length}</td></tr>}
+                        {group !== null && <tr className="grp"><td colSpan={cols.length + (hasActs ? 1 : 0) + (chev ? 1 : 0)}>{group} · {rs.length}</td></tr>}
                         {rs.map((r) => (
-                          <tr key={r.object_uuid} data-zas="row" data-zas-key={r.object_uuid} className={(p.rowClick || E.row_click) !== "none" ? "click" : undefined} onClick={() => onRow(r)}>
+                          <tr key={r.object_uuid} data-zas="row" data-zas-key={r.object_uuid} className={clickable ? "click" : undefined} onClick={() => onRow(r)}>
                             {cols.map((c) => <td key={c.key} className={r.zas?.hl?.[c.key] ? `hl-${r.zas.hl[c.key] === "amber" ? "amber" : "red"}` : undefined}>
                               <Cell E={E} col={c} row={r} onOpen={navigate} /></td>)}
                             {hasActs && <td className="act" onClick={(e) => e.stopPropagation()}>
                               {(r.row_actions || []).length > 0 && <Menu items={rowMenu(r)} trigger={(open) => (
                                 <TriggerButton open={open} />)} />}
                             </td>}
+                            {chev && <td className="chev">{clickable && <ChevronRight />}</td>}
                           </tr>
                         ))}
                       </React.Fragment>
@@ -342,6 +391,7 @@ export function ZasTable(p: ZasTableProps) {
                       {cols.map((c, i) => <td key={c.key} className="num">
                         {p.footer!.includes(c.key) ? number(rows.reduce((a, r) => a + (Number(strip(r[c.key])) || 0), 0)) : i === 0 ? "Total" : ""}</td>)}
                       {hasActs && <td />}
+                      {chev && <td />}
                     </tr></tfoot>
                   ) : null}
                 </table>

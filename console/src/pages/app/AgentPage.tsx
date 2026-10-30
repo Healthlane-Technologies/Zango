@@ -18,6 +18,7 @@ import {
 	type NewRoundInput,
 	type PreviewFocus,
 } from '@/api/agentMode';
+import { useStartRun } from '@/api/agentRuns';
 import { useAppId } from '@/api/hooks';
 import { ApiError } from '@/api/client';
 import {
@@ -221,7 +222,12 @@ export function AgentPage() {
 	const saveSpec = useSaveSpec(appId, activeId);
 	const approve = useApproveRequirement(appId, activeId);
 	const commit = useCommitRequirement(appId, activeId);
-	// Preview-first apps commit the previewed app for build in one step (finalize + approve).
+	// Preview-first apps commit the previewed app and start its build in one step
+	// (finalize + approve, then a run). The Builds tab picks the new run up on refetch.
+	const startBuild = useStartRun(appId, activeId, () => {
+		qc.invalidateQueries({ queryKey: agentKeys.requirements(appId) });
+		qc.invalidateQueries({ queryKey: agentKeys.availability(appId) });
+	});
 	const previewFlow = decisionsInChat;
 	const [confirmCommit, setConfirmCommit] = useState(false);
 	const [sheetSignal, setSheetSignal] = useState<{ sheet: 'checks'; nonce: number } | null>(null);
@@ -294,8 +300,9 @@ export function AgentPage() {
 		el.classList.add('bv-flash');
 		window.setTimeout(() => el.classList.remove('bv-flash'), 1600);
 	};
-	// Commit for build is one click. When the server finds unfinished custom work, the agent
-	// finishes it and the commit runs again by itself once the agent's turn ends (once).
+	// Commit for build is one click: it commits and starts the build. When the server finds
+	// unfinished custom work, the agent finishes it and the commit runs again by itself once
+	// the agent's turn ends (once).
 	const commitAfterTurn = useRef<'off' | 'waiting' | 'running'>('off');
 	const autoCommitted = useRef(false);
 	useEffect(() => {
@@ -308,9 +315,6 @@ export function AgentPage() {
 		const fresh = await qc.fetchQuery({ ...requirementQuery(appId, activeId), staleTime: 0 });
 		try {
 			await commit.mutateAsync(fresh.draft_revision ?? 0);
-			setConfirmCommit(false);
-			toast.success('Committed for build. Start the build when you’re ready.');
-			setView({ round: null, tab: 'builds' });
 		} catch (err) {
 			setConfirmCommit(false);
 			const status = err instanceof ApiError ? err.status : 0;
@@ -334,8 +338,8 @@ export function AgentPage() {
 					commitAfterTurn.current = 'waiting';
 					toast.success(
 						detail.agent_prompt
-							? 'The agent is adding what the spec leaves out of the prototype. The commit will go through when it is done.'
-							: 'The agent is finishing a few custom parts. The commit will go through when it is done.',
+							? 'The agent is adding what the spec leaves out of the prototype. The build will start when it is done.'
+							: 'The agent is finishing a few custom parts. The build will start when it is done.',
 					);
 				}
 				return;
@@ -347,7 +351,13 @@ export function AgentPage() {
 			} else if (status === 409 && detail.open_decisions?.length) {
 				window.setTimeout(showDecisionsCard, 60);
 			}
+			return;
 		}
+		setConfirmCommit(false);
+		setView({ round: null, tab: 'builds' });
+		// The commit stands even if the build can't start (another build running): useStartRun
+		// says so and the Builds tab keeps its Start build button.
+		startBuild.mutate();
 	};
 	const thinking = !!active?.is_thinking;
 	useEffect(() => {
@@ -362,7 +372,7 @@ export function AgentPage() {
 		? {
 				onClick: () => setConfirmCommit(true),
 				blocked: commitBlocked,
-				loading: commit.isPending,
+				loading: commit.isPending || startBuild.isPending,
 			}
 		: undefined;
 
@@ -388,7 +398,7 @@ export function AgentPage() {
 				variant="primary"
 				icon="rocket"
 				disabled={!!commitBlocked}
-				loading={commit.isPending}
+				loading={commit.isPending || startBuild.isPending}
 				onClick={() => setConfirmCommit(true)}
 				title={commitBlocked ?? 'Build the app exactly as previewed'}
 			>
@@ -494,12 +504,12 @@ export function AgentPage() {
 				onOpenChange={setConfirmCommit}
 				title="Commit this preview for build?"
 				confirmLabel="Commit for build"
-				loading={commit.isPending}
+				loading={commit.isPending || startBuild.isPending}
 				onConfirm={onCommit}
 			>
 				<p className="text-[13px] leading-[1.55] text-t2">
-					The app will be built exactly as previewed. You can still change it later with a new
-					change request.
+					The build starts right away and the app is built exactly as previewed. You can still
+					change it later with a new change request.
 				</p>
 			</ConfirmModal>
 			<NewChangeModal

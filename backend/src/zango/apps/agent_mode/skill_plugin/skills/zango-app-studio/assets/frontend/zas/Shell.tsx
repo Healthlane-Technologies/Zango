@@ -11,7 +11,8 @@ import { createPortal } from "react-dom";
 import { Link, useLocation } from "react-router-dom";
 import * as appbuilder from "@zango-core/appbuilder";
 import { ChevronDown, LogOut, UserRound } from "lucide-react";
-import { SPEC } from "./config";
+import * as api from "./api";
+import { SPEC, number } from "./config";
 import { Icon, cx } from "./ui";
 
 // Exported by appbuilder 1.0.0-rc.1 but missing from its main .d.ts (like ZangoApp's customPages).
@@ -50,6 +51,9 @@ export interface ShellOptions {
   groups?: "headings" | "collapsible";
   /** Where the user card and its menu sit: the sidebar's bottom (default for "side") or the top bar. */
   user?: "side" | "top";
+  /** In the sidebar: the user card under the brand, above the menu ("top"), or at the bottom (default:
+   * the spec's app.shell.user). */
+  sideUser?: "bottom" | "top";
   /** A bar over the page with its title (always on for layout "top"). */
   topbar?: boolean;
   /** Sidebar width in px (default 240). */
@@ -170,7 +174,36 @@ function withSoon(menu: PlatformItem[], soon: SoonItem[], role: string): Platfor
   return out;
 }
 
-function NavItems({ items, groups, path }: { items: PlatformItem[]; groups: "headings" | "collapsible"; path: string }) {
+/** roles[].menu[].count: the number on a menu item, by its route: how many rows of the page's entity the
+ * role sees (the item's `where` applied), from that entity's table metadata (zas.menu_count). */
+function useMenuCounts(role: string, path: string): Record<string, number> {
+  const [counts, setCounts] = useState<Record<string, number>>({});
+  useEffect(() => {
+    const spec = (SPEC.menus || {})[role] || Object.entries(SPEC.menus || {}).find(([r]) => same(r, role))?.[1];
+    const items = (spec?.items || []).flatMap((it: any) => (it.items ? it.items : [it])).filter((i: any) => i.count && i.page);
+    let live = true;
+    for (const i of items) {
+      const page = SPEC.pages[i.page];
+      const E = page?.entity ? SPEC.entities[page.entity] : undefined;
+      if (!page || !E) continue;
+      api.get(E.endpoint, { view: "table", action: "get_table_metadata", zas_menu: i.page })
+        .then((j) => {
+          const n = api.body(j)?.table_metadata?.zas?.menu_count;
+          if (live && typeof n === "number") setCounts((c) => ({ ...c, [norm(page.route)]: n }));
+        })
+        .catch(() => undefined);
+    }
+    return () => { live = false; };
+  }, [role, path]);  // refreshed on navigation, so a count follows the records the user just changed
+  return counts;
+}
+
+function NavCount({ it, counts }: { it: PlatformItem; counts: Record<string, number> }) {
+  const n = href(it) !== "#" ? counts[norm(href(it))] : undefined;
+  return n === undefined ? null : <span className="zas-sh-n" data-zas="shell-count">{number(n)}</span>;
+}
+
+function NavItems({ items, groups, path, counts = {} }: { items: PlatformItem[]; groups: "headings" | "collapsible"; path: string; counts?: Record<string, number> }) {
   const [shut, setShut] = useState<Record<string, boolean>>({});
   return (
     <>
@@ -186,7 +219,7 @@ function NavItems({ items, groups, path }: { items: PlatformItem[]; groups: "hea
         if (!kids.length) {
           return (
             <Link key={i} to={href(it)} className={cx("zas-sh-a", isOn(it, path) && "on")} data-zas="shell-nav" data-zas-key={href(it)}>
-              <ItemIcon icon={it.icon} /><span>{label(it)}</span>
+              <ItemIcon icon={it.icon} /><span>{label(it)}</span><NavCount it={it} counts={counts} />
             </Link>
           );
         }
@@ -194,7 +227,7 @@ function NavItems({ items, groups, path }: { items: PlatformItem[]; groups: "hea
           return (
             <React.Fragment key={i}>
               <div className="zas-sh-g">{label(it)}</div>
-              <NavItems items={kids} groups={groups} path={path} />
+              <NavItems items={kids} groups={groups} path={path} counts={counts} />
             </React.Fragment>
           );
         }
@@ -205,7 +238,7 @@ function NavItems({ items, groups, path }: { items: PlatformItem[]; groups: "hea
               onClick={() => setShut({ ...shut, [i]: !closed })}>
               <ItemIcon icon={it.icon} /><span>{label(it)}</span><ChevronDown className={cx("zi zas-sh-chev", !closed && "up")} />
             </button>
-            {!closed && <div className="zas-sh-sub"><NavItems items={kids} groups={groups} path={path} /></div>}
+            {!closed && <div className="zas-sh-sub"><NavItems items={kids} groups={groups} path={path} counts={counts} /></div>}
           </React.Fragment>
         );
       })}
@@ -217,6 +250,7 @@ export function makeShell(options: ShellOptions = {}): React.FC<LayoutProps> {
   const o = { layout: "side" as const, tone: "light" as const, groups: "headings" as const, width: 240, ...options };
   const userAt = o.user || (o.layout === "top" ? "top" : "side");
   const showTop = o.layout === "top" || !!o.topbar || userAt === "top";
+  const sideUser = o.sideUser || SPEC.app.shell?.user || "bottom";
 
   function ZasShell({ menu = [], profileInfo = {}, appLogo, children }: LayoutProps) {
     const { pathname } = useLocation();
@@ -232,15 +266,17 @@ export function makeShell(options: ShellOptions = {}): React.FC<LayoutProps> {
     );
     const role = String(profileInfo.current_role || profileInfo.user_role || "");
     const items = shellMenu(menu, role, o.soon || []);
-    const nav = <nav className="zas-sh-nav"><NavItems items={items} groups={o.groups} path={pathname} /></nav>;
+    const counts = useMenuCounts(role, pathname);
+    const nav = <nav className="zas-sh-nav"><NavItems items={items} groups={o.groups} path={pathname} counts={counts} /></nav>;
     return (
       <div className={cx("zas zas-sh", `is-${o.layout}`, o.tone === "dark" && "dark")} data-zas="shell"
         style={{ "--zas-sh-bg": navBackground(o.nav), "--zas-sh-w": `${o.width}px` } as React.CSSProperties}>
         {o.layout === "side" && (
           <aside className="zas-sh-side">
             {brand}
+            {userAt === "side" && sideUser === "top" && <div className="zas-sh-foot top"><UserCard user={profileInfo} up={false} /></div>}
             {nav}
-            {userAt === "side" && <div className="zas-sh-foot"><UserCard user={profileInfo} up /></div>}
+            {userAt === "side" && sideUser !== "top" && <div className="zas-sh-foot"><UserCard user={profileInfo} up /></div>}
           </aside>
         )}
         <div className="zas-sh-body">

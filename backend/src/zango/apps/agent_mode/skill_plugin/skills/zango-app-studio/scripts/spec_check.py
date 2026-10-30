@@ -60,6 +60,8 @@ BANNER_TONES = {"info", "warning", "danger", "success"}
 LAYOUTS = {"header_tabs", "header_tabs_sidebar", "header_sidebar_tabs_left"}
 COLUMN_SOURCES = {"field", "status", "tags", "computed", "path"}
 FORMATS = {"money", "percent", "number", "date", "datetime", "days", None}
+SHELL_USER = ("bottom", "top")
+STAT_FORMATS = {"money", "percent", "number", "days", None}
 BUILTIN = {
     "id": {"type": "integer", "label": "ID"},
     "created_at": {"type": "datetime", "label": "Created"},
@@ -523,6 +525,16 @@ def norm_entity(e, mod, sets):
         elif isinstance(ic, dict):
             c["icon"] = {"by": ic.get("by"), "map": {str(k): v for k, v in (ic.get("map") or {}).items()},
                          "default": ic.get("default")}
+        bd = c.get("badge")
+        if isinstance(bd, dict):  # a pill after the value, on the rows where `when` holds
+            c["badge"] = {"label": bd.get("label"), "when": bd.get("when"), "tone": bd.get("tone") or "gray"}
+        pg = c.get("progress")
+        if pg is True or isinstance(pg, dict):  # a step bar under a status: the workflow's order, or `steps`
+            all_codes = [s["code"] for s in (E["workflow"] or {}).get("statuses", [])]
+            steps = [str(x) for x in arr((pg if isinstance(pg, dict) else {}).get("steps"))] or all_codes
+            c["progress"] = {"steps": steps}
+        elif pg is False:
+            c.pop("progress")
         ncols.append({**c, "source": src,
                       "label": c.get("label") or (f or {}).get("label") or titleize(c["key"]),
                       "roles": arr(c.get("roles")) or None})
@@ -541,6 +553,7 @@ def norm_entity(e, mod, sets):
         ras.append(a)
     tb["row_actions"] = ras
     tb["footer_totals"] = arr(tb.get("footer_totals"))
+    tb["row_chevron"] = tb.get("row_chevron", False)
     E["table"] = tb
     E["access"] = norm_access(e.get("access") or tb.get("access"))
     E["form"] = copy.deepcopy(e.get("form") or {})
@@ -617,6 +630,18 @@ class Spec:
         if unknown:
             L.warn("app.ui", f"app.ui does not know {', '.join(unknown)} (only radius and density)")
         app["ui"] = {"radius": ui["radius"], "density": ui["density"]}
+        sh = app.get("shell")
+        if sh is not None and not isinstance(sh, dict):
+            L.error("app.shell", "app.shell is {user: bottom | top}")
+            sh = {}
+        sh = dict(sh or {})
+        if sh.get("user") is not None and sh["user"] not in SHELL_USER:
+            L.error("app.shell.user", f"app.shell.user {sh['user']!r} is not one of {', '.join(SHELL_USER)}")
+        unknown = sorted(set(sh) - {"user"})
+        if unknown:
+            L.error("app.shell", f"app.shell does not know {', '.join(unknown)} (only user)")
+        # where the sidebar's user card sits: its bottom (default) or its top, above the menu
+        app["shell"] = {"user": sh["user"] if sh.get("user") in SHELL_USER else "bottom"}
         if app.get("design") is not None:
             css, font_url, bad = design_css(app.get("design"))
             for b in bad:
@@ -643,7 +668,7 @@ class Spec:
                 L.error(f"roles.{name}", f"{name} is a framework role and cannot be declared")
             if len(name) > 50:
                 L.error(f"roles.{name}", "role names must be 50 characters or fewer")
-            R[name] = {**r, "name": name, "menu": arr(r.get("menu")), "slug": slug(name)}
+            R[name] = {**r, "name": name, "menu": copy.deepcopy(arr(r.get("menu"))), "slug": slug(name)}
 
         mods, ents = [], OrderedDict()
         for mod in arr(s.get("modules")):
@@ -923,6 +948,102 @@ class Spec:
         for i, b in enumerate(P["blocks"]):
             visit(b, f"pages.{P['code']}.blocks[{i}]")
 
+    def lint_page_stats(self, P, E):
+        """pages[].stats: KPI tiles over a crud page's rows, each {label, count: true | sum: <number
+        field>, where, format, icon, tone, hint}. Normalised in place; `ast` is the where clause."""
+        L, w = self.L, f"pages.{P['code']}.stats"
+        if not isinstance(P["stats"], list):
+            L.error(w, "stats is a list of {label, count: true | sum: <field>, where, format, icon, tone, hint}")
+            P["stats"] = []
+            return
+        if E is None:
+            L.error(w, "stats go on a crud page: they count its entity's rows")
+            P["stats"] = []
+            return
+        out = []
+        for i, st in enumerate(P["stats"]):
+            sw = f"{w}[{i}]"
+            if not isinstance(st, dict) or not st.get("label"):
+                L.error(sw, "a stat needs a label, and count: true or sum: <number field>")
+                continue
+            st = dict(st)
+            if st.get("sum"):
+                if E["fmap"].get(st["sum"], {}).get("type") not in ("money", "integer", "decimal", "number", "percent"):
+                    L.error(sw + ".sum", f"sum {st['sum']!r} is not a number field of {E['code']}")
+            elif st.get("count") is not True:
+                L.error(sw, "stat needs count: true or sum: <number field>")
+            if st.get("format") not in STAT_FORMATS:
+                L.error(sw + ".format", f"format {st.get('format')!r} is not one of {sorted(f for f in STAT_FORMATS if f)}")
+            if st.get("tone") is not None and st["tone"] not in TONES:
+                L.error(sw + ".tone", f"tone {st['tone']!r} is not one of {sorted(TONES)}")
+            if st.get("icon") is not None and not re.fullmatch(r"[a-z0-9-]+", str(st["icon"])):
+                L.error(sw + ".icon", f"icon {st['icon']!r} is not a lucide icon name")
+            if st.get("hint") is not None and not isinstance(st["hint"], str):
+                L.error(sw + ".hint", "hint is a short text under the figure")
+            unknown = sorted(set(st) - {"label", "count", "sum", "where", "format", "icon", "tone", "hint"})
+            if unknown:
+                L.error(sw, f"a stat does not know {', '.join(unknown)}")
+            st["ast"] = self.check_expr(E, st.get("where"), sw + ".where")
+            st["key"] = f"s{i + 1}"
+            out.append(st)
+        P["stats"] = out
+
+    def lint_menu_count(self, item, where):
+        """roles[].menu[].count: a number on the menu item, the rows of the page's entity the role can
+        see (true), or those matching `where` ({where}). Normalised in place to {where, ast}."""
+        L, pages, ents = self.L, self.M["pages"], self.M["entities"]
+        c = item["count"]
+        if c is not True and not (isinstance(c, dict) and set(c) <= {"where"}):
+            L.error(where, "count is true, or {where: <expression>}")
+            item.pop("count")
+            return
+        P = pages.get(item.get("page")) or {}
+        E = ents.get(P.get("entity")) if P.get("type") == "crud" else None
+        if E is None:
+            L.error(where, f"count needs a crud page: {item.get('page')!r} lists no entity")
+            item.pop("count")
+            return
+        wh = c.get("where") if isinstance(c, dict) else None
+        item["count"] = {"where": wh, "ast": self.check_expr(E, wh, where + ".where")}
+
+    def lint_stepper(self, V, H, w):
+        """detail_views[].header.stepper: the hero's lifecycle in the 360 header. true = every status in
+        workflow order; {steps: [codes]} = those. Normalised to {steps, exits}: for a status off the
+        steps (rejected), `exits` holds the index of the last step done when the record left them,
+        from the transitions into it (else the workflow order)."""
+        L = self.L
+        hd = V.get("header") or {}
+        sp = hd.get("stepper")
+        if sp in (None, False):
+            hd.pop("stepper", None)
+            return
+        wf = H.get("workflow")
+        if not wf:
+            L.error(w, f"stepper needs a workflow on {H['code']}")
+            hd.pop("stepper")
+            return
+        if sp is not True and not (isinstance(sp, dict) and set(sp) <= {"steps"}):
+            L.error(w, "stepper is true, or {steps: [status codes]}")
+            hd.pop("stepper")
+            return
+        order = [s["code"] for s in wf["statuses"]]
+        steps = [str(x) for x in arr(sp.get("steps") if isinstance(sp, dict) else None)] or order
+        bad = [x for x in steps if x not in order]
+        if bad:
+            L.error(w + ".steps", f"not statuses of {H['code']}: {bad}")
+            hd.pop("stepper")
+            return
+        if len(steps) < 2:
+            L.error(w + ".steps", "a stepper needs at least two steps")
+        exits = {}
+        for code in order:
+            if code in steps:
+                continue
+            froms = [steps.index(f) for t in wf["transitions"] if t.get("to") == code for f in t["from"] if f in steps]
+            exits[code] = max(froms) if froms else \
+                sum(1 for x in steps if order.index(x) < order.index(code)) - 1
+        hd["stepper"] = {"steps": steps, "exits": exits}
+
     def lint(self):
         M, L = self.M, self.L
         ents, roles, pages, dvs = M["entities"], M["roles"], M["pages"], M["detail_views"]
@@ -949,6 +1070,8 @@ class Spec:
                                 "put the hero's list page in the menu instead")
                     if i.get("icon") and not re.fullmatch(r"[a-z0-9-]+", str(i["icon"])):
                         L.warn(w + ".menu", f"icon {i['icon']!r} is not a lucide icon name")
+                    if i.get("count") not in (None, False):
+                        self.lint_menu_count(i, w + f".menu.{i.get('page')}.count")
             if not r["menu"]:
                 L.warn(w, "role has no menu: its users land on an empty app")
 
@@ -983,6 +1106,8 @@ class Spec:
                     if st.get("format") not in FORMATS:
                         L.error(w + ".subtitle.stat", f"unknown format {st.get('format')!r}")
                     st["ast"] = self.check_expr(E, st.get("where"), w + ".subtitle.stat.where")
+            if p.get("stats") is not None:  # KPI tiles between the page header and the table
+                self.lint_page_stats(p, ents.get(p.get("entity")) if t == "crud" else None)
             r = p.get("route")
             if not r or not str(r).startswith("/app"):
                 L.error(w, f"route {r!r} must start with /app")
@@ -1433,8 +1558,33 @@ class Spec:
                     L.error(cw + ".icon", "icon needs a name, or `by` with a `map`")
             if c.get("highlight"):
                 c["highlight"]["ast"] = self.check_expr(E, c["highlight"].get("when"), cw + ".highlight")
+            bd = c.get("badge")
+            if bd is not None:
+                if not isinstance(bd, dict) or not bd.get("label") or not isinstance(bd["label"], str):
+                    L.error(cw + ".badge", "badge is {label, when, tone}: a short label shown after the value when `when` holds")
+                elif bd.get("when") in (None, ""):
+                    L.error(cw + ".badge.when", "badge needs `when`, the rows it shows on")
+                else:
+                    if bd["tone"] not in TONES:
+                        L.error(cw + ".badge.tone", f"tone {bd['tone']!r} is not one of {sorted(TONES)}")
+                    bd["ast"] = self.check_expr(E, bd["when"], cw + ".badge.when")
+            pg = c.get("progress")
+            if pg is not None:
+                codes = [s["code"] for s in (wf or {}).get("statuses", [])]
+                if not isinstance(pg, dict):
+                    L.error(cw + ".progress", "progress is true, or {steps: [status codes]}")
+                elif c["source"] != "status" or not wf:
+                    L.error(cw + ".progress", "progress goes on a `source: status` column of an entity with a workflow")
+                else:
+                    bad = [x for x in pg["steps"] if x not in codes]
+                    if bad:
+                        L.error(cw + ".progress.steps", f"not statuses of {E['code']}: {bad}")
+                    elif len(pg["steps"]) < 2:
+                        L.error(cw + ".progress.steps", "progress needs at least two steps")
             if c.get("roles"):
                 chk_roles(cw, c["roles"])
+        if not isinstance(tb.get("row_chevron"), bool):
+            L.error(tw + ".row_chevron", "row_chevron is true or false")
         ds = tb.get("default_sort")
         if ds and ds.lstrip("-") not in E["fmap"] and ds.lstrip("-") not in BUILTIN:
             L.error(tw + ".default_sort", f"{ds!r} is not a field")
@@ -1545,6 +1695,8 @@ class Spec:
             if k is None:
                 L.error(where, f"{p!r}: {info}")
 
+        if "stepper" in hd:
+            self.lint_stepper(V, H, w + ".header.stepper")
         if hd.get("title"):
             chk_path(w + ".header.title", hd["title"])
         for s in arr(hd.get("subtitle")):
@@ -2202,6 +2354,8 @@ class Spec:
         for k in ("filterable", "sortable", "searchable"):
             if c.get(k):
                 col[k] = True
+        if isinstance(c.get("progress"), dict):  # a step bar under the status (row zas.status)
+            col["progress"] = {"steps": c["progress"]["steps"]}
         f = next((x for x in E["fields"] if x["key"] == c["key"]), None) if c.get("source") == "field" else None
         if f:
             col["type"] = f["type"]
@@ -2216,6 +2370,7 @@ class Spec:
         out = {"app": {"code": M["app"].get("code"), "name": M["app"]["name"],
                        "description": M["app"].get("description", ""), "locale": M["app"]["locale"],
                        "currency": M["app"]["currency"], "brand": M["app"]["theme"]["primary"], "ui": M["app"]["ui"],
+                       "shell": M["app"].get("shell") or {"user": "bottom"},
                        **({"design": M["app"]["design_ui"]} if M["app"].get("design_ui") else {}),
                        "roles": [{"name": r["name"], "description": r.get("description", "")} for r in M["roles"].values()],
                        "modules": [{"code": m["code"], "name": m["name"], "description": m.get("description", "")}
@@ -2229,6 +2384,9 @@ class Spec:
                 out["pages"][p["code"]]["subtitle"] = {
                     "text": p["subtitle"].get("text") or "",
                     **({"stat": {"format": st.get("format"), "suffix": st.get("suffix")}} if st else {})}
+            if p.get("stats"):  # KPI tiles: their figures come with the table metadata (zas.stats[<page>])
+                out["pages"][p["code"]]["stats"] = [{k: st.get(k) for k in ("key", "label", "format", "icon", "tone", "hint")
+                                                     if st.get(k) is not None} for st in p["stats"]]
             out["pages"][p["code"]]["export"] = p.get("component") if p.get("type") == "custom" and p.get("component") else p["export"]
         for E in ents.values():
             tb = E["table"]
@@ -2250,6 +2408,7 @@ class Spec:
                 "row_click": tb.get("row_click") or (E.get("detail_view") or "drawer"),
                 "add_button": tb.get("add_button") or f"Add {E['name']}",
                 "footer_totals": tb["footer_totals"],
+                **({"row_chevron": True} if tb.get("row_chevron") is True else {}),
                 "parents": {k: {"hero": v["hero"], "fk": v["fk"]} for k, v in E["parents"].items()},
                 "navigate": {a["key"]: a["to"] for a in tb["row_actions"]
                              if a["type"] == "navigate" and isinstance(a.get("to"), str)},
@@ -2286,6 +2445,8 @@ class Spec:
                 "page": V.get("page"), "states": V.get("states") or {}, "tabs": tabs, "sidebar": side,
                 "sticky_header": any("sticky" in str(cr.get("title", "")).lower() for cr in arr(V.get("custom_requirements"))),
             }
+            if (V.get("header") or {}).get("stepper"):  # the hero's lifecycle under the header (record.status)
+                out["detail_views"][V["code"]]["stepper"] = V["header"]["stepper"]
         for h in self.holes:
             if h["kind"] == "rebuild_page" and h["where"][6:] in out["pages"]:
                 out["pages"][h["where"][6:]]["rebuild"] = h["slot"]
@@ -2301,10 +2462,12 @@ class Spec:
                 if it.get("group"):
                     items.append({"group": it["group"], "icon": it.get("icon"),
                                   "items": [{"page": i["page"], "label": i.get("label") or pages.get(i["page"], {}).get("title"),
-                                             "icon": i.get("icon")} for i in arr(it.get("items"))]})
+                                             "icon": i.get("icon"), **({"count": True} if i.get("count") else {})}
+                                            for i in arr(it.get("items"))]})
                 else:
+                    # count: the item shows how many rows the role can see (zas.menu_count of the page's metadata)
                     items.append({"page": it.get("page"), "label": it.get("label") or pages.get(it.get("page"), {}).get("title"),
-                                  "icon": it.get("icon")})
+                                  "icon": it.get("icon"), **({"count": True} if it.get("count") else {})})
             out["menus"][r["name"]] = {"landing": r.get("landing"), "items": items}
         return out
 

@@ -20,11 +20,14 @@ derived name (contracts.md §1).
 | `app.theme.primary` | default `#4F46E5` | `--brand` (frontend tokens) |
 | `app.ui.radius` | `sharp` · `rounded` (default) · `soft` | `data-zas-radius` → `--z-r-card/-head/-ctl` |
 | `app.ui.density` | `compact` · `comfortable` (default) | `data-zas-density` → `--z-ctl-h`, `--z-cell-y`, `--z-th-y`, `--z-page-pad` |
+| `app.shell.user` | `bottom` (default) · `top` | `makeShell`: the sidebar user card above the menu (`sideUser`, default from `spec.ui.json` `app.shell`) |
 | `app.custom_requirements[]` | holes `app__req__N` | [custom-code](../custom-code.md) |
 | `choice_sets.<code>` | `[{id, label, color?}]` | `<CODE>_CHOICES` constants ([models](../map/models.md)) |
 | `roles[]` (list or map) | keyed by `name`; `slug` added | `roles.json`, policies, menus ([access](../map/access.md)) |
 | `roles[].landing / menu[]` | menu items `{page, label, icon}` or `{group, icon, items}` | AppBuilder menu per role ([pages-menus](../map/pages-menus.md)) |
+| `roles[].menu[].count` | `true` or `{where}` on a crud page's item → `{where, ast}` | `makeShell` asks `get_table_metadata&zas_menu=<page>` → `zas.menu_count` (role-scoped) |
 | `pages[]` | `title` defaults to the entity plural; `export = Page_<code>` | AppBuilder route ([pages-menus](../map/pages-menus.md)) |
+| `pages[].stats` (crud) | each `{label, count \| sum, where, format, icon, tone, hint}` → `key` s1…, `where` → `ast` | `zas.stats[<page>]` in the table metadata (role-scoped), drawn by `ZasTable` as `.zas-lstat` tiles |
 | `modules[]` | `url` = code with `-`; `entity_order` (FK order) | `backend/<code>/` |
 | `modules[].entities[]` | see Entity | model + CRUD view |
 | `detail_views[]` | `page` back-filled from the detail page | `<Hero>Detail` + `ZasDetail360` ([detail-views](../map/detail-views.md)) |
@@ -52,6 +55,7 @@ derived name (contracts.md §1).
 | `validation.rules / duplicate_check` | `when/require_expr/where` parsed to `*_ast` | `ZasFormMixin.clean` |
 | `table.columns` | absent → first 6 non-long fields + `status`; `as`→`source`; `custom`→`computed`; `computed` with `path` → `path` | `ModelTable` columns ([tables](../map/tables.md)) |
 | `table.columns[].secondary`, `secondary_style`, `icon` | `secondary` → list of field paths (a second, muted line joined by " · "; `secondary_style: mono` sets it monospace); `icon` name → `{by: null, map: {}, default}`, `{by, map, default}` picks per row by a field's value, `initials` draws the value's initials | runtime: row `zas.sub` / `zas.icon`, drawn by `ZasTable` |
+| `table.columns[].badge`, `progress`; `table.row_chevron` | `badge: {label, when, tone}` → `ast`; `progress: true` → `{steps: <all statuses>}` (status columns) | runtime: row `zas.badge[key] = {label, tone}`; progress from `zas.status` and `spec.ui.json` column `progress.steps`; `row_chevron` in `spec.ui.json` entity |
 | `table.quick_filters` | `key` = slug(label); `default` is ignored: a list always opens with no chip selected | `?qf=` filter |
 | `table.row_actions` (alias `can_do`) | `type` default **confirm**; `do`→`label`; `by`→`roles` | `row_actions` list |
 | `custom_requirements[]` | holes `<entity>__req__N` | [custom-code](../custom-code.md) |
@@ -66,6 +70,7 @@ all actions when `access` is absent), `workflow.statuses[].wf_color`.
 |---|---|---|
 | `hero, title, back_to, layout, roles` | `layout` default `header_tabs` | `zas_view` config |
 | `header.{avatar, title, subtitle, badges, facts, actions, banners}` | `show_when` → `show_when_ast` | `data.zas.header` |
+| `header.stepper` | `true` → `{steps: <all statuses>, exits}`; `{steps}` → same; `exits[<off status>]` = index of the last step done (from the transitions into it) | `spec.ui.json` `detail_views[].stepper`, drawn from `record.status` |
 | `stats[].value.{count, sum, field, text}` | `where` → `where_ast`; registers a parent param | `data.zas.stats` |
 | `sidebar[] / tabs[].sections[]` | `type` default `fields` | `data.zas.panels` / `mini_tables` |
 | `tabs[]` (`related_table`) | adds `param`, `preset` (one-hop FK) | child `ZasTable` on `<endpoint>?<param>=<uuid>` |

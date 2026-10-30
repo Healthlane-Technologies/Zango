@@ -88,13 +88,25 @@ LAYERS = (
     ("design", "zas_test.design", True, True),
     ("scenarios", "zas_test.scenarios", False, True),
 )
-DESIGN_BROWSER_GROUPS = ("gallery", "tokens", "tree", "layout", "parity", "kit")
+DESIGN_BROWSER_GROUPS = (
+    "gallery",
+    "tokens",
+    "tree",
+    "layout",
+    "parity",
+    "kit",
+    "style",
+)
 # Look-only failures (preview parity, screenshot goldens, layout) go to the fix rounds, then stay in
 # the report as gaps, never failing the build. Kept equal to zas_test/report.py NON_BLOCKING, so the
 # run status and the report's verdict agree.
 NON_FAILING = ("design.layout", "design.gallery", "design.parity", "design.kit")
 # The app's kit against the prototype (zas_test/kit.py): its own rounds (kit_rounds), not the fix rounds.
 KIT_CHECK = "design.kit"
+# design_diff (zas_test/style.py): the built app's computed styles against the approved prototype on
+# what the creator changed. Its own rounds (style_rounds), and it fails the build: the creator's
+# design changes are the contract, not a look figure.
+STYLE_CHECK = "design.style"
 APP_LAYERS = tuple(name for name, _, _, needs_app in LAYERS if needs_app)
 BROWSER_LAYERS = tuple(name for name, _, browser, _ in LAYERS if browser)
 # The one bring-up step that needs the app reachable on its own domain.
@@ -182,6 +194,13 @@ def kit_rounds() -> int:
     from django.conf import settings
 
     return max(0, int(getattr(settings, "AGENT_MODE_KIT_ROUNDS", 3)))
+
+
+def style_rounds() -> int:
+    """How many times the agent fixes what design_diff reports on the creator's design changes."""
+    from django.conf import settings
+
+    return max(0, int(getattr(settings, "AGENT_MODE_STYLE_ROUNDS", 4)))
 
 
 def look_rounds() -> int:
@@ -568,7 +587,7 @@ class StudioBuild:
                 f
                 for f in layer.failures
                 if f.get("id") not in drop
-                and not str(f.get("id", "")).startswith(KIT_CHECK)
+                and not str(f.get("id", "")).startswith((KIT_CHECK, STYLE_CHECK))
             ]
             if len(keep) == len(layer.failures):
                 out[name] = layer
@@ -909,6 +928,11 @@ class StudioBuild:
                     skipped_reason=f"approval bundle failed: {exc}"[:300],
                 )
             )
+            if prototype:
+                # the approved prototype is the design contract: its bundle is written regardless
+                self.write_prototype_bundle(
+                    prototype, out / "prototype", emit, baseline=baseline
+                )
             return None
         finally:
             if probe is not None:
@@ -944,8 +968,10 @@ class StudioBuild:
         self, parts: dict, out: Path, emit=None, baseline=None
     ) -> dict | None:
         """.zas/bundle/prototype/ (open mode): the approved prototype, per screen x role, and the
-        change map against ``baseline`` ((label, parts): changes.json, diff.patch). Never fails
-        the build."""
+        change map against ``baseline`` ((label, parts): changes.json, diff.patch). The approved
+        design is what the build is checked against (design_diff), so a bundle that can't be written
+        is tried once more and then stops the build: building without it would silently drop the
+        creator's design."""
         import time
 
         from zango.apps.shared.app_templates.services.spec import yamlio
@@ -961,14 +987,25 @@ class StudioBuild:
             design = (
                 (doc.get("app") or {}).get("design") if isinstance(doc, dict) else None
             )
-            capture = write_prototype_bundle(
-                parts,
-                out,
-                design=design,
-                soon=soon_menu(spec_text),
-                baseline=baseline,
-            )
-        except Exception as exc:  # noqa: BLE001 - the bundle is an aid, not a gate
+            try:
+                capture = write_prototype_bundle(
+                    parts,
+                    out,
+                    design=design,
+                    soon=soon_menu(spec_text),
+                    baseline=baseline,
+                )
+            except Exception as exc:  # noqa: BLE001 - once more from a clean folder
+                logger.warning("agent_mode: prototype bundle failed, retrying: %s", exc)
+                shutil.rmtree(out, ignore_errors=True)
+                capture = write_prototype_bundle(
+                    parts,
+                    out,
+                    design=design,
+                    soon=soon_menu(spec_text),
+                    baseline=baseline,
+                )
+        except Exception as exc:  # noqa: BLE001
             logger.warning("agent_mode: prototype bundle failed: %s", exc)
             self.steps.append(
                 StepResult(
@@ -977,7 +1014,12 @@ class StudioBuild:
                     skipped_reason=f"prototype bundle failed: {exc}"[:300],
                 )
             )
-            return None
+            raise StudioError(
+                "prototype_bundle",
+                f"The approved prototype could not be prepared for the build: {exc}"[
+                    :500
+                ],
+            ) from exc
         screens = capture.get("screens") or []
         shots = sum(1 for s in screens for r in s.get("roles") or [] if r.get("files"))
         broken = sum(
@@ -2165,7 +2207,11 @@ class StudioBuild:
         elif resume_agent is not None and bring_up_ok:
             before = self.custom_fingerprint()
             bring_up_ok = self.kit_rounds(layers, creds, resume_agent, emit, hold_steps)
-            # a kit round restyles every screen: the built-screen shots are stale
+            if bring_up_ok:
+                bring_up_ok = self.style_rounds(
+                    layers, creds, resume_agent, emit, hold_steps
+                )
+            # a kit or style round restyles every screen: the built-screen shots are stale
             parity_stale = parity_stale or self.custom_fingerprint() != before
         if not actions and resume_agent is not None and bring_up_ok:
             bring_up_ok = self.look_rounds(
@@ -2414,6 +2460,91 @@ class StudioBuild:
             if fresh is not None:
                 layers["design"] = _merge_scoped(design, fresh, KIT_CHECK)
         return True
+
+    def style_rounds(self, layers, creds, resume_agent, emit, hold_steps) -> bool:
+        """Template apps: send what design_diff reports on the creator's design changes back to the
+        agent, compare again. Up to ``style_rounds()`` rounds, stopping when nothing blocks, when the
+        agent changes nothing, or when a round fixes nothing. What is left fails the build.
+        Updates ``layers``; returns bring_up_ok."""
+        total = style_rounds()
+        best = None
+        for n in range(1, total + 1):
+            design = layers.get("design")
+            gaps = [
+                f
+                for f in (design.failures if design else [])
+                if str(f.get("id", "")).startswith(STYLE_CHECK)
+            ]
+            if not gaps:
+                break
+            count = self.style_blocking_count()
+            if best is not None and count is not None and count >= best:
+                if emit:
+                    emit(
+                        "sys",
+                        "The last style round fixed nothing; the rest stays in the report.",
+                        level="sys",
+                    )
+                break
+            best = count if count is not None else best
+            if emit:
+                emit(
+                    "sys",
+                    f"Style {n} of {total}: {len(gaps)} screen(s) differ from the approved design.",
+                    level="sys",
+                )
+            before = self.custom_fingerprint()
+            if not resume_agent(self.style_digest(n, total, gaps)):
+                break
+            if self.custom_fingerprint() == before:
+                if emit:
+                    emit(
+                        "sys",
+                        "The agent changed nothing; the rest stays in the report.",
+                        level="sys",
+                    )
+                break
+            if not self.bring_up(creds, emit, hold=hold_steps):
+                return False
+            fresh = self.verify(
+                emit, only={"design": ["style"]}, bring_up_ok=True, scope=("style",)
+            ).get("design")
+            if fresh is not None:
+                layers["design"] = _merge_scoped(design, fresh, STYLE_CHECK)
+        return True
+
+    def style_blocking_count(self):
+        """How many blocking differences design_diff found last time, or None."""
+        try:
+            data = json.loads(
+                (self.zas_dir / "style_diff.json").read_text(encoding="utf-8")
+            )
+        except (OSError, ValueError):
+            return None
+        return sum(len(r.get("blocking") or []) for r in data.get("screens") or [])
+
+    def style_digest(self, n: int, total: int, gaps) -> str:
+        """A style round's message: every screen whose styles differ from the approved design on
+        what the creator changed, the differences, and where the approved values are."""
+        lines = [
+            f"Style round {n} of {total}. The built app does not show the creator's approved design on "
+            "these screens: design_diff compared each part's computed styles with "
+            "`.zas/bundle/prototype/prototype.html`. Fix each difference in "
+            "`frontend/src/custom/kit/kit.css` on the runtime selector it names (`.zas-…`), with the "
+            "approved value. `.zas/style_fix.css` already has every approved value on its runtime "
+            "selector: start from it (copy the rules into kit.css, keep the `html ` prefix so they win "
+            "over tokens.css), never restyle with a screen's own code. Every difference is in "
+            '`.zas/style_diff.md`. Rebuild and deploy the frontend, then studio_verify(["style"]).',
+            "",
+        ]
+        for f in gaps:
+            lines.append(f"- {f.get('id')}: {f.get('detail') or f.get('title')}")
+        if n == total:
+            lines += [
+                "",
+                "This is the last style round: what still differs fails the build.",
+            ]
+        return "\n".join(lines)
 
     def kit_digest(self, n: int, total: int, gaps) -> str:
         """A kit round's message: each piece over the limit, the prototype's crop next to the app's."""

@@ -4,7 +4,7 @@
 // in data.zas (contracts §8); this component only lays it out.
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, ArrowRightCircle, CircleX, Pencil, Tag as TagIcon, Zap } from "lucide-react";
+import { ArrowLeft, ArrowRight, ArrowRightCircle, Check, CircleX, Pencil, Tag as TagIcon, X, Zap } from "lucide-react";
 import * as api from "./api";
 import { SPEC, detailUrl, pageUrl, tone, viewUrl } from "./config";
 import { ConfirmDialog, FormDialog, useDialog } from "./dialogs";
@@ -26,6 +26,33 @@ function Slot({ name, dataKey }: { name?: string; dataKey?: string | null }) {
 }
 
 // ───────── header ─────────
+/** header.stepper: the hero's lifecycle. Steps before the record's status are done, its status is the
+ * current one; a status off the steps (rejected) ends the line where the record left it (`exits`). */
+function Stepper({ steps, exits, status, hero }: { steps: string[]; exits: Record<string, number>; status: string | null; hero: string }) {
+  const S = SPEC.entities[hero]?.statuses || {};
+  const at = status ? steps.indexOf(status) : -1;
+  const off = status && at < 0 && status in exits ? exits[status] : null;
+  const shown = off === null ? steps : steps.slice(0, off + 1);
+  const last = steps.length - 1;
+  return (
+    <div className="zas-stepper" data-zas="stepper" data-zas-key={status || ""}>
+      {shown.map((code, i) => {
+        const state = off !== null || i < at || (i === at && at === last) ? "done" : i === at ? "cur" : "";
+        return (
+          <div key={code} className={cx("zas-step", state)} data-zas="step" data-zas-key={code}>
+            <i>{state === "done" ? <Check /> : i + 1}</i><span>{S[code]?.label || code}</span>
+          </div>
+        );
+      })}
+      {off !== null && status && (
+        <div className="zas-step end" data-zas="step" data-zas-key={status}>
+          <i><X /></i><span>{S[status]?.label || status}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Header({ data }: { data: DetailResponse }) {
   const d = useDetail();
   const z = d.zas;
@@ -130,6 +157,9 @@ function Header({ data }: { data: DetailResponse }) {
           <Menu items={more} />
         </div>
       </div>
+      {!stuck && d.view.stepper && (
+        <Stepper steps={d.view.stepper.steps} exits={d.view.stepper.exits || {}} status={z.record.status} hero={d.view.hero} />
+      )}
       {!stuck && h.facts.length > 0 && (
         <div className="zas-dfacts">
           {h.facts.map((f) => (

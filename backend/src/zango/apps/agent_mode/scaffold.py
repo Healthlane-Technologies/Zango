@@ -126,8 +126,10 @@ def launch_app(scaffold) -> None:
 
         version = scaffold.template_version
         identity = AppIdentity(
-            name=sanitize_name(slug_from_prompt(scaffold.app_label))
-            or sanitize_name(scaffold.app_label)
+            # The creator's own name, verbatim (only normalised to a legal identifier);
+            # the prompt slugger would drop short words like "zz" or "my".
+            name=sanitize_name(scaffold.app_label)
+            or slug_from_prompt(scaffold.app_label)
             or "new_app",
             label=scaffold.app_label,
             description=(version.template.one_liner if version is not None else "")[

@@ -527,6 +527,64 @@ def _is_screen_part(path: str) -> bool:
     return path.startswith("screens/")
 
 
+CSS_RULE = re.compile(r"([^{}]+)\{([^{}]*)\}")
+CSS_CLASS = re.compile(r"\.(-?[_a-zA-Z][\w-]*)")
+ROOT_SELECTOR = re.compile(r"^(?::root|html|body)(?![\w-])")
+
+
+def _css_rules(css: str) -> set:
+    """A stylesheet's innermost rules as (selector, declarations), whitespace-normalised: an
+    @media block's rules count by themselves."""
+    css = re.sub(r"/\*.*?\*/", "", css or "", flags=re.S)
+    out = set()
+    for sel, body in CSS_RULE.findall(css):
+        sel = re.sub(r"\s+", " ", sel).strip()
+        decls = sorted(
+            re.sub(r"\s+", " ", d).strip() for d in body.split(";") if d.strip()
+        )
+        if sel and not sel.startswith("@"):
+            out.add((sel, ";".join(decls)))
+    return out
+
+
+def look_changes(parts: dict, base: dict) -> dict:
+    """The shared stylesheets that differ from the baseline, the classes their changed rules name
+    (``touched``: the parts of the screens the creator's design changes reach; "*" when a variable
+    on :root changed, which reaches everything) and each one's unified diff."""
+    import difflib
+
+    sheets = sorted(
+        p
+        for p in set(parts) | set(base)
+        if p.endswith(".css") and not _is_screen_part(p)
+    )
+    changed = [p for p in sheets if (parts.get(p) or "") != (base.get(p) or "")]
+    touched: set = set()
+    diffs: dict = {}
+    for p in changed:
+        for sel, decls in _css_rules(parts.get(p) or "") ^ _css_rules(
+            base.get(p) or ""
+        ):
+            for one in sel.split(","):
+                one = one.strip()
+                if ROOT_SELECTOR.match(one) and "--" in decls:
+                    touched.add("*")
+                touched |= set(CSS_CLASS.findall(one))
+
+        def lines(text):
+            return re.sub(r"\}(?!\n)", "}\n", text or "").splitlines(keepends=True)
+
+        diffs[p] = "".join(
+            difflib.unified_diff(
+                lines(base.get(p)),
+                lines(parts.get(p)),
+                fromfile=f"baseline/{p}",
+                tofile=f"approved/{p}",
+            )
+        )
+    return {"parts": changed, "touched": sorted(touched), "diffs": diffs}
+
+
 def change_map(
     parts: dict, baseline_parts: dict | None, label: str = ""
 ) -> tuple[dict, dict]:
@@ -616,6 +674,8 @@ def change_map(
         "screens": screens,
         "removed": sorted(i for i in base_ids if i and i not in screens),
     }
+    if base:
+        changes["look"] = look_changes(parts, base)
     return changes, patches
 
 
@@ -624,6 +684,15 @@ def write_change_map(out_dir, parts: dict, baseline) -> dict:
     label, base = baseline if baseline else ("", {})
     changes, patches = change_map(parts, base, label)
     out = Path(out_dir)
+    look = changes.get("look")
+    if look:
+        # the CSS diffs go next to the map, one file per changed stylesheet; the map names them
+        texts, look["diffs"] = look.get("diffs") or {}, {}
+        for part, text in texts.items():
+            rel = "shared/" + part.replace("/", "__") + ".diff"
+            (out / "shared").mkdir(parents=True, exist_ok=True)
+            (out / rel).write_text(text, encoding="utf-8")
+            look["diffs"][part] = rel
     (out / "changes.json").write_text(json.dumps(changes, indent=2), encoding="utf-8")
     for sid, patch in patches.items():
         folder = out / "screens" / sid
@@ -696,6 +765,12 @@ def write_prototype_bundle(
     (out / "capture.json").write_text(json.dumps(capture, indent=2), encoding="utf-8")
     # Template mode: what changed against the baseline, so the build ports only that.
     changes = write_change_map(out, parts, baseline) if baseline is not None else None
+    if baseline and baseline[1]:
+        # The page the creator started from: design_diff (zas_test/style.py) renders it next to the
+        # approved one, so only what the creator changed blocks the build.
+        (out / "baseline.html").write_text(
+            assemble(baseline[1], soon), encoding="utf-8"
+        )
     if changes is not None:
         capture["changes"] = changes
     (out / "index.md").write_text(
@@ -737,9 +812,11 @@ def prototype_index_md(capture: dict, manifest: dict, design=None, changes=None)
     if changes is not None:
         glob = changes.get("global") or {}
         changed = [k for k, v in glob.items() if v == "changed"]
+        look = changes.get("look") or {}
+        touched = look.get("touched") or []
         lines += [
-            f"**Change map** (`changes.json`) against {changes.get('baseline')}: read the Change "
-            "column first and do only what it says (`references/open-mode.md`, \"Change map\"). "
+            f"**Change map** (`changes.json`) against {changes.get('baseline')}: the Change column "
+            "says which screens need structural work (`references/open-mode.md`, \"Change map\"). "
             + (
                 "Shared look changed: " + ", ".join(f"`{c}`" for c in changed) + "."
                 if changed
@@ -754,6 +831,26 @@ def prototype_index_md(capture: dict, manifest: dict, design=None, changes=None)
             ),
             "",
         ]
+        if touched:
+            lines += [
+                "**The look changed** in "
+                + ", ".join(
+                    f"`{p}` (`{(look.get('diffs') or {}).get(p, '')}`)"
+                    for p in look.get("parts") or []
+                )
+                + ". It reaches "
+                + (
+                    "every part of every screen (a variable on `:root` changed)"
+                    if "*" in touched
+                    else "the parts drawn with "
+                    + ", ".join(f"`.{c}`" for c in touched[:40])
+                )
+                + ". The built app must show these exactly as `prototype.html` does, on every screen "
+                'and role: `studio_verify(["style"])` (design_diff) compares the computed styles of '
+                'each part and fails the build until they match (`references/open-mode.md`, "Style '
+                'parity").',
+                "",
+            ]
     lines += [
         "| Screen | Title | Roles | Record | Files | Problems |"
         + (" Change |" if changes is not None else ""),

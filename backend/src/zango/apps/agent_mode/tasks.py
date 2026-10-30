@@ -1633,7 +1633,12 @@ def agent_requirement_turn(self, requirement_uuid: str, tenant_name: str) -> dic
     bench = None
     try:
         ctx = build_app_context(tenant)
-        from .documents import attachment_note, has_design_reference, write_docs_dir
+        from .documents import (
+            attachment_note,
+            has_design_reference,
+            is_look_request,
+            write_docs_dir,
+        )
         from .preview_focus import focus_note
 
         # The user's documents, where the analyst can read them.
@@ -1660,7 +1665,27 @@ def agent_requirement_turn(self, requirement_uuid: str, tenant_name: str) -> dic
 
             proto = None
             if req.preview_mode == "open":
-                from .prototype import PrototypeBench
+                from .prototype import PrototypeBench, parts_hash
+                from .prototype_kit import refreshed_kit_parts
+
+                # A kit-page prototype draws with the current kit, so the analyst can use what
+                # it draws now (the app's own parts stay as they are).
+                try:
+                    fresh = refreshed_kit_parts(req)
+                except Exception:  # noqa: BLE001 - the old kit still draws the app
+                    logger.exception("agent_mode: kit refresh failed for %s", req.pk)
+                    fresh = None
+                if fresh:
+                    req.prototype_parts = fresh
+                    req.prototype_hash = parts_hash(fresh)
+                    req.prototype_revision += 1
+                    req.save(
+                        update_fields=[
+                            "prototype_parts",
+                            "prototype_hash",
+                            "prototype_revision",
+                        ]
+                    )
 
                 # Open mode: the analyst writes the prototype itself; the template's
                 # kit preview and its sketch probe do not apply.
@@ -1686,8 +1711,13 @@ def agent_requirement_turn(self, requirement_uuid: str, tenant_name: str) -> dic
                 proto=proto,
             )
             bench.reference_turn = has_design_reference(req, last_user)
+            bench.look_turn = is_look_request(req, last_user)
+            bench.reference_html = (
+                bench.reference_turn
+                and last_user.attachments.filter(content_type="text/html").exists()
+            )
             spec_server = build_spec_server(bench)
-            if bench.reference_turn:
+            if bench.reference_turn or bench.look_turn:
                 stream.end_check = bench.reference_gap
         stream.options = build_analyst_options(
             ctx=ctx,

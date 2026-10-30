@@ -143,10 +143,11 @@ class KitPartsTests(unittest.TestCase):
     def test_the_theme_and_canonical_tokens(self):
         tokens = self.parts["tokens.css"]
         self.assertIn("--brand: #7C3AED;", tokens)
-        self.assertIn("--border: var(--bd);", tokens)
+        # the greys the kit draws the app with, not the Studio page's own variables
+        self.assertIn("--border: #EAECF0;", tokens)
         design = design_tokens(self.parts)
         self.assertEqual(design["tokens"]["brand"], "#7C3AED")
-        self.assertEqual(design["tokens"]["border"], "#E2E4E9")
+        self.assertEqual(design["tokens"]["border"], "#EAECF0")
 
     def test_open_spec_adds_design_and_screen_map_and_keeps_comments(self):
         text = pk.open_spec(SPEC, self.parts)

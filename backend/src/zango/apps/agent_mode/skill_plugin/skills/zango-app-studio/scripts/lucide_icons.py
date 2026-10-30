@@ -36,6 +36,10 @@ def collect(resolved):
         for c in (e.get("table") or {}).get("columns", []) or []:
             ic = c.get("icon") or {}
             names |= {n for n in [*(ic.get("map") or {}).values(), ic.get("default")] if n and n != "initials"}
+    for p in resolved.get("pages", {}).values():  # a list page's KPI tiles
+        for s in p.get("stats", []) or []:
+            if isinstance(s, dict) and s.get("icon"):
+                names.add(s["icon"])
     for v in resolved.get("detail_views", {}).values():
         for s in v.get("stats", []) or []:
             if s.get("icon"):

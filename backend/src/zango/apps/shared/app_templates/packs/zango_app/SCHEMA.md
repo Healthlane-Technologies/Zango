@@ -116,8 +116,9 @@ prototype: {...}        # open mode only
 `code` (snake_case), `name`, `description`, `timezone` (e.g. Asia/Kolkata),
 `locale` (en-IN), `currency` (ISO code, INR), `theme: {primary, secondary}`
 (hex colours; the preview uses `primary` as the brand colour),
-`ui: {radius, density}` for the look, and `custom_requirements` for app-wide
-needs (SSO, audit export…).
+`ui: {radius, density}` for the look, `shell: {user: bottom | top}` (where
+the sidebar's user card sits: its bottom, the default, or its top above the
+menu), and `custom_requirements` for app-wide needs (SSO, audit export…).
 
 `ui` is the whole of what the look can be, as choices the preview and the
 built app make the same way: `radius` sharp · rounded (default) · soft and
@@ -224,6 +225,14 @@ choice_sets:
 Icons are lucide icon names. A role only sees pages that are in its menu (or
 reached from one, such as a 360 page) and that its entity access allows.
 
+A menu item of a crud page can show a number: `count: true` (the rows of the
+page's entity the role can see) or `count: { where: <expression> }` (those
+matching it):
+
+```yaml
+    - { page: requests, icon: inbox, count: { where: "status in [received, in_progress]" } }
+```
+
 ## `pages`
 
 Global routes; menus refer to them by `code`.
@@ -239,6 +248,25 @@ Global routes; menus refer to them by `code`.
   limits who sees it. It needs a `preview` sketch and a contract (below).
 
 Every page has a `route` starting with `/app/` and usually a `title`.
+
+A crud page may set `subtitle`, the line under its title (default: "N records"):
+text, or `{text, stat}` where `stat` adds a live figure:
+
+```yaml
+- { code: referrals, type: crud, entity: referral, title: Referrals,
+    subtitle: { text: Referrals from the PAP CRM, stat: { count: true, where: "status != closed", suffix: in progress } } }
+```
+
+It may also set `stats`, KPI tiles between the header and the table, over the
+rows the viewer can see. Each tile is `{label, count: true | sum: <number
+field>, where, format (money · percent · number · days), icon, tone, hint}`:
+
+```yaml
+  stats:
+    - { label: Active, count: true, where: status == active, icon: circle-check, tone: green }
+    - { label: Awaiting confirmation, count: true, where: status == pending, tone: amber, hint: OTP not entered yet }
+    - { label: Requested, sum: amount, format: money, icon: wallet }
+```
 
 ### Other ways to show a list: `views` (crud pages)
 
@@ -563,6 +591,7 @@ table:
   page_size: 25
   quick_filters:
     - { label: Pending my approval, where: status == pending_approval, roles: [Procurement Manager], default: true }
+    - { label: New, where: status == new, count: true }     # count: the chip shows how many match
   row_click: vendor_360              # a detail_view code | <view>#<tab> | drawer | none
   add_button: Add Vendor
   row_actions:
@@ -580,8 +609,31 @@ lists this entity (`request_360#agreement`: an agreement row opens its request
 on the Agreement tab). The tab must be a related_table of this entity.
 
 Column `source`: field (default), status, tags, computed (describe it in
-`shows`) or a `path`. Workflow transitions and tag toggles are added to the
+`shows`) or a `path`.
+
+A column can carry more than its value, the way a designed list does:
+
+```yaml
+    - patient: { label: Patient, icon: initials, secondary: [uid, mobile], secondary_style: mono }
+    - code:    { label: Referral, secondary: [product, channel] }        # "Tagrisso · FC Incoming" under the code
+    - channel: { icon: { by: channel, map: { phone: phone, portal: globe }, default: circle } }
+```
+
+`secondary` is a muted second line (one path or several, joined with " · ";
+`secondary_style: mono` for codes), `icon` an avatar of the value's initials
+(`initials`), a lucide icon, or one per value (`{by, map, default}`). Workflow transitions and tag toggles are added to the
 row menu automatically.
+
+```yaml
+    - due_date: { label: Due, badge: { label: Overdue, when: "due_date < today", tone: red } }   # a pill after the value
+    - status:   { source: status, progress: true }        # a step bar and "Step 2 of 4" under the status
+    - status:   { source: status, progress: { steps: [received, in_progress, completed] } }
+  row_chevron: true                                       # a chevron at the end of rows that open something
+```
+
+`badge` shows its `label` after the value on the rows where `when` holds.
+`progress` (status columns only) draws the workflow's statuses in order, or
+`steps`; a status off the steps shows the badge alone.
 
 ## `detail_views` (360 pages)
 
@@ -643,6 +695,17 @@ One per hero entity that needs a 360 page; a `detail` page points at it.
 `via` must be a link path on the tab's entity that ends at the hero
 (`purchase_order.vendor` for invoices under a vendor). Every block accepts
 `roles` and `show_when`.
+
+`header.stepper` draws the hero's lifecycle under the header: its workflow
+statuses in order (`true`) or `{steps: [status codes]}`. Steps before the
+record's status are done and its status is current. A status off the steps
+(rejected, withdrawn) ends the line with a marker after the step the record
+left from (the furthest `from` of the transitions into it):
+
+```yaml
+  header:
+    stepper: { steps: [draft, submitted, approved, active] }   # rejected shows as an end marker
+```
 
 ## What the checks enforce
 

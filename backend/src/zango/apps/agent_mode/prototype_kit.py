@@ -38,6 +38,24 @@ KIT_SOURCE = "kit"
 
 # The kit's custom properties under the canonical design-token names the build maps
 # (prototype.DESIGN_TOKENS). They point at the kit's own, so editing either moves the look.
+# What the kit page draws the app area with (app-studio.html's .z-* / .d-* rules use these greys
+# directly). The page's :root variables of the same names belong to the Studio around it, not to the
+# app, so a kit prototype's tokens.css (and so app.design) carries these instead. They are also the zas
+# runtime's defaults: a stock template builds with the greys its preview shows.
+KIT_APP_LOOK = {
+    "page": "#F7F8FA",
+    "card": "#FFFFFF",
+    "sunk": "#F2F4F7",
+    "text-strong": "#101828",
+    "text": "#101828",
+    "text-2": "#475467",
+    "text-3": "#667085",
+    "text-faint": "#98A2B3",
+    "border-faint": "#F2F4F7",
+    "border": "#EAECF0",
+    "border-strong": "#D0D5DD",
+}
+
 CANONICAL = {
     "page": "page",
     "card": "card",
@@ -576,7 +594,8 @@ BRIDGE_CSS = """/* The kit page is a preview here: its YAML pane and studio head
 """
 BRIDGE_JS = r"""/* Starts the kit page on this app's spec and tells the preview where the user is.
    The kit draws everything from the YAML (imported/script-zy-spec.js): change the YAML and the
-   pages, forms, filters and status changes change with it. */
+   pages, forms, filters and status changes change with it. The look goes in look.css (loaded after
+   every other stylesheet), as rules on the kit's own classes (.d-head, .d-fact, .z-card, .z-t th…). */
 (function () {
   var ROLES = __ROLES__;   // role code -> the spec's role name
   var CODES = {};
@@ -787,17 +806,15 @@ def imported_parts(cap: dict, kit_html: str, spec_text: str) -> dict:
         "__ROLES__", json.dumps(manifest["roles"], ensure_ascii=False)
     )
     parts["imported/bridge.css"] = BRIDGE_CSS
-    resolved = cap.get("vars") or {}
-    canon = [
-        f"  --{c}: var(--{k});"
-        for c, k in CANONICAL.items()
-        if f"--{k}" in resolved and f"--{c}" not in resolved
-    ]
+    studio = set(CANONICAL) | set(CANONICAL.values())
+    resolved = {n: v for n, v in (cap.get("vars") or {}).items() if n[2:] not in studio}
+    canon = [f"  --{c}: {v};" for c, v in KIT_APP_LOOK.items()]
     if "--brand" in resolved:
         canon.append("  --brand-soft: var(--b50);")
     parts["tokens.css"] = (
         "/* The look this app resolves to (the spec's theme included), and the canonical names the build\n"
-        "   maps (app.design). The kit page draws with its own stylesheet (imported/styles.css). */\n:root {\n"
+        "   maps (app.design): the greys the kit draws the app with, not the Studio page's. The kit page\n"
+        "   draws with its own stylesheet (imported/styles.css). */\n:root {\n"
         + "\n".join([f"  {n}: {v};" for n, v in resolved.items()] + canon)
         + "\n}\n"
     )
@@ -870,6 +887,63 @@ def starting_prototype_issues(spec_text: str, parts: dict) -> list[str]:
     gaps = format_gaps(coverage(doc, bundle))
     out += [line[2:] for line in gaps.splitlines() if line.startswith("- ")]
     return out
+
+
+def _kit_owned(path: str) -> bool:
+    """A part that is the kit page itself (its markup, stylesheet and scripts), not this app's."""
+    from .prototype import BODY_PART
+
+    return (path == BODY_PART or path.startswith("imported/")) and path not in (
+        SPEC_PART,
+        BRIDGE_PART,
+        "imported/bridge.css",
+    )
+
+
+def refresh_kit(parts: dict, pristine: dict | None, kit_html: str) -> dict | None:
+    """``parts`` of a kit page on the current kit (``kit_html``, the generic template's preview page),
+    so the preview draws what the kit draws now. Only the kit's own parts change; the spec, the
+    bridge, look.css, tokens.css and the manifest stay. None when there is nothing to do, or when
+    those kit parts were edited for this app (they differ from the template's own, ``pristine``)."""
+    from .prototype import import_html
+
+    if not kit_html or not is_kit_page(parts):
+        return None
+    from .prototype import parts_hash
+
+    own = {p: t for p, t in parts.items() if _kit_owned(p)}
+    try:
+        manifest = json.loads(parts.get("manifest.json") or "{}")
+    except ValueError:
+        return None
+    # Untouched: as the template drew it, or as the last refresh left it.
+    pristine_own = {p: t for p, t in (pristine or {}).items() if _kit_owned(p)}
+    if own != pristine_own and manifest.get("kit_hash") != parts_hash(own):
+        return None
+    fresh, _ = import_html(kit_html)
+    fresh = {p: t for p, t in fresh.items() if _kit_owned(p)}
+    if fresh == own:
+        return None
+    new = {p: t for p, t in parts.items() if not _kit_owned(p)}
+    new.update(fresh)
+    manifest["kit_hash"] = parts_hash(fresh)
+    new["manifest.json"] = json.dumps(manifest, indent=2, ensure_ascii=False)
+    return new
+
+
+def refreshed_kit_parts(requirement) -> dict | None:
+    """A template-mode requirement's prototype on the current kit, or None (see refresh_kit)."""
+    from zango.apps.shared.app_templates.services.generic import generic_version
+
+    template = requirement.template if requirement.template_slug else None
+    generic = generic_version()
+    if template is None or generic is None:
+        return None
+    return refresh_kit(
+        requirement.prototype_parts or {},
+        getattr(template, "prototype_parts", None) or {},
+        generic.builder_html,
+    )
 
 
 def is_from_kit(parts: dict) -> bool:

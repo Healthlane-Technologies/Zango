@@ -113,10 +113,13 @@ svg.lucide{width:1em;height:1em;flex:none}
 .z-ni.on .lucide{color:var(--brand)}
 .z-ng{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#98A2B3;padding:14px 10px 5px;display:flex;align-items:center;gap:6px}
 .z-ni.sub{padding-left:14px;font-size:13px;height:32px}
+.z-ni-n{margin-left:auto;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:#F2F4F7;color:#475467;font-size:11.5px;font-weight:600;display:inline-grid;place-items:center;font-variant-numeric:tabular-nums}
+.z-ni.on .z-ni-n{background:var(--b100);color:var(--b600)}
 .z-user{border-top:1px solid #EAECF0;padding:12px 14px;display:flex;align-items:center;gap:10px}
 .z-av{border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:600;flex:none}
 .z-user b{display:block;font-size:13px;font-weight:600;color:#101828;line-height:1.25}
 .z-user span{font-size:11.5px;color:#667085}
+.z-user.top{border-top:0;border-bottom:1px solid #EAECF0;margin-bottom:6px}
 .z-main{flex:1;min-width:0;display:flex;flex-direction:column}
 .z-top{height:56px;flex:none;background:#fff;border-bottom:1px solid #EAECF0;display:flex;align-items:center;padding:0 24px;gap:12px}
 .z-crumbs{display:flex;align-items:center;gap:6px;font-size:13px;color:#667085;min-width:0}
@@ -130,6 +133,12 @@ svg.lucide{width:1em;height:1em;flex:none}
 .z-ph h1{margin:0;font-size:22px;font-weight:650;letter-spacing:-.02em;color:#101828}
 .z-ph p{margin:4px 0 0;color:#667085;font-size:13px}
 .z-ph .sp{flex:1}
+.z-lstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px}
+.z-lstat{background:#fff;border:1px solid #EAECF0;border-radius:12px;padding:14px 16px;display:flex;gap:12px;align-items:flex-start;text-align:left;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+.z-lstat .si{width:36px;height:36px;border-radius:9px;display:grid;place-items:center;font-size:17px;flex:none}
+.z-lstat span{display:block;font-size:12.5px;color:#667085;font-weight:500}
+.z-lstat b{display:block;font-size:21px;font-weight:650;letter-spacing:-.02em;color:#101828;margin-top:2px;font-variant-numeric:tabular-nums}
+.z-lstat .z-lstat-hint{margin-top:2px;font-size:11.5px;color:#98A2B3;font-weight:450}
 .z-btn{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 14px;border-radius:8px;font-weight:600;font-size:13.5px;border:1px solid #D0D5DD;background:#fff;color:#344054;box-shadow:0 1px 2px rgba(16,24,40,.05);white-space:nowrap;transition:.12s}
 .z-btn:hover{background:#F9FAFB}
 .z-btn.pri{background:var(--brand);border-color:var(--brand);color:#fff}
@@ -148,6 +157,23 @@ svg.lucide{width:1em;height:1em;flex:none}
 .z-chips{display:flex;gap:6px;flex-wrap:wrap}
 .z-qf{height:30px;padding:0 11px;border-radius:999px;border:1px solid #EAECF0;background:#F9FAFB;font-size:12.5px;font-weight:550;color:#475467}
 .z-qf.on{background:var(--b50);border-color:var(--b100);color:var(--b600)}
+.z-qf-n{margin-left:6px;font-weight:500;color:#98A2B3;font-variant-numeric:tabular-nums}
+.z-qf.on .z-qf-n{color:inherit;opacity:.75}
+.z-cell2{display:flex;align-items:center;gap:10px;min-width:0}
+.z-cell-ico{flex:none;display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;border:1px solid #EAECF0;background:#F2F4F7;color:#98A2B3}
+.z-cell-ico svg{width:14px;height:14px}
+.z-cell-ico.ini{font-size:11px;font-weight:600;letter-spacing:.02em}
+.z-cell-txt{min-width:0;max-width:300px}
+.z-cell-main{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:550;color:#101828}
+.z-cell-main .z-link{color:inherit}
+.z-cell-sub{margin-top:2px;font-size:12px;color:#667085;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.z-cell-sub.mono{font-family:var(--mono);font-size:11.5px}
+.z-cpill{display:inline-flex;align-items:center;height:20px;padding:0 7px;margin-left:6px;border-radius:999px;border:1px solid;font-size:11.5px;font-weight:550;white-space:nowrap;vertical-align:middle}
+.z-cprog{display:grid;gap:5px;justify-items:start;min-width:140px}
+.z-cprog-bar{justify-self:stretch;display:flex;gap:3px}
+.z-cprog-bar i{flex:1;height:4px;border-radius:2px;background:#EAECF0}
+.z-cprog-bar i.on{background:var(--brand)}
+.z-cprog-t{font-size:11.5px;color:#667085;font-weight:450}
 .z-tb .sp{flex:1}
 .z-tbl-w{overflow:auto}
 table.z-t{width:100%;border-collapse:separate;border-spacing:0;font-size:13.5px}
@@ -162,6 +188,9 @@ table.z-t{width:100%;border-collapse:separate;border-spacing:0;font-size:13.5px}
 .z-t tfoot td{background:#F9FAFB;font-weight:600;color:#101828;border-bottom:0}
 .z-t td.hl-red{color:#B42318;font-weight:550}.z-t td.hl-amber{color:#B54708;font-weight:550}
 .z-t tr.grp td{background:#F9FAFB;font-size:12px;font-weight:600;color:#344054;padding:7px 14px}
+.z-t td.chev{width:32px;padding-left:0;padding-right:12px;text-align:right;color:#98A2B3}
+.z-t td.chev svg{width:16px;height:16px;vertical-align:middle}
+.z-t tr.click:hover td.chev{color:#475467}
 .z-kebab{width:30px;height:30px;border-radius:7px;display:inline-grid;place-items:center;color:#667085;font-size:17px}
 .z-kebab:hover{background:#F2F4F7;color:#101828}
 .z-pg{display:flex;align-items:center;gap:10px;padding:11px 14px;font-size:13px;color:#475467}
@@ -209,6 +238,19 @@ table.z-t{width:100%;border-collapse:separate;border-spacing:0;font-size:13.5px}
 .d-ban.danger{background:#FEF3F2;border-color:#FECDCA;color:#912018}
 .d-ban.info{background:#EFF8FF;border-color:#B2DDFF;color:#194185}
 .d-ban.success{background:#ECFDF3;border-color:#ABEFC6;color:#085D3A}
+.d-stepper{display:flex;align-items:center;margin-top:16px;padding-top:15px;border-top:1px solid #F2F4F7;overflow-x:auto}
+.d-step{display:flex;align-items:center;gap:8px;flex:1;min-width:0;font-size:12.5px;font-weight:550;color:#667085;white-space:nowrap}
+.d-step:last-child{flex:none}
+.d-step:not(:last-child)::after{content:"";flex:1;min-width:16px;height:2px;margin:0 10px;border-radius:1px;background:#EAECF0}
+.d-step i{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;flex:none;font-style:normal;font-size:11.5px;font-weight:600;background:#F2F4F7;color:#667085;border:1px solid #EAECF0}
+.d-step i svg{width:13px;height:13px}
+.d-step.done{color:#344054}
+.d-step.done i{background:var(--brand);border-color:var(--brand);color:#fff}
+.d-step.done::after{background:var(--brand)}
+.d-step.cur{color:#101828;font-weight:600}
+.d-step.cur i{background:var(--b50);border-color:var(--brand);color:var(--b600);box-shadow:0 0 0 3px var(--b50)}
+.d-step.end{color:#B42318}
+.d-step.end i{background:#FEF3F2;border-color:#FECDCA;color:#B42318}
 .d-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:14px}
 .d-stat{background:#fff;border:1px solid #EAECF0;border-radius:12px;padding:14px 16px;display:flex;gap:12px;align-items:flex-start;text-align:left;box-shadow:0 1px 2px rgba(16,24,40,.04)}
 .d-stat.click:hover{border-color:#D0D5DD;cursor:pointer}
@@ -2149,13 +2191,17 @@ function activeMenuPage(){
 }
 function renderSide(){
   const M = S.M; const r = M.role[S.role] || { menu: [] }; const act = activeMenuPage();
-  const item = (i, sub, path) => { const p = M.pages[i.page]; if (!p || !canPage(p)) return ''; return `<button class="z-ni ${sub ? 'sub' : ''} ${act === p.code ? 'on' : ''}"${zp(path, i.label || p.title)} data-a="${A(() => go(p.code))}">${ic(i.icon || (p.type === 'custom' || p.type === 'dashboard' ? 'layout-dashboard' : 'list'))}<span>${esc(i.label || p.title)}</span></button>`; };
+  // roles[].menu[].count: how many rows of the page's entity this role sees (matching `where`)
+  const cnt = (i, p) => { const E = i.count && p.type === 'crud' && M.ents[p.entity]; if (!E) return ''; const w = isObj(i.count) ? i.count.where : null; return `<span class="z-ni-n">${visibleRows(E).filter(r => evalCond(w, { E, row: r }) !== false).length}</span>`; };
+  const item = (i, sub, path) => { const p = M.pages[i.page]; if (!p || !canPage(p)) return ''; return `<button class="z-ni ${sub ? 'sub' : ''} ${act === p.code ? 'on' : ''}"${zp(path, i.label || p.title)} data-a="${A(() => go(p.code))}">${ic(i.icon || (p.type === 'custom' || p.type === 'dashboard' ? 'layout-dashboard' : 'list'))}<span>${esc(i.label || p.title)}</span>${cnt(i, p)}</button>`; };
   const mp = `/roles/@${S.role}/menu`;
   const nav = r.menu.map((it, n) => it.group ? `<div class="z-ng nav-group"${zp(`${mp}/${n}`, it.group)}>${esc(it.group)}</div>${arr(it.items).map((i, k) => item(i, true, `${mp}/${n}/items/${k}`)).join('')}` : item(it, false, `${mp}/${n}`)).join('');
   const u = curUser();
+  const top = isObj(M.app.shell) && M.app.shell.user === 'top';  // app.shell.user: the user card above the menu
+  const user = `<div class="z-user${top ? ' top' : ''}"><div class="z-av" style="width:34px;height:34px;background:${avColor(u)};font-size:13px">${esc(initials(u))}</div><div style="min-width:0"><b>${esc(u)}</b><span>${esc(S.role)}</span></div></div>`;
   return `<aside class="z-side"><div class="z-brand"><div class="z-logo">${esc(initials(M.app.name || 'App'))}</div><div><b>${esc(M.app.name || 'App')}</b><span>${esc(S.role)}</span></div></div>
-    <nav class="z-nav">${nav || '<div class="z-ng">No menu for this role</div>'}</nav>
-    <div class="z-user"><div class="z-av" style="width:34px;height:34px;background:${avColor(u)};font-size:13px">${esc(initials(u))}</div><div style="min-width:0"><b>${esc(u)}</b><span>${esc(S.role)}</span></div></div></aside>`;
+    ${top ? user : ''}<nav class="z-nav">${nav || '<div class="z-ng">No menu for this role</div>'}</nav>
+    ${top ? '' : user}</aside>`;
 }
 function renderTop(){
   const M = S.M; const p = M.pages[S.route.page]; let crumbs = '';
@@ -2271,7 +2317,29 @@ function cellHTML(E, row, c){
   let h = fmt(r.f, r.v, { E: r.E || E, display: c.display });
   if (r.computed) h = `<span class="z-comp" title="Computed (dummy value): ${esc(c.shows || '')}">${h}</span>`;
   if (c.link_to && S.M.dvs[c.link_to] && S.M.dvs[c.link_to].page && S.M.dvs[c.link_to].hero === E.code && r.f && r.f.type !== 'link') h = `<a class="z-link" data-a="${A(e => { e.stopPropagation(); go(S.M.dvs[c.link_to].page.code, row.id); })}">${h}</a>`;
-  return h;
+  // table.columns[].badge: a pill after the value on the rows where `when` holds
+  const bd = isObj(c.badge) ? c.badge : null;
+  if (bd && bd.label && bd.when != null && evalCond(bd.when, { E, row }) === true){ const t = tone(bd.tone || 'gray'); h += `<span class="z-cpill" style="background:${t[0]};color:${t[1]};border-color:${t[2]}">${esc(bd.label)}</span>`; }
+  // table.columns[].progress: a status column's step bar and "Step i of n" (the workflow's order, or steps)
+  if (c.progress && c.source === 'status' && E.wf){
+    const steps = isObj(c.progress) && arr(c.progress.steps).length ? arr(c.progress.steps).map(String) : E.wf.statuses.map(s => s.code);
+    const at = steps.indexOf(row.status);
+    if (at >= 0) h = `<div class="z-cprog"><span>${h}</span><div class="z-cprog-bar">${steps.map((x, i) => `<i${i <= at ? ' class="on"' : ''}></i>`).join('')}</div><div class="z-cprog-t">Step ${at + 1} of ${steps.length}</div></div>`;
+  }
+  // table.columns[].secondary / icon: an icon, the value, and a muted second line (as the app draws it)
+  const sub = arr(c.secondary).map(p => { try { const x = rp(E, row, p); return txt(x.f, x.v, x.E || E); } catch (e) { return ''; } }).filter(Boolean).join(' · ');
+  const icn = cellIcon(E, row, c.icon);
+  if (!sub && !icn) return h;
+  const ico = icn === 'initials' ? `<span class="z-cell-ico ini">${esc(initialsOf(txt(r.f, r.v, r.E || E)))}</span>` : icn ? `<span class="z-cell-ico">${ic(icn)}</span>` : '';
+  return `<div class="z-cell2">${ico}<div class="z-cell-txt"><div class="z-cell-main">${h}</div>${sub ? `<div class="z-cell-sub${c.secondary_style === 'mono' ? ' mono' : ''}">${esc(sub)}</div>` : ''}</div></div>`;
+}
+const initialsOf = t => String(t || '').split(/\s+/).filter(w => /^[A-Za-z]/.test(w)).slice(0, 2).map(w => w[0].toUpperCase()).join('');
+function cellIcon(E, row, icon){
+  if (!icon) return null;
+  if (typeof icon === 'string') return icon;
+  if (!icon.by) return icon.default || null;
+  let raw; try { raw = rp(E, row, icon.by).v; } catch (e) { raw = undefined; }
+  const map = icon.map || {}; return map[String(raw)] || icon.default || null;
 }
 function tState(key, init){ return S.ui.tables[key] || (S.ui.tables[key] = { q: '', sort: init.sort || null, filters: {}, qf: init.qf || null, page: 1 }); }
 function filterOpts(E, c){
@@ -2306,21 +2374,22 @@ function renderTable(cfg){
   const id = 'q_' + cfg.key.replace(/\W/g, '_');
   let tb = `<div class="z-tb"><label class="z-search">${ic('search')}<input id="${id}" placeholder="Search ${esc(E.plural.toLowerCase())}" value="${esc(st.q)}" data-in="${A(v => { st.q = v; st.page = 1; render(); })}"></label>
     ${filt.map(c => `<select class="z-sel" data-ch="${A(v => { st.filters[c.key] = v; st.page = 1; render(); })}"><option value="">${esc(c.label)}: All</option>${filterOpts(E, c).map(([v, l]) => `<option value="${esc(v)}" ${st.filters[c.key] === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`).join('')}
-    ${quick.length ? `<div class="z-chips">${quick.map(q => `<button class="z-qf ${st.qf === q.label ? 'on' : ''}"${arr(E.table.quick_filters).includes(q) ? zp(`${tPath}/quick_filters/${arr(E.table.quick_filters).indexOf(q)}`, `${q.label} filter`) : ''} data-a="${A(() => { st.qf = st.qf === q.label ? null : q.label; st.page = 1; render(); })}">${esc(q.label)}</button>`).join('')}</div>` : ''}
+    ${quick.length ? `<div class="z-chips">${quick.map(q => `<button class="z-qf ${st.qf === q.label ? 'on' : ''}"${arr(E.table.quick_filters).includes(q) ? zp(`${tPath}/quick_filters/${arr(E.table.quick_filters).indexOf(q)}`, `${q.label} filter`) : ''} data-a="${A(() => { st.qf = st.qf === q.label ? null : q.label; st.page = 1; render(); })}">${esc(q.label)}${q.count ? `<span class="z-qf-n">${cfg.rows.filter(r => evalCond(q.where, { E, row: r }) !== false).length}</span>` : ''}</button>`).join('')}</div>` : ''}
     <span class="sp"></span>${cfg.right || ''}</div>`;
   if (cfg.view && cfg.view.type !== 'table') return `${card}${tb}<div style="display:contents"${cfg.page ? zp(`/pages/@${cfg.page.code}/views/${S.views[cfg.page.code] || 0}`, `${cfg.view.type} view`) : ''}>${viewHTML(cfg, rows)}</div></div>`;
   const hasActs = pageRows.some(r => rowActions(E, r).length);
+  const chev = !!(E.table && E.table.row_chevron === true);  // table.row_chevron: a chevron in a last cell of clickable rows
   const colPath = c => entPath(E) ? (E.table && E.table.columns ? `${entPath(E)}/table/columns/@${c.key}` : `${entPath(E)}/table`) : '';
-  const th = cols.map(c => { const sortable = c.sortable; const k = c.key; const on = st.sort && st.sort.replace(/^-/, '') === k; return `<th${zp(colPath(c), `${c.label} column`)}>${sortable ? `<button data-a="${A(() => { st.sort = on && st.sort[0] !== '-' ? '-' + k : k; render(); })}">${esc(c.label)}${ic(on ? (st.sort[0] === '-' ? 'arrow-down' : 'arrow-up') : 'chevrons-up-down')}</button>` : esc(c.label)}</th>`; }).join('') + (hasActs ? '<th></th>' : '');
+  const th = cols.map(c => { const sortable = c.sortable; const k = c.key; const on = st.sort && st.sort.replace(/^-/, '') === k; return `<th${zp(colPath(c), `${c.label} column`)}>${sortable ? `<button data-a="${A(() => { st.sort = on && st.sort[0] !== '-' ? '-' + k : k; render(); })}">${esc(c.label)}${ic(on ? (st.sort[0] === '-' ? 'arrow-down' : 'arrow-up') : 'chevrons-up-down')}</button>` : esc(c.label)}</th>`; }).join('') + (hasActs ? '<th></th>' : '') + (chev ? '<th></th>' : '');
   const rowTr = r => {
     const click = cfg.rowClick ? A(() => cfg.rowClick(r)) : null;
     const acts = rowActions(E, r);
-    return `<tr ${click != null ? `class="click" data-a="${click}"` : ''}>${cols.map(c => { let cls = ''; if (c.highlight && evalCond(c.highlight.when, { E, row: r }) === true) cls = 'hl-' + (c.highlight.tone || 'red'); return `<td class="${cls}"${zp(colPath(c), `${c.label} column`)}>${cellHTML(E, r, c)}</td>`; }).join('')}${hasActs ? `<td class="act">${acts.length ? `<button class="z-kebab" data-a="${A((e, el) => { e.stopPropagation(); openPop(el, acts); })}">${ic('ellipsis-vertical')}</button>` : ''}</td>` : ''}</tr>`;
+    return `<tr ${click != null ? `class="click" data-a="${click}"` : ''}>${cols.map(c => { let cls = ''; if (c.highlight && evalCond(c.highlight.when, { E, row: r }) === true) cls = 'hl-' + (c.highlight.tone || 'red'); return `<td class="${cls}"${zp(colPath(c), `${c.label} column`)}>${cellHTML(E, r, c)}</td>`; }).join('')}${hasActs ? `<td class="act">${acts.length ? `<button class="z-kebab" data-a="${A((e, el) => { e.stopPropagation(); openPop(el, acts); })}">${ic('ellipsis-vertical')}</button>` : ''}</td>` : ''}${chev ? `<td class="chev">${click != null ? ic('chevron-right') : ''}</td>` : ''}</tr>`;
   };
   let body;
-  if (cfg.group_by){ const groups = {}; pageRows.forEach(r => { const g = plain(E, r, cfg.group_by) || '—'; (groups[g] = groups[g] || []).push(r); }); body = Object.entries(groups).map(([g, rs]) => `<tr class="grp"><td colspan="${cols.length + (hasActs ? 1 : 0)}">${esc(g)} · ${rs.length}</td></tr>` + rs.map(rowTr).join('')).join(''); }
+  if (cfg.group_by){ const groups = {}; pageRows.forEach(r => { const g = plain(E, r, cfg.group_by) || '—'; (groups[g] = groups[g] || []).push(r); }); body = Object.entries(groups).map(([g, rs]) => `<tr class="grp"><td colspan="${cols.length + (hasActs ? 1 : 0) + (chev ? 1 : 0)}">${esc(g)} · ${rs.length}</td></tr>` + rs.map(rowTr).join('')).join(''); }
   else body = pageRows.map(rowTr).join('');
-  const foot = arr(cfg.footer).length ? `<tfoot><tr>${cols.map((c, i) => { if (arr(cfg.footer).includes(c.key)){ const sum = rows.reduce((a, r) => a + (+cellOf(E, r, c).v || 0), 0); return `<td>${fmt(cellOf(E, rows[0] || {}, c).f || { type: 'decimal' }, sum)}</td>`; } return `<td>${i === 0 ? 'Total' : ''}</td>`; }).join('')}${hasActs ? '<td></td>' : ''}</tr></tfoot>` : '';
+  const foot = arr(cfg.footer).length ? `<tfoot><tr>${cols.map((c, i) => { if (arr(cfg.footer).includes(c.key)){ const sum = rows.reduce((a, r) => a + (+cellOf(E, r, c).v || 0), 0); return `<td>${fmt(cellOf(E, rows[0] || {}, c).f || { type: 'decimal' }, sum)}</td>`; } return `<td>${i === 0 ? 'Total' : ''}</td>`; }).join('')}${hasActs ? '<td></td>' : ''}${chev ? '<td></td>' : ''}</tr></tfoot>` : '';
   const em = cfg.empty || {};
   const emptyHTML = `<div class="z-empty"><div class="ei">${ic('inbox')}</div><b>${esc(st.q || st.qf || Object.values(st.filters).some(Boolean) ? 'No matching records' : em.title || `No ${E.plural.toLowerCase()} yet`)}</b><p>${esc(st.q || st.qf ? 'Try clearing the search or filters.' : em.text || '')}</p>${!st.q && em.cta === 'add' && cfg.addBtn ? cfg.addBtn : ''}</div>`;
   return `${card}${tb}${total ? `<div class="z-tbl-w"><table class="z-t"><thead><tr>${th}</tr></thead><tbody>${body}</tbody>${foot}</table></div>
@@ -2339,6 +2408,31 @@ function rowClickFor(E, target){
   const ra = E.ractions.find(a => a.key === target); if (ra) return r => runRowAction(E, r, ra);
   return r => openDrawer(E, r);
 }
+/* pages[].subtitle: its text, then " · " and the stat's live figure ({count | sum, where, format, suffix}) */
+function pageSubtitle(E, p, rows){
+  const sub = typeof p.subtitle === 'string' ? { text: p.subtitle } : p.subtitle;
+  if (!sub || typeof sub !== 'object') return null;
+  let figure = '';
+  const st = sub.stat;
+  if (st && typeof st === 'object'){
+    const rs = rows.filter(r => { try { return evalCond(st.where, { E, row: r }) !== false; } catch (e) { return true; } });
+    const v = st.sum ? rs.reduce((a, r) => a + (+r[st.sum] || 0), 0) : rs.length;
+    figure = [txt({ type: st.format || (st.sum ? 'decimal' : 'integer') }, v, E) || String(v), st.suffix].filter(Boolean).join(' ');
+  }
+  const out = [sub.text, figure].filter(Boolean).join(' · ');
+  return out || null;
+}
+/* pages[].stats: KPI tiles over the page's rows ({label, count | sum, where, format, icon, tone, hint}) */
+function listStats(E, p, rows){
+  const tiles = arr(p.stats).filter(t => isObj(t) && t.label);
+  if (!tiles.length) return '';
+  return `<div class="z-lstats"${zp(`/pages/@${p.code}/stats`, 'KPI tiles')}>${tiles.map((t, i) => {
+    const rs = rows.filter(r => { try { return evalCond(t.where, { E, row: r }) !== false; } catch (e) { return true; } });
+    const v = t.sum ? rs.reduce((a, r) => a + (+r[t.sum] || 0), 0) : rs.length;
+    const c = tone(t.tone || ['indigo', 'teal', 'amber', 'pink', 'blue', 'purple'][i % 6]);
+    return `<div class="z-lstat"${zp(`/pages/@${p.code}/stats/${i}`, t.label)}><div class="si" style="background:${c[0]};color:${c[1]}">${ic(t.icon || ['activity', 'wallet', 'clock', 'gauge', 'layers', 'target'][i % 6])}</div><div style="flex:1;min-width:0"><span>${esc(t.label)}</span><b>${esc(fmtStat(v, t.format))}</b>${t.hint ? `<span class="z-lstat-hint">${esc(t.hint)}</span>` : ''}</div></div>`;
+  }).join('')}</div>`;
+}
 function renderCrud(E, p){
   const rows = visibleRows(E);
   const addLabel = E.table.add_button || `Add ${E.name}`;
@@ -2346,8 +2440,9 @@ function renderCrud(E, p){
   const addBtn = canAdd ? `<button class="z-btn pri"${zp(entPath(E) ? `${entPath(E)}/form/create` : '', `${addLabel} form`)} data-a="${A(() => openCreate(E, {}, null, E.table.add_button))}">${ic('plus')}${esc(addLabel)}</button>` : '';
   const exp = can(E, 'export') ? `<button class="z-btn sm" data-a="${A(() => toast('Export', `${rows.length} ${E.plural.toLowerCase()} exported to CSV (simulated).`))}">${ic('download')}Export</button>` : '';
   const sc = E.acc && E.acc[S.role] && E.acc[S.role].rows;
-  return `<div class="z-ph"${zp(`/pages/@${p.code}`, p.title)}><div><h1>${esc(p.title)}</h1><p data-zas-chrome>${rows.length} records${sc && sc !== 'all' ? ` · scoped to <b>${esc(scopeLabel(sc))}</b>` : ''}</p></div><span class="sp"></span>${addBtn}</div>
-    ${renderTable({ key: 'crud_' + E.code, E, rows, cols: E.cols, rowClick: rowClickFor(E), quick: E.table.quick_filters, right: viewSwitch(p) + exp, empty: { cta: 'add' }, addBtn, footer: E.table.footer_totals, group_by: E.table.group_by, view: curView(p), page: p })}`;
+  const sub = pageSubtitle(E, p, rows);
+  return `<div class="z-ph"${zp(`/pages/@${p.code}`, p.title)}><div><h1>${esc(p.title)}</h1>${sub != null ? `<p>${esc(sub)}</p>` : `<p data-zas-chrome>${rows.length} records${sc && sc !== 'all' ? ` · scoped to <b>${esc(scopeLabel(sc))}</b>` : ''}</p>`}</div><span class="sp"></span>${addBtn}</div>
+    ${listStats(E, p, rows)}${renderTable({ key: 'crud_' + E.code, E, rows, cols: E.cols, rowClick: rowClickFor(E), quick: E.table.quick_filters, right: viewSwitch(p) + exp, empty: { cta: 'add' }, addBtn, footer: E.table.footer_totals, group_by: E.table.group_by, view: curView(p), page: p })}`;
 }
 
 /* ═════════════════════════ list views ═════════════════════════ */
@@ -2995,7 +3090,7 @@ function renderDetail(dv, id){
   const dvp = `/detail_views/@${dv.code}`;
   const head = `<div class="d-head"${zp(`${dvp}/header`, '360 header')}><div class="d-top"><div class="d-av" style="background:${avColor(title)}">${esc(avTxt)}</div>
     <div class="d-tt"><h1>${esc(title)}</h1>${subtitle ? `<div class="d-sub">${esc(subtitle)}</div>` : ''}${badges ? `<div class="d-badges">${badges}</div>` : ''}</div>
-    <div class="d-acts">${heroButtons(dv, E, row)}</div></div>${facts ? `<div class="d-facts">${facts}</div>` : ''}${banners}</div>`;
+    <div class="d-acts">${heroButtons(dv, E, row)}</div></div>${stepperHTML(dv, E, row)}${facts ? `<div class="d-facts">${facts}</div>` : ''}${banners}</div>`;
   // stats
   const tabs = dv.tabs.filter(t => roleOK(t) && showOK(t, E, row) && (t.type !== 'related_table' || (M.ents[t.entity] && can(M.ents[t.entity], 'view'))));
   const stats = arr(dv.stats).filter(s => roleOK(s) && showOK(s, E, row)).map((s, i) => {
@@ -3015,6 +3110,28 @@ function renderDetail(dv, id){
   const layout = dv.layout || 'header_tabs';
   const body = side && layout !== 'header_tabs' ? (layout === 'header_sidebar_tabs_left' ? `<div class="d-body sl"><div>${side}</div><div>${tabBar}${tabBody}</div></div>` : `<div class="d-body sr"><div>${tabBar}${tabBody}</div><div>${side}</div></div>`) : `<div class="d-body"><div>${tabBar}${tabBody}</div></div>`;
   return head + (stats ? `<div class="d-stats">${stats}</div>` : '') + body;
+}
+/* header.stepper: the hero's lifecycle (true = every status in order, or {steps}). Steps before the
+   record's status are done; a status off the steps (rejected) ends the line where the record left
+   them: after the furthest step a transition into it starts from, else by the workflow order. */
+function stepperHTML(dv, E, row){
+  const sp = (dv.header || {}).stepper;
+  if (!sp || !E.wf) return '';
+  const order = E.wf.statuses.map(s => s.code);
+  const steps = isObj(sp) && arr(sp.steps).length ? arr(sp.steps).map(String).filter(c => E.wf.smap[c]) : order;
+  if (steps.length < 2) return '';
+  const st = row.status; const at = steps.indexOf(st); const last = steps.length - 1;
+  let off = null;
+  if (at < 0 && E.wf.smap[st]){
+    const froms = E.wf.trs.filter(t => t.to === st).flatMap(t => t.from).map(f => steps.indexOf(f)).filter(i => i >= 0);
+    off = froms.length ? Math.max(...froms) : steps.filter(x => order.indexOf(x) < order.indexOf(st)).length - 1;
+  }
+  const lab = c => (E.wf.smap[c] || {}).label || titleize(c);
+  const shown = off === null ? steps : steps.slice(0, off + 1);
+  return `<div class="d-stepper"${zp(`/detail_views/@${dv.code}/header/stepper`, 'stepper')}>${shown.map((c, i) => {
+    const s = off !== null || i < at || (i === at && at === last) ? 'done' : i === at ? 'cur' : '';
+    return `<div class="d-step${s ? ' ' + s : ''}"><i>${s === 'done' ? ic('check') : i + 1}</i><span>${esc(lab(c))}</span></div>`;
+  }).join('')}${off !== null ? `<div class="d-step end"><i>${ic('x')}</i><span>${esc(lab(st))}</span></div>` : ''}</div>`;
 }
 // A 360 tab's spec path, as the spec tools address it (@code, or its index).
 const tabPath = (dv, t) => `/detail_views/@${dv.code}/tabs/${t.code ? '@' + t.code : dv.tabs.indexOf(t)}`;

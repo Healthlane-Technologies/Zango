@@ -111,13 +111,20 @@ class ZasTableMixin:
         try:
             req = self._zas_request()
             role = access.role_name(req)
+            menu_page = req.GET.get("zas_menu") if req is not None else None
+            if menu_page:  # the shell asks for one menu item's count only
+                meta["zas"] = {"entity": self.zas_entity, "role": role,
+                               "menu_count": self._zas_menu_count(menu_page, role, req)}
+                return meta
             qfs = [q for q in (zs.entity(self.zas_entity).get("table") or {}).get("quick_filters", [])
                    if not q.get("roles") or role in q["roles"]]
             counted = [q for q in qfs if q.get("count")]
             page = next((p for p in (zs.load().get("pages") or {}).values()
                          if p.get("type") == "crud" and p.get("entity") == self.zas_entity
                          and (p.get("subtitle") or {}).get("stat")), None)
-            base = self._zas_base_queryset(req) if counted or page else None
+            tiles = [p for p in (zs.load().get("pages") or {}).values()
+                     if p.get("type") == "crud" and p.get("entity") == self.zas_entity and p.get("stats")]
+            base = self._zas_base_queryset(req) if counted or page or tiles else None
             meta["zas"] = {
                 "entity": self.zas_entity, "role": role,
                 "quick_filters": [{"key": q["key"], "label": q["label"], "default": bool(q.get("default")),
@@ -127,6 +134,8 @@ class ZasTableMixin:
             }
             if page:
                 meta["zas"]["subtitle_stat"] = self._zas_stat(base, page["subtitle"]["stat"], req)
+            if tiles:  # pages[].stats: each crud page's KPI tiles, in order, over the viewer's rows
+                meta["zas"]["stats"] = {p["code"]: [self._zas_stat(base, st, req) for st in p["stats"]] for p in tiles}
         except Exception:
             logger.exception("zas: table metadata for %s", self.zas_entity)
         return meta
@@ -145,6 +154,8 @@ class ZasTableMixin:
             hls = [(c["key"], c["highlight"]) for c in (E.get("table") or {}).get("columns", [])
                    if (c.get("highlight") or {}).get("ast")]
             cells = [c for c in (E.get("table") or {}).get("columns", []) if c.get("secondary") or c.get("icon")]
+            pills = [(c["key"], c["badge"]) for c in (E.get("table") or {}).get("columns", [])
+                     if (c.get("badge") or {}).get("ast")]
             ctx = access.expr_ctx(self._zas_request())
             for row, d in zip(rows, data):
                 obj = d["obj"]
@@ -166,6 +177,12 @@ class ZasTableMixin:
                         logger.exception("zas: highlight %s.%s", self.zas_entity, key)
                 if hl:
                     z["hl"] = hl
+                for key, b in pills:  # table.columns[].badge: {label, when, tone}, a pill after the value
+                    try:
+                        if zx.evaluate(b["ast"], obj, ctx):
+                            z.setdefault("badge", {})[key] = {"label": b["label"], "tone": b.get("tone") or "gray"}
+                    except Exception:
+                        logger.exception("zas: badge %s.%s", self.zas_entity, key)
                 for c in cells:  # table.columns[].secondary / icon: the cell's second line and icon
                     try:
                         sub = [t for t in (_cell_text(E, obj, p) for p in c.get("secondary") or []) if t]
@@ -250,6 +267,25 @@ class ZasTableMixin:
             return qs.count()
         except Exception:
             logger.exception("zas: subtitle stat for %s", self.zas_entity)
+            return None
+
+    def _zas_menu_count(self, page_code, role, req):
+        """roles[].menu[].count: how many of this entity's rows the viewer's role sees (narrowed by the
+        item's `where`), for the menu item that opens `page_code`. None when that item has no count."""
+        try:
+            page = (zs.load().get("pages") or {}).get(page_code) or {}
+            if page.get("type") != "crud" or page.get("entity") != self.zas_entity:
+                return None
+            r = (zs.roles() or {}).get(role) or {}
+            items = [i for it in r.get("menu") or [] for i in (it.get("items") or [it])]
+            item = next((i for i in items if i.get("page") == page_code and i.get("count")), None)
+            if item is None:
+                return None
+            qs = access.scope_queryset(self.zas_entity, super().get_table_data_queryset(), req)
+            ast = (item["count"] or {}).get("ast") if isinstance(item["count"], dict) else None
+            return (qs.filter(zx.to_q(ast, qs.model, access.expr_ctx(req))) if ast else qs).count()
+        except Exception:
+            logger.exception("zas: menu count for %s", page_code)
             return None
 
     def _zas_quick_filter(self, qs, req):
