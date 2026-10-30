@@ -5,6 +5,7 @@
   "category": "Compliance & Quality",
   "icon": "alert",
   "is_beta": false,
+  "listed": false,
   "aka": [
     "AE intake",
     "pharmacovigilance case intake",

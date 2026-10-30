@@ -5,6 +5,7 @@
   "category": "Compliance & Quality",
   "icon": "eye",
   "is_beta": true,
+  "listed": false,
   "aka": [
     "HCP compliance monitoring",
     "transfer of value monitoring",

@@ -5,7 +5,11 @@ from unittest import mock
 
 from rest_framework.test import APIRequestFactory, force_authenticate
 
-from zango.apps.shared.app_templates.models import AppTemplateBinding, BindingSource
+from zango.apps.shared.app_templates.models import (
+    AppTemplate,
+    AppTemplateBinding,
+    BindingSource,
+)
 from zango.apps.shared.app_templates.services import catalogue
 from zango.apps.shared.app_templates.services.packs import import_pack
 from zango.cli.start_project import create_platform_user
@@ -96,6 +100,21 @@ class CatalogueApiTests(AppTemplatesTestBase):
         )
         self.assertNotIn("other", [t["slug"] for t in body["response"]["templates"]])
 
+    def test_unlisted_templates_are_not_in_the_gallery(self):
+        from zango.api.platform.app_templates.v1.views import (
+            TemplateDetailView,
+            TemplateListView,
+        )
+
+        version, _ = import_pack(self.pack(), publish_now=True)
+        AppTemplate.objects.filter(pk=version.template_id).update(listed=False)
+        _, body = self._get(
+            TemplateListView, "/api/v1/platform/app-templates/templates/"
+        )
+        self.assertNotIn("demo", [t["slug"] for t in body["response"]["templates"]])
+        status, _ = self._get(TemplateDetailView, "/x/", slug="demo")
+        self.assertEqual(status, 404)
+
 
 class ScaffoldTemplateTests(AppTemplatesTestBase):
     def setUp(self):
@@ -144,6 +163,11 @@ class ScaffoldTemplateTests(AppTemplatesTestBase):
 
     def test_unknown_template_is_refused(self):
         status, _ = self._post({"template_slug": "nope", "prompt": "x"})
+        self.assertEqual(status, 400)
+
+    def test_unlisted_template_is_refused(self):
+        AppTemplate.objects.filter(slug="demo").update(listed=False)
+        status, _ = self._post({"template_slug": "demo", "prompt": "x"})
         self.assertEqual(status, 400)
 
     def test_brief_only_still_needs_a_prompt(self):

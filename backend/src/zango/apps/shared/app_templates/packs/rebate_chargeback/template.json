@@ -5,6 +5,7 @@
   "category": "Market Access",
   "icon": "card",
   "is_beta": false,
+  "listed": false,
   "aka": [
     "gross-to-net",
     "contract and rebate management",

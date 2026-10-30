@@ -5,6 +5,7 @@
   "category": "Advanced Therapies",
   "icon": "dna",
   "is_beta": false,
+  "listed": false,
   "aka": [
     "CAR-T scheduling",
     "cell and gene therapy orchestration",

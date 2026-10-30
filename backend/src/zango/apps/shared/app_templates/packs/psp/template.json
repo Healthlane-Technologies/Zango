@@ -5,6 +5,7 @@
   "category": "Patient Services",
   "icon": "heart",
   "is_beta": false,
+  "listed": false,
   "aka": [
     "PSP",
     "PAP",

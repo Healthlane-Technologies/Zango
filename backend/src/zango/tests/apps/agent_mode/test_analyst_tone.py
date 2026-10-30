@@ -16,6 +16,8 @@ Three things are easy to break here and none of them fails loudly:
 import re
 import unittest
 
+from unittest import mock
+
 from pathlib import Path
 
 import zango
@@ -139,6 +141,7 @@ class TemplateOfferTests(unittest.TestCase):
         self.assertIn("is there a template for this?", self.body.lower())
         self.assertRegex(self.body, r"[Ff]irst reply")
 
+    @mock.patch("zango.apps.agent_mode.app_templates.unlisted_slugs", new=lambda: set())
     def test_the_choice_is_declared_in_a_fence_the_platform_reads(self):
         from zango.apps.agent_mode.requirements import extract_template
 
@@ -169,6 +172,7 @@ class TemplateOfferTests(unittest.TestCase):
 class TemplateCatalogueInPromptTests(unittest.TestCase):
     """The offer is only possible if the first turn is told what exists."""
 
+    @mock.patch("zango.apps.shared.app_templates.services.catalogue.unlisted_slugs", new=lambda: set())
     def test_the_opening_prompt_carries_the_catalogue(self):
         from zango.apps.agent_mode.app_templates import catalogue_digest
         from zango.apps.agent_mode.requirements import compose_analyst_prompt

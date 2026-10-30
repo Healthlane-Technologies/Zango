@@ -5,6 +5,7 @@
   "category": "Regulatory Affairs",
   "icon": "file",
   "is_beta": false,
+  "listed": false,
   "aka": [
     "RIM",
     "regulatory tracking",

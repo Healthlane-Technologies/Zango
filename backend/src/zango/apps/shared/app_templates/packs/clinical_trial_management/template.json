@@ -5,6 +5,7 @@
   "category": "Clinical Operations",
   "icon": "pulse",
   "is_beta": false,
+  "listed": false,
   "aka": [
     "CTMS",
     "study and site management",

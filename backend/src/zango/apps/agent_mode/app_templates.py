@@ -20,6 +20,7 @@ from zango.apps.shared.app_templates.services.catalogue import (
     get_template,
     load_templates,
     spec_format_for,
+    unlisted_slugs,
 )
 from zango.apps.shared.app_templates.services.materialise import templates_root
 
@@ -38,4 +39,5 @@ __all__ = [
     "load_templates",
     "spec_format_for",
     "templates_dir",
+    "unlisted_slugs",
 ]

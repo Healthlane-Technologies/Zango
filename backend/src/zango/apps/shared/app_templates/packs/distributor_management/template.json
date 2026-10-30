@@ -5,6 +5,7 @@
   "category": "Traceability & Supply Chain",
   "icon": "truck",
   "is_beta": false,
+  "listed": false,
   "aka": [
     "DMS",
     "distributor portal",

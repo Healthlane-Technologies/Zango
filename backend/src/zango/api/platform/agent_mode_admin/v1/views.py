@@ -349,14 +349,21 @@ class AgentAppScaffoldCreateView(ZangoGenericPlatformAPIView):
                 if generic is not None and reference:
                     reference = ""  # its references are only examples to draft from
             if template_slug:
+                from django.db.models import Q
+
                 from zango.apps.shared.app_templates.models import (
                     AppTemplate,
                     TemplateStatus,
+                )
+                from zango.apps.shared.app_templates.services.generic import (
+                    GENERIC_SLUG,
                 )
 
                 template = (
                     AppTemplate.objects.select_related("current_version")
                     .filter(slug=template_slug, status=TemplateStatus.PUBLISHED)
+                    # Unlisted templates can't be started; the generic one always can.
+                    .filter(Q(listed=True) | Q(slug=GENERIC_SLUG))
                     .first()
                 )
                 if template is None or template.current_version is None:

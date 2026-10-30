@@ -86,6 +86,10 @@ class AppTemplate(FullAuditMixin):
     icon = models.CharField(max_length=64, blank=True, default="")
     one_liner = models.TextField(blank=True, default="")
     is_beta = models.BooleanField(default=False)
+    # Shown in the gallery and offered by the analyst. An unlisted template can't be
+    # started by slug; apps already on it keep working, and the generic template
+    # still starts every app described from scratch.
+    listed = models.BooleanField(default=True)
     sort_order = models.IntegerField(default=0)
     status = models.CharField(
         max_length=16,

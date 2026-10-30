@@ -10,6 +10,8 @@ the test database has it.
 
 import unittest
 
+from unittest import mock
+
 from pathlib import Path
 
 from zango.apps.agent_mode.app_templates import (
@@ -80,7 +82,9 @@ class DigestTests(unittest.TestCase):
     """What the analyst is told before it decides whether to offer."""
 
     def setUp(self):
-        self.digest = catalogue_digest()
+        # PSP is the example here; whether it is listed is CatalogueTests' business.
+        with mock.patch("zango.apps.shared.app_templates.services.catalogue.unlisted_slugs", return_value=set()):
+            self.digest = catalogue_digest()
 
     def test_names_the_template_and_its_slug(self):
         self.assertIn("Patient Support Program", self.digest)

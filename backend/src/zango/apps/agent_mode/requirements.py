@@ -124,10 +124,10 @@ def extract_template(text: str) -> str:
         elif isinstance(data, str):
             slug = data.strip()
 
-    from .app_templates import get_template
+    from .app_templates import get_template, unlisted_slugs
 
     template = get_template(slug)
-    return template.slug if template else ""
+    return template.slug if template and template.slug not in unlisted_slugs() else ""
 
 
 def extract_questions(text: str) -> list:

@@ -5,6 +5,7 @@
   "category": "Patient Services",
   "icon": "shield",
   "is_beta": true,
+  "listed": true,
   "aka": [
     "consent manager",
     "consent capture",

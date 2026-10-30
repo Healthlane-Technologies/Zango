@@ -349,6 +349,40 @@ class CatalogueTests(AppTemplatesTestBase):
         self.assertIn("Offer it when:", digest)
         self.assertIn(f"pack: {view.path}/", digest)
 
+    def test_unlisted_templates_are_not_offered_but_still_resolve(self):
+        version, _ = import_pack(self.pack(), publish_now=True)
+        template = version.template
+        self.assertTrue(template.listed)
+        template.listed = False
+        template.save()
+        self.assertIn("demo", catalogue.unlisted_slugs())
+        self.assertNotIn("(slug: demo)", catalogue.catalogue_digest())
+        # Apps already on it keep working.
+        self.assertIsNotNone(catalogue.get_template("demo"))
+
+    def test_listed_follows_the_manifest_only_when_it_says(self):
+        root = self.pack()
+        version, _ = import_pack(root, publish_now=True)
+        template = version.template
+        template.listed = False
+        template.save()
+        import_pack(root, publish_now=True)  # no "listed" key: kept as it is
+        template.refresh_from_db()
+        self.assertFalse(template.listed)
+        manifest = json.loads((root / "template.json").read_text())
+        manifest["listed"] = True
+        (root / "template.json").write_text(json.dumps(manifest))
+        import_pack(root, publish_now=True)  # same content: no new version
+        template.refresh_from_db()
+        self.assertTrue(template.listed)
+        self.assertEqual(template.versions.count(), 1)
+
+    def test_the_generic_template_is_never_unlisted_for_the_analyst(self):
+        from zango.apps.shared.app_templates.services.generic import GENERIC_SLUG
+
+        AppTemplate.objects.filter(slug=GENERIC_SLUG).update(listed=False)
+        self.assertNotIn(GENERIC_SLUG, catalogue.unlisted_slugs())
+
 
 class BundledPackTests(AppTemplatesTestBase):
     def test_bundled_packs_are_seeded_and_publishable(self):

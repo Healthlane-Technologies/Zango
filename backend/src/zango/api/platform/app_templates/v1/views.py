@@ -30,6 +30,7 @@ def _published():
         .defer("current_version__prototype_parts")
         .filter(
             status=TemplateStatus.PUBLISHED,
+            listed=True,
             current_version__isnull=False,
             current_version__status=VersionStatus.PUBLISHED,
         )

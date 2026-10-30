@@ -24,7 +24,7 @@ from pathlib import Path
 from django.core.cache import cache
 from django.db.models import F
 
-from ..models import AppTemplateVersion, TemplateStatus, VersionStatus
+from ..models import AppTemplate, AppTemplateVersion, TemplateStatus, VersionStatus
 from .materialise import REQUIREMENT_FILES, REQUIREMENTS_DIR, materialise
 
 
@@ -291,6 +291,22 @@ def get_template(slug, version_uuid=None):
     return _current_versions().get(slug)
 
 
+def unlisted_slugs() -> set:
+    """Templates left out of the gallery and the analyst's offers (``AppTemplate.listed``).
+
+    Read from the database each time, not from the cached views: listing is the
+    template's, not the version's, so it changes without a new version. The
+    generic template is never in it — it starts every app described from scratch.
+    """
+    from .generic import GENERIC_SLUG
+
+    return set(
+        AppTemplate.objects.filter(listed=False)
+        .exclude(slug=GENERIC_SLUG)
+        .values_list("slug", flat=True)
+    )
+
+
 def spec_format_for(slug) -> str:
     template = get_template(slug)
     return template.spec_format if template else "markdown"
@@ -304,6 +320,8 @@ def catalogue_digest() -> str:
     so a declined offer costs a few hundred tokens rather than a file read.
     """
     templates = load_templates()
+    hidden = unlisted_slugs()
+    templates = {slug: t for slug, t in templates.items() if slug not in hidden}
     if not templates:
         return ""
 

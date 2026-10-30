@@ -5,6 +5,7 @@
   "category": "Medical Affairs",
   "icon": "book",
   "is_beta": false,
+  "listed": false,
   "aka": [
     "medical information",
     "MI inquiry management",

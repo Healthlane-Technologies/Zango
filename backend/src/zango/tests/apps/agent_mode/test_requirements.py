@@ -7,6 +7,8 @@ phase silently stalls.
 
 import unittest
 
+from unittest import mock
+
 from zango.apps.agent_mode.requirements import (
     ANALYST_DISALLOWED,
     ANALYST_SKILL,
@@ -222,8 +224,9 @@ class DraftSpecTests(unittest.TestCase):
         self.assertEqual(strip_fences(DRAFT_TURN), "Here's where we've got to.")
 
 
+@mock.patch("zango.apps.agent_mode.app_templates.unlisted_slugs", new=lambda: set())
 class TemplateFenceTests(unittest.TestCase):
-    """How the platform learns the user accepted a template."""
+    """How the platform learns the user accepted a template (PSP as the example, listed or not)."""
 
     def test_json_object(self):
         self.assertEqual(

@@ -803,6 +803,7 @@ def import_pack(
         ("icon", "icon"),
         ("one_liner", "one_liner"),
         ("is_beta", "is_beta"),
+        ("listed", "listed"),
     ):
         if key in m:
             setattr(template, attr, m[key])
@@ -901,6 +902,7 @@ def export_pack(version: AppTemplateVersion) -> bytes:
         "category": template.category,
         "icon": template.icon,
         "is_beta": template.is_beta,
+        "listed": template.listed,
         "one_liner": template.one_liner,
         "aka": cat.pop("aka", []),
         "fits_when": cat.pop("fits_when", []),
