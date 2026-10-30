@@ -1,0 +1,1 @@
+import{c as o}from"../console.1793368971179.min.js";function n(t,e=300){const[r,s]=o.useState(t);return o.useEffect(()=>{const c=setTimeout(()=>s(t),e);return()=>clearTimeout(c)},[t,e]),r}export{n as u};

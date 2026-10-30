@@ -116,6 +116,8 @@ ENV/
 temp/
 
 logs/
+# The console's Logs page source, not log output
+!console/src/pages/app/logs/
 
 .DS_Store
 
