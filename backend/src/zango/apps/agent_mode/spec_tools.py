@@ -69,6 +69,11 @@ class SpecWorkbench:
         # The open prototype's parts (prototype.PrototypeBench), or None in kit mode.
         # In open mode custom screens are drawn there, so sketch rules do not apply.
         self.proto = proto
+        self._proto_looks = 0
+        # End-of-turn check for a turn that carries a design reference (reference_gap).
+        self.reference_turn = False
+        self._looked_at_writes = 0
+        self._look_unavailable = False
         # Screenshots an edit took on its own, sent with that edit's result (make_handler).
         self._pending_images: list = []
         self._lock = threading.Lock()
@@ -845,6 +850,90 @@ class SpecWorkbench:
         app = (schema.get("properties") or {}).get("app") or {}
         return "design" in (app.get("properties") or {})
 
+    PROTO_MAX_LOOKS = 6
+
+    def reference_gap(self) -> str | None:
+        """What the agent still owes before it may end a turn that carries a design reference.
+
+        None when nothing is owed. Read from the stream's thread: plain attributes only."""
+        if not self.reference_turn or self.proto is None:
+            return None
+        if self.proto.writes == 0:
+            return (
+                "The user attached a design reference and the prototype is unchanged, so it has "
+                "not been applied; changing the YAML does not apply it. Read the reference, "
+                "restyle the prototype from it with proto_patch and proto_design (palette, type, "
+                "radius, density, layout), then look at the result with proto_look. If the user's "
+                "message says the reference is not for the look, say so in your reply instead."
+            )
+        if self._look_unavailable or self._looked_at_writes >= self.proto.writes:
+            return None
+        return (
+            "You changed the prototype but have not looked at the result. Call proto_look on a "
+            "screen you changed, check it against the reference and fix what is off, then reply."
+        )
+
+    def proto_look(self, screen=None, role=None):
+        """Screenshot one prototype screen as one persona sees it, from the current parts."""
+        import base64
+
+        from .prototype_coverage import ensure_capture
+
+        if self.proto is None:
+            raise ToolRefused("There is no prototype to look at.")
+        if self._proto_looks >= self.PROTO_MAX_LOOKS:
+            raise ToolRefused(
+                f"That is {self.PROTO_MAX_LOOKS} screenshots this turn; ask the user how it looks."
+            )
+        try:
+            bundle, why = ensure_capture(self.proto.parts)
+        except Exception as exc:  # noqa: BLE001 - the user still sees the preview
+            bundle, why = None, str(exc)
+        if bundle is None:
+            self._look_unavailable = True
+            return (
+                f"The prototype can't be rendered here ({why}). Say you could not check it "
+                "and ask the user to look at the preview."
+            )
+        self._proto_looks += 1
+        self._looked_at_writes = self.proto.writes
+        capture = json.loads((bundle / "capture.json").read_text(encoding="utf-8"))
+        screens = capture.get("screens") or []
+        ids = [str(sc.get("id")) for sc in screens]
+        entry = next((sc for sc in screens if str(sc.get("id")) == screen), None)
+        if entry is None:
+            if screen:
+                raise ToolRefused(f"No screen {screen!r}. Screens: {', '.join(ids)}.")
+            entry = screens[0] if screens else None
+        if entry is None:
+            return "The prototype has no screens to look at."
+        roles = entry.get("roles") or []
+        item = next((r for r in roles if role and r.get("role") == role), None) or next(
+            (r for r in roles if "error" not in r), None
+        )
+        if item is None:
+            errors = "; ".join(str(r.get("error")) for r in roles if r.get("error"))
+            return f"{entry['id']} did not draw for any role: {errors or 'blank'}."
+        shown = item.get("same_as") or item["role"]
+        shot = bundle / "screens" / str(entry["id"]) / f"shot.{shown}.png"
+        text = f"{entry['id']} as {item['role']}."
+        problems = item.get("error") or "; ".join(item.get("errors") or [])
+        if item.get("blank"):
+            text += " It drew blank."
+        if problems:
+            text += f" Errors: {problems[:300]}"
+        content = []
+        if shot.is_file():
+            content.append(
+                {
+                    "type": "image",
+                    "data": base64.b64encode(shot.read_bytes()).decode("ascii"),
+                    "mimeType": "image/png",
+                }
+            )
+        content.append({"type": "text", "text": text})
+        return {"content": content}
+
     def apply_design(self) -> str:
         """Set app.design from the prototype's tokens (open mode)."""
         import json
@@ -982,6 +1071,7 @@ TOOL_NAMES = (
     "preview_look",
     *PROTO_TOOL_NAMES,
     "proto_design",
+    "proto_look",
 )
 ALLOWED_TOOL_NAMES = tuple(f"mcp__{SERVER_NAME}__{name}" for name in TOOL_NAMES)
 
@@ -1267,7 +1357,29 @@ def tool_specs(bench: SpecWorkbench) -> list:
                     "first draft and whenever the tokens change; spec_mark_ready checks it.",
                     _schema({}, []),
                     lambda a: bench.apply_design(),
-                )
+                ),
+                (
+                    "proto_look",
+                    "Screenshot one prototype screen as a persona sees it, from the prototype as it "
+                    "is now. Use it after every visual change, before you reply: look for overlap, "
+                    "clipping, broken cards and anything that is not what the user asked. Fix what "
+                    "is wrong and look again. The first look after an edit renders the whole "
+                    "prototype, so make your edits first and look once or twice.",
+                    _schema(
+                        {
+                            "screen": {
+                                "type": "string",
+                                "description": "A screen id from manifest.json; default: the first.",
+                            },
+                            "role": {
+                                "type": "string",
+                                "description": "A persona; default: the first that opens it.",
+                            },
+                        },
+                        [],
+                    ),
+                    lambda a: bench.proto_look(a.get("screen"), a.get("role")),
+                ),
             ]
             if bench.proto is not None
             else []

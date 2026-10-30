@@ -179,7 +179,8 @@ class AgentRequirement(FullAuditMixin):
         default=uuid.uuid4, unique=True, db_index=True, editable=False
     )
     title = models.CharField(max_length=255, blank=True, default="")
-    initial_prompt = models.TextField()
+    # The brief. Empty for a template opened as it is (template mode, launch "direct").
+    initial_prompt = models.TextField(blank=True, default="")
     status = models.CharField(
         max_length=16,
         choices=RequirementStatus.choices,
@@ -221,7 +222,8 @@ class AgentRequirement(FullAuditMixin):
     # straight from them, and leaves only real gaps as open decisions.
     mode = models.CharField(
         max_length=16, blank=True, default=""
-    )  # draft | interview | adopted (see tasks._start_template_draft)
+    )  # draft | interview | adopted | template (see tasks._start_template_draft;
+    # "template": opened on the template's own preview, no brief, see scaffold.py)
     reference_id = models.CharField(max_length=64, blank=True, default="")
     # [{path, kind: inferred|reference|default|missing, note, source?}]
     spec_flags = models.JSONField(default=list, blank=True)
@@ -326,6 +328,37 @@ class AgentRequirement(FullAuditMixin):
         self.draft_revision += 1
         return True
 
+    def sync_kit_spec(self) -> bool:
+        """A prototype that is the kit page draws the requirement's YAML: keep its copy current.
+
+        Whatever changes the spec (the analyst's tools, a revision, a template's starter) changes
+        what the preview shows, with no step in between. True when the parts changed.
+        """
+        from .prototype import parts_hash
+        from .prototype_kit import is_kit_page, with_spec
+
+        if not is_kit_page(self.prototype_parts):
+            return False
+        synced = with_spec(self.prototype_parts, self.spec_markdown)
+        if synced == self.prototype_parts:
+            return False
+        self.prototype_parts = synced
+        self.prototype_hash = parts_hash(synced)
+        self.prototype_revision = (self.prototype_revision or 0) + 1
+        return True
+
+    def save(self, *args, **kwargs):
+        if self.sync_kit_spec() and kwargs.get("update_fields") is not None:
+            kwargs["update_fields"] = list(
+                {
+                    *kwargs["update_fields"],
+                    "prototype_parts",
+                    "prototype_hash",
+                    "prototype_revision",
+                }
+            )
+        super().save(*args, **kwargs)
+
     def record_spec(self, markdown: str, source: str = SpecSource.AGENT) -> None:
         """Store a new spec revision, keeping the previous one."""
         markdown = (markdown or "").strip()
@@ -339,6 +372,7 @@ class AgentRequirement(FullAuditMixin):
         self.spec_version += 1
         self.spec_markdown = markdown
         self.spec_is_draft = False
+        self.sync_kit_spec()
         AgentRequirementVersion.objects.create(
             requirement=self,
             version=self.spec_version,
@@ -348,7 +382,15 @@ class AgentRequirement(FullAuditMixin):
             source=source,
             prototype_parts=dict(self.prototype_parts or {}),
             prototype_hash=self.prototype_hash,
+            preview_mode=self.preview_mode or "",
+            baseline=self.prototype_baseline() if self.preview_mode == "open" else "",
         )
+
+    def prototype_baseline(self) -> str:
+        """What a new version's prototype is compared against (template_mode.baseline_for)."""
+        from .template_mode import baseline_for
+
+        return baseline_for(self)
 
     def __str__(self) -> str:
         return f"{self.title or self.initial_prompt[:40]} ({self.status})"
@@ -444,6 +486,13 @@ class AgentRequirementVersion(models.Model):
     # The open prototype as agreed with this spec version (empty in kit mode).
     prototype_parts = models.JSONField(default=dict, blank=True)
     prototype_hash = models.CharField(max_length=64, blank=True, default="")
+    # The requirement's preview mode when this version was recorded: what a build of it
+    # follows (kit | open). Empty on versions recorded before it was kept.
+    preview_mode = models.CharField(max_length=8, blank=True, default="")
+    # What the prototype is compared against for the build's change map
+    # (approval_bundle.write_change_map): "template:<version uuid>" for the template's
+    # starting prototype, "version:<n>" for an earlier approved version, "" for none.
+    baseline = models.CharField(max_length=80, blank=True, default="")
     ts = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -478,6 +527,15 @@ class AgentRun(FullAuditMixin):
     # The approved spec this run was built from, when there is one.
     requirement = models.ForeignKey(
         "AgentRequirement",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="runs",
+    )
+    # The approved version of that requirement the run builds: its spec, preview mode and
+    # prototype, never the live requirement, which may be edited after Commit (G1).
+    requirement_version = models.ForeignKey(
+        "AgentRequirementVersion",
         null=True,
         blank=True,
         on_delete=models.SET_NULL,

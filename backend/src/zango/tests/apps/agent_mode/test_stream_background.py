@@ -57,14 +57,14 @@ class _Client:
         await asyncio.sleep(3600)  # a live session never ends by itself
 
 
-def _run(script, prompt="build"):
+def _run(script, prompt="build", end_check=None):
     _Client.instances.clear()
     client = type("C", (_Client,), {"script": script})
     sdk = types.SimpleNamespace(ClaudeSDKClient=client)
     with mock.patch.dict(sys.modules, {"claude_agent_sdk": sdk}), mock.patch.object(
         stream, "NUDGE_SECONDS", 0.2
     ):
-        items = [i for i in stream.AgentStream(None, prompt) if i.kind != "idle"]
+        items = [i for i in stream.AgentStream(None, prompt, end_check=end_check) if i.kind != "idle"]
     names = [type(i.payload).__name__ for i in items if i.kind == "message"]
     return items, names, _Client.instances[0].queries
 
@@ -133,4 +133,32 @@ class BackgroundTasksKeepTheRunOpenTests(unittest.TestCase):
         )
         self.assertEqual(items[-1].kind, "done")
         self.assertEqual(len(names), 2)
+        self.assertEqual(queries, ["build"])
+
+
+class EndOfTurnCheckTests(unittest.TestCase):
+    TURN = [_msg("AssistantMessage", parent_tool_use_id=None), _msg("ResultMessage")]
+
+    def test_an_owed_message_is_sent_back_instead_of_ending_the_turn(self):
+        owed = ["apply the reference", None]
+        _, names, queries = _run(
+            self.TURN + ["nudged"] + self.TURN, end_check=lambda: owed.pop(0)
+        )
+        self.assertEqual(queries, ["build", "apply the reference"])
+        self.assertEqual(len(names), 4)
+
+    def test_the_check_is_asked_at_most_twice(self):
+        _, names, queries = _run(
+            self.TURN + ["nudged"] + self.TURN + ["nudged"] + self.TURN,
+            end_check=lambda: "still owed",
+        )
+        self.assertEqual(queries, ["build", "still owed", "still owed"])
+        self.assertEqual(len(names), 6)
+
+    def test_a_check_that_raises_does_not_hold_the_turn(self):
+        def boom():
+            raise RuntimeError("x")
+
+        items, _, queries = _run(self.TURN, end_check=boom)
+        self.assertEqual(items[-1].kind, "done")
         self.assertEqual(queries, ["build"])

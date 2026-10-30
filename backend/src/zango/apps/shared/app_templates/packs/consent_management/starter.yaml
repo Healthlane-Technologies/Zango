@@ -1,0 +1,553 @@
+# Consent Management: the template's starting point. Consent policies with versioned
+# texts approved by the Privacy Officer, consent captured from patients across channels
+# with evidence, withdrawal and data requests handled within the legal deadline, and
+# re-consent when a policy changes. In template mode this journey is what the creator
+# sees the moment the app opens; the analyst changes it from the chat.
+spec_version: 1
+
+app:
+  code: consent_management
+  name: Consent Management
+  description: Consent capture, versioning, withdrawal and proof across channels and countries.
+  timezone: Asia/Kolkata
+  locale: en-IN
+  currency: INR
+  theme: { primary: "#0E7490", secondary: "#64748B" }
+  custom_requirements:
+    - area: integration
+      title: OTP and WhatsApp confirmation
+      text: When a consent is captured on the portal or by an agent, send the patient a one-time code by SMS (or WhatsApp when they chose it) and confirm the consent when the code is entered; store the delivery log as evidence.
+    - area: scheduled
+      title: Request deadlines
+      text: Every hour, set the due_soon tag on open requests due within 5 days and the overdue tag once the due date has passed.
+    - area: permission
+      title: PII masking
+      text: Program Managers see patient name, mobile and email masked (first letter and last 2 digits only); Support Agents and the Privacy Officer see them in full.
+    - area: notification
+      title: Adverse event hand-off
+      text: When a withdrawal reason or request note mentions a side effect, notify the pharmacovigilance inbox with the patient ID and the text within 24 hours.
+
+choice_sets:
+  purpose:
+    - { id: programme,   label: Programme participation, color: teal }
+    - { id: marketing,   label: Marketing communication, color: purple }
+    - { id: hcp_sharing, label: Sharing with my doctor, color: blue }
+    - { id: pv_followup, label: Safety follow-up, color: amber }
+    - { id: research,    label: Research use, color: indigo }
+  country:
+    - { id: in, label: India }
+    - { id: gb, label: United Kingdom }
+    - { id: de, label: Germany }
+    - { id: ae, label: UAE }
+    - { id: sg, label: Singapore }
+  legal_basis:
+    - { id: dpdp,  label: DPDP Act 2023 }
+    - { id: gdpr,  label: GDPR }
+    - { id: pdpa,  label: PDPA }
+    - { id: local, label: Local law }
+  channel:
+    - { id: portal,   label: Patient portal, color: teal }
+    - { id: call,     label: Call centre,    color: blue }
+    - { id: paper,    label: Paper form,     color: gray }
+    - { id: whatsapp, label: WhatsApp,       color: green }
+    - { id: field,    label: Field nurse,    color: purple }
+  evidence_kind:
+    - { id: otp_log,   label: OTP confirmation log }
+    - { id: recording, label: Call recording }
+    - { id: signed,    label: Signed form scan }
+    - { id: web_log,   label: Portal click log }
+  request_type:
+    - { id: withdraw, label: Withdraw consent, color: amber }
+    - { id: access,   label: Copy of my data, color: blue }
+    - { id: correct,  label: Correct my data, color: indigo }
+    - { id: erase,    label: Erase my data,   color: red }
+  language:
+    - { id: en, label: English }
+    - { id: hi, label: Hindi }
+    - { id: de, label: German }
+    - { id: ar, label: Arabic }
+
+roles:
+  - name: Program Manager
+    description: Owns consent policies and their texts per country and purpose, and watches consent coverage across the programme.
+    landing: dashboard
+    menu:
+      - { page: dashboard, icon: layout-dashboard }
+      - { page: policies,  icon: scroll-text }
+      - { page: consents,  icon: file-check }
+      - { page: patients,  icon: users }
+      - { page: requests,  icon: inbox }
+
+  - name: Privacy Officer
+    description: Approves every policy version before it is published, verifies consent evidence and closes withdrawal and data requests within the legal deadline.
+    landing: requests
+    menu:
+      - { page: requests,        label: Requests, icon: inbox }
+      - { page: versions,  label: Versions to Approve, icon: stamp }
+      - { page: evidence,  label: Evidence to Verify, icon: shield-check }
+      - { page: consents,        icon: file-check }
+      - { page: policies,        icon: scroll-text }
+
+  - name: Support Agent
+    description: Enrols patients from the call centre or the field, captures consent on their behalf with evidence, and logs requests they make by phone.
+    landing: patients
+    menu:
+      - { page: patients, icon: users }
+      - { page: consents, icon: file-check }
+      - { page: requests, icon: inbox }
+
+  - name: Patient
+    description: External login; sees every consent they have given, withdraws any of them and asks for a copy, correction or erasure of their data.
+    landing: consents
+    menu:
+      - { page: consents, label: My Consents, icon: file-check }
+      - { page: requests, label: My Requests, icon: inbox }
+
+pages:
+  - code: dashboard
+    type: dashboard
+    route: /app/dashboard
+    title: Consent Overview
+    roles: [Program Manager]
+    blocks:
+      - kpis:
+          - { label: Active consents, value: { count: consent, where: "status == active" }, icon: file-check, tone: teal, go: consents }
+          - { label: Awaiting confirmation, value: { count: consent, where: "status == pending" }, icon: hourglass, tone: amber, go: consents }
+          - { label: Re-consent due, value: { count: consent, where: "has_tag reconsent_due" }, icon: refresh-cw, tone: indigo, go: consents }
+          - { label: Open requests, value: { count: privacy_request, where: "status in [received, in_progress]" }, icon: inbox, tone: red, go: requests }
+      - grid:
+          - bars: { title: Consents by purpose, entity: consent, group_by: purpose }
+          - bars: { title: Consents by channel, entity: consent, group_by: channel }
+      - list:
+          title: Requests due soonest
+          entity: privacy_request
+          where: "status in [received, in_progress]"
+          sort: due_date
+          primary: request_no
+          secondary: patient
+          meta: due_date
+          badge: status
+          limit: 8
+          empty: No open request.
+  - { code: policies,   type: crud,   entity: consent_policy, route: /app/policies, title: Consent Policies }
+  - { code: policy_360, type: detail, detail_view: policy_360, route: "/app/policies/:id" }
+  - { code: versions, type: crud, entity: policy_version, route: /app/versions, title: Policy Versions }
+  - { code: consents,    type: crud,   entity: consent,  route: /app/consents, title: Consents }
+  - { code: patients,    type: crud,   entity: patient,  route: /app/patients, title: Patients }
+  - { code: patient_360, type: detail, detail_view: patient_360, route: "/app/patients/:id" }
+  - { code: evidence, type: crud, entity: evidence, route: /app/evidence, title: Evidence }
+  - { code: requests, type: crud, entity: privacy_request, route: /app/requests, title: Requests }
+
+modules:
+  - code: policies
+    name: Policies
+    description: Consent policies per purpose and country, and the versioned texts patients agree to.
+    entities:
+      - code: consent_policy
+        name: Consent Policy
+        plural: Consent Policies
+        kind: hero
+        display: title
+        fields:
+          - policy_code:   { type: text, label: Code, readonly: true, unique: true, auto: { sequence: "CP-{000}" } }
+          - title:         { type: text, label: Policy title, required: true }
+          - purpose:       { type: choice, choices: purpose, required: true }
+          - country:       { type: choice, choices: country, required: true }
+          - legal_basis:   { type: choice, label: Legal basis, choices: legal_basis, required: true }
+          - retention_months: { type: integer, label: Keep data for (months), required: true, min: 6, max: 120 }
+          - mandatory:     { type: boolean, label: Required to join the programme, default: false }
+          - current_version: { type: text, label: Current version, readonly: true }
+        validation:
+          duplicate_check:
+            rules:
+              - { match: [purpose, country], compare: exact, on_match: block, message: A policy for this purpose and country already exists. }
+        access:
+          Program Manager: { actions: [view, add, edit, export, detail] }
+          Privacy Officer: { actions: [view, export, detail] }
+        workflow:
+          statuses:
+            - { code: draft,   label: Draft,   color: gray, initial: true }
+            - { code: live,    label: Live,    color: green }
+            - { code: retired, label: Retired, color: red, final: true }
+          transitions:
+            - { name: go_live, label: Go Live, from: draft, to: live, trigger: system, text: When the policy's first version is published. }
+            - { name: retire, label: Retire, from: live, to: retired, roles: [Program Manager], tone: danger,
+                confirm: "Retire this policy? No new consents can be given under it; existing ones stay on record.",
+                form: [ { reason: { type: long_text, required: true } } ] }
+        form:
+          create:
+            roles: [Program Manager]
+            title: New Consent Policy
+            fields: [title, purpose, country, legal_basis, retention_months, mandatory]
+            after_create: policy_360
+          edit: { same_as: create, editable_in: [draft, live] }
+        table:
+          columns:
+            - policy_code:     { label: Code, searchable: true, link_to: policy_360 }
+            - title:           { label: Policy, searchable: true, sortable: true }
+            - purpose:         { label: Purpose, filterable: true }
+            - country:         { label: Country, filterable: true }
+            - legal_basis:     { label: Legal basis, filterable: true }
+            - current_version: { label: Version }
+            - status:          { source: status, label: Status, filterable: true }
+          default_sort: title
+          row_click: policy_360
+          add_button: New Policy
+
+      - code: policy_version
+        name: Policy Version
+        plural: Policy Versions
+        kind: child
+        parent: { entity: consent_policy, field: policy }
+        display: version_no
+        fields:
+          - policy:         { type: link, to: consent_policy, required: true, display: title, on_delete: cascade }
+          - version_no:     { type: text, label: Version, required: true, placeholder: "2.0" }
+          - language:       { type: choice, choices: language, required: true }
+          - text:           { type: long_text, label: Consent text, required: true }
+          - change_summary: { type: long_text, label: What changed }
+          - needs_reconsent: { type: boolean, label: Existing consents must be given again, default: false }
+          - effective_from: { type: date, label: Effective from, required: true }
+        validation:
+          duplicate_check:
+            rules:
+              - { match: [policy, version_no, language], compare: exact, on_match: block, message: This version already exists in this language. }
+        access:
+          Program Manager: { actions: [view, add, edit] }
+          Privacy Officer: { actions: [view, export] }
+        workflow:
+          statuses:
+            - { code: draft,      label: Draft,      color: gray, initial: true }
+            - { code: in_review,  label: In Review,  color: amber }
+            - { code: published,  label: Published,  color: green }
+            - { code: superseded, label: Superseded, color: blue, final: true }
+          transitions:
+            - { name: submit, label: Submit for Approval, from: draft, to: in_review, roles: [Program Manager], primary: true,
+                on_done: Notify the Privacy Officer. }
+            - name: publish
+              label: Approve & Publish
+              from: in_review
+              to: published
+              roles: [Privacy Officer]
+              primary: true
+              confirm: "Publish this version? New consents use it from the effective date."
+              on_done: "Supersede the policy's previous published version, set the policy's current_version, and when needs_reconsent is set tag every active consent on the policy reconsent_due and message those patients."
+            - { name: send_back, label: Send Back, from: in_review, to: draft, roles: [Privacy Officer],
+                form: [ { note: { type: long_text, required: true } } ] }
+            - { name: supersede, label: Superseded, from: published, to: superseded, trigger: system, text: When a newer version of the same policy is published. }
+        table:
+          columns:
+            - policy:          { label: Policy, display: title, filterable: true }
+            - version_no:      { label: Version }
+            - language:        { label: Language, filterable: true }
+            - effective_from:  { label: Effective, sortable: true }
+            - needs_reconsent: { label: Re-consent }
+            - status:          { source: status, label: Status, filterable: true }
+          default_sort: -effective_from
+          quick_filters:
+            - { label: To approve, where: status == in_review, roles: [Privacy Officer], default: true }
+          add_button: Add Policy Version
+        form:
+          create: { fields: [version_no, language, text, change_summary, needs_reconsent, effective_from] }
+          edit:   { same_as: create, editable_in: [draft] }
+
+  - code: consents
+    name: Consents
+    description: Patients, the consents they give under each policy version, and the evidence behind each one.
+    entities:
+      - code: patient
+        name: Patient
+        plural: Patients
+        kind: master
+        display: full_name
+        app_user: { role: Patient, name: full_name, email: email, create_on: has_login == true }
+        fields:
+          - patient_id:   { type: text, label: Patient ID, readonly: true, unique: true, auto: { sequence: "PT-{000000}" } }
+          - full_name:    { type: text, label: Name, required: true }
+          - mobile:       { type: phone, required: true, unique: true }
+          - email:        { type: email }
+          - country:      { type: choice, choices: country, required: true }
+          - language:     { type: choice, label: Preferred language, choices: language, required: true }
+          - preferred_channel: { type: choice, label: Preferred channel, choices: channel }
+          - has_login:    { type: boolean, label: Portal login, default: false }
+        validation:
+          duplicate_check:
+            rules:
+              - { match: [mobile], compare: exact, on_match: block, message: A patient with this mobile number already exists. }
+        access:
+          Support Agent:   { actions: [view, add, edit, detail] }
+          Program Manager: { actions: [view, export, detail] }
+          Privacy Officer: { actions: [view, export, detail] }
+        table:
+          columns:
+            - patient_id: { label: Patient ID, searchable: true, link_to: patient_360 }
+            - full_name:  { label: Name, searchable: true, sortable: true }
+            - mobile:     { label: Mobile, searchable: true }
+            - country:    { label: Country, filterable: true }
+            - preferred_channel: { label: Channel, filterable: true }
+          default_sort: full_name
+          row_click: patient_360
+          add_button: Enrol Patient
+        form:
+          create: { title: Enrol Patient, fields: [full_name, mobile, email, country, language, preferred_channel, has_login], after_create: patient_360 }
+          edit:   { same_as: create }
+
+      - code: consent
+        name: Consent
+        plural: Consents
+        kind: transactional
+        display: consent_no
+        fields:
+          - consent_no:   { type: text, label: Consent, readonly: true, unique: true, auto: { sequence: "CN-{YY}-{000000}" } }
+          - patient:      { type: link, to: patient, required: true, display: full_name }
+          - policy:       { type: link, to: consent_policy, required: true, display: title, limit_choices: status == live }
+          - purpose:      { type: choice, choices: purpose, readonly: true }
+          - version_no:   { type: text, label: Version agreed, readonly: true }
+          - channel:      { type: choice, choices: channel, required: true }
+          - given_at:     { type: datetime, label: Given at, readonly: true }
+          - expires_on:   { type: date, label: Expires }
+          - withdrawn_at: { type: datetime, label: Withdrawn at, readonly: true }
+        validation:
+          duplicate_check:
+            rules:
+              - { match: [patient, policy], compare: exact, on_match: warn, message: This patient already has a consent under this policy; a new one replaces it. }
+        access:
+          Support Agent:   { actions: [view, add, export] }
+          Program Manager: { actions: [view, export] }
+          Privacy Officer: { actions: [view, export] }
+          Patient:         { actions: [view], rows: { own: patient } }
+        workflow:
+          statuses:
+            - { code: pending,   label: Awaiting Confirmation, color: amber, initial: true }
+            - { code: active,    label: Active,    color: green }
+            - { code: withdrawn, label: Withdrawn, color: red, final: true }
+            - { code: expired,   label: Expired,   color: gray, final: true }
+            - { code: replaced,  label: Replaced,  color: blue, final: true }
+          transitions:
+            - { name: confirm, label: Confirm, from: pending, to: active, trigger: system,
+                text: "When the patient enters the one-time code, or at once for a signed paper form; set given_at." }
+            - { name: lapse, label: Not Confirmed, from: pending, to: expired, trigger: system, text: When the code is not entered within 72 hours. }
+            - name: withdraw
+              label: Withdraw
+              from: active
+              to: withdrawn
+              roles: [Patient, Support Agent]
+              tone: danger
+              confirm: "Withdraw this consent? Processing for this purpose stops today."
+              form: [ { reason: { type: long_text } } ]
+              on_done: "Set withdrawn_at, stop every communication for this purpose, and log a Withdraw consent request as completed."
+            - { name: expire, label: Expire, from: active, to: expired, trigger: system, text: Nightly when expires_on < today. }
+            - { name: replace, label: Replaced, from: active, to: replaced, trigger: system, text: When the patient gives consent again under a newer version of the same policy. }
+          tags:
+            - { code: reconsent_due, label: Re-consent Due, color: indigo, system: true, text: Set when a policy version that needs re-consent is published; cleared when the consent is replaced. }
+        table:
+          columns:
+            - consent_no: { label: Consent, searchable: true, sortable: true }
+            - patient:    { label: Patient, display: full_name, searchable: true }
+            - policy:     { label: Policy, display: title, filterable: true }
+            - purpose:    { label: Purpose, filterable: true }
+            - version_no: { label: Version }
+            - channel:    { label: Channel, filterable: true }
+            - given_at:   { label: Given, format: datetime, sortable: true }
+            - status:     { source: status, label: Status, filterable: true }
+          default_sort: -given_at
+          quick_filters:
+            - { label: Active, where: status == active, default: true }
+            - { label: Re-consent due, where: has_tag reconsent_due }
+            - { label: Awaiting confirmation, where: status == pending }
+          add_button: Capture Consent
+        form:
+          create: { roles: [Support Agent], title: Capture Consent, fields: [patient, policy, channel, expires_on], on_create: "Copy the purpose and the policy's current version, then send the patient a one-time code to confirm." }
+
+      - code: evidence
+        name: Evidence
+        plural: Evidence
+        kind: child
+        parent: { entity: consent, field: consent }
+        display: kind
+        fields:
+          - consent:     { type: link, to: consent, required: true, display: consent_no, on_delete: protect }
+          - kind:        { type: choice, label: Evidence, choices: evidence_kind, required: true }
+          - file:        { type: file, accept: [pdf, jpg, png, mp3, wav, json] }
+          - checksum:    { type: text, label: SHA-256, readonly: true, help: Fingerprint of the file at upload; any change is detectable. }
+          - captured_at: { type: datetime, label: Captured at, required: true }
+          - verified:    { type: boolean, default: false, readonly: true }
+          - verified_by: { type: link, to: app_user, label: Verified by, readonly: true }
+        access:
+          Support Agent:   { actions: [view, add] }
+          Privacy Officer: { actions: [view, export] }
+          Program Manager: { actions: [view] }
+        table:
+          columns:
+            - consent:     { label: Consent, display: consent_no, searchable: true }
+            - kind:        { label: Evidence, filterable: true }
+            - captured_at: { label: Captured, format: datetime, sortable: true }
+            - checksum:    { label: SHA-256 }
+            - verified:    { label: Verified, filterable: true }
+          default_sort: -captured_at
+          quick_filters:
+            - { label: To verify, where: verified == false, roles: [Privacy Officer], default: true }
+          row_actions:
+            - { key: verify, label: Verify, type: confirm, roles: [Privacy Officer], show_when: verified == false, confirm: "Mark this evidence as verified?", on_done: "Set verified and verified_by to the current user." }
+          add_button: Add Evidence
+        form:
+          create: { fields: [kind, file, captured_at], on_create: Compute the file's SHA-256 into checksum. }
+
+  - code: requests
+    name: Requests
+    description: Withdrawal, access, correction and erasure requests from patients, closed within the legal deadline.
+    entities:
+      - code: privacy_request
+        name: Request
+        plural: Requests
+        kind: transactional
+        display: request_no
+        fields:
+          - request_no:   { type: text, label: Request, readonly: true, unique: true, auto: { sequence: "DSR-{YY}-{0000}" } }
+          - patient:      { type: link, to: patient, required: true, display: full_name }
+          - request_type: { type: choice, label: Type, choices: request_type, required: true }
+          - consent:      { type: link, to: consent, display: consent_no, help: "For a withdrawal, the consent it is about." }
+          - details:      { type: long_text }
+          - received_on:  { type: date, label: Received, readonly: true }
+          - due_date:     { type: date, label: Due, readonly: true, computed: "received_on + 30 days." }
+          - response:     { type: long_text, label: Response to the patient }
+          - response_file: { type: file, label: Data copy, accept: [pdf, zip] }
+        validation:
+          rules:
+            - { when: request_type == withdraw, require: [consent], message: Choose the consent to withdraw. }
+        access:
+          Patient:         { actions: [view, add], rows: { own: patient } }
+          Support Agent:   { actions: [view, add] }
+          Privacy Officer: { actions: [view, export] }
+          Program Manager: { actions: [view, export] }
+        workflow:
+          statuses:
+            - { code: received,    label: Received,    color: blue, initial: true }
+            - { code: in_progress, label: In Progress, color: amber }
+            - { code: completed,   label: Completed,   color: green, final: true }
+            - { code: rejected,    label: Rejected,    color: red, final: true }
+          transitions:
+            - { name: start, label: Start, from: received, to: in_progress, roles: [Privacy Officer], primary: true }
+            - name: complete
+              label: Complete
+              from: in_progress
+              to: completed
+              roles: [Privacy Officer]
+              primary: true
+              form: [ { response: { type: long_text, required: true } } ]
+              on_done: "Carry out the request (withdraw the consent, export or correct the data, or erase it after the retention check), then send the patient the response."
+            - { name: reject, label: Reject, from: [received, in_progress], to: rejected, roles: [Privacy Officer], tone: danger,
+                form: [ { response: { type: long_text, required: true } } ],
+                on_done: Send the patient the reason. }
+          tags:
+            - { code: due_soon, label: Due Soon, color: amber, system: true, text: Set when the due date is within 5 days. }
+            - { code: overdue,  label: Overdue,  color: red, system: true, text: Set once the due date has passed. }
+        table:
+          columns:
+            - request_no:   { label: Request, searchable: true, sortable: true }
+            - patient:      { label: Patient, display: full_name, searchable: true }
+            - request_type: { label: Type, filterable: true }
+            - received_on:  { label: Received, sortable: true }
+            - due_date:     { label: Due, sortable: true }
+            - status:       { source: status, label: Status, filterable: true }
+          default_sort: due_date
+          quick_filters:
+            - { label: Open, where: "status in [received, in_progress]", default: true }
+            - { label: Overdue, where: has_tag overdue }
+          add_button: New Request
+        form:
+          create: { title: New Request, fields: [patient, request_type, consent, details], on_create: "Set received_on to today; a patient's own request is linked to them." }
+
+detail_views:
+  - code: policy_360
+    hero: consent_policy
+    title: "{title}"
+    back_to: policies
+    layout: header_tabs_sidebar
+    roles: [Program Manager, Privacy Officer]
+    header:
+      title: title
+      subtitle: ["{policy_code}", "{country}"]
+      badges: [ { source: status } ]
+      facts:
+        - { label: Purpose, field: purpose }
+        - { label: Legal basis, field: legal_basis }
+        - { label: Version, field: current_version }
+        - { label: Retention, field: retention_months }
+      actions: { transitions: true, buttons: [ { key: edit, label: Edit, type: edit, roles: [Program Manager] } ] }
+    stats:
+      - { label: Active consents, value: { count: consent, via: policy, where: status == active }, tone: teal, link_to_tab: consents }
+      - { label: Withdrawn, value: { count: consent, via: policy, where: status == withdrawn }, tone: red, link_to_tab: consents }
+      - { label: Re-consent due, value: { count: consent, via: policy, where: has_tag reconsent_due }, tone: indigo, link_to_tab: consents }
+      - { label: Versions, value: { count: policy_version, via: policy }, tone: gray, link_to_tab: versions }
+    sidebar:
+      - { type: fields, title: Policy, fields: [purpose, country, legal_basis, retention_months, mandatory] }
+    tabs:
+      - code: versions
+        label: Versions
+        type: related_table
+        entity: policy_version
+        via: policy
+        count_badge: true
+        columns: [version_no, language, effective_from, needs_reconsent, status]
+        add: { label: New Version, prefill: { policy: hero } }
+      - code: consents
+        label: Consents
+        type: related_table
+        entity: consent
+        via: policy
+        count_badge: true
+        columns: [consent_no, patient, version_no, channel, given_at, status]
+      - code: activity
+        label: Activity
+        type: timeline
+        sources:
+          - { entity: consent_policy, events: [created, updated, transition] }
+          - { entity: policy_version, via: policy, events: [created, transition] }
+    states:
+      not_found: { title: Policy not found, back_to: policies }
+
+  - code: patient_360
+    hero: patient
+    title: "{full_name}"
+    back_to: patients
+    layout: header_tabs_sidebar
+    roles: [Program Manager, Privacy Officer, Support Agent]
+    header:
+      title: full_name
+      subtitle: ["{patient_id}", "{country}"]
+      facts:
+        - { label: Mobile, field: mobile }
+        - { label: Language, field: language }
+        - { label: Channel, field: preferred_channel }
+      actions: { buttons: [ { key: edit, label: Edit, type: edit, roles: [Support Agent] } ] }
+    stats:
+      - { label: Active consents, value: { count: consent, via: patient, where: status == active }, tone: teal, link_to_tab: consents }
+      - { label: Withdrawn, value: { count: consent, via: patient, where: status == withdrawn }, tone: red, link_to_tab: consents }
+      - { label: Open requests, value: { count: privacy_request, via: patient, where: "status in [received, in_progress]" }, tone: amber, link_to_tab: requests }
+    sidebar:
+      - { type: fields, title: Contact, fields: [mobile, email, country, language, preferred_channel, has_login] }
+    tabs:
+      - code: consents
+        label: Consents
+        type: related_table
+        entity: consent
+        via: patient
+        count_badge: true
+        columns: [consent_no, policy, purpose, version_no, channel, given_at, status]
+        add: { label: Capture Consent, prefill: { patient: hero } }
+      - code: requests
+        label: Requests
+        type: related_table
+        entity: privacy_request
+        via: patient
+        count_badge: true
+        columns: [request_no, request_type, received_on, due_date, status]
+      - code: activity
+        label: Consent history
+        type: timeline
+        sources:
+          - { entity: consent, via: patient, events: [created, transition] }
+          - { entity: privacy_request, via: patient, events: [created, transition] }
+    states:
+      not_found: { title: Patient not found, back_to: patients }

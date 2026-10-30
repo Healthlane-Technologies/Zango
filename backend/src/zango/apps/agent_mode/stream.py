@@ -58,6 +58,7 @@ DEFAULT_QUEUE_MAX = 2_000
 DEFAULT_POLL_TIMEOUT = 0.25
 # How often the pump looks at the stop flag, and how long it gives an
 # interrupted agent to wind down before closing the client under it.
+MAX_END_CHECKS = 2
 STOP_POLL_SECONDS = 0.25
 STOP_GRACE_SECONDS = 20.0
 # Subagents run in the background: the parent's turn can end (a ResultMessage)
@@ -126,7 +127,11 @@ class AgentStream:
         cancel: threading.Event | None = None,
         queue_max: int = DEFAULT_QUEUE_MAX,
         poll_timeout: float = DEFAULT_POLL_TIMEOUT,
+        end_check=None,
     ):
+        # end_check() -> str | None: called when the agent finishes a turn; a message is
+        # sent back to it (at most MAX_END_CHECKS times) instead of ending the turn.
+        self.end_check = end_check
         self.options = options
         self.prompt = prompt
         self.cancel = cancel or threading.Event()
@@ -180,6 +185,17 @@ class AgentStream:
                 return
             yield item
 
+    def _end_gap(self, used: int, is_error: bool) -> str | None:
+        if self.end_check is None or used >= MAX_END_CHECKS or is_error:
+            return None
+        if self.cancel.is_set():
+            return None
+        try:
+            return self.end_check() or None
+        except Exception:  # noqa: BLE001 - a broken check must not hold a turn open
+            logger.exception("agent_mode: end-of-turn check failed")
+            return None
+
     def request_stop(self) -> None:
         self.cancel.set()
 
@@ -212,6 +228,7 @@ class AgentStream:
                 nudge = NUDGE_PROMPT
                 answered = False  # the agent has said or done anything
                 reprompted = False
+                end_checks = 0
                 last_message_at = loop.time()
                 try:
                     while True:
@@ -241,7 +258,13 @@ class AgentStream:
                                     reprompted, nudge = True, self.prompt
                                     waiting, nudge_at = True, None
                                 elif not active:
-                                    break
+                                    owed = self._end_gap(
+                                        end_checks, getattr(message, "is_error", False)
+                                    )
+                                    if owed is None:
+                                        break
+                                    end_checks += 1
+                                    await client.query(owed)
                                 else:
                                     waiting, nudge_at = True, None
                                     nudge = NUDGE_PROMPT

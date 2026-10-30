@@ -56,6 +56,38 @@ class Command(BaseCommand):
         bld.add_argument("--changelog", default="")
         bld.add_argument("--publish", action="store_true")
 
+        port = sub.add_parser(
+            "port",
+            help="Port a template from the Zelthy catalogue (services/porting.py).",
+        )
+        psub = port.add_subparsers(dest="port_action", required=True)
+        pex = psub.add_parser("extract", help="Read the catalogue out of Zelthy.html.")
+        pex.add_argument("html", help="Path to the Zelthy console mockup (.html).")
+        pls = psub.add_parser("list", help="List catalogue entries and their packs.")
+        pls.add_argument("--category", default="")
+        pls.add_argument("--grep", default="")
+        psc = psub.add_parser(
+            "scaffold", help="Write packs/<dir>/ (template.json + starter skeleton)."
+        )
+        psc.add_argument("entry", help="Catalogue id (consentmgr) or exact name.")
+        psc.add_argument(
+            "--dir", default="", help="Pack folder (default: from the slug)."
+        )
+        psc.add_argument(
+            "--slug", default="", help="Template slug (default: from the name)."
+        )
+        psc.add_argument("--force", action="store_true", help="Rewrite template.json.")
+        pck = psub.add_parser(
+            "check", help="spec_check the starter, list manifest gaps, screenshot it."
+        )
+        pck.add_argument("dir", help="Pack folder under packs/ (or a path).")
+        pck.add_argument("--shots", default="", help="Write preview screenshots here.")
+        pim = psub.add_parser(
+            "import", help="Check, then import (and publish) the pack."
+        )
+        pim.add_argument("dir")
+        pim.add_argument("--publish", action="store_true")
+
         att = sub.add_parser(
             "attach-workspace",
             help="Attach a workspace zip to a template as its next version.",
@@ -156,6 +188,9 @@ class Command(BaseCommand):
 
         if action == "attach-builder":
             return self._attach_builder(opts)
+
+        if action == "port":
+            return self._port(opts)
 
         for template in AppTemplate.objects.all():
             current = template.current_version_id
@@ -281,3 +316,85 @@ class Command(BaseCommand):
         self.stdout.write(
             self.style.SUCCESS(f"{template.slug} {draft.version} is {state}.")
         )
+
+    def _port(self, opts):
+        import tempfile
+
+        from zango.apps.shared.app_templates.services import porting
+
+        def pack_dir(name):
+            path = Path(name)
+            return path if path.is_dir() else porting.PACKS_DIR / name
+
+        act = opts["port_action"]
+        try:
+            if act == "extract":
+                cat = porting.extract(opts["html"])
+                self.stdout.write(
+                    self.style.SUCCESS(
+                        f"{len(cat['templates'])} templates → {porting.CATALOGUE_PATH}"
+                    )
+                )
+                return
+
+            if act == "list":
+                done = porting.ported()
+                for t in porting.load_catalogue()["templates"]:
+                    if opts["category"] and t["category"] != opts["category"]:
+                        continue
+                    hay = f"{t['id']} {t['name']} {t['description']}".lower()
+                    if opts["grep"] and opts["grep"].lower() not in hay:
+                        continue
+                    pack = f"  → packs/{done[t['id']]}" if t["id"] in done else ""
+                    self.stdout.write(
+                        f"{t['id']:<14} {t['name']}  [{t['category']}]{pack}"
+                    )
+                return
+
+            if act == "scaffold":
+                pack = porting.scaffold(
+                    opts["entry"],
+                    dirname=opts["dir"],
+                    slug=opts["slug"],
+                    force=opts["force"],
+                )
+                self.stdout.write(
+                    self.style.SUCCESS(
+                        f"Wrote {pack}. Author starter.yaml, then: app_templates port check {pack.name} --shots <dir>"
+                    )
+                )
+                return
+
+            pack = pack_dir(opts["dir"])
+            if not (pack / "template.json").exists():
+                raise CommandError(f"{pack} has no template.json.")
+            with tempfile.TemporaryDirectory() as ws:
+                code, report = porting.spec_check(pack, Path(ws))
+            self.stdout.write(report)
+            schema_errors = porting.schema_issues(pack)
+            for err in schema_errors:
+                self.stdout.write(self.style.ERROR(f"  schema: {err}"))
+            for gap in porting.manifest_issues(pack):
+                self.stdout.write(self.style.WARNING(f"  template.json: {gap}"))
+            if code != 0 or schema_errors:
+                raise CommandError("The starter has spec errors; fix them first.")
+
+            if act == "check":
+                if opts["shots"]:
+                    shots = porting.render(pack, Path(opts["shots"]))
+                    self.stdout.write(
+                        self.style.SUCCESS(
+                            f"{len(shots)} screenshots in {opts['shots']}"
+                        )
+                    )
+                return
+
+            if act == "import":
+                return self.handle(
+                    action="import",
+                    source=str(pack),
+                    publish=opts["publish"],
+                    version=None,
+                )
+        except porting.PortError as exc:
+            raise CommandError(str(exc)) from exc

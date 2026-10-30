@@ -257,10 +257,14 @@ class AgentRunListCreateView(
 
             try:
                 with transaction.atomic():
+                    from zango.apps.agent_mode.template_build import pin_version
+
                     run = AgentRun.objects.create(
                         prompt=prompt,
                         title=(requirement.title if requirement else prompt[:80])[:255],
                         requirement=requirement,
+                        # The build reads this version, never the live requirement (G1).
+                        requirement_version=pin_version(requirement),
                         trigger_kind=TriggerKind.UI,
                         triggered_by=_user_label(request),
                         status=RunStatus.QUEUED,
@@ -774,6 +778,7 @@ class AgentRunResumeView(ZangoGenericPlatformAPIView, TenantMixin):
                         prompt=previous.prompt,
                         title=previous.title,
                         requirement=previous.requirement,
+                        requirement_version=previous.requirement_version,
                         resumed_from=previous,
                         trigger_kind=TriggerKind.RESUME,
                         triggered_by=_user_label(request),
@@ -855,8 +860,8 @@ def _dispatch_turn(requirement, tenant):
 def _seed_preview_mode(requirement, asked) -> None:
     """Open prototype or kit preview for a new (template) requirement.
 
-    An explicit choice wins; otherwise a change keeps the mode of the app's last
-    approved requirement, and starts from its prototype.
+    Open unless the platform switch is off: the creator changes the design in chat, there is
+    no design choice. A change starts from the last approved requirement's prototype.
     """
     from django.conf import settings as dj
 
@@ -870,13 +875,22 @@ def _seed_preview_mode(requirement, asked) -> None:
         .only("preview_mode", "prototype_parts", "prototype_hash")
         .first()
     )
-    asked = (asked or "").strip().lower()
-    if asked not in ("open", "kit"):
-        asked = previous.preview_mode if previous and previous.preview_mode else "kit"
-    requirement.preview_mode = asked
-    if asked == "open" and previous and previous.prototype_parts:
+    from zango.apps.agent_mode.template_mode import is_direct
+
+    template = requirement.template if requirement.template_slug else None
+    requirement.preview_mode = "open"
+    if previous and previous.prototype_parts:
         requirement.prototype_parts = dict(previous.prototype_parts)
         requirement.prototype_hash = previous.prototype_hash
+    elif is_direct(template) and not requirement.prototype_parts:
+        from zango.apps.agent_mode.prototype_kit import open_spec
+
+        requirement.prototype_parts = dict(template.prototype_parts)
+        requirement.prototype_hash = template.prototype_hash
+        if requirement.spec_markdown:
+            requirement.spec_markdown = open_spec(
+                requirement.spec_markdown, requirement.prototype_parts
+            ).strip()
 
 
 def _append_user_message(requirement, content: str, focus=None):

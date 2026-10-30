@@ -22,7 +22,8 @@ the probe worker) and returns its labels by kind:
   "initials" for an avatar of initials, ``mono`` the second line set in a monospace class.
 
 Labels are normalised for matching (``norm``); counts at the end ("Open 7") are dropped. Text that
-is record data rather than UI copy (IDs, amounts, dates, long sentences) is skipped by ``is_copy``.
+is record data rather than UI copy (IDs, amounts, dates, long sentences) is skipped by ``is_copy``, and
+an element marked ``data-zas-chrome`` (the runtime's pager, a record count) with all it holds.
 """
 
 import re
@@ -32,6 +33,9 @@ KINDS = ("menu", "title", "heading", "column", "tab", "button", "label", "counte
 VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
 SKIP = {"script", "style", "svg", "template", "noscript"}
 CLICKABLE = {"a", "button"}
+# Marks what the preview's runtime draws on every page of its kind (a pager, a record count), not
+# the spec: such an element and everything in it is left out.
+CHROME = "data-zas-chrome"
 
 
 def norm(text) -> str:
@@ -95,7 +99,7 @@ class _Reader(HTMLParser):
         if tag in VOID:
             return
         a = dict(attrs)
-        if tag in SKIP or self.skip:
+        if tag in SKIP or self.skip or CHROME in a:
             self.skip += 1
             self.stack.append([tag, a, None, []])
             return
@@ -244,8 +248,10 @@ def subtitle(dom_html: str):
     m = re.search(r"<h1\b[^>]*>.*?</h1>(.*)", dom_html or "", re.S | re.I)
     if not m:
         return None
-    p = re.search(r"<(p|div)\b[^>]*>((?:(?!<(?:p|div|h\d|table|button)\b).)*?)</\1>", m.group(1)[:4000], re.S | re.I)
-    text = " ".join(re.sub(r"<[^>]+>", " ", p.group(2)).split()) if p else ""
+    p = re.search(r"<(p|div)\b([^>]*)>((?:(?!<(?:p|div|h\d|table|button)\b).)*?)</\1>", m.group(1)[:4000], re.S | re.I)
+    if p and CHROME in p.group(2):
+        return None
+    text = " ".join(re.sub(r"<[^>]+>", " ", p.group(3)).split()) if p else ""
     return text or None
 
 

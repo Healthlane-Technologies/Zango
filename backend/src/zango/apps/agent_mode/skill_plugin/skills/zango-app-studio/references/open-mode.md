@@ -2,7 +2,8 @@
 
 An app is in open mode when its approval bundle has `.zas/bundle/prototype/` (the user approved a
 free-form prototype instead of the kit preview). Read `.zas/bundle/prototype/index.md` first: it lists
-every screen, its roles and its files, and names the shell's screenshots.
+every screen, its roles and its files, and names the shell's screenshots. When it has a Change column,
+read §Change map before anything else: it says which screens need work at all.
 
 What the user approved is the **look**. Behaviour, data, menus and permissions still come from the spec.
 The prototype's tokens are already in the runtime (`app.design` → `spec.ui.json`), so standard pages
@@ -20,6 +21,25 @@ A screen copied from the prototype's own markup and classes matches it; one redr
 resembles it. So every rebuild screen, and the shell when `makeShell` cannot draw it, is a **port**:
 the prototype's component, in React, under `<div className="zp">`, with the app's data in place of the
 demo data (§Screens).
+
+## Change map (`changes.json`)
+
+When the bundle has `changes.json` (an app on a template, or a change request), the prototype was
+compared with a **baseline**: the template's starting prototype, or the version the app was last built
+from. Each screen has a tag, computed from the parts (the Change column of `index.md`). Do only what the
+tag says; a screen you don't need to touch stays exactly as it is built.
+
+| Tag | Means | What you do |
+|---|---|---|
+| `unchanged` | The screen and the shared look are as in the baseline. | Build it the standard way from the spec (a kit page, or its hole as in kit mode). On a change request, don't touch it. No port, no parity work. |
+| `restyled` | The screen is the same; only the shared look changed (`global`: tokens.css, app.css, shell). | Nothing per screen: apply the new look once (the tokens are in `app.design`; the shell and shared CSS as §The shell / §The kit), then check the screen with parity. |
+| `edited` | The screen changed, but most of it is still the baseline. | Port only the change: read `screens/<id>/diff.patch` with the screen's `shot` and `dom`, and edit the existing page or slot. A change the spec says (a column, a status, a button) comes from the spec. |
+| `rewritten`, `new` | Mostly new markup, or a screen the baseline didn't have. | Port it in full, as below (§Screens, rebuild), or build it from the spec when it is a kit page. |
+
+`global` says which shared parts changed (`tokens.css`, `app.css`, `shell.js`, `other`). When only
+`tokens.css` changed, every screen is `restyled`: update the theme, run parity, and you are done.
+`removed` lists screens the baseline had and the approved prototype doesn't; their pages are gone from
+the spec too.
 
 ## The shell
 
@@ -171,8 +191,15 @@ at the end of `.zas/bundle/prototype/index.md` (and `plan.md`). Follow it; never
 | **rebuild** | a custom page or dashboard, or a standard page marked `rebuild: true` | Its hole's slot, ported from the approved screen. The hole text names the folder. |
 | **prototype-only** | not built | Nothing. |
 
-**Kit.** Compare the built page with `shot.<role>.png`. What differs is fixed in the kit piece that
-draws it (every page using that piece gets the fix), then in the page's stylesheet. Anything left is
+**Kit.** Compare the built page with `shot.<role>.png`, part by part, including the 360's header,
+facts, stat tiles, tabs and panels (a record page has its own `screens/<id>/`: open it as well as the
+list). What differs is fixed in the kit piece that draws it (every page using that piece gets the fix),
+then in the page's stylesheet. `kit.css` can restyle **any** `.zas-…` element, not only the pieces in
+`map.json`: find the prototype's element in `dom.<role>.html`, copy its declarations from
+`css.used.css` (gradients, borders, shadows, fonts, letter-spacing, `text-transform`) onto the matching
+`.zas-…` selector, and hide what the prototype does not show. A design change can touch any part, so
+check every part, not the ones the pieces list names. `prototype.css` does not style kit pages: its
+rules sit under `.zp`, which only ported (rebuild) screens render. Anything left is
 a gap for the build report, not a reason to write custom code: the lint fails a kit page whose
 `Page_<code>` export isn't `makeListPage` / `makeViewsPage`. A screen stylesheet:
 
@@ -277,7 +304,8 @@ Until the prototype carries field and action markers (P2), parity in open mode i
 - **One look per screen**: the built page, shot at 1280 px, next to the approved `shot.<role>.png`, with
   a look-difference score: how differently the two are laid out (edges in the first screen; 0% = the
   same, a different layout is 40% and more; a faithful port with demo data sits near 10–15%). The
-  score goes to the build report, never to the verdict.
+  score goes to the build report. A score over 40% (`ZAS_LOOK_FAIL`: a different layout, not demo
+  data) also fails the screen's parity check, so it counts in the verdict.
 - **Look rounds** run on that score: each round sends the screens still over 25% (and those with a
   parity problem), worst first; the platform rebuilds and re-shoots after your changes. They go on
   while a screen gets at least 3 points closer, up to 5 rounds, and stop when every screen is within

@@ -54,6 +54,80 @@ class TemplateBuild:
         return str(Path(self.spec_path).parent)
 
 
+class PinMismatch(Exception):
+    """The approved version's prototype does not match the hash it was approved with."""
+
+
+@dataclass
+class Approved:
+    """What a build builds: the approved version, never the live requirement (G1)."""
+
+    spec: str
+    preview_mode: str
+    prototype: dict
+    prototype_hash: str
+    version: object = (
+        None  # AgentRequirementVersion, or None for a run from before pinning
+    )
+    baseline: str = ""
+
+    @property
+    def is_open(self) -> bool:
+        return self.preview_mode == "open" and bool(self.prototype)
+
+
+def approved(run) -> Approved | None:
+    """The spec, preview mode and prototype ``run`` builds.
+
+    A run pinned to a version (``run.requirement_version``, set when the build is started) reads
+    that version only, so editing the requirement after Commit (another chat turn, a second tab)
+    cannot change what is built. A run from before pinning reads the requirement as it is.
+    Raises PinMismatch when the version's prototype is not the one it was approved with.
+    """
+    requirement = getattr(run, "requirement", None)
+    version = getattr(run, "requirement_version", None)
+    if version is not None:
+        from .prototype import parts_hash
+
+        parts = dict(version.prototype_parts or {})
+        if (
+            parts
+            and version.prototype_hash
+            and parts_hash(parts) != version.prototype_hash
+        ):
+            raise PinMismatch(
+                f"Requirement version {version.version}: the prototype does not match its hash."
+            )
+        return Approved(
+            spec=version.spec_markdown or "",
+            # A version recorded before preview_mode was kept follows the requirement's.
+            preview_mode=version.preview_mode
+            or (getattr(requirement, "preview_mode", "") or "kit"),
+            prototype=parts,
+            prototype_hash=version.prototype_hash or "",
+            version=version,
+            baseline=version.baseline or "",
+        )
+    if requirement is None:
+        return None
+    return Approved(
+        spec=requirement.spec_markdown or "",
+        preview_mode=requirement.preview_mode or "kit",
+        prototype=dict(requirement.prototype_parts or {}),
+        prototype_hash=requirement.prototype_hash or "",
+    )
+
+
+def pin_version(requirement):
+    """The version a build of ``requirement`` started now should be pinned to: its newest agreed
+    (non-draft) version when it is approved, else None."""
+    from .models import RequirementStatus
+
+    if requirement is None or requirement.status != RequirementStatus.APPROVED:
+        return None
+    return requirement.versions.filter(is_draft=False).order_by("-version").first()
+
+
 def prepare(run, workspace_path: str, run_dir: str):
     """A TemplateBuild for ``run``, or None when it is not a YAML template build."""
     from zango.apps.shared.app_templates.models import AppTemplateVersion
@@ -76,5 +150,9 @@ def prepare(run, workspace_path: str, run_dir: str):
     spec_dir = Path(run_dir) / "spec"
     spec_dir.mkdir(parents=True, exist_ok=True)
     spec_path = spec_dir / f"{template.spec_root or 'spec'}.yaml"
-    spec_path.write_text(requirement.spec_markdown.rstrip() + "\n", encoding="utf-8")
+    pinned = approved(run)
+    spec_path.write_text(
+        (pinned.spec if pinned else requirement.spec_markdown).rstrip() + "\n",
+        encoding="utf-8",
+    )
     return TemplateBuild(template=template, spec_path=str(spec_path), restored=restored)

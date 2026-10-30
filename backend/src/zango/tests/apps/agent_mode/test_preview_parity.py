@@ -269,14 +269,17 @@ class OpenParityTests(unittest.TestCase):
 
     def test_the_look_round_speaks_open_mode(self):
         pairs = [{"screen": "prototype/tests", "role": "Admin", "kind": "prototype", "class": "theme", "score": 0.1,
-                  "approved": "a.png", "built": "b.png"},
+                  "approved": "a.png", "built": "b.png", "dom": "s/tests/dom.admin.html"},
                  {"screen": "prototype/home", "role": "Admin", "kind": "prototype", "class": "rebuild", "score": 0.3,
                   "approved": "c.png", "built": "d.png", "dom": "c.html"}]
         text = StudioBuild.prototype_look_digest(pairs, 1, 2)
         self.assertIn("next to the approved prototype", text)
         self.assertNotIn("sketch.js", text)
         self.assertLess(text.index("prototype/home"), text.index("prototype/tests"))  # worst first
-        self.assertIn("snapshot `c.html`", text)
+        self.assertIn("prototype markup `c.html`", text)
+        # a kit screen points at the prototype's markup and CSS too, and may restyle any zas element
+        self.assertIn("its CSS `s/tests/css.used.css`", text)
+        self.assertIn("restyle **any** `.zas-", text)
         self.assertIn("Never replace the runtime page with custom code", text)
 
     def test_the_report_lists_each_screen(self):

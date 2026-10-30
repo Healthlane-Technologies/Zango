@@ -52,7 +52,7 @@ derived name (contracts.md §1).
 | `validation.rules / duplicate_check` | `when/require_expr/where` parsed to `*_ast` | `ZasFormMixin.clean` |
 | `table.columns` | absent → first 6 non-long fields + `status`; `as`→`source`; `custom`→`computed`; `computed` with `path` → `path` | `ModelTable` columns ([tables](../map/tables.md)) |
 | `table.columns[].secondary`, `secondary_style`, `icon` | `secondary` → list of field paths (a second, muted line joined by " · "; `secondary_style: mono` sets it monospace); `icon` name → `{by: null, map: {}, default}`, `{by, map, default}` picks per row by a field's value, `initials` draws the value's initials | runtime: row `zas.sub` / `zas.icon`, drawn by `ZasTable` |
-| `table.quick_filters` | `key` = slug(label) | `?qf=` filter |
+| `table.quick_filters` | `key` = slug(label); `default` is ignored: a list always opens with no chip selected | `?qf=` filter |
 | `table.row_actions` (alias `can_do`) | `type` default **confirm**; `do`→`label`; `by`→`roles` | `row_actions` list |
 | `custom_requirements[]` | holes `<entity>__req__N` | [custom-code](../custom-code.md) |
 

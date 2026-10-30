@@ -26,6 +26,8 @@ def _published():
 
     return (
         AppTemplate.objects.select_related("current_version")
+        # A listing never needs a template's starting prototype (hundreds of KB each).
+        .defer("current_version__prototype_parts")
         .filter(
             status=TemplateStatus.PUBLISHED,
             current_version__isnull=False,

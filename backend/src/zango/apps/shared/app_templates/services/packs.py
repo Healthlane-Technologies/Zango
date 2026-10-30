@@ -12,6 +12,9 @@ A pack is a directory (or a zip of one)::
     example.yaml       a fully answered example
     skill/...          the build skill (SKILL.md + references); packs on the
                        generic spec have none (see generic.py)
+    prototype/...      optional: the template's own starting prototype (open-mode
+                       parts). A pack with ``"launch": "direct"`` and none has one
+                       drawn from its starter by the kit when it is imported.
 
 File names other than the manifest are whatever template.json says, so older
 packs keep importing. Importing is idempotent: a pack whose content matches an
@@ -41,6 +44,7 @@ from ..models import (
     AppTemplate,
     AppTemplateFile,
     AppTemplateVersion,
+    LaunchMode,
     SpecFormat,
     TemplateStatus,
     VersionStatus,
@@ -73,6 +77,7 @@ class Pack:
     documents: dict  # file name -> text (manifest-referenced files)
     skill_files: dict = field(default_factory=dict)  # path in skill dir -> text
     references: list = field(default_factory=list)  # [{id, title, summary, tags, yaml}]
+    prototype: dict = field(default_factory=dict)  # part path -> text (prototype/)
 
 
 # ---------------------------------------------------------------- reading --
@@ -227,11 +232,21 @@ def read_pack(source) -> Pack:
         for rel, value in raw_files.items():
             if rel.startswith(prefix):
                 skill_files[normalise_pack_path(rel[len(prefix) :])] = value
+    prototype = {}
+    proto_dir = str(manifest.get("prototype") or "prototype").strip().strip("/")
+    for rel, value in raw_files.items():
+        if rel.startswith(proto_dir + "/"):
+            part = rel[len(proto_dir) + 1 :]
+            if isinstance(value, (bytes, bytearray)):
+                raise PackError(f"{rel} is not a UTF-8 text file.")
+            prototype[part] = value
     if len(skill_files) > MAX_VERSION_FILES:
         raise PackError(f"The build skill has more than {MAX_VERSION_FILES} files.")
     total = sum(
         len(t if isinstance(t, (bytes, bytearray)) else t.encode("utf-8"))
-        for t in list(documents.values()) + list(skill_files.values())
+        for t in list(documents.values())
+        + list(skill_files.values())
+        + list(prototype.values())
     )
     if total > MAX_VERSION_BYTES:
         raise PackError(f"The pack is larger than {MAX_VERSION_BYTES} bytes.")
@@ -240,6 +255,7 @@ def read_pack(source) -> Pack:
         documents=documents,
         skill_files=skill_files,
         references=references,
+        prototype=prototype,
     )
 
 
@@ -310,7 +326,19 @@ def _version_fields(pack: Pack) -> dict:
         "builder_adapter": pack.documents.get("builder_adapter", ""),
         "references": pack.references,
         "drafting_md": pack.documents.get("drafting", ""),
+        "launch": str(m.get("launch") or LaunchMode.BRIEF).strip().lower(),
+        "welcome": m.get("welcome") if isinstance(m.get("welcome"), dict) else {},
+        "prototype_parts": pack.prototype,
+        "prototype_hash": _parts_hash(pack.prototype),
     }
+
+
+def _parts_hash(parts: dict) -> str:
+    if not parts:
+        return ""
+    from zango.apps.agent_mode.prototype import parts_hash
+
+    return parts_hash(parts)
 
 
 def _engine_paths(manifest: dict) -> list:
@@ -542,6 +570,8 @@ def lint(version: AppTemplateVersion, files=None) -> list:
             )
         )
 
+    issues += _template_mode_issues(version)
+
     if files is None:
         files = {row.path: row.value for row in version.files.all()}
     if version.build_skill_name:
@@ -575,6 +605,126 @@ def lint(version: AppTemplateVersion, files=None) -> list:
     return issues
 
 
+MAX_SUGGESTIONS = 6
+
+
+def _template_mode_issues(version: AppTemplateVersion) -> list:
+    """launch / welcome / the starting prototype (template mode). Cheap: no browser."""
+    from .generic import GENERIC_DIALECT
+
+    issues = []
+    if version.launch not in LaunchMode.values:
+        issues.append(
+            _issue(
+                "error",
+                MANIFEST,
+                f"launch must be one of {', '.join(LaunchMode.values)} "
+                f"(got {version.launch!r}).",
+            )
+        )
+        return issues
+    welcome = version.welcome or {}
+    suggestions = welcome.get("suggestions") or []
+    if welcome and (
+        not isinstance(welcome.get("message", ""), str)
+        or not isinstance(suggestions, list)
+        or not all(isinstance(x, str) and x.strip() for x in suggestions)
+    ):
+        issues.append(
+            _issue(
+                "error",
+                MANIFEST,
+                "welcome must be {message: text, suggestions: [text]}.",
+                "/welcome",
+            )
+        )
+    elif len(suggestions) > MAX_SUGGESTIONS:
+        issues.append(
+            _issue(
+                "error",
+                MANIFEST,
+                f"welcome has more than {MAX_SUGGESTIONS} suggestions.",
+                "/welcome/suggestions",
+            )
+        )
+    if not version.is_direct:
+        return issues
+    if not str(welcome.get("message") or "").strip():
+        issues.append(
+            _issue(
+                "error",
+                MANIFEST,
+                'A "direct" template opens with its welcome message: write welcome.message.',
+                "/welcome/message",
+            )
+        )
+    if not suggestions:
+        issues.append(
+            _issue(
+                "warning",
+                MANIFEST,
+                "welcome.suggestions is empty (shown as chips when the app opens).",
+                "/welcome/suggestions",
+            )
+        )
+    if version.spec_format != SpecFormat.YAML or (
+        version.spec_dialect != GENERIC_DIALECT and not version.prototype_parts
+    ):
+        issues.append(
+            _issue(
+                "error",
+                MANIFEST,
+                'launch "direct" needs a YAML template on the generic spec, or a pack that '
+                "ships its own prototype/.",
+            )
+        )
+        return issues
+    if not version.prototype_parts:
+        issues.append(
+            _issue(
+                "error",
+                "prototype",
+                "The template has no starting prototype: ship prototype/ in the pack, or "
+                "import it where the kit can draw one (Playwright).",
+            )
+        )
+        return issues
+    from zango.apps.agent_mode.prototype import (
+        js_syntax_error,
+        parts_hash,
+        static_problems,
+    )
+
+    for problem in static_problems(version.prototype_parts):
+        issues.append(_issue("error", "prototype", problem))
+    for path, text in sorted(version.prototype_parts.items()):
+        if path.endswith(".js"):
+            err = js_syntax_error(text)
+            if err:
+                issues.append(_issue("error", f"prototype/{path}", err))
+    if version.prototype_hash != parts_hash(version.prototype_parts):
+        issues.append(
+            _issue("error", "prototype", "prototype_hash does not match the parts.")
+        )
+    return issues
+
+
+def prototype_issues(version: AppTemplateVersion) -> list:
+    """What Commit would refuse in a "direct" template as it starts: a screen that doesn't draw
+    for a role that opens it, or something it shows that the starter doesn't say. Renders the
+    prototype in a browser (cached by parts hash)."""
+    if not version.is_direct or not version.prototype_parts:
+        return []
+    from zango.apps.agent_mode.prototype_kit import starting_prototype_issues
+
+    return [
+        _issue("error", "prototype", message)
+        for message in starting_prototype_issues(
+            version.starter_yaml, version.prototype_parts
+        )
+    ]
+
+
 # -------------------------------------------------------------- publishing --
 
 
@@ -591,6 +741,8 @@ def publish(
     if not version.is_draft:
         raise PackError(f"{version} is already {version.status}.")
     issues = lint(version)
+    if not any(i["level"] == "error" for i in issues):
+        issues += prototype_issues(version)
     if any(i["level"] == "error" for i in issues):
         raise LintFailed(issues)
 
@@ -690,6 +842,8 @@ def import_pack(
     # Likewise the builder page: packs ship the adapter, the page is attached.
     if not draft.builder_html and source is not None and source.builder_html:
         draft.builder_html = source.builder_html
+    if draft.is_direct and not draft.prototype_parts:
+        _draw_prototype(draft)
     draft.save()
 
     draft.files.all().delete()
@@ -703,6 +857,34 @@ def import_pack(
             by=by,
         )
     return draft, True
+
+
+def _draw_prototype(draft: AppTemplateVersion) -> None:
+    """A "direct" template's starting prototype, drawn from its starter by the kit (the
+    generic template's preview page). Left empty when it can't be drawn here (lint says so)."""
+    import logging
+
+    from .generic import GENERIC_DIALECT, preview_version
+
+    if draft.spec_dialect != GENERIC_DIALECT or not draft.starter_yaml:
+        return
+    page, _ = preview_version(draft)
+    if page is None:
+        return
+    from zango.apps.agent_mode.prototype import parts_hash
+    from zango.apps.agent_mode.prototype_kit import KitCaptureError, open_from_kit
+
+    try:
+        parts = open_from_kit(
+            draft.starter_yaml, page.builder_html, page.builder_adapter
+        )
+    except KitCaptureError as exc:
+        logging.getLogger("zango.app_templates").warning(
+            "app_templates: no starting prototype for %s: %s", draft.template.slug, exc
+        )
+        return
+    draft.prototype_parts = parts
+    draft.prototype_hash = parts_hash(parts)
 
 
 # ---------------------------------------------------------------- exporting --
@@ -739,8 +921,18 @@ def export_pack(version: AppTemplateVersion) -> bytes:
         "ui_schema": "ui.json",
         "rules": "rules.json",
         "skill_dir": "skill",
+        "launch": version.launch,
+        "welcome": version.welcome or {},
         "changelog": version.changelog,
     }
+    from .paths import generated_prototype
+
+    # A drawn prototype is drawn again on import; one the pack shipped goes with it.
+    shipped = (
+        {}
+        if generated_prototype(version.prototype_parts)
+        else version.prototype_parts or {}
+    )
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
         prefix = f"{template.slug}/"
@@ -759,4 +951,6 @@ def export_pack(version: AppTemplateVersion) -> bytes:
             zf.writestr(prefix + name, text or "")
         for row in version.files.all():
             zf.writestr(f"{prefix}skill/{row.path}", row.value)
+        for path, text in sorted(shipped.items()):
+            zf.writestr(f"{prefix}prototype/{path}", text or "")
     return buf.getvalue()

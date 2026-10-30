@@ -456,15 +456,22 @@ def _execute(run, tenant, creds, ws_root, build_app_context) -> dict:
             with service_account(tenant, emit=_studio_emit):
                 pass
             try:
-                requirement = getattr(run, "requirement", None)
+                from .template_build import approved
+                from .template_mode import baseline_parts
+
+                # Open mode: the approved version's prototype (G1), for .zas/bundle/prototype/,
+                # with what it is compared against for the change map (changes.json).
+                pinned = approved(run)
+                is_open = pinned is not None and pinned.is_open
                 studio.prepare(
                     emit=_studio_emit,
                     template=template_build.template,
-                    # Open mode: the approved prototype, for .zas/bundle/prototype/.
-                    prototype=(
-                        dict(requirement.prototype_parts or {})
-                        if requirement is not None
-                        and requirement.preview_mode == "open"
+                    prototype=pinned.prototype if is_open else None,
+                    baseline=(
+                        baseline_parts(
+                            getattr(run, "requirement", None), pinned.baseline
+                        )
+                        if is_open
                         else None
                     ),
                 )
@@ -1626,7 +1633,7 @@ def agent_requirement_turn(self, requirement_uuid: str, tenant_name: str) -> dic
     bench = None
     try:
         ctx = build_app_context(tenant)
-        from .documents import attachment_note, write_docs_dir
+        from .documents import attachment_note, has_design_reference, write_docs_dir
         from .preview_focus import focus_note
 
         # The user's documents, where the analyst can read them.
@@ -1678,7 +1685,10 @@ def agent_requirement_turn(self, requirement_uuid: str, tenant_name: str) -> dic
                 sketch_looks=req.sketch_looks,
                 proto=proto,
             )
+            bench.reference_turn = has_design_reference(req, last_user)
             spec_server = build_spec_server(bench)
+            if bench.reference_turn:
+                stream.end_check = bench.reference_gap
         stream.options = build_analyst_options(
             ctx=ctx,
             creds=creds,

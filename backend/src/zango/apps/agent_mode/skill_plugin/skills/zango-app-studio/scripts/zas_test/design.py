@@ -22,7 +22,8 @@ Design checks. No human approves anything: every check compares against a fixed 
   parity   each custom screen the user approved (.zas/bundle/): its kit blocks, titles, KPI labels
            and table columns as the approved role saw them, in order (kit_tree.js on both sides;
            values are never compared). Saves the built screen to .zas/screens/parity/ and lists
-           approved/built pairs in .zas/parity_looks.json. Reported, not blocking.
+           approved/built pairs in .zas/parity_looks.json. A screen over ZAS_LOOK_FAIL (40%: a
+           different layout) fails; below it the score is reported only.
            Standard screens in the bundle too: a list page in each declared view (the switcher's
            place) and the app shell (the shell-brand / shell-user / shell-top markers), each with
            its screenshot pair.
@@ -40,6 +41,8 @@ import re
 import sys
 
 from . import auth, browser, in_scope, kit, load_json, print_summary, save_results
+
+LOOK_FAIL = float(os.environ.get("ZAS_LOOK_FAIL", "0.40"))  # a faithful port sits at 10-15%, a different layout at 40%+
 
 GROUPS = ["lint", "gallery", "tokens", "tree", "layout", "parity", "kit"]
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -979,6 +982,9 @@ def open_parity(Dx, b):
                                   "dom": os.path.relpath(approved.replace("/shot.", "/dom.").replace(".png", ".html"), Dx.ws),
                                   "built": os.path.relpath(built, Dx.ws), "hand_written": False})
                     look = f"look difference {score:.0%}" if score is not None else "no score (PIL missing)"
+                    if score is not None and score > LOOK_FAIL:
+                        # a different layout (40% and more), not demo data: the screen is not the approved one
+                        probs.append(f"look difference {score:.0%} is over the {LOOK_FAIL:.0%} limit: the layout is not the approved one")
                     return not probs, ("; ".join(probs[:12]) + ". " if probs else "") + f"{r.get('cls')}, {look}."
                 finally:
                     rp.close()

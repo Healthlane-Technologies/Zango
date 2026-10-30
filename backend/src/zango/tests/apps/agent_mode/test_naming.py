@@ -9,6 +9,8 @@ no reply at all — has to produce a name that ``SQL_IDENTIFIER_RE`` accepts.
 import re
 import unittest
 
+from unittest import mock
+
 from zango.apps.agent_mode.naming import (
     MAX_NAME_LEN,
     MIN_NAME_LEN,
@@ -16,6 +18,7 @@ from zango.apps.agent_mode.naming import (
     label_from_name,
     sanitize_name,
     slug_from_prompt,
+    suggest_identity,
 )
 from zango.apps.shared.tenancy.models import (
     SQL_IDENTIFIER_RE,
@@ -132,6 +135,34 @@ class ContractTests(unittest.TestCase):
         self.assertTrue(_is_legal("a" * MIN_NAME_LEN))
         self.assertTrue(_is_legal("a" * MAX_NAME_LEN))
         self.assertFalse(_is_legal("a" * (MIN_NAME_LEN - 1)))
+
+
+class SuggestIdentityTests(unittest.TestCase):
+    def _creds(self, **kw):
+        from zango.apps.agent_mode.credentials import AgentCredentials
+
+        return AgentCredentials(**kw)
+
+    def test_subscription_login_names_through_the_cli(self):
+        reply = '{"name": "clinic_visits", "label": "Clinic Visits", "description": "x"}'
+        with mock.patch(
+            "zango.apps.agent_mode.naming._complete_via_sdk", return_value=reply
+        ) as sdk:
+            identity = suggest_identity(
+                "track patient visits", self._creds(oauth_token="t" * 20)
+            )
+        sdk.assert_called_once()
+        self.assertEqual((identity.name, identity.source), ("clinic_visits", "model"))
+
+    def test_cli_failure_falls_back_to_a_slug(self):
+        with mock.patch(
+            "zango.apps.agent_mode.naming._complete_via_sdk", side_effect=RuntimeError
+        ):
+            identity = suggest_identity(
+                "track patient visits", self._creds(oauth_token="t" * 20)
+            )
+        self.assertEqual(identity.source, "fallback")
+        self.assertTrue(_is_legal(identity.name))
 
 
 if __name__ == "__main__":

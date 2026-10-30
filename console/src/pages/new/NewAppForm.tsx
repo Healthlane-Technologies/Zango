@@ -17,14 +17,15 @@ import {
 	CardHeader,
 	Field,
 	Icon,
+	Input,
 	Page,
 	PageHeader,
 	Skeleton,
-	SwitchField,
 	Textarea,
 } from '@/ui';
 import { DocumentDrop, DRAFT_GUIDANCE, ReferencePicker } from './intake';
 import { Section, SourceOption, SummaryRow } from './parts';
+import { TemplateIcon } from '../workspace/templates/parts';
 import { TemplatePicker } from './TemplatePicker';
 
 const PLACEHOLDER =
@@ -78,19 +79,24 @@ export function NewAppForm({ onStarted }: { onStarted: (s: Scaffold) => void }) 
 	const preselected = params.get('template');
 	const [source, setSource] = useState<StartingPoint>(preselected ? 'template' : 'brief');
 	const [templateSlug, setTemplateSlug] = useState<string | null>(preselected);
+	// Arrived with a template already chosen: show it as a locked card, not a list to find it in.
+	const [changing, setChanging] = useState(false);
 	// Deep links from the template pages: a description to start from, an example journey.
 	const [prompt, setPrompt] = useState(() => params.get('prompt') ?? '');
 	const [files, setFiles] = useState<File[]>([]);
 	const [reference, setReference] = useState(() => params.get('reference') ?? '');
-	// Free design: the agent writes a working prototype of the app in any look (open mode).
-	const [freeDesign, setFreeDesign] = useState(params.get('design') === 'free');
-	const previewMode = freeDesign ? ('open' as const) : undefined;
 	const { data: availability, isLoading: checking } = useAgentAvailability();
 	const templates = useTemplates();
 	const create = useApiMutation({ fn: createScaffold, onSuccess: (s) => onStarted(s) });
 
 	const template =
 		source === 'template' ? (templates.data?.find((t) => t.slug === templateSlug) ?? null) : null;
+	// Template mode: the app opens on the template's own preview.
+	const direct = template?.launch === 'direct';
+	// Any template: the creator only names the app. No brief.
+	const fromTemplate = source === 'template' && !!template;
+	const [appName, setAppName] = useState('');
+	const name = appName.trim();
 	// References come with the template's detail, not the catalogue list.
 	const detail = useTemplate(template?.slug);
 	const references = detail.data?.references;
@@ -108,27 +114,33 @@ export function NewAppForm({ onStarted }: { onStarted: (s: Scaffold) => void }) 
 		}
 	}, [source, templates.data, templateSlug]);
 
+	const locked = !!preselected && !changing;
+
 	const blocked = !!availability && !availability.available;
 	const trimmed = prompt.trim();
 	const tooLong = trimmed.length > MAX_PROMPT_CHARS;
 	// A template draft needs material to work from: a detailed brief, documents, or both.
-	const hasInput =
-		source === 'template' ? !!template && (!!trimmed || files.length > 0) : !!trimmed;
+	const hasInput = fromTemplate
+		? true
+		: source === 'template'
+			? !!template && (!!trimmed || files.length > 0)
+			: !!trimmed;
 	// From scratch the app is written in the generic template's spec, so documents
 	// (an SOP, an RFP) are welcome there too — alongside a sentence or two.
 	const canStart = !blocked && !checking && hasInput && !tooLong && !create.isPending;
 	const start = () =>
 		canStart &&
 		create.mutate(
-			source === 'template' && template
+			fromTemplate && template
+				? { template_slug: template.slug, app_name: name || undefined }
+				: source === 'template' && template
 				? {
 						prompt: trimmed || undefined,
 						template_slug: template.slug,
 						reference: reference || undefined,
 						documents: files,
-						preview_mode: previewMode,
 					}
-				: { prompt: trimmed, documents: files, preview_mode: previewMode },
+				: { prompt: trimmed, documents: files },
 		);
 
 	return (
@@ -141,6 +153,48 @@ export function NewAppForm({ onStarted }: { onStarted: (s: Scaffold) => void }) 
 				{blocked && <Unavailable reasons={availability.reasons} />}
 				<div className="grid grid-cols-[minmax(0,1fr)_300px] items-start gap-7">
 					<div>
+							{locked ? (
+								<Section n={1} title="Template" hint="You picked this from the gallery.">
+									{template ? (
+										<div className="tprow on">
+											<TemplateIcon template={template} size={28} />
+											<span className="mid">
+												<b>{template.name}</b>
+												<small>{template.one_liner || template.catalogue.description}</small>
+											</span>
+											<span className="meta">
+												<span className="mono">v{template.version}</span>
+												<br />
+												<button
+													type="button"
+													className="text-[12px] text-accent underline"
+													disabled={create.isPending}
+													onClick={() => setChanging(true)}
+												>
+													Change
+												</button>
+											</span>
+										</div>
+									) : templates.error ? (
+										<TemplatePicker
+											templates={templates.data}
+											loading={false}
+											error={templates.error}
+											onRetry={() => templates.refetch()}
+											value={templateSlug}
+											onChange={setTemplateSlug}
+										/>
+									) : (
+										<div className="tprow">
+											<Skeleton width={28} height={28} />
+											<span className="mid grid gap-1.5">
+												<Skeleton width="45%" />
+												<Skeleton width="75%" />
+											</span>
+										</div>
+									)}
+								</Section>
+							) : (
 						<Section n={1} title="Starting point" hint="Where the agent begins.">
 							<div
 								className="grid grid-cols-2 gap-[10px]"
@@ -170,6 +224,53 @@ export function NewAppForm({ onStarted }: { onStarted: (s: Scaffold) => void }) 
 								/>
 							)}
 						</Section>
+							)}
+						{fromTemplate && template && (
+							<Section
+								n={2}
+								title="Name"
+								hint={
+									direct
+										? "The app opens on the template's preview with demo data. Change anything in the chat (flows, data, screens, the look), then build it."
+										: 'The agent starts from the template and agrees the requirements with you in the chat.'
+								}
+							>
+								<Field label="App name (optional)" hint="Leave it empty and the agent suggests a short name.">
+									{(p) => (
+										<Input
+											{...p}
+											value={appName}
+											placeholder="Chosen by the agent"
+											maxLength={120}
+											disabled={blocked || create.isPending}
+											onChange={(e) => setAppName(e.target.value)}
+											onKeyDown={(e) => {
+												if (e.key === 'Enter') {
+													e.preventDefault();
+													start();
+												}
+											}}
+										/>
+									)}
+								</Field>
+								{!!template.catalogue.gives_you?.length && (
+									<div className="mt-4">
+										<div className="mb-2 text-[12.5px] font-[550] text-t2">What's included</div>
+										<ul className="grid gap-[6px] text-[13px] text-t2">
+											{template.catalogue.gives_you.map((g) => (
+												<li key={g} className="flex items-start gap-2">
+													<span className="mt-[2px] text-green-t">
+														<Icon name="check" />
+													</span>
+													{g}
+												</li>
+											))}
+										</ul>
+									</div>
+								)}
+							</Section>
+						)}
+						{!fromTemplate && (
 						<Section
 							n={2}
 							title="Requirements"
@@ -239,15 +340,7 @@ export function NewAppForm({ onStarted }: { onStarted: (s: Scaffold) => void }) 
 								</div>
 							)}
 						</Section>
-						<Section n={3} title="Design" hint="How the preview is drawn.">
-							<SwitchField
-								checked={freeDesign}
-								onChange={setFreeDesign}
-								disabled={create.isPending}
-								label="Free design"
-								hint="The agent designs a working prototype of your app in its own look, with personas, sample records and working actions, instead of the standard Zango screens."
-							/>
-						</Section>
+						)}
 					</div>
 					<aside className="sticky top-0">
 						<Card>
@@ -273,8 +366,8 @@ export function NewAppForm({ onStarted }: { onStarted: (s: Scaffold) => void }) 
 										<SummaryRow label="Workflows included">
 											{template ? (template.catalogue.workflows?.length ?? 0) : '—'}
 										</SummaryRow>
-										<SummaryRow label="Documents">{files.length || '—'}</SummaryRow>
-										{!!references?.length && (
+										{!fromTemplate && <SummaryRow label="Documents">{files.length || '—'}</SummaryRow>}
+										{!fromTemplate && !!references?.length && (
 											<SummaryRow label="Start from">
 												{references.find((r) => r.id === reference)?.title ?? (
 													<span className="font-normal text-t3">Agent's choice</span>
@@ -284,14 +377,14 @@ export function NewAppForm({ onStarted }: { onStarted: (s: Scaffold) => void }) 
 									</>
 								)}
 								<SummaryRow label="App name">
-									<span className="font-normal text-t3">Chosen by the agent</span>
+									{fromTemplate ? (
+										name || <span className="font-normal text-t3">Chosen by the agent</span>
+									) : (
+										<span className="font-normal text-t3">Chosen by the agent</span>
+									)}
 								</SummaryRow>
 								<SummaryRow label="Analyst model">
 									{checking ? <Skeleton width={90} /> : (availability?.config.analyst_model ?? '—')}
-								</SummaryRow>
-								<SummaryRow label="Design">{freeDesign ? 'Free design' : 'Standard'}</SummaryRow>
-								<SummaryRow label="First step">
-									{source === 'template' ? 'One-pass draft' : 'Requirements chat'}
 								</SummaryRow>
 								<div className="divider my-3" />
 								<p className="text-[12px] text-t3">
@@ -312,7 +405,7 @@ export function NewAppForm({ onStarted }: { onStarted: (s: Scaffold) => void }) 
 					loading={create.isPending}
 					onClick={start}
 				>
-					Create app and start agent
+					{direct ? 'Create & open' : 'Create app and start agent'}
 				</Button>
 			</div>
 		</div>

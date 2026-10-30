@@ -47,8 +47,17 @@ export interface TemplateSummary {
 	published_at: string | null;
 	apps_using: number;
 	spec_format: 'yaml' | 'markdown';
+	/** Template mode: 'direct' opens the new app on the template's preview, with no brief. */
+	launch?: 'brief' | 'direct';
+	welcome?: TemplateWelcome;
 	catalogue: TemplateCatalogue;
 	sections: TemplateSection[];
+}
+
+/** The first message of a template-mode app, and the chips under it. */
+export interface TemplateWelcome {
+	message?: string;
+	suggestions?: string[];
 }
 
 export interface TemplateVersionRef {

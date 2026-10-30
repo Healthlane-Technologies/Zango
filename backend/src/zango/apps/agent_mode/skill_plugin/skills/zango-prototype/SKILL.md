@@ -171,7 +171,7 @@ For every screen, say in the YAML, with the prototype's own words:
 | each persona's menu: items, labels, groups and order | that role's `roles[].menu`, exactly. When the requirements give a role less than the prototype shows it, change the prototype's menu for that persona; never give the role items it shouldn't have |
 | a menu item for a screen not built | that screen's `prototype.screens` entry: `menu: {group, label, icon}` (shown greyed out) |
 | a page heading | `pages[].title` |
-| list columns, status tabs or filter chips | `table.columns`, `table.quick_filters` |
+| list columns, status tabs or filter chips | `table.columns`, `table.quick_filters` (never `default: true`: a list opens with no chip selected, in the prototype too) |
 | a list cell with a muted second line, an icon or initials before its value | that column's `secondary: [<fields>]` (`secondary_style: mono` for a monospace line) and `icon: <lucide name>`, `icon: {by: <field>, map: {<value>: <name>}, default}` or `icon: initials` |
 | where a list row opens (its record, a parent record on a tab, a drawer) | `table.row_click`: the 360, `<view>#<tab>`, or `drawer` |
 | 360 tabs, sections, side panels, header buttons, banners | `detail_views[]`: `tabs` (the prototype's, no others), summary `sections`, `sidebar`, `header.actions.buttons`, `banners`. A heading is a section's or panel's `title`; a field of that name doesn't show it |

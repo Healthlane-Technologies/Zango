@@ -259,6 +259,7 @@ def _template_payload(obj):
         "spec_format": template.spec_format,
         "version": template.version,
         "version_uuid": template.version_uuid,
+        "launch": getattr(template, "launch", "brief"),
     }
 
 
@@ -316,6 +317,8 @@ class AgentRequirementDetailSerializer(serializers.ModelSerializer):
     template = serializers.SerializerMethodField()
     # The preview greys the YAML's not-built menu items; the frame reloads when they change.
     prototype_soon = serializers.SerializerMethodField()
+    # Template mode: the welcome's suggestions, as chips, until the creator writes.
+    welcome_suggestions = serializers.SerializerMethodField()
 
     class Meta:
         model = AgentRequirement
@@ -327,6 +330,8 @@ class AgentRequirementDetailSerializer(serializers.ModelSerializer):
             "template_slug",
             "template",
             "prototype_soon",
+            "welcome_suggestions",
+            "mode",
             "initial_prompt",
             "spec_markdown",
             "spec_format",
@@ -350,6 +355,16 @@ class AgentRequirementDetailSerializer(serializers.ModelSerializer):
 
     def get_template(self, obj):
         return _template_payload(obj)
+
+    def get_welcome_suggestions(self, obj):
+        from zango.apps.agent_mode.models import MessageRole
+        from zango.apps.agent_mode.template_mode import is_template_mode, suggestions
+
+        if not is_template_mode(obj) or obj.is_thinking:
+            return []
+        if obj.messages.filter(role=MessageRole.USER).exists():
+            return []
+        return suggestions(obj.template)
 
     def get_prototype_soon(self, obj):
         from zango.apps.agent_mode.prototype import soon_digest, soon_menu

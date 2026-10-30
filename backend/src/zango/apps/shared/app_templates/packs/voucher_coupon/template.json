@@ -1,0 +1,128 @@
+{
+  "slug": "voucher-coupon",
+  "name": "Voucher & Coupon Management",
+  "version": "0.1.5",
+  "category": "Patient Services",
+  "icon": "gift",
+  "is_beta": true,
+  "aka": [
+    "copay card",
+    "patient voucher",
+    "coupon programme",
+    "free trial voucher",
+    "discount coupon"
+  ],
+  "one_liner": "Issue, redeem and reconcile product vouchers and coupons with fraud controls.",
+  "fits_when": [
+    "patients get copay, free-trial or discount vouchers through HCPs, a hub, field reps or self sign-up",
+    "partner pharmacies redeem vouchers at the counter against a bill",
+    "redemptions are checked by fraud rules before they count",
+    "pharmacies are settled monthly for approved redemptions"
+  ],
+  "gives_you": [
+    "Campaigns with benefit, cap, budget, voucher limit and maker-checker go-live",
+    "Patient enrollment with consent and voucher issue with SMS or WhatsApp delivery",
+    "Pharmacy redemption with bill upload, automatic benefit and fraud rules",
+    "A fraud review queue and monthly pharmacy settlements",
+    "A campaign 360 page and a programme dashboard"
+  ],
+  "spec_format": "yaml",
+  "spec_root": "app_spec",
+  "spec_dialect": "zango-app/1",
+  "starter": "starter.yaml",
+  "example": "starter.yaml",
+  "references": "references.json",
+  "launch": "direct",
+  "welcome": {
+    "message": "This is the Voucher & Coupon Management template, running on demo data. Switch roles with View as. Tell me what to change: flows, fields, screens, roles or the look. You can also build it as it is.",
+    "suggestions": [
+      "Add a Finance approval above ₹5,000",
+      "Use our brand colours",
+      "Patients sign up with OTP",
+      "Send a WhatsApp reminder before a voucher expires"
+    ]
+  },
+  "ported_from": {
+    "source": "Zelthy.html",
+    "id": "voucher"
+  },
+  "catalogue": {
+    "description": "Run voucher and coupon programmes end to end: Program Managers set up campaigns and budgets, Support Agents enrol patients and issue codes, partner pharmacies redeem them against a bill, fraud rules flag suspicious redemptions for review, and approved redemptions are settled with each pharmacy monthly.",
+    "packages": [
+      {
+        "name": "workflow",
+        "description": "Campaign, voucher, redemption and settlement lifecycles"
+      },
+      {
+        "name": "rules",
+        "description": "Benefit calculation and fraud rules"
+      },
+      {
+        "name": "integrations",
+        "description": "SMS and WhatsApp delivery, settlement payment file"
+      },
+      {
+        "name": "reports",
+        "description": "Programme dashboard and campaign 360"
+      }
+    ],
+    "roles": [
+      {
+        "name": "Program Manager",
+        "description": "Owns campaigns, reviews fraud flags and approves settlements"
+      },
+      {
+        "name": "Support Agent",
+        "description": "Enrols patients and issues vouchers"
+      },
+      {
+        "name": "Pharmacy",
+        "description": "Redeems vouchers and sees its own settlements"
+      },
+      {
+        "name": "Patient",
+        "description": "Sees their vouchers and expiry dates"
+      }
+    ],
+    "workflows": [
+      {
+        "name": "Voucher issue",
+        "description": "Enrol, issue and deliver a code"
+      },
+      {
+        "name": "Redemption",
+        "description": "Counter redemption with bill upload and automatic benefit"
+      },
+      {
+        "name": "Fraud checks",
+        "description": "Velocity, spike, cap, product and expiry rules"
+      },
+      {
+        "name": "Reconciliation",
+        "description": "Monthly settlement per pharmacy"
+      }
+    ],
+    "data_objects": [
+      "Campaign",
+      "Voucher",
+      "Redemption",
+      "Pharmacy",
+      "Settlement"
+    ],
+    "integrations": [
+      "SMS gateway",
+      "WhatsApp Business"
+    ],
+    "compliance": [
+      "Patient consent before a voucher is issued",
+      "Maker-checker go-live for campaigns",
+      "Audit trail of every redemption decision"
+    ],
+    "recommended_agents": [
+      "recon"
+    ],
+    "app_name_prefill": "Voucher & Coupon Management",
+    "app_prompt_prefill": ""
+  },
+  "changelog": "Redrawn on zango_app 1.1.25: no quick filter is preselected. Template mode: opens on the template's own preview (the kit page, drawn from this YAML), so every list, form, filter, status change and row action works as in the preview."
+}

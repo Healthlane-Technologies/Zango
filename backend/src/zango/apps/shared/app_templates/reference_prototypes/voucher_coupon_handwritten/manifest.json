@@ -1,0 +1,110 @@
+{
+  "title": "Voucher & Coupon Management",
+  "roles": {
+    "program_manager": "Program Manager",
+    "support_agent": "Support Agent",
+    "pharmacy": "Pharmacy",
+    "patient": "Patient"
+  },
+  "default_role": "program_manager",
+  "home": {
+    "program_manager": "dashboard",
+    "support_agent": "vouchers",
+    "pharmacy": "redemptions",
+    "patient": "vouchers"
+  },
+  "fonts": [
+    "https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;550;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+  ],
+  "libraries": [
+    "https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"
+  ],
+  "screens": [
+    {
+      "id": "dashboard",
+      "title": "Voucher Programme Overview",
+      "roles": [
+        "program_manager"
+      ],
+      "maps": "/pages/@dashboard"
+    },
+    {
+      "id": "campaigns",
+      "title": "Campaigns",
+      "roles": [
+        "program_manager",
+        "support_agent"
+      ],
+      "maps": "/pages/@campaigns"
+    },
+    {
+      "id": "campaign_360",
+      "title": "Campaign",
+      "roles": [
+        "program_manager",
+        "support_agent"
+      ],
+      "maps": "/pages/@campaign_360",
+      "record": "campaign_360",
+      "sample": "cm1",
+      "parent": "campaigns"
+    },
+    {
+      "id": "vouchers",
+      "title": "Vouchers",
+      "roles": [
+        "program_manager",
+        "support_agent",
+        "patient"
+      ],
+      "maps": "/pages/@vouchers"
+    },
+    {
+      "id": "patients",
+      "title": "Patients",
+      "roles": [
+        "program_manager",
+        "support_agent"
+      ],
+      "maps": "/pages/@patients"
+    },
+    {
+      "id": "redemptions",
+      "title": "Redemptions",
+      "roles": [
+        "program_manager",
+        "support_agent",
+        "pharmacy"
+      ],
+      "maps": "/pages/@redemptions"
+    },
+    {
+      "id": "settlements",
+      "title": "Settlements",
+      "roles": [
+        "program_manager",
+        "pharmacy"
+      ],
+      "maps": "/pages/@settlements"
+    },
+    {
+      "id": "pharmacies",
+      "title": "Pharmacies",
+      "roles": [
+        "program_manager",
+        "support_agent"
+      ],
+      "maps": "/pages/@pharmacies"
+    },
+    {
+      "id": "products",
+      "title": "Products",
+      "roles": [
+        "program_manager"
+      ],
+      "maps": "/pages/@products"
+    }
+  ],
+  "currency": "INR",
+  "locale": "en-IN"
+}

@@ -842,7 +842,7 @@ class StudioBuild:
 
     # -- before the agent ------------------------------------------------
 
-    def prepare(self, emit=None, template=None, prototype=None) -> None:
+    def prepare(self, emit=None, template=None, prototype=None, baseline=None) -> None:
         """Phases 0-2 and the frontend prep of Phase 6. Raises StudioError.
 
         ``template``: the requirement's App Studio template; with it the approval bundle (what the
@@ -858,7 +858,7 @@ class StudioBuild:
         self.check_spec = self._write_check_spec()
         if template is not None:
             # Before spec_check: it points each custom screen's hole at its bundle folder.
-            self.write_bundle(template, emit, prototype=prototype)
+            self.write_bundle(template, emit, prototype=prototype, baseline=baseline)
         checked = self.script(
             "spec_check",
             "spec_check.py",
@@ -874,7 +874,9 @@ class StudioBuild:
         self.prepare_frontend(emit)
         self.prepare_views(emit)
 
-    def write_bundle(self, template, emit=None, prototype=None) -> dict | None:
+    def write_bundle(
+        self, template, emit=None, prototype=None, baseline=None
+    ) -> dict | None:
         """.zas/bundle/ (approval_bundle.py): each custom screen's sketch, contract, kit trees and
         screenshots, from the approved spec in the same preview the user saw. Never fails the build:
         without it the agent builds from the hole text, as before."""
@@ -933,11 +935,16 @@ class StudioBuild:
                 level="sys",
             )
         if prototype:
-            self.write_prototype_bundle(prototype, out / "prototype", emit)
+            self.write_prototype_bundle(
+                prototype, out / "prototype", emit, baseline=baseline
+            )
         return manifest
 
-    def write_prototype_bundle(self, parts: dict, out: Path, emit=None) -> dict | None:
-        """.zas/bundle/prototype/ (open mode): the approved prototype, per screen x role. Never fails
+    def write_prototype_bundle(
+        self, parts: dict, out: Path, emit=None, baseline=None
+    ) -> dict | None:
+        """.zas/bundle/prototype/ (open mode): the approved prototype, per screen x role, and the
+        change map against ``baseline`` ((label, parts): changes.json, diff.patch). Never fails
         the build."""
         import time
 
@@ -955,7 +962,11 @@ class StudioBuild:
                 (doc.get("app") or {}).get("design") if isinstance(doc, dict) else None
             )
             capture = write_prototype_bundle(
-                parts, out, design=design, soon=soon_menu(spec_text)
+                parts,
+                out,
+                design=design,
+                soon=soon_menu(spec_text),
+                baseline=baseline,
             )
         except Exception as exc:  # noqa: BLE001 - the bundle is an aid, not a gate
             logger.warning("agent_mode: prototype bundle failed: %s", exc)
@@ -2561,7 +2572,16 @@ class StudioBuild:
             "2. Fix what differs with the lever its class allows (references/open-mode.md):",
             "   - **kit**: the app's kit (`src/custom/kit/`: the piece's component, `kit.css`, its map.json "
             "entry), `app.design` (re-run spec_check), the shell options, or the page's "
-            "`src/custom/screens/<page>.css`. Never replace the runtime page with custom code.",
+            "`src/custom/screens/<page>.css`. Never replace the runtime page with custom code. "
+            "`kit.css` can restyle **any** `.zas-…` element, not only the pieces in map.json (a 360's "
+            "header `.zas-dhead`, its facts `.zas-dfact`, stat tiles `.zas-stat`, tabs, panels, the "
+            "page background): find the prototype's element in its markup file, copy its declarations "
+            "(backgrounds, gradients, borders, shadows, fonts, letter-spacing, text-transform, "
+            "pseudo-elements) from its CSS file onto the matching `.zas-…` selector, and hide what "
+            "the prototype does not show (icon tiles, extra chrome). Do this for the header, the "
+            "stat tiles and every panel of a 360, not only for the list. Colours that the prototype's "
+            "CSS uses are allowed, gradients included. What CSS cannot draw (an element the prototype "
+            "has and the page lacks, such as an extra action button) goes in your reply by name.",
             "   - **rebuild**: the screen's slot, ported from the prototype's own component "
             "(`.zas/bundle/prototype/source/index.md`): its markup, classes and inline styles under "
             '`<div className="zp">`, not a redraw on the zas kit. A part the slot lacks is copied from the '
@@ -2601,8 +2621,8 @@ class StudioBuild:
                 f"- `{x['screen']}` as {x['role']} ({x.get('class') or '?'}, difference {score}): "
                 f"approved `{x['approved']}`, built `{x['built']}`"
                 + (
-                    f", snapshot `{x['dom']}`"
-                    if x.get("class") == "rebuild" and x.get("dom")
+                    f", prototype markup `{x['dom']}`, its CSS `{x['dom'].rsplit('/', 1)[0]}/css.used.css`"
+                    if x.get("dom")
                     else ""
                 )
             )

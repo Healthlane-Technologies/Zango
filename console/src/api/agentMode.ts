@@ -144,6 +144,10 @@ export interface Requirement {
 	/** Digest of the YAML's not-built menu items, which the preview greys; reloads the frame too. */
 	prototype_soon?: string;
 	prototype_hash?: string;
+	/** "template": opened on the template's own preview with no brief (template mode). */
+	mode?: string;
+	/** Template mode: the welcome's suggestions, shown as chips until the creator writes. */
+	welcome_suggestions?: string[];
 }
 
 /** One validation finding on a template spec. `path` is an RFC 6901 pointer into the YAML. */
@@ -220,7 +224,7 @@ export interface RequirementSpec {
 	/** Documents the requirement was drafted from. */
 	documents?: UploadedDocument[];
 	/** 'draft' while the agent drafts the whole journey in one pass; null when unknown. */
-	mode?: 'draft' | 'interview' | null;
+	mode?: 'draft' | 'interview' | 'adopted' | 'template' | null;
 	/** User journeys the agent described while drafting, drawn as swimlanes. */
 	workflows?: Workflows | null;
 }
@@ -290,6 +294,8 @@ export interface RequirementTemplate {
 	spec_format: 'yaml' | 'markdown';
 	version: string;
 	version_uuid: string;
+	/** "direct": template mode (opens on the template's preview, Free design only). */
+	launch?: 'brief' | 'direct';
 }
 
 export interface Availability {
@@ -384,7 +390,6 @@ export type NewRoundInput =
 			reference?: string;
 			documents?: File[];
 			focus?: PreviewFocus | null;
-			preview_mode?: 'open' | 'kit';
 	  };
 
 export function useCreateRequirement(appId: string, onCreated: (uuid: string) => void) {
@@ -397,7 +402,6 @@ export function useCreateRequirement(appId: string, onCreated: (uuid: string) =>
 			if (input.prompt) body.append('prompt', input.prompt);
 			if (input.reference) body.append('reference', input.reference);
 			if (input.focus) body.append('focus', JSON.stringify(input.focus));
-			if (input.preview_mode) body.append('preview_mode', input.preview_mode);
 			for (const file of input.documents ?? []) body.append('documents', file, file.name);
 			return api<{ uuid: string; status: RequirementStatus }>(url, 'POST', body);
 		},

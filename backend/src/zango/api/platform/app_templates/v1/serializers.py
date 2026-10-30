@@ -29,6 +29,9 @@ def template_summary(template, version, apps_using: int = 0) -> dict:
         else None,
         "apps_using": apps_using,
         "spec_format": version.spec_format,
+        # Template mode: "direct" opens the new app on the template's preview, with no brief.
+        "launch": version.launch or "brief",
+        "welcome": version.welcome or {},
         "catalogue": {
             "description": catalogue.get("description", ""),
             "aka": catalogue.get("aka", []),

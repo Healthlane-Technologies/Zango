@@ -1,0 +1,6818 @@
+{
+ "source": "Zelthy.html",
+ "package_descriptions": {
+  "workflow": "State machines, approvals and SLA timers",
+  "crm": "Accounts, contacts and activity history",
+  "communication": "SMS, email, WhatsApp and IVR messaging",
+  "forms": "Form builder with validation and versioning",
+  "tasks": "Work queues and assignment rules",
+  "documents": "Upload, OCR, versioning and retention",
+  "consent": "Consent capture, withdrawal and proof",
+  "reports": "Dashboards, scheduled reports and exports",
+  "scheduling": "Slots, calendars and capacity",
+  "integrations": "REST, SFTP and ERP connectors",
+  "serialization": "GS1 identifiers and EPCIS events",
+  "rules": "Rules engine and risk scoring"
+ },
+ "templates": [
+  {
+   "id": "ws",
+   "name": "General Workspace",
+   "category": "Cross-functional",
+   "icon": "apps",
+   "description": "One workspace for incoming issues from any channel. AI reads, classifies and routes each issue, a workflow runs for its type, tasks come from a shared task master, and SLAs are tracked with escalations.",
+   "packages": [
+    "workflow",
+    "tasks",
+    "communication",
+    "forms",
+    "documents",
+    "rules",
+    "reports",
+    "integrations"
+   ],
+   "roles": [
+    "Intake agent",
+    "Issue owner",
+    "Team lead",
+    "QA associate",
+    "PV associate",
+    "Medical reviewer",
+    "Operations head"
+   ],
+   "workflows": [
+    "Issue intake",
+    "AI triage",
+    "Issue-type workflows",
+    "Task master",
+    "SLA & escalations",
+    "Workspace dashboard"
+   ],
+   "data_objects": [
+    "Issue",
+    "Issue type",
+    "Channel",
+    "Requester",
+    "Task",
+    "Task template",
+    "SLA policy",
+    "Escalation"
+   ],
+   "integrations": [
+    "Email inbox (IMAP / Graph)",
+    "WhatsApp Business",
+    "REST API"
+   ],
+   "compliance": [
+    "Audit trail on every issue and task",
+    "SLA clock with pause reasons recorded",
+    "AE hand-off to PV within 24 hours",
+    "Role-based access and PII masking"
+   ],
+   "agents": [],
+   "app_name": "Operations Workspace"
+  },
+  {
+   "id": "psp",
+   "name": "Patient Support Program",
+   "category": "Patient Services",
+   "icon": "heart",
+   "description": "Enrollment, eligibility, financial assistance, free-of-charge dispensing and adherence for specialty therapies.",
+   "packages": [
+    "workflow",
+    "crm",
+    "communication",
+    "forms",
+    "tasks",
+    "documents",
+    "consent",
+    "reports"
+   ],
+   "roles": [
+    "HCP",
+    "Call center agent",
+    "Program manager"
+   ],
+   "workflows": [
+    "Patient enrollment",
+    "Document verification",
+    "Eligibility & approval",
+    "FOC cycle dispensing"
+   ],
+   "data_objects": [
+    "Patient",
+    "HCP",
+    "Program",
+    "Enrollment",
+    "Document",
+    "Dispense"
+   ],
+   "integrations": [
+    "SMS gateway"
+   ],
+   "compliance": [
+    "21 CFR Part 11 audit trail and e-signatures",
+    "DPDP consent and retention",
+    "PII masking by role",
+    "AE capture hand-off to PV"
+   ],
+   "agents": [],
+   "app_name": "Oncology PAP — North"
+  },
+  {
+   "id": "cgt",
+   "name": "Cell Therapy Orchestration",
+   "category": "Advanced Therapies",
+   "icon": "dna",
+   "description": "Chain of identity and custody from apheresis slot booking to infusion, across treatment sites, manufacturing and couriers.",
+   "packages": [
+    "workflow",
+    "scheduling",
+    "communication",
+    "forms",
+    "documents",
+    "reports"
+   ],
+   "roles": [
+    "Site coordinator",
+    "Apheresis center",
+    "Manufacturing scheduler",
+    "Courier"
+   ],
+   "workflows": [
+    "Slot booking",
+    "Chain-of-identity labels",
+    "Custody handoffs",
+    "Infusion confirmation"
+   ],
+   "data_objects": [
+    "Patient",
+    "Treatment site",
+    "Slot",
+    "Batch",
+    "Shipment",
+    "Custody event"
+   ],
+   "integrations": [
+    "Courier tracking API"
+   ],
+   "compliance": [
+    "Chain-of-identity checks at every handoff",
+    "21 CFR Part 11 audit trail",
+    "Temperature excursion logging"
+   ],
+   "agents": [],
+   "app_name": "CAR-T Scheduling — East"
+  },
+  {
+   "id": "dms",
+   "name": "Distributor Management",
+   "category": "Traceability & Supply Chain",
+   "icon": "truck",
+   "description": "Distributor onboarding, secondary sales capture, stock and expiry visibility, schemes and claims.",
+   "packages": [
+    "workflow",
+    "crm",
+    "forms",
+    "documents",
+    "reports",
+    "integrations"
+   ],
+   "roles": [
+    "Distributor",
+    "Area sales manager",
+    "Commercial ops"
+   ],
+   "workflows": [
+    "Distributor onboarding",
+    "Secondary sales upload",
+    "Stock & expiry tracking",
+    "Claims & schemes"
+   ],
+   "data_objects": [
+    "Distributor",
+    "Invoice",
+    "Stock position",
+    "Scheme",
+    "Claim"
+   ],
+   "integrations": [
+    "SAP connector"
+   ],
+   "compliance": [
+    "Audit trail on claims and adjustments",
+    "Maker-checker on scheme approvals"
+   ],
+   "agents": [],
+   "app_name": "Distributor Hub — West"
+  },
+  {
+   "id": "tnt",
+   "name": "Track & Trace",
+   "category": "Traceability & Supply Chain",
+   "icon": "barcode",
+   "description": "GS1 serialization, case and pallet aggregation, and pack-level movement events across the supply chain.",
+   "packages": [
+    "workflow",
+    "serialization",
+    "integrations",
+    "reports",
+    "forms"
+   ],
+   "roles": [
+    "Plant operator",
+    "Warehouse",
+    "Distributor",
+    "Regulatory viewer"
+   ],
+   "workflows": [
+    "Serial number management",
+    "Aggregation",
+    "Movement events",
+    "Verification & recall"
+   ],
+   "data_objects": [
+    "Product",
+    "Serial number",
+    "Aggregation",
+    "Movement event",
+    "Location"
+   ],
+   "integrations": [
+    "Packaging line (L3) interface"
+   ],
+   "compliance": [
+    "GS1 and EPCIS conformance",
+    "Immutable movement history",
+    "Recall traceability by batch"
+   ],
+   "agents": [],
+   "app_name": "Pack Traceability"
+  },
+  {
+   "id": "samp",
+   "name": "HCP Sampling",
+   "category": "Commercial Operations",
+   "icon": "gift",
+   "description": "Sample requests, rep allocation, delivery acknowledgement and quarterly reconciliation.",
+   "packages": [
+    "workflow",
+    "crm",
+    "forms",
+    "communication",
+    "reports"
+   ],
+   "roles": [
+    "Medical rep",
+    "HCP",
+    "Sample ops",
+    "Compliance reviewer"
+   ],
+   "workflows": [
+    "Sample request",
+    "Allocation by territory",
+    "Delivery acknowledgement",
+    "Reconciliation"
+   ],
+   "data_objects": [
+    "HCP",
+    "Product",
+    "Allocation",
+    "Request",
+    "Delivery"
+   ],
+   "integrations": [
+    "Courier API"
+   ],
+   "compliance": [
+    "Delivery acknowledgement evidence",
+    "Quarterly reconciliation report",
+    "UCPMP sample limits"
+   ],
+   "agents": [],
+   "app_name": "Sample Desk"
+  },
+  {
+   "id": "speak",
+   "name": "Speaker Programs",
+   "category": "Commercial Operations",
+   "icon": "mic",
+   "description": "HCP speaker contracting, fair-market-value checks, event logistics and spend transparency.",
+   "packages": [
+    "workflow",
+    "crm",
+    "forms",
+    "documents",
+    "reports"
+   ],
+   "roles": [
+    "Brand manager",
+    "Event ops",
+    "Compliance reviewer",
+    "Speaker"
+   ],
+   "workflows": [
+    "Speaker nomination",
+    "FMV check & contract",
+    "Event logistics",
+    "Spend reporting"
+   ],
+   "data_objects": [
+    "Speaker",
+    "Event",
+    "Contract",
+    "Attendee",
+    "Spend line"
+   ],
+   "integrations": [
+    "e-signature"
+   ],
+   "compliance": [
+    "FMV caps and approvals",
+    "Spend transparency reporting",
+    "UCPMP / EFPIA rules"
+   ],
+   "agents": [],
+   "app_name": "Speaker Programs"
+  },
+  {
+   "id": "ec",
+   "name": "Compliance Monitoring Workbench",
+   "category": "Compliance & Quality",
+   "icon": "eye",
+   "description": "Rules-based and AI monitoring of HCP interactions, spend and field activity, with case management.",
+   "packages": [
+    "workflow",
+    "rules",
+    "documents",
+    "reports",
+    "integrations"
+   ],
+   "roles": [
+    "Compliance analyst",
+    "Investigator",
+    "Business reviewer"
+   ],
+   "workflows": [
+    "Signal ingestion",
+    "Rules & AI risk scoring",
+    "Case investigation",
+    "Remediation tracking"
+   ],
+   "data_objects": [
+    "Interaction",
+    "Spend record",
+    "Signal",
+    "Case",
+    "Finding"
+   ],
+   "integrations": [
+    "CRM activity feed",
+    "Expense system"
+   ],
+   "compliance": [
+    "Evidence-linked case files",
+    "Investigator audit trail",
+    "Remediation sign-off"
+   ],
+   "agents": [],
+   "app_name": "Compliance Monitor"
+  },
+  {
+   "id": "order",
+   "name": "Ordering Portal",
+   "category": "Commercial Operations",
+   "icon": "cart",
+   "description": "Clinic and pharmacy ordering with catalogue, credit limits and delivery tracking.",
+   "packages": [
+    "workflow",
+    "crm",
+    "forms",
+    "communication",
+    "reports",
+    "integrations"
+   ],
+   "roles": [
+    "Clinic buyer",
+    "Distributor",
+    "Customer service"
+   ],
+   "workflows": [
+    "Catalogue & pricing",
+    "Order placement",
+    "Credit checks",
+    "Delivery tracking"
+   ],
+   "data_objects": [
+    "Clinic",
+    "Product",
+    "Order",
+    "Invoice",
+    "Shipment"
+   ],
+   "integrations": [
+    "ERP connector",
+    "Payment gateway"
+   ],
+   "compliance": [
+    "Credit approval trail",
+    "Invoice and GST records"
+   ],
+   "agents": [],
+   "app_name": "Clinic Ordering"
+  },
+  {
+   "id": "ae",
+   "name": "Adverse Event Intake",
+   "category": "Compliance & Quality",
+   "icon": "alert",
+   "description": "Multi-channel adverse event and product complaint capture with PV routing and SLA timers.",
+   "packages": [
+    "workflow",
+    "forms",
+    "communication",
+    "documents",
+    "reports"
+   ],
+   "roles": [
+    "Intake agent",
+    "PV associate",
+    "QA reviewer"
+   ],
+   "workflows": [
+    "Multi-channel intake",
+    "Duplicate check",
+    "PV routing with SLA",
+    "Follow-up requests"
+   ],
+   "data_objects": [
+    "Case",
+    "Reporter",
+    "Product",
+    "Event",
+    "Follow-up"
+   ],
+   "integrations": [
+    "Safety database export"
+   ],
+   "compliance": [
+    "PV SLA timers (24h / 15 day)",
+    "Four minimum criteria check",
+    "Source document retention"
+   ],
+   "agents": [],
+   "app_name": "AE Intake"
+  },
+  {
+   "id": "therapy",
+   "name": "Complete Therapy Management",
+   "category": "Patient Services",
+   "icon": "heart",
+   "description": "End-to-end therapy support from diagnosis to long-term adherence, combining enrollment, dispensing, nursing and outcomes in one program.",
+   "packages": [
+    "workflow",
+    "crm",
+    "communication",
+    "forms",
+    "documents",
+    "consent",
+    "reports",
+    "tasks"
+   ],
+   "roles": [
+    "Program manager",
+    "Care coordinator",
+    "HCP",
+    "Patient"
+   ],
+   "workflows": [
+    "Diagnosis & referral",
+    "Enrollment & onboarding",
+    "Dispensing & refills",
+    "Nursing & adherence",
+    "Outcomes review"
+   ],
+   "data_objects": [
+    "Patient",
+    "HCP",
+    "Therapy plan",
+    "Dispense",
+    "Outcome"
+   ],
+   "integrations": [
+    "SMS gateway",
+    "WhatsApp Business"
+   ],
+   "compliance": [
+    "21 CFR Part 11 audit trail",
+    "DPDP and GDPR consent",
+    "PII masking by role",
+    "AE hand-off to PV"
+   ],
+   "agents": [
+    {
+     "id": "docv",
+     "name": "Document Verification"
+    },
+    {
+     "id": "engage",
+     "name": "Patient Engagement"
+    }
+   ],
+   "app_name": "Complete Therapy Management"
+  },
+  {
+   "id": "pap",
+   "name": "Patient Assistance Program",
+   "category": "Patient Services",
+   "icon": "heart",
+   "description": "Free-drug and cost-sharing programs with income eligibility, approvals and cycle-based dispensing at partner pharmacies.",
+   "packages": [
+    "workflow",
+    "crm",
+    "communication",
+    "forms",
+    "documents",
+    "consent",
+    "reports"
+   ],
+   "roles": [
+    "Case manager",
+    "Pharmacy",
+    "HCP",
+    "Program manager"
+   ],
+   "workflows": [
+    "Application intake",
+    "Income eligibility",
+    "Approval & tiering",
+    "Cycle dispensing",
+    "Renewal"
+   ],
+   "data_objects": [
+    "Patient",
+    "Application",
+    "Eligibility",
+    "Cycle",
+    "Pharmacy"
+   ],
+   "integrations": [
+    "SMS gateway",
+    "WhatsApp Business"
+   ],
+   "compliance": [
+    "21 CFR Part 11 audit trail",
+    "DPDP and GDPR consent",
+    "PII masking by role",
+    "AE hand-off to PV"
+   ],
+   "agents": [
+    {
+     "id": "docv",
+     "name": "Document Verification"
+    },
+    {
+     "id": "elig",
+     "name": "Eligibility Assessment"
+    }
+   ],
+   "app_name": "Patient Assistance Program"
+  },
+  {
+   "id": "hub",
+   "name": "Patient Hub Services",
+   "category": "Patient Services",
+   "icon": "heart",
+   "description": "US-style hub: benefits investigation, prior authorization, co-pay, specialty pharmacy triage and case management.",
+   "packages": [
+    "workflow",
+    "crm",
+    "communication",
+    "forms",
+    "documents",
+    "tasks",
+    "integrations",
+    "reports"
+   ],
+   "roles": [
+    "Case manager",
+    "Reimbursement specialist",
+    "Specialty pharmacy",
+    "HCP office"
+   ],
+   "workflows": [
+    "Referral intake",
+    "Benefits investigation",
+    "Prior authorization",
+    "Co-pay enrollment",
+    "SP triage"
+   ],
+   "data_objects": [
+    "Case",
+    "Patient",
+    "Payer",
+    "Prior auth",
+    "Referral"
+   ],
+   "integrations": [
+    "SMS gateway",
+    "WhatsApp Business"
+   ],
+   "compliance": [
+    "21 CFR Part 11 audit trail",
+    "DPDP and GDPR consent",
+    "PII masking by role",
+    "AE hand-off to PV"
+   ],
+   "agents": [
+    {
+     "id": "docv",
+     "name": "Document Verification"
+    }
+   ],
+   "app_name": "Patient Hub Services"
+  },
+  {
+   "id": "d2p",
+   "name": "Direct-to-Patient",
+   "category": "Patient Services",
+   "icon": "heart",
+   "description": "Home delivery coordination, nursing visits, injection training and self-administration support.",
+   "packages": [
+    "workflow",
+    "communication",
+    "forms",
+    "scheduling",
+    "documents",
+    "reports",
+    "integrations"
+   ],
+   "roles": [
+    "Logistics coordinator",
+    "Nurse",
+    "Patient",
+    "Pharmacist"
+   ],
+   "workflows": [
+    "Delivery scheduling",
+    "Nursing visit routing",
+    "Self-admin training",
+    "Delivery confirmation"
+   ],
+   "data_objects": [
+    "Patient",
+    "Order",
+    "Delivery",
+    "Visit",
+    "Training"
+   ],
+   "integrations": [
+    "SMS gateway",
+    "WhatsApp Business"
+   ],
+   "compliance": [
+    "21 CFR Part 11 audit trail",
+    "DPDP and GDPR consent",
+    "PII masking by role",
+    "AE hand-off to PV"
+   ],
+   "agents": [
+    {
+     "id": "engage",
+     "name": "Patient Engagement"
+    }
+   ],
+   "app_name": "Direct-to-Patient"
+  },
+  {
+   "id": "care",
+   "name": "Disease & Care Management",
+   "category": "Patient Services",
+   "icon": "heart",
+   "description": "Holistic care plans with care-team tasks, education content, vitals and periodic reviews for chronic conditions.",
+   "packages": [
+    "workflow",
+    "crm",
+    "communication",
+    "forms",
+    "tasks",
+    "consent",
+    "reports"
+   ],
+   "roles": [
+    "Care manager",
+    "Dietitian",
+    "Patient",
+    "Physician"
+   ],
+   "workflows": [
+    "Care plan setup",
+    "Care-team tasks",
+    "Education delivery",
+    "Vitals capture",
+    "Periodic review"
+   ],
+   "data_objects": [
+    "Patient",
+    "Care plan",
+    "Task",
+    "Vital",
+    "Review"
+   ],
+   "integrations": [
+    "SMS gateway",
+    "WhatsApp Business"
+   ],
+   "compliance": [
+    "21 CFR Part 11 audit trail",
+    "DPDP and GDPR consent",
+    "PII masking by role",
+    "AE hand-off to PV"
+   ],
+   "agents": [
+    {
+     "id": "engage",
+     "name": "Patient Engagement"
+    }
+   ],
+   "app_name": "Disease & Care Management"
+  },
+  {
+   "id": "govprog",
+   "name": "Public Health Disease Programme",
+   "category": "Patient Services",
+   "icon": "heart",
+   "description": "Population-scale programmes for governments and NGOs: registration, treatment tracking, facility reporting and loss-to-follow-up.",
+   "packages": [
+    "workflow",
+    "crm",
+    "communication",
+    "forms",
+    "reports",
+    "tasks",
+    "integrations"
+   ],
+   "roles": [
+    "Facility staff",
+    "District officer",
+    "Programme lead",
+    "Outreach worker"
+   ],
+   "workflows": [
+    "Patient registration",
+    "Treatment tracking",
+    "Facility reporting",
+    "Loss-to-follow-up tracing",
+    "Programme dashboards"
+   ],
+   "data_objects": [
+    "Patient",
+    "Facility",
+    "Visit",
+    "Regimen",
+    "Report"
+   ],
+   "integrations": [
+    "SMS gateway",
+    "WhatsApp Business"
+   ],
+   "compliance": [
+    "21 CFR Part 11 audit trail",
+    "DPDP and GDPR consent",
+    "PII masking by role",
+    "AE hand-off to PV"
+   ],
+   "agents": [],
+   "app_name": "Public Health Disease Programme"
+  },
+  {
+   "id": "enroll",
+   "name": "Patient Enrollment & Onboarding",
+   "category": "Patient Services",
+   "icon": "heart",
+   "description": "Digital self-service enrollment with document verification, eligibility checks and consent capture.",
+   "packages": [
+    "workflow",
+    "communication",
+    "forms",
+    "documents",
+    "consent",
+    "reports"
+   ],
+   "roles": [
+    "Patient",
+    "HCP",
+    "Enrollment agent",
+    "Program manager"
+   ],
+   "workflows": [
+    "Self-service enrollment",
+    "Document verification",
+    "Eligibility checks",
+    "Consent capture",
+    "Welcome journey"
+   ],
+   "data_objects": [
+    "Patient",
+    "Enrollment",
+    "Document",
+    "Consent"
+   ],
+   "integrations": [
+    "SMS gateway",
+    "WhatsApp Business"
+   ],
+   "compliance": [
+    "21 CFR Part 11 audit trail",
+    "DPDP and GDPR consent",
+    "PII masking by role",
+    "AE hand-off to PV"
+   ],
+   "agents": [
+    {
+     "id": "docv",
+     "name": "Document Verification"
+    },
+    {
+     "id": "elig",
+     "name": "Eligibility Assessment"
+    }
+   ],
+   "app_name": "Patient Enrollment & Onboarding"
+  },
+  {
+   "id": "bv",
+   "name": "Benefits Verification & Co-pay",
+   "category": "Patient Services",
+   "icon": "heart",
+   "description": "Insurance benefits investigation, prior authorization tracking, co-pay cards and financial assistance.",
+   "packages": [
+    "workflow",
+    "crm",
+    "forms",
+    "documents",
+    "reports",
+    "integrations"
+   ],
+   "roles": [
+    "Reimbursement specialist",
+    "HCP office",
+    "Patient",
+    "Payer liaison"
+   ],
+   "workflows": [
+    "Benefits investigation",
+    "PA tracking",
+    "Co-pay card issue",
+    "Claims & reimbursement"
+   ],
+   "data_objects": [
+    "Patient",
+    "Payer",
+    "Benefit",
+    "Prior auth",
+    "Claim"
+   ],
+   "integrations": [
+    "SMS gateway",
+    "WhatsApp Business"
+   ],
+   "compliance": [
+    "21 CFR Part 11 audit trail",
+    "DPDP and GDPR consent",
+    "PII masking by role",
+    "AE hand-off to PV"
+   ],
+   "agents": [
+    {
+     "id": "docv",
+     "name": "Document Verification"
+    }
+   ],
+   "app_name": "Benefits Verification & Co-pay"
+  },
+  {
+   "id": "callc",
+   "name": "Call Centre Operations",
+   "category": "Patient Services",
+   "icon": "heart",
+   "description": "Inbound and outbound call centre with queues, scripts, post-call documentation and AE detection.",
+   "packages": [
+    "workflow",
+    "crm",
+    "communication",
+    "tasks",
+    "forms",
+    "reports"
+   ],
+   "roles": [
+    "Call centre agent",
+    "Supervisor",
+    "QA reviewer"
+   ],
+   "workflows": [
+    "Call queue management",
+    "Scripted calls",
+    "Post-call documentation",
+    "QA monitoring",
+    "AE hand-off"
+   ],
+   "data_objects": [
+    "Call",
+    "Patient",
+    "Script",
+    "Disposition",
+    "Task"
+   ],
+   "integrations": [
+    "SMS gateway",
+    "WhatsApp Business"
+   ],
+   "compliance": [
+    "21 CFR Part 11 audit trail",
+    "DPDP and GDPR consent",
+    "PII masking by role",
+    "AE hand-off to PV"
+   ],
+   "agents": [
+    {
+     "id": "call",
+     "name": "Call Summary"
+    },
+    {
+     "id": "ae",
+     "name": "AE Detection"
+    }
+   ],
+   "app_name": "Call Centre Operations"
+  },
+  {
+   "id": "nurse",
+   "name": "Nurse Navigator",
+   "category": "Patient Services",
+   "icon": "heart",
+   "description": "Coordination for nurse educators: patient assignment, visit scheduling, documentation and outcomes reporting.",
+   "packages": [
+    "workflow",
+    "crm",
+    "scheduling",
+    "forms",
+    "tasks",
+    "reports"
+   ],
+   "roles": [
+    "Nurse educator",
+    "Nurse lead",
+    "Program manager"
+   ],
+   "workflows": [
+    "Patient assignment",
+    "Visit scheduling",
+    "Visit documentation",
+    "Escalations",
+    "Outcomes reporting"
+   ],
+   "data_objects": [
+    "Nurse",
+    "Patient",
+    "Visit",
+    "Note",
+    "Escalation"
+   ],
+   "integrations": [
+    "SMS gateway",
+    "WhatsApp Business"
+   ],
+   "compliance": [
+    "21 CFR Part 11 audit trail",
+    "DPDP and GDPR consent",
+    "PII masking by role",
+    "AE hand-off to PV"
+   ],
+   "agents": [
+    {
+     "id": "call",
+     "name": "Call Summary"
+    }
+   ],
+   "app_name": "Nurse Navigator"
+  },
+  {
+   "id": "adh",
+   "name": "Medication Adherence Monitoring",
+   "category": "Patient Services",
+   "icon": "heart",
+   "description": "Adherence tracking from refills, pharmacy data and patient-reported doses, with risk scoring and interventions.",
+   "packages": [
+    "workflow",
+    "communication",
+    "tasks",
+    "rules",
+    "reports",
+    "integrations"
+   ],
+   "roles": [
+    "Adherence coach",
+    "Patient",
+    "Pharmacy",
+    "Program manager"
+   ],
+   "workflows": [
+    "Refill tracking",
+    "Risk scoring",
+    "Intervention workflows",
+    "Dose reminders",
+    "Adherence reporting"
+   ],
+   "data_objects": [
+    "Patient",
+    "Refill",
+    "Adherence score",
+    "Intervention"
+   ],
+   "integrations": [
+    "SMS gateway",
+    "WhatsApp Business"
+   ],
+   "compliance": [
+    "21 CFR Part 11 audit trail",
+    "DPDP and GDPR consent",
+    "PII masking by role",
+    "AE hand-off to PV"
+   ],
+   "agents": [
+    {
+     "id": "engage",
+     "name": "Patient Engagement"
+    }
+   ],
+   "app_name": "Medication Adherence Monitoring"
+  },
+  {
+   "id": "edu",
+   "name": "Patient Education & Engagement",
+   "category": "Patient Services",
+   "icon": "heart",
+   "description": "Approved content timed to treatment milestones across SMS, email, app and WhatsApp.",
+   "packages": [
+    "workflow",
+    "communication",
+    "documents",
+    "consent",
+    "reports"
+   ],
+   "roles": [
+    "Content manager",
+    "Patient",
+    "MLR reviewer"
+   ],
+   "workflows": [
+    "Content library",
+    "Milestone sequencing",
+    "Multi-channel delivery",
+    "Engagement tracking"
+   ],
+   "data_objects": [
+    "Content",
+    "Journey",
+    "Message",
+    "Engagement"
+   ],
+   "integrations": [
+    "SMS gateway",
+    "WhatsApp Business"
+   ],
+   "compliance": [
+    "21 CFR Part 11 audit trail",
+    "DPDP and GDPR consent",
+    "PII masking by role",
+    "AE hand-off to PV"
+   ],
+   "agents": [
+    {
+     "id": "engage",
+     "name": "Patient Engagement"
+    }
+   ],
+   "app_name": "Patient Education & Engagement"
+  },
+  {
+   "id": "camp",
+   "name": "Digital Health Campaigns",
+   "category": "Patient Services",
+   "icon": "heart",
+   "description": "Disease awareness and therapy initiation: landing pages, HCP finder, consultation booking and funnel tracking.",
+   "packages": [
+    "workflow",
+    "crm",
+    "communication",
+    "forms",
+    "scheduling",
+    "consent",
+    "reports"
+   ],
+   "roles": [
+    "Brand manager",
+    "Patient",
+    "HCP",
+    "Call centre agent"
+   ],
+   "workflows": [
+    "Landing pages",
+    "HCP finder",
+    "Consultation booking",
+    "Lead nurturing",
+    "Funnel analytics"
+   ],
+   "data_objects": [
+    "Lead",
+    "HCP",
+    "Booking",
+    "Campaign"
+   ],
+   "integrations": [
+    "SMS gateway",
+    "WhatsApp Business"
+   ],
+   "compliance": [
+    "21 CFR Part 11 audit trail",
+    "DPDP and GDPR consent",
+    "PII masking by role",
+    "AE hand-off to PV"
+   ],
+   "agents": [],
+   "app_name": "Digital Health Campaigns"
+  },
+  {
+   "id": "pspcrm",
+   "name": "PSP CRM",
+   "category": "Patient Services",
+   "icon": "heart",
+   "description": "Case-centric CRM for patient programs: 360° patient view, interactions, tasks and program milestones.",
+   "packages": [
+    "workflow",
+    "crm",
+    "communication",
+    "tasks",
+    "forms",
+    "reports"
+   ],
+   "roles": [
+    "Case manager",
+    "Supervisor",
+    "Program manager"
+   ],
+   "workflows": [
+    "Patient 360",
+    "Interaction logging",
+    "Task queues",
+    "Milestone tracking",
+    "Program reports"
+   ],
+   "data_objects": [
+    "Patient",
+    "Case",
+    "Interaction",
+    "Task",
+    "Milestone"
+   ],
+   "integrations": [
+    "SMS gateway",
+    "WhatsApp Business"
+   ],
+   "compliance": [
+    "21 CFR Part 11 audit trail",
+    "DPDP and GDPR consent",
+    "PII masking by role",
+    "AE hand-off to PV"
+   ],
+   "agents": [
+    {
+     "id": "call",
+     "name": "Call Summary"
+    }
+   ],
+   "app_name": "PSP CRM"
+  },
+  {
+   "id": "frm",
+   "name": "Field Reimbursement Manager",
+   "category": "Patient Services",
+   "icon": "heart",
+   "description": "Tools for FRMs supporting HCP offices on coverage, denials, appeals and access barriers.",
+   "packages": [
+    "workflow",
+    "crm",
+    "forms",
+    "documents",
+    "tasks",
+    "reports"
+   ],
+   "roles": [
+    "Field reimbursement manager",
+    "FRM lead",
+    "HCP office"
+   ],
+   "workflows": [
+    "Account planning",
+    "Access case logging",
+    "Denial & appeal support",
+    "Payer policy lookup",
+    "Visit reporting"
+   ],
+   "data_objects": [
+    "Account",
+    "Access case",
+    "Payer policy",
+    "Visit",
+    "Appeal"
+   ],
+   "integrations": [
+    "SMS gateway",
+    "WhatsApp Business"
+   ],
+   "compliance": [
+    "21 CFR Part 11 audit trail",
+    "DPDP and GDPR consent",
+    "PII masking by role",
+    "AE hand-off to PV"
+   ],
+   "agents": [
+    {
+     "id": "call",
+     "name": "Call Summary"
+    }
+   ],
+   "app_name": "Field Reimbursement Manager"
+  },
+  {
+   "id": "spharm",
+   "name": "Specialty Pharmacy Coordination",
+   "category": "Patient Services",
+   "icon": "heart",
+   "description": "Referral routing, dispensing status and data exchange with a specialty pharmacy network.",
+   "packages": [
+    "workflow",
+    "crm",
+    "integrations",
+    "tasks",
+    "reports"
+   ],
+   "roles": [
+    "Pharmacy liaison",
+    "Specialty pharmacy",
+    "Case manager"
+   ],
+   "workflows": [
+    "Referral routing",
+    "Dispense status",
+    "Data exchange",
+    "Exception handling"
+   ],
+   "data_objects": [
+    "Referral",
+    "Pharmacy",
+    "Dispense",
+    "Exception"
+   ],
+   "integrations": [
+    "SMS gateway",
+    "WhatsApp Business"
+   ],
+   "compliance": [
+    "21 CFR Part 11 audit trail",
+    "DPDP and GDPR consent",
+    "PII masking by role",
+    "AE hand-off to PV"
+   ],
+   "agents": [],
+   "app_name": "Specialty Pharmacy Coordination"
+  },
+  {
+   "id": "tele",
+   "name": "Tele-consultation",
+   "category": "Patient Services",
+   "icon": "heart",
+   "description": "Video and phone consultations with HCPs, booking, e-prescriptions and consult notes.",
+   "packages": [
+    "workflow",
+    "communication",
+    "scheduling",
+    "forms",
+    "documents",
+    "consent",
+    "reports"
+   ],
+   "roles": [
+    "Patient",
+    "Doctor",
+    "Coordinator"
+   ],
+   "workflows": [
+    "Consult booking",
+    "Video consultation",
+    "e-Prescription",
+    "Consult notes",
+    "Follow-up"
+   ],
+   "data_objects": [
+    "Patient",
+    "Doctor",
+    "Consultation",
+    "Prescription"
+   ],
+   "integrations": [
+    "SMS gateway",
+    "WhatsApp Business"
+   ],
+   "compliance": [
+    "21 CFR Part 11 audit trail",
+    "DPDP and GDPR consent",
+    "PII masking by role",
+    "AE hand-off to PV"
+   ],
+   "agents": [],
+   "app_name": "Tele-consultation"
+  },
+  {
+   "id": "rpm",
+   "name": "Remote Patient Monitoring",
+   "category": "Patient Services",
+   "icon": "heart",
+   "description": "Device and app readings with thresholds, alerts and clinician review queues.",
+   "packages": [
+    "workflow",
+    "communication",
+    "tasks",
+    "rules",
+    "integrations",
+    "reports"
+   ],
+   "roles": [
+    "Patient",
+    "Nurse",
+    "Clinician"
+   ],
+   "workflows": [
+    "Device onboarding",
+    "Reading capture",
+    "Threshold alerts",
+    "Clinician review",
+    "Trend reports"
+   ],
+   "data_objects": [
+    "Patient",
+    "Device",
+    "Reading",
+    "Alert",
+    "Review"
+   ],
+   "integrations": [
+    "SMS gateway",
+    "WhatsApp Business"
+   ],
+   "compliance": [
+    "21 CFR Part 11 audit trail",
+    "DPDP and GDPR consent",
+    "PII masking by role",
+    "AE hand-off to PV"
+   ],
+   "agents": [],
+   "app_name": "Remote Patient Monitoring"
+  },
+  {
+   "id": "diag",
+   "name": "Diagnostic Test Voucher Programme",
+   "category": "Patient Services",
+   "icon": "heart",
+   "description": "Test vouchers for biomarker or screening tests, lab network booking and result routing to the HCP.",
+   "packages": [
+    "workflow",
+    "communication",
+    "forms",
+    "scheduling",
+    "documents",
+    "integrations",
+    "reports"
+   ],
+   "roles": [
+    "HCP",
+    "Lab partner",
+    "Patient",
+    "Program manager"
+   ],
+   "workflows": [
+    "Voucher issue",
+    "Lab booking",
+    "Sample tracking",
+    "Result delivery",
+    "Lab reimbursement"
+   ],
+   "data_objects": [
+    "Voucher",
+    "Lab",
+    "Test order",
+    "Result"
+   ],
+   "integrations": [
+    "SMS gateway",
+    "WhatsApp Business"
+   ],
+   "compliance": [
+    "21 CFR Part 11 audit trail",
+    "DPDP and GDPR consent",
+    "PII masking by role",
+    "AE hand-off to PV"
+   ],
+   "agents": [],
+   "app_name": "Diagnostic Test Voucher Programme"
+  },
+  {
+   "id": "homeinf",
+   "name": "Home Infusion & Nursing Visits",
+   "category": "Patient Services",
+   "icon": "heart",
+   "description": "Scheduling and documentation for home infusions and nursing visits with drug and kit logistics.",
+   "packages": [
+    "workflow",
+    "communication",
+    "scheduling",
+    "forms",
+    "documents",
+    "tasks",
+    "reports"
+   ],
+   "roles": [
+    "Nurse",
+    "Scheduler",
+    "Patient",
+    "Pharmacist"
+   ],
+   "workflows": [
+    "Visit scheduling",
+    "Drug & kit dispatch",
+    "Infusion documentation",
+    "Reaction reporting"
+   ],
+   "data_objects": [
+    "Patient",
+    "Visit",
+    "Infusion",
+    "Kit",
+    "Reaction"
+   ],
+   "integrations": [
+    "SMS gateway",
+    "WhatsApp Business"
+   ],
+   "compliance": [
+    "21 CFR Part 11 audit trail",
+    "DPDP and GDPR consent",
+    "PII masking by role",
+    "AE hand-off to PV"
+   ],
+   "agents": [
+    {
+     "id": "ae",
+     "name": "AE Detection"
+    }
+   ],
+   "app_name": "Home Infusion & Nursing Visits"
+  },
+  {
+   "id": "pro",
+   "name": "Patient-Reported Outcomes",
+   "category": "Patient Services",
+   "icon": "heart",
+   "description": "Validated questionnaires on schedule, scoring, alerts and outcomes dashboards.",
+   "packages": [
+    "workflow",
+    "communication",
+    "forms",
+    "consent",
+    "rules",
+    "reports"
+   ],
+   "roles": [
+    "Patient",
+    "Program manager",
+    "Medical reviewer"
+   ],
+   "workflows": [
+    "Questionnaire setup",
+    "Scheduled collection",
+    "Scoring",
+    "Alerts",
+    "Outcome dashboards"
+   ],
+   "data_objects": [
+    "Patient",
+    "Questionnaire",
+    "Response",
+    "Score"
+   ],
+   "integrations": [
+    "SMS gateway",
+    "WhatsApp Business"
+   ],
+   "compliance": [
+    "21 CFR Part 11 audit trail",
+    "DPDP and GDPR consent",
+    "PII masking by role",
+    "AE hand-off to PV"
+   ],
+   "agents": [],
+   "app_name": "Patient-Reported Outcomes"
+  },
+  {
+   "id": "registry",
+   "name": "Rare Disease Registry",
+   "category": "Patient Services",
+   "icon": "heart",
+   "description": "Longitudinal registry with consented enrollment, visit data, genetics and research exports.",
+   "packages": [
+    "workflow",
+    "forms",
+    "documents",
+    "consent",
+    "reports",
+    "integrations"
+   ],
+   "roles": [
+    "Registry coordinator",
+    "Site investigator",
+    "Data manager"
+   ],
+   "workflows": [
+    "Consented enrollment",
+    "Visit data capture",
+    "Genetic results",
+    "Data quality checks",
+    "Research exports"
+   ],
+   "data_objects": [
+    "Patient",
+    "Site",
+    "Visit",
+    "Genotype",
+    "Export"
+   ],
+   "integrations": [
+    "SMS gateway",
+    "WhatsApp Business"
+   ],
+   "compliance": [
+    "21 CFR Part 11 audit trail",
+    "DPDP and GDPR consent",
+    "PII masking by role",
+    "AE hand-off to PV"
+   ],
+   "agents": [],
+   "app_name": "Rare Disease Registry"
+  },
+  {
+   "id": "psphub",
+   "name": "Multi-vendor PSP Data Hub",
+   "category": "Patient Services",
+   "icon": "heart",
+   "description": "One data layer over multiple PSP vendors: standard data model, feeds, reconciliation and unified reporting.",
+   "packages": [
+    "integrations",
+    "workflow",
+    "reports",
+    "documents"
+   ],
+   "roles": [
+    "Program manager",
+    "Vendor",
+    "Data analyst"
+   ],
+   "workflows": [
+    "Vendor onboarding",
+    "Data feed mapping",
+    "Reconciliation",
+    "Unified dashboards"
+   ],
+   "data_objects": [
+    "Vendor",
+    "Feed",
+    "Patient",
+    "Metric"
+   ],
+   "integrations": [
+    "SMS gateway",
+    "WhatsApp Business"
+   ],
+   "compliance": [
+    "21 CFR Part 11 audit trail",
+    "DPDP and GDPR consent",
+    "PII masking by role",
+    "AE hand-off to PV"
+   ],
+   "agents": [
+    {
+     "id": "recon",
+     "name": "Secondary Sales Reconciliation"
+    }
+   ],
+   "app_name": "Multi-vendor PSP Data Hub"
+  },
+  {
+   "id": "carer",
+   "name": "Caregiver Support Programme",
+   "category": "Patient Services",
+   "icon": "heart",
+   "description": "Support for caregivers: onboarding, education, respite resources and caregiver check-ins.",
+   "packages": [
+    "workflow",
+    "crm",
+    "communication",
+    "forms",
+    "consent",
+    "reports"
+   ],
+   "roles": [
+    "Caregiver",
+    "Support coordinator",
+    "Patient"
+   ],
+   "workflows": [
+    "Caregiver onboarding",
+    "Education tracks",
+    "Resource booking",
+    "Check-ins"
+   ],
+   "data_objects": [
+    "Caregiver",
+    "Patient",
+    "Resource",
+    "Check-in"
+   ],
+   "integrations": [
+    "SMS gateway",
+    "WhatsApp Business"
+   ],
+   "compliance": [
+    "21 CFR Part 11 audit trail",
+    "DPDP and GDPR consent",
+    "PII masking by role",
+    "AE hand-off to PV"
+   ],
+   "agents": [
+    {
+     "id": "engage",
+     "name": "Patient Engagement"
+    }
+   ],
+   "app_name": "Caregiver Support Programme"
+  },
+  {
+   "id": "pportal",
+   "name": "Patient Portal & App",
+   "category": "Patient Services",
+   "icon": "heart",
+   "description": "Patient-facing web and mobile app: profile, documents, reminders, requests and messaging.",
+   "packages": [
+    "workflow",
+    "communication",
+    "forms",
+    "documents",
+    "consent"
+   ],
+   "roles": [
+    "Patient",
+    "Support agent"
+   ],
+   "workflows": [
+    "Profile & documents",
+    "Reminders",
+    "Service requests",
+    "Secure messaging"
+   ],
+   "data_objects": [
+    "Patient",
+    "Request",
+    "Document",
+    "Message"
+   ],
+   "integrations": [
+    "SMS gateway",
+    "WhatsApp Business"
+   ],
+   "compliance": [
+    "21 CFR Part 11 audit trail",
+    "DPDP and GDPR consent",
+    "PII masking by role",
+    "AE hand-off to PV"
+   ],
+   "agents": [
+    {
+     "id": "engage",
+     "name": "Patient Engagement"
+    }
+   ],
+   "app_name": "Patient Portal & App"
+  },
+  {
+   "id": "hcpportal",
+   "name": "HCP Portal",
+   "category": "Patient Services",
+   "icon": "heart",
+   "description": "HCP-facing portal to enroll patients, track status, upload documents and request support.",
+   "packages": [
+    "workflow",
+    "crm",
+    "forms",
+    "documents",
+    "communication"
+   ],
+   "roles": [
+    "HCP",
+    "Clinic staff",
+    "Support agent"
+   ],
+   "workflows": [
+    "Patient enrollment",
+    "Status tracking",
+    "Document upload",
+    "Support requests"
+   ],
+   "data_objects": [
+    "HCP",
+    "Patient",
+    "Enrollment",
+    "Request"
+   ],
+   "integrations": [
+    "SMS gateway",
+    "WhatsApp Business"
+   ],
+   "compliance": [
+    "21 CFR Part 11 audit trail",
+    "DPDP and GDPR consent",
+    "PII masking by role",
+    "AE hand-off to PV"
+   ],
+   "agents": [
+    {
+     "id": "docv",
+     "name": "Document Verification"
+    }
+   ],
+   "app_name": "HCP Portal"
+  },
+  {
+   "id": "consentmgr",
+   "name": "Consent Management",
+   "category": "Patient Services",
+   "icon": "heart",
+   "description": "Consent capture, versioning, withdrawal and proof across channels and countries.",
+   "packages": [
+    "workflow",
+    "consent",
+    "documents",
+    "reports"
+   ],
+   "roles": [
+    "Patient",
+    "Program manager",
+    "Privacy officer"
+   ],
+   "workflows": [
+    "Consent capture",
+    "Version control",
+    "Withdrawal handling",
+    "Consent evidence"
+   ],
+   "data_objects": [
+    "Consent",
+    "Patient",
+    "Policy version",
+    "Evidence"
+   ],
+   "integrations": [
+    "SMS gateway",
+    "WhatsApp Business"
+   ],
+   "compliance": [
+    "21 CFR Part 11 audit trail",
+    "DPDP and GDPR consent",
+    "PII masking by role",
+    "AE hand-off to PV"
+   ],
+   "agents": [],
+   "app_name": "Consent Management"
+  },
+  {
+   "id": "eligeng",
+   "name": "Eligibility Rules",
+   "category": "Patient Services",
+   "icon": "heart",
+   "description": "Configurable eligibility rules for programs: criteria, slabs, exceptions and explainable decisions.",
+   "packages": [
+    "rules",
+    "workflow",
+    "forms",
+    "reports"
+   ],
+   "roles": [
+    "Program manager",
+    "Reviewer"
+   ],
+   "workflows": [
+    "Criteria setup",
+    "Slab configuration",
+    "Decision run",
+    "Exception approval"
+   ],
+   "data_objects": [
+    "Rule",
+    "Criterion",
+    "Decision",
+    "Exception"
+   ],
+   "integrations": [
+    "SMS gateway",
+    "WhatsApp Business"
+   ],
+   "compliance": [
+    "21 CFR Part 11 audit trail",
+    "DPDP and GDPR consent",
+    "PII masking by role",
+    "AE hand-off to PV"
+   ],
+   "agents": [
+    {
+     "id": "elig",
+     "name": "Eligibility Assessment"
+    }
+   ],
+   "app_name": "Eligibility Rules"
+  },
+  {
+   "id": "journey",
+   "name": "Patient Journey Orchestration",
+   "category": "Patient Services",
+   "icon": "heart",
+   "description": "Rule-driven journeys across channels triggered by program events such as enrollment, dispense or missed refill.",
+   "packages": [
+    "workflow",
+    "communication",
+    "rules",
+    "reports"
+   ],
+   "roles": [
+    "Program manager",
+    "Content manager"
+   ],
+   "workflows": [
+    "Journey design",
+    "Event triggers",
+    "Channel delivery",
+    "Journey analytics"
+   ],
+   "data_objects": [
+    "Journey",
+    "Trigger",
+    "Message",
+    "Patient"
+   ],
+   "integrations": [
+    "SMS gateway",
+    "WhatsApp Business"
+   ],
+   "compliance": [
+    "21 CFR Part 11 audit trail",
+    "DPDP and GDPR consent",
+    "PII masking by role",
+    "AE hand-off to PV"
+   ],
+   "agents": [
+    {
+     "id": "engage",
+     "name": "Patient Engagement"
+    }
+   ],
+   "app_name": "Patient Journey Orchestration"
+  },
+  {
+   "id": "appt",
+   "name": "Appointment Scheduling",
+   "category": "Patient Services",
+   "icon": "heart",
+   "description": "Slot-based booking for consultations, tests and visits with reminders and rescheduling.",
+   "packages": [
+    "scheduling",
+    "communication",
+    "workflow"
+   ],
+   "roles": [
+    "Patient",
+    "Coordinator",
+    "Provider"
+   ],
+   "workflows": [
+    "Slot setup",
+    "Booking",
+    "Reminders",
+    "Rescheduling"
+   ],
+   "data_objects": [
+    "Slot",
+    "Booking",
+    "Provider",
+    "Patient"
+   ],
+   "integrations": [
+    "SMS gateway",
+    "WhatsApp Business"
+   ],
+   "compliance": [
+    "21 CFR Part 11 audit trail",
+    "DPDP and GDPR consent",
+    "PII masking by role",
+    "AE hand-off to PV"
+   ],
+   "agents": [],
+   "app_name": "Appointment Scheduling"
+  },
+  {
+   "id": "voucher",
+   "name": "Voucher & Coupon Management",
+   "category": "Patient Services",
+   "icon": "heart",
+   "description": "Issue, redeem and reconcile product vouchers and coupons with fraud controls.",
+   "packages": [
+    "workflow",
+    "rules",
+    "integrations",
+    "reports"
+   ],
+   "roles": [
+    "Program manager",
+    "Pharmacy",
+    "Patient"
+   ],
+   "workflows": [
+    "Voucher issue",
+    "Redemption",
+    "Fraud checks",
+    "Reconciliation"
+   ],
+   "data_objects": [
+    "Voucher",
+    "Redemption",
+    "Pharmacy"
+   ],
+   "integrations": [
+    "SMS gateway",
+    "WhatsApp Business"
+   ],
+   "compliance": [
+    "21 CFR Part 11 audit trail",
+    "DPDP and GDPR consent",
+    "PII masking by role",
+    "AE hand-off to PV"
+   ],
+   "agents": [
+    {
+     "id": "recon",
+     "name": "Secondary Sales Reconciliation"
+    }
+   ],
+   "app_name": "Voucher & Coupon Management"
+  },
+  {
+   "id": "aph",
+   "name": "Apheresis & Collection Management",
+   "category": "Advanced Therapies",
+   "icon": "dna",
+   "description": "Collection scheduling, patient prep protocols, kit logistics and manufacturing handoff.",
+   "packages": [
+    "workflow",
+    "scheduling",
+    "forms",
+    "documents",
+    "reports"
+   ],
+   "roles": [
+    "Apheresis centre",
+    "Site coordinator",
+    "Courier"
+   ],
+   "workflows": [
+    "Collection scheduling",
+    "Patient prep",
+    "Kit logistics",
+    "Manufacturing handoff"
+   ],
+   "data_objects": [
+    "Collection",
+    "Kit",
+    "Patient",
+    "Shipment"
+   ],
+   "integrations": [
+    "Courier tracking API",
+    "Manufacturing MES"
+   ],
+   "compliance": [
+    "Chain-of-identity checks",
+    "21 CFR Part 11 audit trail",
+    "Temperature excursion logging"
+   ],
+   "agents": [
+    {
+     "id": "coc",
+     "name": "Custody Exception"
+    }
+   ],
+   "app_name": "Apheresis & Collection Management"
+  },
+  {
+   "id": "cold",
+   "name": "Cold Chain & Logistics Tracking",
+   "category": "Advanced Therapies",
+   "icon": "dna",
+   "description": "Temperature monitoring with excursion prediction, alerts and deviation management.",
+   "packages": [
+    "workflow",
+    "integrations",
+    "rules",
+    "reports",
+    "tasks"
+   ],
+   "roles": [
+    "Logistics lead",
+    "Courier",
+    "QA reviewer"
+   ],
+   "workflows": [
+    "Shipment setup",
+    "Temperature monitoring",
+    "Excursion alerts",
+    "Deviation management"
+   ],
+   "data_objects": [
+    "Shipment",
+    "Logger",
+    "Reading",
+    "Excursion"
+   ],
+   "integrations": [
+    "Courier tracking API",
+    "Manufacturing MES"
+   ],
+   "compliance": [
+    "Chain-of-identity checks",
+    "21 CFR Part 11 audit trail",
+    "Temperature excursion logging"
+   ],
+   "agents": [
+    {
+     "id": "coc",
+     "name": "Custody Exception"
+    }
+   ],
+   "app_name": "Cold Chain & Logistics Tracking"
+  },
+  {
+   "id": "rems",
+   "name": "REMS Compliance",
+   "category": "Advanced Therapies",
+   "icon": "dna",
+   "description": "Prescriber certification, patient enrollment, pharmacy qualification and dispensing controls.",
+   "packages": [
+    "workflow",
+    "forms",
+    "documents",
+    "consent",
+    "rules",
+    "reports"
+   ],
+   "roles": [
+    "Prescriber",
+    "Pharmacy",
+    "REMS coordinator"
+   ],
+   "workflows": [
+    "Prescriber certification",
+    "Patient enrollment",
+    "Pharmacy qualification",
+    "Dispense authorization"
+   ],
+   "data_objects": [
+    "Prescriber",
+    "Pharmacy",
+    "Patient",
+    "Authorization"
+   ],
+   "integrations": [
+    "Courier tracking API",
+    "Manufacturing MES"
+   ],
+   "compliance": [
+    "Chain-of-identity checks",
+    "21 CFR Part 11 audit trail",
+    "Temperature excursion logging"
+   ],
+   "agents": [],
+   "app_name": "REMS Compliance"
+  },
+  {
+   "id": "tcc",
+   "name": "Treatment Centre Coordination",
+   "category": "Advanced Therapies",
+   "icon": "dna",
+   "description": "Referral intake, slot management, nursing protocols and infusion scheduling for treatment centres.",
+   "packages": [
+    "workflow",
+    "scheduling",
+    "forms",
+    "communication",
+    "reports"
+   ],
+   "roles": [
+    "Site coordinator",
+    "Treating physician",
+    "Nurse"
+   ],
+   "workflows": [
+    "Referral intake",
+    "Slot management",
+    "Protocol delivery",
+    "Infusion scheduling"
+   ],
+   "data_objects": [
+    "Referral",
+    "Site",
+    "Slot",
+    "Infusion"
+   ],
+   "integrations": [
+    "Courier tracking API",
+    "Manufacturing MES"
+   ],
+   "compliance": [
+    "Chain-of-identity checks",
+    "21 CFR Part 11 audit trail",
+    "Temperature excursion logging"
+   ],
+   "agents": [],
+   "app_name": "Treatment Centre Coordination"
+  },
+  {
+   "id": "ltfu",
+   "name": "Long-term Follow-up",
+   "category": "Advanced Therapies",
+   "icon": "dna",
+   "description": "15-year post-treatment follow-up with AE monitoring, outcomes and registry reporting.",
+   "packages": [
+    "workflow",
+    "scheduling",
+    "communication",
+    "forms",
+    "documents",
+    "reports"
+   ],
+   "roles": [
+    "Follow-up coordinator",
+    "Investigator",
+    "Patient"
+   ],
+   "workflows": [
+    "Follow-up scheduling",
+    "AE monitoring",
+    "Outcome capture",
+    "Registry submissions"
+   ],
+   "data_objects": [
+    "Patient",
+    "Visit",
+    "AE",
+    "Outcome",
+    "Submission"
+   ],
+   "integrations": [
+    "Courier tracking API",
+    "Manufacturing MES"
+   ],
+   "compliance": [
+    "Chain-of-identity checks",
+    "21 CFR Part 11 audit trail",
+    "Temperature excursion logging"
+   ],
+   "agents": [
+    {
+     "id": "ae",
+     "name": "AE Detection"
+    }
+   ],
+   "app_name": "Long-term Follow-up"
+  },
+  {
+   "id": "refer",
+   "name": "Patient Identification & Referral",
+   "category": "Advanced Therapies",
+   "icon": "dna",
+   "description": "Eligibility screening and referral from community hospitals to authorised treatment centres.",
+   "packages": [
+    "workflow",
+    "crm",
+    "forms",
+    "documents",
+    "communication"
+   ],
+   "roles": [
+    "Referring physician",
+    "Treatment centre",
+    "Patient liaison"
+   ],
+   "workflows": [
+    "Candidate screening",
+    "Referral submission",
+    "Centre acceptance",
+    "Referral tracking"
+   ],
+   "data_objects": [
+    "Patient",
+    "Referral",
+    "Centre",
+    "Screening"
+   ],
+   "integrations": [
+    "Courier tracking API",
+    "Manufacturing MES"
+   ],
+   "compliance": [
+    "Chain-of-identity checks",
+    "21 CFR Part 11 audit trail",
+    "Temperature excursion logging"
+   ],
+   "agents": [],
+   "app_name": "Patient Identification & Referral"
+  },
+  {
+   "id": "mslot",
+   "name": "Manufacturing Slot Management",
+   "category": "Advanced Therapies",
+   "icon": "dna",
+   "description": "Capacity calendar, slot requests, allocation rules and release status for personalised therapies.",
+   "packages": [
+    "workflow",
+    "scheduling",
+    "rules",
+    "reports"
+   ],
+   "roles": [
+    "Manufacturing scheduler",
+    "Site coordinator",
+    "QA release"
+   ],
+   "workflows": [
+    "Capacity calendar",
+    "Slot requests",
+    "Allocation",
+    "Release status"
+   ],
+   "data_objects": [
+    "Slot",
+    "Batch",
+    "Site",
+    "Release"
+   ],
+   "integrations": [
+    "Courier tracking API",
+    "Manufacturing MES"
+   ],
+   "compliance": [
+    "Chain-of-identity checks",
+    "21 CFR Part 11 audit trail",
+    "Temperature excursion logging"
+   ],
+   "agents": [],
+   "app_name": "Manufacturing Slot Management"
+  },
+  {
+   "id": "coi",
+   "name": "Chain of Identity & Custody",
+   "category": "Advanced Therapies",
+   "icon": "dna",
+   "description": "Identity labels and custody handoffs verified at every step from collection to infusion.",
+   "packages": [
+    "workflow",
+    "serialization",
+    "forms",
+    "reports"
+   ],
+   "roles": [
+    "Courier",
+    "Site coordinator",
+    "Manufacturing"
+   ],
+   "workflows": [
+    "Label generation",
+    "Handoff scanning",
+    "Identity verification",
+    "Custody record"
+   ],
+   "data_objects": [
+    "COI",
+    "Custody event",
+    "Label",
+    "Location"
+   ],
+   "integrations": [
+    "Courier tracking API",
+    "Manufacturing MES"
+   ],
+   "compliance": [
+    "Chain-of-identity checks",
+    "21 CFR Part 11 audit trail",
+    "Temperature excursion logging"
+   ],
+   "agents": [
+    {
+     "id": "coc",
+     "name": "Custody Exception"
+    }
+   ],
+   "app_name": "Chain of Identity & Custody"
+  },
+  {
+   "id": "siteq",
+   "name": "Treatment Site Qualification",
+   "category": "Advanced Therapies",
+   "icon": "dna",
+   "description": "Onboarding and qualification of treatment centres: audits, training, SOPs and activation.",
+   "packages": [
+    "workflow",
+    "forms",
+    "documents",
+    "tasks",
+    "reports"
+   ],
+   "roles": [
+    "Site lead",
+    "Qualification auditor",
+    "Medical lead"
+   ],
+   "workflows": [
+    "Site application",
+    "Qualification audit",
+    "Staff training",
+    "Site activation"
+   ],
+   "data_objects": [
+    "Site",
+    "Audit",
+    "Training",
+    "Activation"
+   ],
+   "integrations": [
+    "Courier tracking API",
+    "Manufacturing MES"
+   ],
+   "compliance": [
+    "Chain-of-identity checks",
+    "21 CFR Part 11 audit trail",
+    "Temperature excursion logging"
+   ],
+   "agents": [],
+   "app_name": "Treatment Site Qualification"
+  },
+  {
+   "id": "rlt",
+   "name": "Radioligand Therapy Scheduling",
+   "category": "Advanced Therapies",
+   "icon": "dna",
+   "description": "Decay-aware scheduling of dose production, shipment and administration across nuclear medicine sites.",
+   "packages": [
+    "workflow",
+    "scheduling",
+    "integrations",
+    "rules",
+    "reports"
+   ],
+   "roles": [
+    "Nuclear medicine site",
+    "Production planner",
+    "Courier"
+   ],
+   "workflows": [
+    "Dose ordering",
+    "Production slotting",
+    "Time-critical shipping",
+    "Administration confirmation"
+   ],
+   "data_objects": [
+    "Dose",
+    "Order",
+    "Shipment",
+    "Site"
+   ],
+   "integrations": [
+    "Courier tracking API",
+    "Manufacturing MES"
+   ],
+   "compliance": [
+    "Chain-of-identity checks",
+    "21 CFR Part 11 audit trail",
+    "Temperature excursion logging"
+   ],
+   "agents": [
+    {
+     "id": "coc",
+     "name": "Custody Exception"
+    }
+   ],
+   "app_name": "Radioligand Therapy Scheduling"
+  },
+  {
+   "id": "travel",
+   "name": "Patient Travel & Lodging",
+   "category": "Advanced Therapies",
+   "icon": "dna",
+   "description": "Travel, lodging and caregiver support for patients travelling to treatment centres.",
+   "packages": [
+    "workflow",
+    "communication",
+    "forms",
+    "reports"
+   ],
+   "roles": [
+    "Patient liaison",
+    "Patient",
+    "Travel agency"
+   ],
+   "workflows": [
+    "Travel request",
+    "Booking",
+    "Expense reimbursement",
+    "Itinerary updates"
+   ],
+   "data_objects": [
+    "Trip",
+    "Booking",
+    "Expense",
+    "Patient"
+   ],
+   "integrations": [
+    "Courier tracking API",
+    "Manufacturing MES"
+   ],
+   "compliance": [
+    "Chain-of-identity checks",
+    "21 CFR Part 11 audit trail",
+    "Temperature excursion logging"
+   ],
+   "agents": [],
+   "app_name": "Patient Travel & Lodging"
+  },
+  {
+   "id": "finclr",
+   "name": "Financial Clearance",
+   "category": "Advanced Therapies",
+   "icon": "dna",
+   "description": "Payer approval, cost estimates and contracting checks before an advanced therapy is scheduled.",
+   "packages": [
+    "workflow",
+    "forms",
+    "documents",
+    "reports"
+   ],
+   "roles": [
+    "Access specialist",
+    "Hospital finance",
+    "Payer"
+   ],
+   "workflows": [
+    "Cost estimate",
+    "Payer approval",
+    "Contract check",
+    "Clearance sign-off"
+   ],
+   "data_objects": [
+    "Case",
+    "Estimate",
+    "Approval",
+    "Contract"
+   ],
+   "integrations": [
+    "Courier tracking API",
+    "Manufacturing MES"
+   ],
+   "compliance": [
+    "Chain-of-identity checks",
+    "21 CFR Part 11 audit trail",
+    "Temperature excursion logging"
+   ],
+   "agents": [],
+   "app_name": "Financial Clearance"
+  },
+  {
+   "id": "obc",
+   "name": "Outcomes-based Contracts",
+   "category": "Advanced Therapies",
+   "icon": "dna",
+   "description": "Track outcomes against payer contracts and calculate rebates or refunds.",
+   "packages": [
+    "workflow",
+    "rules",
+    "reports",
+    "documents"
+   ],
+   "roles": [
+    "Market access lead",
+    "Payer",
+    "Finance"
+   ],
+   "workflows": [
+    "Contract setup",
+    "Outcome capture",
+    "Milestone evaluation",
+    "Rebate calculation"
+   ],
+   "data_objects": [
+    "Contract",
+    "Patient",
+    "Outcome",
+    "Rebate"
+   ],
+   "integrations": [
+    "Courier tracking API",
+    "Manufacturing MES"
+   ],
+   "compliance": [
+    "Chain-of-identity checks",
+    "21 CFR Part 11 audit trail",
+    "Temperature excursion logging"
+   ],
+   "agents": [],
+   "app_name": "Outcomes-based Contracts"
+  },
+  {
+   "id": "kit",
+   "name": "Kit & Shipper Tracking",
+   "category": "Advanced Therapies",
+   "icon": "dna",
+   "description": "Collection kits and reusable shippers: inventory, dispatch, returns and refurbishment.",
+   "packages": [
+    "workflow",
+    "serialization",
+    "reports"
+   ],
+   "roles": [
+    "Logistics coordinator",
+    "Site coordinator"
+   ],
+   "workflows": [
+    "Kit inventory",
+    "Dispatch",
+    "Returns",
+    "Refurbishment"
+   ],
+   "data_objects": [
+    "Kit",
+    "Shipper",
+    "Dispatch",
+    "Return"
+   ],
+   "integrations": [
+    "Courier tracking API",
+    "Manufacturing MES"
+   ],
+   "compliance": [
+    "Chain-of-identity checks",
+    "21 CFR Part 11 audit trail",
+    "Temperature excursion logging"
+   ],
+   "agents": [],
+   "app_name": "Kit & Shipper Tracking"
+  },
+  {
+   "id": "siteportal",
+   "name": "Treatment Site Portal",
+   "category": "Advanced Therapies",
+   "icon": "dna",
+   "description": "Portal for treatment centres to request slots, see order status and download documents.",
+   "packages": [
+    "workflow",
+    "forms",
+    "documents",
+    "communication"
+   ],
+   "roles": [
+    "Site coordinator",
+    "Support agent"
+   ],
+   "workflows": [
+    "Slot requests",
+    "Order status",
+    "Documents",
+    "Messages"
+   ],
+   "data_objects": [
+    "Site",
+    "Order",
+    "Document",
+    "Message"
+   ],
+   "integrations": [
+    "Courier tracking API",
+    "Manufacturing MES"
+   ],
+   "compliance": [
+    "Chain-of-identity checks",
+    "21 CFR Part 11 audit trail",
+    "Temperature excursion logging"
+   ],
+   "agents": [],
+   "app_name": "Treatment Site Portal"
+  },
+  {
+   "id": "ffm",
+   "name": "Field Force Management",
+   "category": "Commercial Operations",
+   "icon": "cart",
+   "description": "Territory management, visit planning, call reporting and performance analytics for field teams.",
+   "packages": [
+    "workflow",
+    "crm",
+    "scheduling",
+    "forms",
+    "reports"
+   ],
+   "roles": [
+    "Medical rep",
+    "Area manager",
+    "Sales ops"
+   ],
+   "workflows": [
+    "Territory setup",
+    "Visit planning",
+    "Call reporting",
+    "Performance dashboards"
+   ],
+   "data_objects": [
+    "Rep",
+    "Territory",
+    "Visit",
+    "HCP",
+    "Target"
+   ],
+   "integrations": [
+    "ERP connector",
+    "CRM sync"
+   ],
+   "compliance": [
+    "UCPMP / EFPIA rules",
+    "Spend and approval trail",
+    "Maker-checker on payouts"
+   ],
+   "agents": [
+    {
+     "id": "call",
+     "name": "Call Summary"
+    }
+   ],
+   "app_name": "Field Force Management"
+  },
+  {
+   "id": "hcpev",
+   "name": "HCP Event Management",
+   "category": "Commercial Operations",
+   "icon": "cart",
+   "description": "Advisory boards, CMEs and congresses with invitations, attendance and transparency reporting.",
+   "packages": [
+    "workflow",
+    "crm",
+    "communication",
+    "forms",
+    "documents",
+    "reports"
+   ],
+   "roles": [
+    "Event manager",
+    "HCP",
+    "Compliance reviewer"
+   ],
+   "workflows": [
+    "Event planning",
+    "Invitations & RSVP",
+    "Attendance capture",
+    "Spend reporting"
+   ],
+   "data_objects": [
+    "Event",
+    "HCP",
+    "Invitation",
+    "Attendance",
+    "Spend"
+   ],
+   "integrations": [
+    "ERP connector",
+    "CRM sync"
+   ],
+   "compliance": [
+    "UCPMP / EFPIA rules",
+    "Spend and approval trail",
+    "Maker-checker on payouts"
+   ],
+   "agents": [
+    {
+     "id": "hcpmon",
+     "name": "HCP Interaction Monitor"
+    }
+   ],
+   "app_name": "HCP Event Management"
+  },
+  {
+   "id": "kol",
+   "name": "HCP/KOL Engagement",
+   "category": "Commercial Operations",
+   "icon": "cart",
+   "description": "Credentialing, FMV documentation, aggregate spend and conflict-of-interest management.",
+   "packages": [
+    "workflow",
+    "crm",
+    "forms",
+    "documents",
+    "reports"
+   ],
+   "roles": [
+    "Medical affairs",
+    "Compliance reviewer",
+    "Brand manager"
+   ],
+   "workflows": [
+    "KOL profiling",
+    "Credentialing",
+    "FMV documentation",
+    "Spend tracking"
+   ],
+   "data_objects": [
+    "KOL",
+    "Engagement",
+    "Contract",
+    "Spend"
+   ],
+   "integrations": [
+    "ERP connector",
+    "CRM sync"
+   ],
+   "compliance": [
+    "UCPMP / EFPIA rules",
+    "Spend and approval trail",
+    "Maker-checker on payouts"
+   ],
+   "agents": [
+    {
+     "id": "hcpmon",
+     "name": "HCP Interaction Monitor"
+    }
+   ],
+   "app_name": "HCP/KOL Engagement"
+  },
+  {
+   "id": "clinon",
+   "name": "Clinic & HCP Onboarding",
+   "category": "Commercial Operations",
+   "icon": "cart",
+   "description": "Credential verification, agreements, training and tier assignment for clinic and HCP partners.",
+   "packages": [
+    "workflow",
+    "crm",
+    "forms",
+    "documents",
+    "reports"
+   ],
+   "roles": [
+    "Partner manager",
+    "Clinic",
+    "Compliance reviewer"
+   ],
+   "workflows": [
+    "Credential verification",
+    "Agreements",
+    "Training",
+    "Tier assignment"
+   ],
+   "data_objects": [
+    "Clinic",
+    "HCP",
+    "Agreement",
+    "Tier"
+   ],
+   "integrations": [
+    "ERP connector",
+    "CRM sync"
+   ],
+   "compliance": [
+    "UCPMP / EFPIA rules",
+    "Spend and approval trail",
+    "Maker-checker on payouts"
+   ],
+   "agents": [
+    {
+     "id": "docv",
+     "name": "Document Verification"
+    }
+   ],
+   "app_name": "Clinic & HCP Onboarding"
+  },
+  {
+   "id": "vax",
+   "name": "Vaccine Distribution",
+   "category": "Commercial Operations",
+   "icon": "cart",
+   "description": "Clinic allocation, cold chain compliance, multi-dose vial tracking and wastage monitoring.",
+   "packages": [
+    "workflow",
+    "crm",
+    "forms",
+    "integrations",
+    "reports"
+   ],
+   "roles": [
+    "Clinic",
+    "Distributor",
+    "Supply planner"
+   ],
+   "workflows": [
+    "Clinic ordering",
+    "Allocation",
+    "Cold chain monitoring",
+    "Vial & wastage tracking"
+   ],
+   "data_objects": [
+    "Clinic",
+    "Order",
+    "Lot",
+    "Vial",
+    "Wastage"
+   ],
+   "integrations": [
+    "ERP connector",
+    "CRM sync"
+   ],
+   "compliance": [
+    "UCPMP / EFPIA rules",
+    "Spend and approval trail",
+    "Maker-checker on payouts"
+   ],
+   "agents": [],
+   "app_name": "Vaccine Distribution"
+  },
+  {
+   "id": "fieldintel",
+   "name": "Field Intelligence",
+   "category": "Commercial Operations",
+   "icon": "cart",
+   "description": "Voice post-visit debriefs in any language turned into structured signals, visit quality scores and weekly themes.",
+   "packages": [
+    "workflow",
+    "crm",
+    "communication",
+    "reports"
+   ],
+   "roles": [
+    "Medical rep",
+    "Area manager",
+    "HQ analyst"
+   ],
+   "workflows": [
+    "Voice debrief",
+    "Signal extraction",
+    "Visit quality score",
+    "Manager digest"
+   ],
+   "data_objects": [
+    "Visit",
+    "Debrief",
+    "Signal",
+    "Theme"
+   ],
+   "integrations": [
+    "ERP connector",
+    "CRM sync"
+   ],
+   "compliance": [
+    "UCPMP / EFPIA rules",
+    "Spend and approval trail",
+    "Maker-checker on payouts"
+   ],
+   "agents": [
+    {
+     "id": "call",
+     "name": "Call Summary"
+    }
+   ],
+   "app_name": "Field Intelligence"
+  },
+  {
+   "id": "edet",
+   "name": "e-Detailing",
+   "category": "Commercial Operations",
+   "icon": "cart",
+   "description": "Approved digital detail aids, remote detailing sessions and content engagement analytics.",
+   "packages": [
+    "workflow",
+    "crm",
+    "documents",
+    "communication",
+    "reports"
+   ],
+   "roles": [
+    "Medical rep",
+    "HCP",
+    "Content manager"
+   ],
+   "workflows": [
+    "Content library",
+    "Remote session",
+    "Engagement capture",
+    "Content analytics"
+   ],
+   "data_objects": [
+    "Content",
+    "Session",
+    "HCP",
+    "Engagement"
+   ],
+   "integrations": [
+    "ERP connector",
+    "CRM sync"
+   ],
+   "compliance": [
+    "UCPMP / EFPIA rules",
+    "Spend and approval trail",
+    "Maker-checker on payouts"
+   ],
+   "agents": [],
+   "app_name": "e-Detailing"
+  },
+  {
+   "id": "precall",
+   "name": "Pre-call Planning",
+   "category": "Commercial Operations",
+   "icon": "cart",
+   "description": "AI pre-call briefs from HCP history, prescriptions, open requests and last-visit notes.",
+   "packages": [
+    "crm",
+    "workflow",
+    "reports"
+   ],
+   "roles": [
+    "Medical rep",
+    "Area manager"
+   ],
+   "workflows": [
+    "HCP history",
+    "Brief generation",
+    "Talking points",
+    "Post-call follow-up"
+   ],
+   "data_objects": [
+    "HCP",
+    "Brief",
+    "Visit",
+    "Follow-up"
+   ],
+   "integrations": [
+    "ERP connector",
+    "CRM sync"
+   ],
+   "compliance": [
+    "UCPMP / EFPIA rules",
+    "Spend and approval trail",
+    "Maker-checker on payouts"
+   ],
+   "agents": [
+    {
+     "id": "call",
+     "name": "Call Summary"
+    }
+   ],
+   "app_name": "Pre-call Planning"
+  },
+  {
+   "id": "tender",
+   "name": "Tender & Institutional Sales",
+   "category": "Commercial Operations",
+   "icon": "cart",
+   "description": "Hospital and government tender pipeline: bid prep, pricing approval, documents and award tracking.",
+   "packages": [
+    "workflow",
+    "crm",
+    "documents",
+    "tasks",
+    "reports"
+   ],
+   "roles": [
+    "Institutional sales",
+    "Pricing lead",
+    "Legal"
+   ],
+   "workflows": [
+    "Tender discovery",
+    "Bid preparation",
+    "Pricing approval",
+    "Award tracking"
+   ],
+   "data_objects": [
+    "Tender",
+    "Bid",
+    "Price approval",
+    "Award"
+   ],
+   "integrations": [
+    "ERP connector",
+    "CRM sync"
+   ],
+   "compliance": [
+    "UCPMP / EFPIA rules",
+    "Spend and approval trail",
+    "Maker-checker on payouts"
+   ],
+   "agents": [],
+   "app_name": "Tender & Institutional Sales"
+  },
+  {
+   "id": "scheme",
+   "name": "Trade Schemes & Claims",
+   "category": "Commercial Operations",
+   "icon": "cart",
+   "description": "Scheme design, eligibility, distributor claims, validation and settlement.",
+   "packages": [
+    "workflow",
+    "rules",
+    "integrations",
+    "documents",
+    "reports"
+   ],
+   "roles": [
+    "Commercial ops",
+    "Distributor",
+    "Finance"
+   ],
+   "workflows": [
+    "Scheme setup",
+    "Claim submission",
+    "Validation",
+    "Settlement"
+   ],
+   "data_objects": [
+    "Scheme",
+    "Claim",
+    "Distributor",
+    "Settlement"
+   ],
+   "integrations": [
+    "ERP connector",
+    "CRM sync"
+   ],
+   "compliance": [
+    "UCPMP / EFPIA rules",
+    "Spend and approval trail",
+    "Maker-checker on payouts"
+   ],
+   "agents": [
+    {
+     "id": "recon",
+     "name": "Secondary Sales Reconciliation"
+    }
+   ],
+   "app_name": "Trade Schemes & Claims"
+  },
+  {
+   "id": "kam",
+   "name": "Key Account Management",
+   "category": "Commercial Operations",
+   "icon": "cart",
+   "description": "Account plans, stakeholder maps, opportunities and joint initiatives for key hospital accounts.",
+   "packages": [
+    "workflow",
+    "crm",
+    "tasks",
+    "reports"
+   ],
+   "roles": [
+    "Key account manager",
+    "Sales head"
+   ],
+   "workflows": [
+    "Account planning",
+    "Stakeholder mapping",
+    "Opportunity tracking",
+    "Business reviews"
+   ],
+   "data_objects": [
+    "Account",
+    "Stakeholder",
+    "Opportunity",
+    "Plan"
+   ],
+   "integrations": [
+    "ERP connector",
+    "CRM sync"
+   ],
+   "compliance": [
+    "UCPMP / EFPIA rules",
+    "Spend and approval trail",
+    "Maker-checker on payouts"
+   ],
+   "agents": [],
+   "app_name": "Key Account Management"
+  },
+  {
+   "id": "loyal",
+   "name": "Chemist & Retailer Loyalty",
+   "category": "Commercial Operations",
+   "icon": "cart",
+   "description": "Points, tiers and rewards for pharmacies based on purchases and programme participation.",
+   "packages": [
+    "workflow",
+    "crm",
+    "communication",
+    "rules",
+    "integrations",
+    "reports"
+   ],
+   "roles": [
+    "Retailer",
+    "Loyalty manager",
+    "Distributor"
+   ],
+   "workflows": [
+    "Enrolment",
+    "Points accrual",
+    "Tiering",
+    "Reward redemption"
+   ],
+   "data_objects": [
+    "Retailer",
+    "Purchase",
+    "Points",
+    "Reward"
+   ],
+   "integrations": [
+    "ERP connector",
+    "CRM sync"
+   ],
+   "compliance": [
+    "UCPMP / EFPIA rules",
+    "Spend and approval trail",
+    "Maker-checker on payouts"
+   ],
+   "agents": [],
+   "app_name": "Chemist & Retailer Loyalty"
+  },
+  {
+   "id": "launch",
+   "name": "Launch Command Centre",
+   "category": "Commercial Operations",
+   "icon": "cart",
+   "description": "Cross-functional launch readiness: milestones, risks, dependencies and daily launch KPIs.",
+   "packages": [
+    "workflow",
+    "tasks",
+    "reports"
+   ],
+   "roles": [
+    "Launch lead",
+    "Function lead",
+    "Leadership"
+   ],
+   "workflows": [
+    "Readiness checklist",
+    "Milestones",
+    "Risk log",
+    "Launch KPIs"
+   ],
+   "data_objects": [
+    "Milestone",
+    "Risk",
+    "Task",
+    "KPI"
+   ],
+   "integrations": [
+    "ERP connector",
+    "CRM sync"
+   ],
+   "compliance": [
+    "UCPMP / EFPIA rules",
+    "Spend and approval trail",
+    "Maker-checker on payouts"
+   ],
+   "agents": [],
+   "app_name": "Launch Command Centre"
+  },
+  {
+   "id": "incent",
+   "name": "Incentive Compensation",
+   "category": "Commercial Operations",
+   "icon": "cart",
+   "description": "Plan design, target setting, payout calculation and dispute handling for field teams.",
+   "packages": [
+    "workflow",
+    "rules",
+    "integrations",
+    "reports"
+   ],
+   "roles": [
+    "Sales ops",
+    "Rep",
+    "Finance"
+   ],
+   "workflows": [
+    "Plan design",
+    "Targets",
+    "Payout calculation",
+    "Disputes"
+   ],
+   "data_objects": [
+    "Plan",
+    "Target",
+    "Payout",
+    "Dispute"
+   ],
+   "integrations": [
+    "ERP connector",
+    "CRM sync"
+   ],
+   "compliance": [
+    "UCPMP / EFPIA rules",
+    "Spend and approval trail",
+    "Maker-checker on payouts"
+   ],
+   "agents": [],
+   "app_name": "Incentive Compensation"
+  },
+  {
+   "id": "fexp",
+   "name": "Field Expense Management",
+   "category": "Commercial Operations",
+   "icon": "cart",
+   "description": "Expense claims with policy limits, receipts, approvals and HCP-spend tagging.",
+   "packages": [
+    "workflow",
+    "forms",
+    "documents",
+    "rules",
+    "integrations",
+    "reports"
+   ],
+   "roles": [
+    "Rep",
+    "Manager",
+    "Finance"
+   ],
+   "workflows": [
+    "Expense capture",
+    "Policy checks",
+    "Approvals",
+    "HCP spend tagging"
+   ],
+   "data_objects": [
+    "Expense",
+    "Receipt",
+    "Approval",
+    "Policy"
+   ],
+   "integrations": [
+    "ERP connector",
+    "CRM sync"
+   ],
+   "compliance": [
+    "UCPMP / EFPIA rules",
+    "Spend and approval trail",
+    "Maker-checker on payouts"
+   ],
+   "agents": [
+    {
+     "id": "hcpmon",
+     "name": "HCP Interaction Monitor"
+    }
+   ],
+   "app_name": "Field Expense Management"
+  },
+  {
+   "id": "terr",
+   "name": "Territory & Alignment",
+   "category": "Commercial Operations",
+   "icon": "cart",
+   "description": "Territory design, HCP-to-rep alignment, change requests and roster management.",
+   "packages": [
+    "workflow",
+    "crm",
+    "reports"
+   ],
+   "roles": [
+    "Sales ops",
+    "Area manager"
+   ],
+   "workflows": [
+    "Territory design",
+    "HCP alignment",
+    "Change requests",
+    "Roster"
+   ],
+   "data_objects": [
+    "Territory",
+    "Rep",
+    "HCP",
+    "Alignment"
+   ],
+   "integrations": [
+    "ERP connector",
+    "CRM sync"
+   ],
+   "compliance": [
+    "UCPMP / EFPIA rules",
+    "Spend and approval trail",
+    "Maker-checker on payouts"
+   ],
+   "agents": [],
+   "app_name": "Territory & Alignment"
+  },
+  {
+   "id": "hcpmdm",
+   "name": "HCP Master Data",
+   "category": "Commercial Operations",
+   "icon": "cart",
+   "description": "Golden HCP and account records: dedupe, verification, specialty and affiliation management.",
+   "packages": [
+    "workflow",
+    "crm",
+    "integrations",
+    "reports"
+   ],
+   "roles": [
+    "Data steward",
+    "Rep",
+    "Sales ops"
+   ],
+   "workflows": [
+    "Record intake",
+    "Dedupe & merge",
+    "Verification",
+    "Affiliations"
+   ],
+   "data_objects": [
+    "HCP",
+    "Account",
+    "Affiliation",
+    "Change request"
+   ],
+   "integrations": [
+    "ERP connector",
+    "CRM sync"
+   ],
+   "compliance": [
+    "UCPMP / EFPIA rules",
+    "Spend and approval trail",
+    "Maker-checker on payouts"
+   ],
+   "agents": [],
+   "app_name": "HCP Master Data"
+  },
+  {
+   "id": "auth",
+   "name": "Authentication & Anti-Counterfeiting",
+   "category": "Traceability & Supply Chain",
+   "icon": "barcode",
+   "description": "Verification scanning, suspicious activity detection and counterfeit incident management.",
+   "packages": [
+    "workflow",
+    "serialization",
+    "rules",
+    "reports"
+   ],
+   "roles": [
+    "Brand protection",
+    "Distributor",
+    "Investigator"
+   ],
+   "workflows": [
+    "Scan verification",
+    "Suspicious activity rules",
+    "Incident management",
+    "Alerts"
+   ],
+   "data_objects": [
+    "Scan",
+    "Serial number",
+    "Incident",
+    "Alert"
+   ],
+   "integrations": [
+    "Packaging line (L3) interface",
+    "ERP connector"
+   ],
+   "compliance": [
+    "GS1 and EPCIS conformance",
+    "Immutable movement history",
+    "Batch-level recall trace"
+   ],
+   "agents": [],
+   "app_name": "Authentication & Anti-Counterfeiting"
+  },
+  {
+   "id": "regrep",
+   "name": "Traceability Regulatory Reporting",
+   "category": "Traceability & Supply Chain",
+   "icon": "barcode",
+   "description": "DSCSA and EU FMD event reporting, India H2 QR/barcode compliance and pre-submission validation.",
+   "packages": [
+    "workflow",
+    "serialization",
+    "integrations",
+    "reports"
+   ],
+   "roles": [
+    "Regulatory lead",
+    "Supply chain ops"
+   ],
+   "workflows": [
+    "Market configuration",
+    "Event reporting",
+    "Pre-submission validation",
+    "Exception management"
+   ],
+   "data_objects": [
+    "Event",
+    "Market",
+    "Submission",
+    "Exception"
+   ],
+   "integrations": [
+    "Packaging line (L3) interface",
+    "ERP connector"
+   ],
+   "compliance": [
+    "GS1 and EPCIS conformance",
+    "Immutable movement history",
+    "Batch-level recall trace"
+   ],
+   "agents": [],
+   "app_name": "Traceability Regulatory Reporting"
+  },
+  {
+   "id": "lastmile",
+   "name": "Last-Mile Tracking",
+   "category": "Traceability & Supply Chain",
+   "icon": "barcode",
+   "description": "Distribution-to-patient visibility with delivery confirmation, proof of delivery and returns.",
+   "packages": [
+    "workflow",
+    "serialization",
+    "integrations",
+    "reports"
+   ],
+   "roles": [
+    "Logistics partner",
+    "Pharmacy",
+    "Supply chain ops"
+   ],
+   "workflows": [
+    "Delivery tracking",
+    "Proof of delivery",
+    "Returns",
+    "Route exceptions"
+   ],
+   "data_objects": [
+    "Delivery",
+    "Proof",
+    "Return",
+    "Route"
+   ],
+   "integrations": [
+    "Packaging line (L3) interface",
+    "ERP connector"
+   ],
+   "compliance": [
+    "GS1 and EPCIS conformance",
+    "Immutable movement history",
+    "Batch-level recall trace"
+   ],
+   "agents": [],
+   "app_name": "Last-Mile Tracking"
+  },
+  {
+   "id": "scanalytics",
+   "name": "Supply Chain Analytics",
+   "category": "Traceability & Supply Chain",
+   "icon": "barcode",
+   "description": "Demand sensing, stockout prediction and channel performance from traceability data.",
+   "packages": [
+    "reports",
+    "serialization",
+    "integrations"
+   ],
+   "roles": [
+    "Supply planner",
+    "Commercial ops",
+    "Leadership"
+   ],
+   "workflows": [
+    "Demand sensing",
+    "Stockout prediction",
+    "Inventory dashboards",
+    "Channel benchmarks"
+   ],
+   "data_objects": [
+    "Movement",
+    "Stock",
+    "Forecast",
+    "Channel"
+   ],
+   "integrations": [
+    "Packaging line (L3) interface",
+    "ERP connector"
+   ],
+   "compliance": [
+    "GS1 and EPCIS conformance",
+    "Immutable movement history",
+    "Batch-level recall trace"
+   ],
+   "agents": [
+    {
+     "id": "recon",
+     "name": "Secondary Sales Reconciliation"
+    }
+   ],
+   "app_name": "Supply Chain Analytics"
+  },
+  {
+   "id": "govport",
+   "name": "Government Portal Integration",
+   "category": "Traceability & Supply Chain",
+   "icon": "barcode",
+   "description": "Automated data exchange with national systems such as Brazil SNCM and Turkey ITS.",
+   "packages": [
+    "integrations",
+    "serialization",
+    "workflow"
+   ],
+   "roles": [
+    "Integration lead",
+    "Regulatory lead"
+   ],
+   "workflows": [
+    "Portal connectors",
+    "Data transformation",
+    "Submission scheduling",
+    "Response handling"
+   ],
+   "data_objects": [
+    "Portal",
+    "Submission",
+    "Response",
+    "Mapping"
+   ],
+   "integrations": [
+    "Packaging line (L3) interface",
+    "ERP connector"
+   ],
+   "compliance": [
+    "GS1 and EPCIS conformance",
+    "Immutable movement history",
+    "Batch-level recall trace"
+   ],
+   "agents": [],
+   "app_name": "Government Portal Integration"
+  },
+  {
+   "id": "whagg",
+   "name": "Warehouse Aggregation & Scanning",
+   "category": "Traceability & Supply Chain",
+   "icon": "barcode",
+   "description": "Mobile scanning for receiving, aggregation, disaggregation and dispatch at warehouses.",
+   "packages": [
+    "workflow",
+    "serialization",
+    "forms"
+   ],
+   "roles": [
+    "Warehouse operator",
+    "Supervisor"
+   ],
+   "workflows": [
+    "Receiving",
+    "Aggregation",
+    "Disaggregation",
+    "Dispatch"
+   ],
+   "data_objects": [
+    "Serial number",
+    "Case",
+    "Pallet",
+    "Dispatch"
+   ],
+   "integrations": [
+    "Packaging line (L3) interface",
+    "ERP connector"
+   ],
+   "compliance": [
+    "GS1 and EPCIS conformance",
+    "Immutable movement history",
+    "Batch-level recall trace"
+   ],
+   "agents": [],
+   "app_name": "Warehouse Aggregation & Scanning"
+  },
+  {
+   "id": "recall",
+   "name": "Recall Management",
+   "category": "Traceability & Supply Chain",
+   "icon": "barcode",
+   "description": "Batch recall from decision to closure: affected stock, notifications, returns and effectiveness checks.",
+   "packages": [
+    "workflow",
+    "serialization",
+    "communication",
+    "reports"
+   ],
+   "roles": [
+    "QA head",
+    "Distributor",
+    "Regulatory lead"
+   ],
+   "workflows": [
+    "Recall initiation",
+    "Impact analysis",
+    "Notifications",
+    "Effectiveness check"
+   ],
+   "data_objects": [
+    "Recall",
+    "Batch",
+    "Location",
+    "Notification"
+   ],
+   "integrations": [
+    "Packaging line (L3) interface",
+    "ERP connector"
+   ],
+   "compliance": [
+    "GS1 and EPCIS conformance",
+    "Immutable movement history",
+    "Batch-level recall trace"
+   ],
+   "agents": [],
+   "app_name": "Recall Management"
+  },
+  {
+   "id": "returns",
+   "name": "Returns & Reverse Logistics",
+   "category": "Traceability & Supply Chain",
+   "icon": "barcode",
+   "description": "Return authorisation, pickup, inspection, credit notes and destruction records.",
+   "packages": [
+    "workflow",
+    "serialization",
+    "forms",
+    "integrations",
+    "reports"
+   ],
+   "roles": [
+    "Distributor",
+    "Warehouse",
+    "Finance"
+   ],
+   "workflows": [
+    "Return request",
+    "Pickup",
+    "Inspection",
+    "Credit & destruction"
+   ],
+   "data_objects": [
+    "Return",
+    "Serial number",
+    "Inspection",
+    "Credit note"
+   ],
+   "integrations": [
+    "Packaging line (L3) interface",
+    "ERP connector"
+   ],
+   "compliance": [
+    "GS1 and EPCIS conformance",
+    "Immutable movement history",
+    "Batch-level recall trace"
+   ],
+   "agents": [],
+   "app_name": "Returns & Reverse Logistics"
+  },
+  {
+   "id": "divert",
+   "name": "Diversion Detection",
+   "category": "Traceability & Supply Chain",
+   "icon": "barcode",
+   "description": "Detects stock appearing outside its intended channel or territory from scan and sales data.",
+   "packages": [
+    "rules",
+    "serialization",
+    "workflow",
+    "reports"
+   ],
+   "roles": [
+    "Brand protection",
+    "Commercial ops",
+    "Investigator"
+   ],
+   "workflows": [
+    "Channel rules",
+    "Anomaly detection",
+    "Case creation",
+    "Investigation"
+   ],
+   "data_objects": [
+    "Scan",
+    "Rule",
+    "Anomaly",
+    "Case"
+   ],
+   "integrations": [
+    "Packaging line (L3) interface",
+    "ERP connector"
+   ],
+   "compliance": [
+    "GS1 and EPCIS conformance",
+    "Immutable movement history",
+    "Batch-level recall trace"
+   ],
+   "agents": [
+    {
+     "id": "recon",
+     "name": "Secondary Sales Reconciliation"
+    }
+   ],
+   "app_name": "Diversion Detection"
+  },
+  {
+   "id": "tempcap",
+   "name": "Temperature Data Capture",
+   "category": "Traceability & Supply Chain",
+   "icon": "barcode",
+   "description": "Logger and IoT data from warehouses and shipments with excursion workflows.",
+   "packages": [
+    "workflow",
+    "integrations",
+    "rules",
+    "reports"
+   ],
+   "roles": [
+    "Warehouse",
+    "QA reviewer",
+    "Logistics"
+   ],
+   "workflows": [
+    "Logger onboarding",
+    "Data ingestion",
+    "Excursion workflow",
+    "Stability assessment"
+   ],
+   "data_objects": [
+    "Logger",
+    "Reading",
+    "Excursion",
+    "Assessment"
+   ],
+   "integrations": [
+    "Packaging line (L3) interface",
+    "ERP connector"
+   ],
+   "compliance": [
+    "GS1 and EPCIS conformance",
+    "Immutable movement history",
+    "Batch-level recall trace"
+   ],
+   "agents": [
+    {
+     "id": "coc",
+     "name": "Custody Exception"
+    }
+   ],
+   "app_name": "Temperature Data Capture"
+  },
+  {
+   "id": "sdc",
+   "name": "Secondary & Tertiary Sales Capture",
+   "category": "Traceability & Supply Chain",
+   "icon": "barcode",
+   "description": "Sales and stock capture from distributors and retailers via upload, API or app.",
+   "packages": [
+    "workflow",
+    "integrations",
+    "reports",
+    "forms"
+   ],
+   "roles": [
+    "Distributor",
+    "Retailer",
+    "Commercial ops"
+   ],
+   "workflows": [
+    "Upload & API intake",
+    "Data validation",
+    "Stock positions",
+    "Sales dashboards"
+   ],
+   "data_objects": [
+    "Upload",
+    "Sale",
+    "Stock position",
+    "Outlet"
+   ],
+   "integrations": [
+    "Packaging line (L3) interface",
+    "ERP connector"
+   ],
+   "compliance": [
+    "GS1 and EPCIS conformance",
+    "Immutable movement history",
+    "Batch-level recall trace"
+   ],
+   "agents": [
+    {
+     "id": "recon",
+     "name": "Secondary Sales Reconciliation"
+    }
+   ],
+   "app_name": "Secondary & Tertiary Sales Capture"
+  },
+  {
+   "id": "verify",
+   "name": "Consumer Medicine Verification",
+   "category": "Traceability & Supply Chain",
+   "icon": "barcode",
+   "description": "Patients and pharmacists scan a pack to confirm authenticity and see product information.",
+   "packages": [
+    "serialization",
+    "communication",
+    "reports"
+   ],
+   "roles": [
+    "Patient",
+    "Pharmacist",
+    "Brand protection"
+   ],
+   "workflows": [
+    "Scan & verify",
+    "Product information",
+    "Report a suspect pack",
+    "Scan analytics"
+   ],
+   "data_objects": [
+    "Scan",
+    "Product",
+    "Report"
+   ],
+   "integrations": [
+    "Packaging line (L3) interface",
+    "ERP connector"
+   ],
+   "compliance": [
+    "GS1 and EPCIS conformance",
+    "Immutable movement history",
+    "Batch-level recall trace"
+   ],
+   "agents": [],
+   "app_name": "Consumer Medicine Verification"
+  },
+  {
+   "id": "inv",
+   "name": "Inventory Management",
+   "category": "Traceability & Supply Chain",
+   "icon": "barcode",
+   "description": "Multi-location inventory with batches, expiry, transfers and reorder points.",
+   "packages": [
+    "workflow",
+    "serialization",
+    "reports"
+   ],
+   "roles": [
+    "Warehouse",
+    "Supply planner"
+   ],
+   "workflows": [
+    "Stock receipt",
+    "Transfers",
+    "Expiry management",
+    "Reorder alerts"
+   ],
+   "data_objects": [
+    "Location",
+    "Batch",
+    "Stock",
+    "Transfer"
+   ],
+   "integrations": [
+    "Packaging line (L3) interface",
+    "ERP connector"
+   ],
+   "compliance": [
+    "GS1 and EPCIS conformance",
+    "Immutable movement history",
+    "Batch-level recall trace"
+   ],
+   "agents": [],
+   "app_name": "Inventory Management"
+  },
+  {
+   "id": "ctrldist",
+   "name": "Controlled Distribution Network",
+   "category": "Traceability & Supply Chain",
+   "icon": "barcode",
+   "description": "Restricted distribution for controlled or high-risk products with licensed-entity checks and quantity limits.",
+   "packages": [
+    "workflow",
+    "serialization",
+    "rules",
+    "forms"
+   ],
+   "roles": [
+    "Distributor",
+    "Compliance reviewer",
+    "Pharmacy"
+   ],
+   "workflows": [
+    "Entity licensing",
+    "Order authorisation",
+    "Quantity limits",
+    "Movement audit"
+   ],
+   "data_objects": [
+    "Entity",
+    "Licence",
+    "Order",
+    "Movement"
+   ],
+   "integrations": [
+    "Packaging line (L3) interface",
+    "ERP connector"
+   ],
+   "compliance": [
+    "GS1 and EPCIS conformance",
+    "Immutable movement history",
+    "Batch-level recall trace"
+   ],
+   "agents": [],
+   "app_name": "Controlled Distribution Network"
+  },
+  {
+   "id": "epcis",
+   "name": "EPCIS Event Repository",
+   "category": "Traceability & Supply Chain",
+   "icon": "barcode",
+   "description": "Store, query and share EPCIS events across trading partners.",
+   "packages": [
+    "serialization",
+    "integrations"
+   ],
+   "roles": [
+    "Integration lead",
+    "Trading partner"
+   ],
+   "workflows": [
+    "Event ingestion",
+    "Partner sharing",
+    "Query",
+    "Event audit"
+   ],
+   "data_objects": [
+    "Event",
+    "Partner",
+    "Query"
+   ],
+   "integrations": [
+    "Packaging line (L3) interface",
+    "ERP connector"
+   ],
+   "compliance": [
+    "GS1 and EPCIS conformance",
+    "Immutable movement history",
+    "Batch-level recall trace"
+   ],
+   "agents": [],
+   "app_name": "EPCIS Event Repository"
+  },
+  {
+   "id": "serial",
+   "name": "Serial Number Management",
+   "category": "Traceability & Supply Chain",
+   "icon": "barcode",
+   "description": "Serial number generation, allocation to lines and CMOs, commissioning and decommissioning.",
+   "packages": [
+    "serialization",
+    "workflow",
+    "integrations"
+   ],
+   "roles": [
+    "Serialization lead",
+    "CMO",
+    "Plant operator"
+   ],
+   "workflows": [
+    "Number generation",
+    "Line allocation",
+    "Commissioning",
+    "Decommissioning"
+   ],
+   "data_objects": [
+    "Serial pool",
+    "Allocation",
+    "Serial number"
+   ],
+   "integrations": [
+    "Packaging line (L3) interface",
+    "ERP connector"
+   ],
+   "compliance": [
+    "GS1 and EPCIS conformance",
+    "Immutable movement history",
+    "Batch-level recall trace"
+   ],
+   "agents": [],
+   "app_name": "Serial Number Management"
+  },
+  {
+   "id": "gs1",
+   "name": "Product Master & GS1 Data",
+   "category": "Traceability & Supply Chain",
+   "icon": "barcode",
+   "description": "Product master with GTINs, pack hierarchy, market variants and GS1 data sharing.",
+   "packages": [
+    "workflow",
+    "serialization",
+    "integrations"
+   ],
+   "roles": [
+    "Master data steward",
+    "Regulatory lead"
+   ],
+   "workflows": [
+    "GTIN assignment",
+    "Pack hierarchy",
+    "Market variants",
+    "Data publishing"
+   ],
+   "data_objects": [
+    "Product",
+    "GTIN",
+    "Pack level",
+    "Market"
+   ],
+   "integrations": [
+    "Packaging line (L3) interface",
+    "ERP connector"
+   ],
+   "compliance": [
+    "GS1 and EPCIS conformance",
+    "Immutable movement history",
+    "Batch-level recall trace"
+   ],
+   "agents": [],
+   "app_name": "Product Master & GS1 Data"
+  },
+  {
+   "id": "pspcomp",
+   "name": "Global PSP Compliance",
+   "category": "Compliance & Quality",
+   "icon": "shield",
+   "description": "Multi-country PSP compliance: consent, AE routing, market research rules and cross-border data governance.",
+   "packages": [
+    "workflow",
+    "consent",
+    "rules",
+    "reports"
+   ],
+   "roles": [
+    "Compliance lead",
+    "Program manager",
+    "Privacy officer"
+   ],
+   "workflows": [
+    "Country configuration",
+    "Consent lifecycle",
+    "AE routing",
+    "Data transfer controls"
+   ],
+   "data_objects": [
+    "Country",
+    "Program",
+    "Consent",
+    "Control"
+   ],
+   "integrations": [
+    "HR directory",
+    "Document management system"
+   ],
+   "compliance": [
+    "21 CFR Part 11 e-signatures",
+    "Immutable audit trail",
+    "Evidence export for inspections"
+   ],
+   "agents": [
+    {
+     "id": "ae",
+     "name": "AE Detection"
+    }
+   ],
+   "app_name": "Global PSP Compliance"
+  },
+  {
+   "id": "copilot",
+   "name": "Compliance Co-Pilot",
+   "category": "Compliance & Quality",
+   "icon": "shield",
+   "description": "Assistant grounded in your SOPs: regulatory Q&A, document scoring, SOP drafting and policy gap analysis.",
+   "packages": [
+    "documents",
+    "workflow",
+    "reports"
+   ],
+   "roles": [
+    "Compliance analyst",
+    "Business user",
+    "SOP owner"
+   ],
+   "workflows": [
+    "SOP library",
+    "Regulatory Q&A",
+    "Document scoring",
+    "Gap analysis"
+   ],
+   "data_objects": [
+    "SOP",
+    "Question",
+    "Answer",
+    "Gap"
+   ],
+   "integrations": [
+    "HR directory",
+    "Document management system"
+   ],
+   "compliance": [
+    "21 CFR Part 11 e-signatures",
+    "Immutable audit trail",
+    "Evidence export for inspections"
+   ],
+   "agents": [
+    {
+     "id": "mi",
+     "name": "Medical Inquiry Response"
+    }
+   ],
+   "app_name": "Compliance Co-Pilot"
+  },
+  {
+   "id": "evcomp",
+   "name": "Events Compliance",
+   "category": "Compliance & Quality",
+   "icon": "shield",
+   "description": "HCP spend monitoring, hospitality limits, UCPMP/Sunshine/EFPIA classification and approvals.",
+   "packages": [
+    "workflow",
+    "rules",
+    "forms",
+    "reports"
+   ],
+   "roles": [
+    "Compliance reviewer",
+    "Event manager"
+   ],
+   "workflows": [
+    "Spend capture",
+    "Auto-classification",
+    "Limit enforcement",
+    "Approvals"
+   ],
+   "data_objects": [
+    "Event",
+    "Spend",
+    "HCP",
+    "Approval"
+   ],
+   "integrations": [
+    "HR directory",
+    "Document management system"
+   ],
+   "compliance": [
+    "21 CFR Part 11 e-signatures",
+    "Immutable audit trail",
+    "Evidence export for inspections"
+   ],
+   "agents": [
+    {
+     "id": "hcpmon",
+     "name": "HCP Interaction Monitor"
+    }
+   ],
+   "app_name": "Events Compliance"
+  },
+  {
+   "id": "mlr",
+   "name": "Promotional Review (PRC/MLR)",
+   "category": "Compliance & Quality",
+   "icon": "shield",
+   "description": "Content review with claims validation, reference checks, fair balance and versioned approvals.",
+   "packages": [
+    "workflow",
+    "documents",
+    "forms",
+    "reports"
+   ],
+   "roles": [
+    "Brand manager",
+    "Medical reviewer",
+    "Legal reviewer",
+    "Regulatory reviewer"
+   ],
+   "workflows": [
+    "Submission",
+    "Claims & references",
+    "Medical, legal, regulatory review",
+    "Approval & expiry"
+   ],
+   "data_objects": [
+    "Material",
+    "Claim",
+    "Reference",
+    "Review"
+   ],
+   "integrations": [
+    "HR directory",
+    "Document management system"
+   ],
+   "compliance": [
+    "21 CFR Part 11 e-signatures",
+    "Immutable audit trail",
+    "Evidence export for inspections"
+   ],
+   "agents": [],
+   "app_name": "Promotional Review (PRC/MLR)"
+  },
+  {
+   "id": "tpdd",
+   "name": "Third-Party Due Diligence",
+   "category": "Compliance & Quality",
+   "icon": "shield",
+   "description": "Anti-bribery due diligence: risk profiling, sanctions and media screening, questionnaires and monitoring.",
+   "packages": [
+    "workflow",
+    "forms",
+    "documents",
+    "rules",
+    "reports"
+   ],
+   "roles": [
+    "Compliance analyst",
+    "Business owner",
+    "Third party"
+   ],
+   "workflows": [
+    "Risk profiling",
+    "Screening",
+    "Questionnaires",
+    "Ongoing monitoring"
+   ],
+   "data_objects": [
+    "Third party",
+    "Questionnaire",
+    "Screening",
+    "Risk"
+   ],
+   "integrations": [
+    "HR directory",
+    "Document management system"
+   ],
+   "compliance": [
+    "21 CFR Part 11 e-signatures",
+    "Immutable audit trail",
+    "Evidence export for inspections"
+   ],
+   "agents": [],
+   "app_name": "Third-Party Due Diligence"
+  },
+  {
+   "id": "cttrans",
+   "name": "Clinical Trial Transparency",
+   "category": "Compliance & Quality",
+   "icon": "shield",
+   "description": "Registry submissions and results posting for ClinicalTrials.gov and EU CTR with deadline tracking.",
+   "packages": [
+    "workflow",
+    "documents",
+    "tasks",
+    "reports"
+   ],
+   "roles": [
+    "Transparency lead",
+    "Study manager"
+   ],
+   "workflows": [
+    "Deadline tracking",
+    "Submission filing",
+    "Cross-registry checks",
+    "Results posting"
+   ],
+   "data_objects": [
+    "Study",
+    "Registry",
+    "Submission",
+    "Deadline"
+   ],
+   "integrations": [
+    "HR directory",
+    "Document management system"
+   ],
+   "compliance": [
+    "21 CFR Part 11 e-signatures",
+    "Immutable audit trail",
+    "Evidence export for inspections"
+   ],
+   "agents": [],
+   "app_name": "Clinical Trial Transparency"
+  },
+  {
+   "id": "ethics",
+   "name": "Speak-up & Ethics Cases",
+   "category": "Compliance & Quality",
+   "icon": "shield",
+   "description": "Whistleblower intake, anonymous reporting, triage, investigations and culture metrics.",
+   "packages": [
+    "workflow",
+    "forms",
+    "documents",
+    "tasks",
+    "reports"
+   ],
+   "roles": [
+    "Ethics officer",
+    "Investigator",
+    "Reporter"
+   ],
+   "workflows": [
+    "Anonymous intake",
+    "Triage",
+    "Investigation",
+    "Closure & remediation"
+   ],
+   "data_objects": [
+    "Report",
+    "Case",
+    "Investigation",
+    "Action"
+   ],
+   "integrations": [
+    "HR directory",
+    "Document management system"
+   ],
+   "compliance": [
+    "21 CFR Part 11 e-signatures",
+    "Immutable audit trail",
+    "Evidence export for inspections"
+   ],
+   "agents": [],
+   "app_name": "Speak-up & Ethics Cases"
+  },
+  {
+   "id": "compacc",
+   "name": "Compassionate Access",
+   "category": "Compliance & Quality",
+   "icon": "shield",
+   "description": "Expanded access: request intake, medical review, ethics approval, regulatory filing and supply.",
+   "packages": [
+    "workflow",
+    "forms",
+    "documents",
+    "communication",
+    "reports"
+   ],
+   "roles": [
+    "Treating physician",
+    "Medical reviewer",
+    "Regulatory lead"
+   ],
+   "workflows": [
+    "Request intake",
+    "Medical review",
+    "Ethics approval",
+    "Regulatory filing",
+    "Supply"
+   ],
+   "data_objects": [
+    "Request",
+    "Patient",
+    "Approval",
+    "Shipment"
+   ],
+   "integrations": [
+    "HR directory",
+    "Document management system"
+   ],
+   "compliance": [
+    "21 CFR Part 11 e-signatures",
+    "Immutable audit trail",
+    "Evidence export for inspections"
+   ],
+   "agents": [],
+   "app_name": "Compassionate Access"
+  },
+  {
+   "id": "pv",
+   "name": "Pharmacovigilance Case Management",
+   "category": "Compliance & Quality",
+   "icon": "shield",
+   "description": "AE case lifecycle: intake, triage, assessment, narratives, follow-up and regulatory submission.",
+   "packages": [
+    "workflow",
+    "forms",
+    "documents",
+    "communication",
+    "tasks",
+    "reports"
+   ],
+   "roles": [
+    "PV associate",
+    "Safety physician",
+    "QA reviewer"
+   ],
+   "workflows": [
+    "Case intake",
+    "Triage & assessment",
+    "Narrative drafting",
+    "Follow-up",
+    "Submission"
+   ],
+   "data_objects": [
+    "Case",
+    "Event",
+    "Product",
+    "Submission"
+   ],
+   "integrations": [
+    "HR directory",
+    "Document management system"
+   ],
+   "compliance": [
+    "21 CFR Part 11 e-signatures",
+    "Immutable audit trail",
+    "Evidence export for inspections"
+   ],
+   "agents": [
+    {
+     "id": "ae",
+     "name": "AE Detection"
+    }
+   ],
+   "app_name": "Pharmacovigilance Case Management"
+  },
+  {
+   "id": "capa",
+   "name": "CAPA Management",
+   "category": "Compliance & Quality",
+   "icon": "shield",
+   "description": "Corrective and preventive actions: root cause, action plans, effectiveness checks and closure.",
+   "packages": [
+    "workflow",
+    "tasks",
+    "forms",
+    "documents",
+    "reports"
+   ],
+   "roles": [
+    "QA lead",
+    "CAPA owner",
+    "Approver"
+   ],
+   "workflows": [
+    "CAPA initiation",
+    "Root cause analysis",
+    "Action plan",
+    "Effectiveness check",
+    "Closure"
+   ],
+   "data_objects": [
+    "CAPA",
+    "Root cause",
+    "Action",
+    "Effectiveness check"
+   ],
+   "integrations": [
+    "HR directory",
+    "Document management system"
+   ],
+   "compliance": [
+    "21 CFR Part 11 e-signatures",
+    "Immutable audit trail",
+    "Evidence export for inspections"
+   ],
+   "agents": [],
+   "app_name": "CAPA Management"
+  },
+  {
+   "id": "incident",
+   "name": "Incident Management",
+   "category": "Compliance & Quality",
+   "icon": "shield",
+   "description": "Log, classify and investigate compliance, data or safety incidents with escalation and reporting.",
+   "packages": [
+    "workflow",
+    "tasks",
+    "forms",
+    "rules",
+    "reports"
+   ],
+   "roles": [
+    "Reporter",
+    "Incident manager",
+    "Compliance lead"
+   ],
+   "workflows": [
+    "Incident logging",
+    "Classification",
+    "Investigation",
+    "Escalation",
+    "Reporting"
+   ],
+   "data_objects": [
+    "Incident",
+    "Classification",
+    "Investigation",
+    "Action"
+   ],
+   "integrations": [
+    "HR directory",
+    "Document management system"
+   ],
+   "compliance": [
+    "21 CFR Part 11 e-signatures",
+    "Immutable audit trail",
+    "Evidence export for inspections"
+   ],
+   "agents": [],
+   "app_name": "Incident Management"
+  },
+  {
+   "id": "deviation",
+   "name": "Deviation Management",
+   "category": "Compliance & Quality",
+   "icon": "shield",
+   "description": "Planned and unplanned deviations with impact assessment, QA approval and CAPA linkage.",
+   "packages": [
+    "workflow",
+    "forms",
+    "documents",
+    "tasks",
+    "reports"
+   ],
+   "roles": [
+    "Area owner",
+    "QA reviewer"
+   ],
+   "workflows": [
+    "Deviation record",
+    "Impact assessment",
+    "QA review",
+    "CAPA link"
+   ],
+   "data_objects": [
+    "Deviation",
+    "Assessment",
+    "Batch",
+    "CAPA"
+   ],
+   "integrations": [
+    "HR directory",
+    "Document management system"
+   ],
+   "compliance": [
+    "21 CFR Part 11 e-signatures",
+    "Immutable audit trail",
+    "Evidence export for inspections"
+   ],
+   "agents": [],
+   "app_name": "Deviation Management"
+  },
+  {
+   "id": "change",
+   "name": "Change Control",
+   "category": "Compliance & Quality",
+   "icon": "shield",
+   "description": "Change requests with impact assessment, approvals, implementation tasks and verification.",
+   "packages": [
+    "workflow",
+    "tasks",
+    "forms",
+    "documents",
+    "reports"
+   ],
+   "roles": [
+    "Change owner",
+    "QA approver",
+    "SME"
+   ],
+   "workflows": [
+    "Change request",
+    "Impact assessment",
+    "Approvals",
+    "Implementation",
+    "Verification"
+   ],
+   "data_objects": [
+    "Change",
+    "Assessment",
+    "Approval",
+    "Task"
+   ],
+   "integrations": [
+    "HR directory",
+    "Document management system"
+   ],
+   "compliance": [
+    "21 CFR Part 11 e-signatures",
+    "Immutable audit trail",
+    "Evidence export for inspections"
+   ],
+   "agents": [],
+   "app_name": "Change Control"
+  },
+  {
+   "id": "sop",
+   "name": "SOP & Document Control",
+   "category": "Compliance & Quality",
+   "icon": "shield",
+   "description": "Controlled documents with authoring, review, approval, training links and periodic review.",
+   "packages": [
+    "workflow",
+    "documents",
+    "forms",
+    "reports"
+   ],
+   "roles": [
+    "Document owner",
+    "Reviewer",
+    "QA approver"
+   ],
+   "workflows": [
+    "Drafting",
+    "Review & approval",
+    "Effective release",
+    "Periodic review"
+   ],
+   "data_objects": [
+    "Document",
+    "Version",
+    "Approval",
+    "Review"
+   ],
+   "integrations": [
+    "HR directory",
+    "Document management system"
+   ],
+   "compliance": [
+    "21 CFR Part 11 e-signatures",
+    "Immutable audit trail",
+    "Evidence export for inspections"
+   ],
+   "agents": [],
+   "app_name": "SOP & Document Control"
+  },
+  {
+   "id": "train",
+   "name": "GxP Training Management",
+   "category": "Compliance & Quality",
+   "icon": "shield",
+   "description": "Role-based curricula, SOP read-and-understand, assessments and training compliance.",
+   "packages": [
+    "workflow",
+    "tasks",
+    "forms",
+    "reports"
+   ],
+   "roles": [
+    "Trainee",
+    "Manager",
+    "Training admin"
+   ],
+   "workflows": [
+    "Curricula",
+    "Assignments",
+    "Assessments",
+    "Compliance reports"
+   ],
+   "data_objects": [
+    "Course",
+    "Assignment",
+    "Assessment",
+    "Record"
+   ],
+   "integrations": [
+    "HR directory",
+    "Document management system"
+   ],
+   "compliance": [
+    "21 CFR Part 11 e-signatures",
+    "Immutable audit trail",
+    "Evidence export for inspections"
+   ],
+   "agents": [],
+   "app_name": "GxP Training Management"
+  },
+  {
+   "id": "audit",
+   "name": "Audit & Inspection Management",
+   "category": "Compliance & Quality",
+   "icon": "shield",
+   "description": "Audit plans, fieldwork, findings, responses and inspection readiness rooms.",
+   "packages": [
+    "workflow",
+    "tasks",
+    "forms",
+    "documents",
+    "reports"
+   ],
+   "roles": [
+    "Auditor",
+    "Auditee",
+    "QA lead"
+   ],
+   "workflows": [
+    "Audit planning",
+    "Fieldwork",
+    "Findings",
+    "Responses",
+    "Inspection readiness"
+   ],
+   "data_objects": [
+    "Audit",
+    "Finding",
+    "Response",
+    "Evidence"
+   ],
+   "integrations": [
+    "HR directory",
+    "Document management system"
+   ],
+   "compliance": [
+    "21 CFR Part 11 e-signatures",
+    "Immutable audit trail",
+    "Evidence export for inspections"
+   ],
+   "agents": [],
+   "app_name": "Audit & Inspection Management"
+  },
+  {
+   "id": "supq",
+   "name": "Supplier Quality",
+   "category": "Compliance & Quality",
+   "icon": "shield",
+   "description": "Supplier qualification, quality agreements, audits, scorecards and SCARs.",
+   "packages": [
+    "workflow",
+    "forms",
+    "documents",
+    "reports"
+   ],
+   "roles": [
+    "Supplier quality lead",
+    "Supplier",
+    "Procurement"
+   ],
+   "workflows": [
+    "Qualification",
+    "Quality agreements",
+    "Supplier audits",
+    "Scorecards"
+   ],
+   "data_objects": [
+    "Supplier",
+    "Agreement",
+    "Audit",
+    "Scorecard"
+   ],
+   "integrations": [
+    "HR directory",
+    "Document management system"
+   ],
+   "compliance": [
+    "21 CFR Part 11 e-signatures",
+    "Immutable audit trail",
+    "Evidence export for inspections"
+   ],
+   "agents": [],
+   "app_name": "Supplier Quality"
+  },
+  {
+   "id": "complaint",
+   "name": "Product Complaint Management",
+   "category": "Compliance & Quality",
+   "icon": "shield",
+   "description": "Product quality complaints with sample retrieval, investigation, trending and response.",
+   "packages": [
+    "workflow",
+    "forms",
+    "documents",
+    "tasks",
+    "reports"
+   ],
+   "roles": [
+    "Complaint handler",
+    "QA investigator",
+    "Reporter"
+   ],
+   "workflows": [
+    "Complaint intake",
+    "Sample retrieval",
+    "Investigation",
+    "Trending",
+    "Response"
+   ],
+   "data_objects": [
+    "Complaint",
+    "Sample",
+    "Investigation",
+    "Response"
+   ],
+   "integrations": [
+    "HR directory",
+    "Document management system"
+   ],
+   "compliance": [
+    "21 CFR Part 11 e-signatures",
+    "Immutable audit trail",
+    "Evidence export for inspections"
+   ],
+   "agents": [
+    {
+     "id": "ae",
+     "name": "AE Detection"
+    }
+   ],
+   "app_name": "Product Complaint Management"
+  },
+  {
+   "id": "risk",
+   "name": "Risk Register",
+   "category": "Compliance & Quality",
+   "icon": "shield",
+   "description": "Enterprise and GxP risks with scoring, owners, mitigations and review cycles.",
+   "packages": [
+    "workflow",
+    "rules",
+    "tasks",
+    "reports"
+   ],
+   "roles": [
+    "Risk owner",
+    "Risk committee"
+   ],
+   "workflows": [
+    "Risk identification",
+    "Scoring",
+    "Mitigation",
+    "Periodic review"
+   ],
+   "data_objects": [
+    "Risk",
+    "Score",
+    "Mitigation",
+    "Review"
+   ],
+   "integrations": [
+    "HR directory",
+    "Document management system"
+   ],
+   "compliance": [
+    "21 CFR Part 11 e-signatures",
+    "Immutable audit trail",
+    "Evidence export for inspections"
+   ],
+   "agents": [],
+   "app_name": "Risk Register"
+  },
+  {
+   "id": "attest",
+   "name": "Policy Attestation",
+   "category": "Compliance & Quality",
+   "icon": "shield",
+   "description": "Policy distribution, acknowledgement campaigns and conflict-of-interest declarations.",
+   "packages": [
+    "workflow",
+    "communication",
+    "forms",
+    "reports"
+   ],
+   "roles": [
+    "Employee",
+    "Compliance admin"
+   ],
+   "workflows": [
+    "Policy publish",
+    "Attestation campaign",
+    "COI declarations",
+    "Reminders"
+   ],
+   "data_objects": [
+    "Policy",
+    "Attestation",
+    "Declaration"
+   ],
+   "integrations": [
+    "HR directory",
+    "Document management system"
+   ],
+   "compliance": [
+    "21 CFR Part 11 e-signatures",
+    "Immutable audit trail",
+    "Evidence export for inspections"
+   ],
+   "agents": [],
+   "app_name": "Policy Attestation"
+  },
+  {
+   "id": "privacy",
+   "name": "Privacy Requests & Consent",
+   "category": "Compliance & Quality",
+   "icon": "shield",
+   "description": "DPDP and GDPR data subject requests, consent records, breach logs and processing registers.",
+   "packages": [
+    "workflow",
+    "consent",
+    "documents",
+    "reports"
+   ],
+   "roles": [
+    "Privacy officer",
+    "Data subject",
+    "System owner"
+   ],
+   "workflows": [
+    "Request intake",
+    "Identity check",
+    "Fulfilment",
+    "Breach log"
+   ],
+   "data_objects": [
+    "Request",
+    "Data subject",
+    "Record",
+    "Breach"
+   ],
+   "integrations": [
+    "HR directory",
+    "Document management system"
+   ],
+   "compliance": [
+    "21 CFR Part 11 e-signatures",
+    "Immutable audit trail",
+    "Evidence export for inspections"
+   ],
+   "agents": [],
+   "app_name": "Privacy Requests & Consent"
+  },
+  {
+   "id": "aimon",
+   "name": "AI Output Monitoring",
+   "category": "Compliance & Quality",
+   "icon": "shield",
+   "description": "Monitors AI agent outputs with guardrails, sampling review, exception handling and audit trails.",
+   "packages": [
+    "rules",
+    "workflow",
+    "reports"
+   ],
+   "roles": [
+    "AI governance lead",
+    "Reviewer"
+   ],
+   "workflows": [
+    "Guardrail rules",
+    "Output sampling",
+    "Exception review",
+    "Audit reporting"
+   ],
+   "data_objects": [
+    "Output",
+    "Rule",
+    "Exception",
+    "Review"
+   ],
+   "integrations": [
+    "HR directory",
+    "Document management system"
+   ],
+   "compliance": [
+    "21 CFR Part 11 e-signatures",
+    "Immutable audit trail",
+    "Evidence export for inspections"
+   ],
+   "agents": [],
+   "app_name": "AI Output Monitoring"
+  },
+  {
+   "id": "csv",
+   "name": "Computer System Validation",
+   "category": "Compliance & Quality",
+   "icon": "shield",
+   "description": "Validation plans, risk assessments, IQ/OQ/PQ execution and traceability matrices.",
+   "packages": [
+    "workflow",
+    "forms",
+    "documents",
+    "tasks",
+    "reports"
+   ],
+   "roles": [
+    "Validation lead",
+    "Tester",
+    "QA approver"
+   ],
+   "workflows": [
+    "Validation plan",
+    "Risk assessment",
+    "Test execution",
+    "Traceability matrix",
+    "Summary report"
+   ],
+   "data_objects": [
+    "System",
+    "Requirement",
+    "Test",
+    "Deviation"
+   ],
+   "integrations": [
+    "HR directory",
+    "Document management system"
+   ],
+   "compliance": [
+    "21 CFR Part 11 e-signatures",
+    "Immutable audit trail",
+    "Evidence export for inspections"
+   ],
+   "agents": [],
+   "app_name": "Computer System Validation"
+  },
+  {
+   "id": "disclose",
+   "name": "Transparency Disclosure Reporting",
+   "category": "Compliance & Quality",
+   "icon": "shield",
+   "description": "Aggregate HCP and HCO transfers of value for Sunshine Act, EFPIA and local disclosure.",
+   "packages": [
+    "workflow",
+    "rules",
+    "integrations",
+    "reports"
+   ],
+   "roles": [
+    "Transparency lead",
+    "HCP",
+    "Finance"
+   ],
+   "workflows": [
+    "Spend aggregation",
+    "Consent check",
+    "Dispute handling",
+    "Disclosure file"
+   ],
+   "data_objects": [
+    "Transfer of value",
+    "HCP",
+    "Report",
+    "Dispute"
+   ],
+   "integrations": [
+    "HR directory",
+    "Document management system"
+   ],
+   "compliance": [
+    "21 CFR Part 11 e-signatures",
+    "Immutable audit trail",
+    "Evidence export for inspections"
+   ],
+   "agents": [],
+   "app_name": "Transparency Disclosure Reporting"
+  },
+  {
+   "id": "mrae",
+   "name": "Market Research AE Reconciliation",
+   "category": "Compliance & Quality",
+   "icon": "shield",
+   "description": "Reconciles AE reports from market research and digital listening with PV records.",
+   "packages": [
+    "workflow",
+    "integrations",
+    "reports"
+   ],
+   "roles": [
+    "PV associate",
+    "Market research lead",
+    "Vendor"
+   ],
+   "workflows": [
+    "Vendor intake",
+    "AE extraction",
+    "Reconciliation",
+    "PV hand-off"
+   ],
+   "data_objects": [
+    "Study",
+    "Report",
+    "AE",
+    "Reconciliation"
+   ],
+   "integrations": [
+    "HR directory",
+    "Document management system"
+   ],
+   "compliance": [
+    "21 CFR Part 11 e-signatures",
+    "Immutable audit trail",
+    "Evidence export for inspections"
+   ],
+   "agents": [
+    {
+     "id": "ae",
+     "name": "AE Detection"
+    }
+   ],
+   "app_name": "Market Research AE Reconciliation"
+  },
+  {
+   "id": "casemgmt",
+   "name": "Case Management",
+   "category": "Compliance & Quality",
+   "icon": "shield",
+   "description": "General case management for compliance, quality or support teams: intake, SLAs, tasks and resolution.",
+   "packages": [
+    "workflow",
+    "tasks",
+    "forms",
+    "reports"
+   ],
+   "roles": [
+    "Case handler",
+    "Supervisor"
+   ],
+   "workflows": [
+    "Intake",
+    "Assignment",
+    "SLA tracking",
+    "Resolution"
+   ],
+   "data_objects": [
+    "Case",
+    "Task",
+    "SLA",
+    "Resolution"
+   ],
+   "integrations": [
+    "HR directory",
+    "Document management system"
+   ],
+   "compliance": [
+    "21 CFR Part 11 e-signatures",
+    "Immutable audit trail",
+    "Evidence export for inspections"
+   ],
+   "agents": [],
+   "app_name": "Case Management"
+  },
+  {
+   "id": "draft",
+   "name": "Regulatory Authoring Workspace",
+   "category": "Regulatory Affairs",
+   "icon": "file",
+   "description": "AI-assisted dossier authoring grounded in CSRs, datasets and TLFs, with citation tracing and consistency checks.",
+   "packages": [
+    "workflow",
+    "documents",
+    "reports"
+   ],
+   "roles": [
+    "Regulatory writer",
+    "Medical reviewer",
+    "Regulatory lead"
+   ],
+   "workflows": [
+    "Source import",
+    "Guided drafting",
+    "Citation tracing",
+    "Consistency checks",
+    "Review"
+   ],
+   "data_objects": [
+    "Document",
+    "Source",
+    "Section",
+    "Citation"
+   ],
+   "integrations": [
+    "eCTD publishing tool",
+    "Document management system"
+   ],
+   "compliance": [
+    "Version control and e-signatures",
+    "Source citation on every draft",
+    "Review audit trail"
+   ],
+   "agents": [],
+   "app_name": "Regulatory Authoring Workspace"
+  },
+  {
+   "id": "rim",
+   "name": "Regulatory Information Management",
+   "category": "Regulatory Affairs",
+   "icon": "file",
+   "description": "Products, registrations, submissions and commitments across markets in one system.",
+   "packages": [
+    "workflow",
+    "documents",
+    "tasks",
+    "reports"
+   ],
+   "roles": [
+    "Regulatory lead",
+    "Affiliate RA",
+    "Leadership"
+   ],
+   "workflows": [
+    "Product registry",
+    "Registrations",
+    "Submissions",
+    "Commitments"
+   ],
+   "data_objects": [
+    "Product",
+    "Registration",
+    "Submission",
+    "Commitment"
+   ],
+   "integrations": [
+    "eCTD publishing tool",
+    "Document management system"
+   ],
+   "compliance": [
+    "Version control and e-signatures",
+    "Source citation on every draft",
+    "Review audit trail"
+   ],
+   "agents": [],
+   "app_name": "Regulatory Information Management"
+  },
+  {
+   "id": "subpipe",
+   "name": "Submission Pipeline",
+   "category": "Regulatory Affairs",
+   "icon": "file",
+   "description": "Unified view of submissions with milestones and health authority query coordination.",
+   "packages": [
+    "workflow",
+    "tasks",
+    "reports"
+   ],
+   "roles": [
+    "Regulatory lead",
+    "Submission manager"
+   ],
+   "workflows": [
+    "Pipeline dashboard",
+    "Milestones",
+    "Query management",
+    "Status reporting"
+   ],
+   "data_objects": [
+    "Submission",
+    "Milestone",
+    "Query"
+   ],
+   "integrations": [
+    "eCTD publishing tool",
+    "Document management system"
+   ],
+   "compliance": [
+    "Version control and e-signatures",
+    "Source citation on every draft",
+    "Review audit trail"
+   ],
+   "agents": [],
+   "app_name": "Submission Pipeline"
+  },
+  {
+   "id": "dossier",
+   "name": "Dossier Assembly & eCTD",
+   "category": "Regulatory Affairs",
+   "icon": "file",
+   "description": "Document organisation by CTD module, publishing validation and submission packages.",
+   "packages": [
+    "workflow",
+    "documents",
+    "integrations",
+    "reports"
+   ],
+   "roles": [
+    "Publisher",
+    "Regulatory writer"
+   ],
+   "workflows": [
+    "CTD structure",
+    "Document placement",
+    "Publishing validation",
+    "Package export"
+   ],
+   "data_objects": [
+    "Dossier",
+    "Module",
+    "Document",
+    "Package"
+   ],
+   "integrations": [
+    "eCTD publishing tool",
+    "Document management system"
+   ],
+   "compliance": [
+    "Version control and e-signatures",
+    "Source citation on every draft",
+    "Review audit trail"
+   ],
+   "agents": [],
+   "app_name": "Dossier Assembly & eCTD"
+  },
+  {
+   "id": "regint",
+   "name": "Regulatory Intelligence",
+   "category": "Regulatory Affairs",
+   "icon": "file",
+   "description": "Monitors guidelines, requirement changes and precedents, with impact on active submissions.",
+   "packages": [
+    "workflow",
+    "documents",
+    "communication",
+    "reports"
+   ],
+   "roles": [
+    "RI analyst",
+    "Regulatory lead"
+   ],
+   "workflows": [
+    "Source monitoring",
+    "Change assessment",
+    "Impact on portfolio",
+    "Alerts"
+   ],
+   "data_objects": [
+    "Guideline",
+    "Change",
+    "Impact",
+    "Alert"
+   ],
+   "integrations": [
+    "eCTD publishing tool",
+    "Document management system"
+   ],
+   "compliance": [
+    "Version control and e-signatures",
+    "Source citation on every draft",
+    "Review audit trail"
+   ],
+   "agents": [],
+   "app_name": "Regulatory Intelligence"
+  },
+  {
+   "id": "csr",
+   "name": "Clinical Study Report Drafting",
+   "category": "Regulatory Affairs",
+   "icon": "file",
+   "description": "AI-assisted CSR sections per ICH E3 with cross-reference validation and review.",
+   "packages": [
+    "workflow",
+    "documents",
+    "reports"
+   ],
+   "roles": [
+    "Medical writer",
+    "Biostatistician",
+    "Reviewer"
+   ],
+   "workflows": [
+    "Template setup",
+    "Section drafting",
+    "Cross-reference checks",
+    "Review"
+   ],
+   "data_objects": [
+    "CSR",
+    "Section",
+    "TLF",
+    "Comment"
+   ],
+   "integrations": [
+    "eCTD publishing tool",
+    "Document management system"
+   ],
+   "compliance": [
+    "Version control and e-signatures",
+    "Source citation on every draft",
+    "Review audit trail"
+   ],
+   "agents": [],
+   "app_name": "Clinical Study Report Drafting"
+  },
+  {
+   "id": "label",
+   "name": "Labelling Management",
+   "category": "Regulatory Affairs",
+   "icon": "file",
+   "description": "Core data sheet, local adaptations, artwork coordination and change impact.",
+   "packages": [
+    "workflow",
+    "documents",
+    "tasks",
+    "reports"
+   ],
+   "roles": [
+    "Labelling lead",
+    "Affiliate RA",
+    "Artwork studio"
+   ],
+   "workflows": [
+    "Core data sheet",
+    "Local adaptation",
+    "Artwork request",
+    "Change impact"
+   ],
+   "data_objects": [
+    "Label",
+    "Market",
+    "Change",
+    "Artwork"
+   ],
+   "integrations": [
+    "eCTD publishing tool",
+    "Document management system"
+   ],
+   "compliance": [
+    "Version control and e-signatures",
+    "Source citation on every draft",
+    "Review audit trail"
+   ],
+   "agents": [],
+   "app_name": "Labelling Management"
+  },
+  {
+   "id": "variation",
+   "name": "Variation & Change Management",
+   "category": "Regulatory Affairs",
+   "icon": "file",
+   "description": "Post-approval variation classification, submission prep and cross-market tracking.",
+   "packages": [
+    "workflow",
+    "documents",
+    "tasks",
+    "reports"
+   ],
+   "roles": [
+    "Regulatory lead",
+    "Affiliate RA",
+    "CMC lead"
+   ],
+   "workflows": [
+    "Classification",
+    "Submission prep",
+    "Market tracking",
+    "Implementation"
+   ],
+   "data_objects": [
+    "Variation",
+    "Market",
+    "Submission"
+   ],
+   "integrations": [
+    "eCTD publishing tool",
+    "Document management system"
+   ],
+   "compliance": [
+    "Version control and e-signatures",
+    "Source citation on every draft",
+    "Review audit trail"
+   ],
+   "agents": [],
+   "app_name": "Variation & Change Management"
+  },
+  {
+   "id": "m2",
+   "name": "Module 2 Summaries",
+   "category": "Regulatory Affairs",
+   "icon": "file",
+   "description": "Draft 2.5 Clinical Overview and 2.7 Clinical Summaries grounded in study evidence.",
+   "packages": [
+    "workflow",
+    "documents",
+    "reports"
+   ],
+   "roles": [
+    "Regulatory writer",
+    "Clinical lead"
+   ],
+   "workflows": [
+    "Evidence import",
+    "Outline",
+    "Drafting",
+    "Consistency review"
+   ],
+   "data_objects": [
+    "Summary",
+    "Source",
+    "Section",
+    "Citation"
+   ],
+   "integrations": [
+    "eCTD publishing tool",
+    "Document management system"
+   ],
+   "compliance": [
+    "Version control and e-signatures",
+    "Source citation on every draft",
+    "Review audit trail"
+   ],
+   "agents": [],
+   "app_name": "Module 2 Summaries"
+  },
+  {
+   "id": "uspi",
+   "name": "Prescribing Information Authoring",
+   "category": "Regulatory Affairs",
+   "icon": "file",
+   "description": "USPI and SmPC drafting with section rules, evidence links and version comparison.",
+   "packages": [
+    "workflow",
+    "documents",
+    "reports"
+   ],
+   "roles": [
+    "Labelling writer",
+    "Medical reviewer"
+   ],
+   "workflows": [
+    "Section drafting",
+    "Evidence links",
+    "Version compare",
+    "Review"
+   ],
+   "data_objects": [
+    "Label",
+    "Section",
+    "Evidence",
+    "Version"
+   ],
+   "integrations": [
+    "eCTD publishing tool",
+    "Document management system"
+   ],
+   "compliance": [
+    "Version control and e-signatures",
+    "Source citation on every draft",
+    "Review audit trail"
+   ],
+   "agents": [],
+   "app_name": "Prescribing Information Authoring"
+  },
+  {
+   "id": "haq",
+   "name": "Health Authority Query Response",
+   "category": "Regulatory Affairs",
+   "icon": "file",
+   "description": "Track agency questions, assign owners, draft responses and meet deadlines.",
+   "packages": [
+    "workflow",
+    "tasks",
+    "documents",
+    "reports"
+   ],
+   "roles": [
+    "Regulatory lead",
+    "SME",
+    "Writer"
+   ],
+   "workflows": [
+    "Query intake",
+    "Assignment",
+    "Response drafting",
+    "Submission"
+   ],
+   "data_objects": [
+    "Query",
+    "Response",
+    "Deadline"
+   ],
+   "integrations": [
+    "eCTD publishing tool",
+    "Document management system"
+   ],
+   "compliance": [
+    "Version control and e-signatures",
+    "Source citation on every draft",
+    "Review audit trail"
+   ],
+   "agents": [],
+   "app_name": "Health Authority Query Response"
+  },
+  {
+   "id": "isse",
+   "name": "Integrated Summaries (ISS/ISE)",
+   "category": "Regulatory Affairs",
+   "icon": "file",
+   "description": "Integrated safety and efficacy summaries across studies with pooled-data references.",
+   "packages": [
+    "workflow",
+    "documents",
+    "reports"
+   ],
+   "roles": [
+    "Medical writer",
+    "Biostatistician"
+   ],
+   "workflows": [
+    "Study pooling",
+    "Drafting",
+    "Data traceability",
+    "Review"
+   ],
+   "data_objects": [
+    "Summary",
+    "Study",
+    "TLF",
+    "Section"
+   ],
+   "integrations": [
+    "eCTD publishing tool",
+    "Document management system"
+   ],
+   "compliance": [
+    "Version control and e-signatures",
+    "Source citation on every draft",
+    "Review audit trail"
+   ],
+   "agents": [],
+   "app_name": "Integrated Summaries (ISS/ISE)"
+  },
+  {
+   "id": "licence",
+   "name": "Registrations & Renewals",
+   "category": "Regulatory Affairs",
+   "icon": "file",
+   "description": "Product licences by market with renewal deadlines, fees and document checklists.",
+   "packages": [
+    "workflow",
+    "tasks",
+    "documents",
+    "reports"
+   ],
+   "roles": [
+    "Affiliate RA",
+    "Regulatory lead"
+   ],
+   "workflows": [
+    "Licence register",
+    "Renewal alerts",
+    "Document checklist",
+    "Fee tracking"
+   ],
+   "data_objects": [
+    "Licence",
+    "Market",
+    "Renewal",
+    "Document"
+   ],
+   "integrations": [
+    "eCTD publishing tool",
+    "Document management system"
+   ],
+   "compliance": [
+    "Version control and e-signatures",
+    "Source citation on every draft",
+    "Review audit trail"
+   ],
+   "agents": [],
+   "app_name": "Registrations & Renewals"
+  },
+  {
+   "id": "docops",
+   "name": "Regulatory Document Operations",
+   "category": "Regulatory Affairs",
+   "icon": "file",
+   "description": "Document classification, drafting, QC and review routing across the regulatory document lifecycle.",
+   "packages": [
+    "workflow",
+    "documents",
+    "tasks",
+    "reports"
+   ],
+   "roles": [
+    "Regulatory operations",
+    "Writer",
+    "QC reviewer"
+   ],
+   "workflows": [
+    "Classification",
+    "Drafting",
+    "Quality checks",
+    "Review routing"
+   ],
+   "data_objects": [
+    "Document",
+    "Classification",
+    "QC check",
+    "Review"
+   ],
+   "integrations": [
+    "eCTD publishing tool",
+    "Document management system"
+   ],
+   "compliance": [
+    "Version control and e-signatures",
+    "Source citation on every draft",
+    "Review audit trail"
+   ],
+   "agents": [],
+   "app_name": "Regulatory Document Operations"
+  },
+  {
+   "id": "artwork",
+   "name": "Artwork Management",
+   "category": "Regulatory Affairs",
+   "icon": "file",
+   "description": "Pack artwork briefs, proofing, approvals and print-ready release per market.",
+   "packages": [
+    "workflow",
+    "documents",
+    "reports"
+   ],
+   "roles": [
+    "Artwork coordinator",
+    "Regulatory reviewer",
+    "Printer"
+   ],
+   "workflows": [
+    "Artwork brief",
+    "Proofing",
+    "Approvals",
+    "Release"
+   ],
+   "data_objects": [
+    "Artwork",
+    "Proof",
+    "Approval",
+    "Market"
+   ],
+   "integrations": [
+    "eCTD publishing tool",
+    "Document management system"
+   ],
+   "compliance": [
+    "Version control and e-signatures",
+    "Source citation on every draft",
+    "Review audit trail"
+   ],
+   "agents": [],
+   "app_name": "Artwork Management"
+  },
+  {
+   "id": "idmp",
+   "name": "IDMP & xEVMPD Data",
+   "category": "Regulatory Affairs",
+   "icon": "file",
+   "description": "Structured product data for IDMP and xEVMPD with validation and submission.",
+   "packages": [
+    "workflow",
+    "integrations",
+    "reports"
+   ],
+   "roles": [
+    "Master data steward",
+    "Regulatory lead"
+   ],
+   "workflows": [
+    "Data capture",
+    "Validation",
+    "Submission",
+    "Maintenance"
+   ],
+   "data_objects": [
+    "Product",
+    "Substance",
+    "Submission"
+   ],
+   "integrations": [
+    "eCTD publishing tool",
+    "Document management system"
+   ],
+   "compliance": [
+    "Version control and e-signatures",
+    "Source citation on every draft",
+    "Review audit trail"
+   ],
+   "agents": [],
+   "app_name": "IDMP & xEVMPD Data"
+  },
+  {
+   "id": "transl",
+   "name": "Translation & Localisation",
+   "category": "Regulatory Affairs",
+   "icon": "file",
+   "description": "Translation requests, vendor management, linguistic review and version sync.",
+   "packages": [
+    "workflow",
+    "documents",
+    "tasks",
+    "reports"
+   ],
+   "roles": [
+    "Affiliate RA",
+    "Translation vendor",
+    "Reviewer"
+   ],
+   "workflows": [
+    "Translation request",
+    "Vendor assignment",
+    "Linguistic review",
+    "Version sync"
+   ],
+   "data_objects": [
+    "Request",
+    "Document",
+    "Language",
+    "Review"
+   ],
+   "integrations": [
+    "eCTD publishing tool",
+    "Document management system"
+   ],
+   "compliance": [
+    "Version control and e-signatures",
+    "Source citation on every draft",
+    "Review audit trail"
+   ],
+   "agents": [],
+   "app_name": "Translation & Localisation"
+  },
+  {
+   "id": "msl",
+   "name": "MSL Field Medical",
+   "category": "Medical Affairs",
+   "icon": "book",
+   "description": "MSL planning, scientific exchange logging and KOL relationship management.",
+   "packages": [
+    "workflow",
+    "crm",
+    "forms",
+    "reports"
+   ],
+   "roles": [
+    "MSL",
+    "Medical lead"
+   ],
+   "workflows": [
+    "KOL planning",
+    "Interaction logging",
+    "Insight capture",
+    "Activity reporting"
+   ],
+   "data_objects": [
+    "MSL",
+    "KOL",
+    "Interaction",
+    "Insight"
+   ],
+   "integrations": [
+    "CRM sync",
+    "Literature database"
+   ],
+   "compliance": [
+    "Medical–commercial separation",
+    "Off-label request flagging",
+    "Audit trail on responses"
+   ],
+   "agents": [
+    {
+     "id": "call",
+     "name": "Call Summary"
+    }
+   ],
+   "app_name": "MSL Field Medical"
+  },
+  {
+   "id": "mir",
+   "name": "Medical Information Requests",
+   "category": "Medical Affairs",
+   "icon": "book",
+   "description": "HCP and patient medical inquiries with standard responses, approvals and AE capture.",
+   "packages": [
+    "workflow",
+    "crm",
+    "communication",
+    "documents",
+    "reports"
+   ],
+   "roles": [
+    "MI specialist",
+    "HCP",
+    "Medical reviewer"
+   ],
+   "workflows": [
+    "Inquiry intake",
+    "Standard response match",
+    "Response approval",
+    "AE capture"
+   ],
+   "data_objects": [
+    "Inquiry",
+    "Response",
+    "Standard response",
+    "Reporter"
+   ],
+   "integrations": [
+    "CRM sync",
+    "Literature database"
+   ],
+   "compliance": [
+    "Medical–commercial separation",
+    "Off-label request flagging",
+    "Audit trail on responses"
+   ],
+   "agents": [
+    {
+     "id": "mi",
+     "name": "Medical Inquiry Response"
+    },
+    {
+     "id": "ae",
+     "name": "AE Detection"
+    }
+   ],
+   "app_name": "Medical Information Requests"
+  },
+  {
+   "id": "iis",
+   "name": "Investigator-Initiated Studies & Grants",
+   "category": "Medical Affairs",
+   "icon": "book",
+   "description": "Proposal intake, review committees, contracts, milestones and payments.",
+   "packages": [
+    "workflow",
+    "forms",
+    "documents",
+    "reports"
+   ],
+   "roles": [
+    "Investigator",
+    "Review committee",
+    "Grants manager"
+   ],
+   "workflows": [
+    "Proposal intake",
+    "Committee review",
+    "Contracting",
+    "Milestones & payments"
+   ],
+   "data_objects": [
+    "Proposal",
+    "Study",
+    "Contract",
+    "Payment"
+   ],
+   "integrations": [
+    "CRM sync",
+    "Literature database"
+   ],
+   "compliance": [
+    "Medical–commercial separation",
+    "Off-label request flagging",
+    "Audit trail on responses"
+   ],
+   "agents": [],
+   "app_name": "Investigator-Initiated Studies & Grants"
+  },
+  {
+   "id": "insight",
+   "name": "Medical Insights",
+   "category": "Medical Affairs",
+   "icon": "book",
+   "description": "Capture, tag and route field medical insights to leadership with weekly digests.",
+   "packages": [
+    "workflow",
+    "forms",
+    "communication",
+    "reports"
+   ],
+   "roles": [
+    "MSL",
+    "Medical lead",
+    "Leadership"
+   ],
+   "workflows": [
+    "Insight capture",
+    "Tagging",
+    "Priority routing",
+    "Digest"
+   ],
+   "data_objects": [
+    "Insight",
+    "Topic",
+    "Therapy area"
+   ],
+   "integrations": [
+    "CRM sync",
+    "Literature database"
+   ],
+   "compliance": [
+    "Medical–commercial separation",
+    "Off-label request flagging",
+    "Audit trail on responses"
+   ],
+   "agents": [
+    {
+     "id": "mi",
+     "name": "Medical Inquiry Response"
+    }
+   ],
+   "app_name": "Medical Insights"
+  },
+  {
+   "id": "advb",
+   "name": "Advisory Board Management",
+   "category": "Medical Affairs",
+   "icon": "book",
+   "description": "Advisory boards from objectives to minutes: participants, contracts, FMV and outputs.",
+   "packages": [
+    "workflow",
+    "crm",
+    "documents",
+    "reports"
+   ],
+   "roles": [
+    "Medical lead",
+    "Compliance reviewer",
+    "HCP"
+   ],
+   "workflows": [
+    "Objectives",
+    "Participant selection",
+    "Contracts & FMV",
+    "Minutes & outputs"
+   ],
+   "data_objects": [
+    "Advisory board",
+    "Participant",
+    "Contract",
+    "Output"
+   ],
+   "integrations": [
+    "CRM sync",
+    "Literature database"
+   ],
+   "compliance": [
+    "Medical–commercial separation",
+    "Off-label request flagging",
+    "Audit trail on responses"
+   ],
+   "agents": [
+    {
+     "id": "hcpmon",
+     "name": "HCP Interaction Monitor"
+    }
+   ],
+   "app_name": "Advisory Board Management"
+  },
+  {
+   "id": "pubs",
+   "name": "Publication Planning",
+   "category": "Medical Affairs",
+   "icon": "book",
+   "description": "Publication plans, author coordination, journal submissions and congress abstracts.",
+   "packages": [
+    "workflow",
+    "documents",
+    "tasks",
+    "reports"
+   ],
+   "roles": [
+    "Publication lead",
+    "Author",
+    "Medical writer"
+   ],
+   "workflows": [
+    "Plan",
+    "Author coordination",
+    "Submission tracking",
+    "Congress abstracts"
+   ],
+   "data_objects": [
+    "Publication",
+    "Author",
+    "Journal",
+    "Abstract"
+   ],
+   "integrations": [
+    "CRM sync",
+    "Literature database"
+   ],
+   "compliance": [
+    "Medical–commercial separation",
+    "Off-label request flagging",
+    "Audit trail on responses"
+   ],
+   "agents": [],
+   "app_name": "Publication Planning"
+  },
+  {
+   "id": "medcomm",
+   "name": "Medical Education Programmes",
+   "category": "Medical Affairs",
+   "icon": "book",
+   "description": "CME and scientific programmes with grants, faculty, attendance and outcomes.",
+   "packages": [
+    "workflow",
+    "crm",
+    "communication",
+    "scheduling",
+    "reports"
+   ],
+   "roles": [
+    "Medical education lead",
+    "Faculty",
+    "HCP"
+   ],
+   "workflows": [
+    "Programme setup",
+    "Faculty",
+    "Attendance",
+    "Outcomes"
+   ],
+   "data_objects": [
+    "Programme",
+    "Session",
+    "Attendee",
+    "Outcome"
+   ],
+   "integrations": [
+    "CRM sync",
+    "Literature database"
+   ],
+   "compliance": [
+    "Medical–commercial separation",
+    "Off-label request flagging",
+    "Audit trail on responses"
+   ],
+   "agents": [],
+   "app_name": "Medical Education Programmes"
+  },
+  {
+   "id": "ctms",
+   "name": "Clinical Trial Management",
+   "category": "Clinical Operations",
+   "icon": "pulse",
+   "description": "Study and site management with milestones, visits, monitoring reports and issues.",
+   "packages": [
+    "workflow",
+    "scheduling",
+    "tasks",
+    "documents",
+    "reports"
+   ],
+   "roles": [
+    "Study manager",
+    "CRA",
+    "Site"
+   ],
+   "workflows": [
+    "Study setup",
+    "Site management",
+    "Monitoring visits",
+    "Issue tracking"
+   ],
+   "data_objects": [
+    "Study",
+    "Site",
+    "Visit",
+    "Issue"
+   ],
+   "integrations": [
+    "EDC connector",
+    "eTMF export"
+   ],
+   "compliance": [
+    "ICH E6 (R3) audit trail",
+    "21 CFR Part 11 e-signatures",
+    "Consent versioning"
+   ],
+   "agents": [],
+   "app_name": "Clinical Trial Management"
+  },
+  {
+   "id": "feas",
+   "name": "Site Feasibility & Selection",
+   "category": "Clinical Operations",
+   "icon": "pulse",
+   "description": "Feasibility questionnaires, site scoring and selection decisions.",
+   "packages": [
+    "workflow",
+    "forms",
+    "rules",
+    "reports"
+   ],
+   "roles": [
+    "Feasibility lead",
+    "Site",
+    "Study manager"
+   ],
+   "workflows": [
+    "Questionnaires",
+    "Site scoring",
+    "Selection",
+    "Activation hand-off"
+   ],
+   "data_objects": [
+    "Site",
+    "Questionnaire",
+    "Score"
+   ],
+   "integrations": [
+    "EDC connector",
+    "eTMF export"
+   ],
+   "compliance": [
+    "ICH E6 (R3) audit trail",
+    "21 CFR Part 11 e-signatures",
+    "Consent versioning"
+   ],
+   "agents": [],
+   "app_name": "Site Feasibility & Selection"
+  },
+  {
+   "id": "recruit",
+   "name": "Patient Recruitment",
+   "category": "Clinical Operations",
+   "icon": "pulse",
+   "description": "Pre-screening, referral tracking and enrolment funnels across trial sites.",
+   "packages": [
+    "workflow",
+    "communication",
+    "forms",
+    "consent",
+    "reports"
+   ],
+   "roles": [
+    "Recruitment lead",
+    "Site",
+    "Patient"
+   ],
+   "workflows": [
+    "Pre-screening",
+    "Referral",
+    "Site hand-off",
+    "Funnel tracking"
+   ],
+   "data_objects": [
+    "Candidate",
+    "Site",
+    "Screening",
+    "Referral"
+   ],
+   "integrations": [
+    "EDC connector",
+    "eTMF export"
+   ],
+   "compliance": [
+    "ICH E6 (R3) audit trail",
+    "21 CFR Part 11 e-signatures",
+    "Consent versioning"
+   ],
+   "agents": [],
+   "app_name": "Patient Recruitment"
+  },
+  {
+   "id": "econsent",
+   "name": "eConsent",
+   "category": "Clinical Operations",
+   "icon": "pulse",
+   "description": "Electronic informed consent with multimedia content, comprehension checks and version control.",
+   "packages": [
+    "consent",
+    "forms",
+    "documents",
+    "workflow"
+   ],
+   "roles": [
+    "Site staff",
+    "Participant",
+    "Study manager"
+   ],
+   "workflows": [
+    "Consent content",
+    "Comprehension check",
+    "Signature",
+    "Re-consent"
+   ],
+   "data_objects": [
+    "Participant",
+    "Consent",
+    "Version"
+   ],
+   "integrations": [
+    "EDC connector",
+    "eTMF export"
+   ],
+   "compliance": [
+    "ICH E6 (R3) audit trail",
+    "21 CFR Part 11 e-signatures",
+    "Consent versioning"
+   ],
+   "agents": [],
+   "app_name": "eConsent"
+  },
+  {
+   "id": "dct",
+   "name": "Decentralised Trial Coordination",
+   "category": "Clinical Operations",
+   "icon": "pulse",
+   "description": "Home visits, direct-to-patient IMP shipments and remote data capture.",
+   "packages": [
+    "workflow",
+    "scheduling",
+    "communication",
+    "forms",
+    "integrations"
+   ],
+   "roles": [
+    "Site",
+    "Home nurse",
+    "Participant"
+   ],
+   "workflows": [
+    "Home visit scheduling",
+    "IMP shipments",
+    "Remote data capture",
+    "Participant support"
+   ],
+   "data_objects": [
+    "Participant",
+    "Visit",
+    "Shipment",
+    "Data point"
+   ],
+   "integrations": [
+    "EDC connector",
+    "eTMF export"
+   ],
+   "compliance": [
+    "ICH E6 (R3) audit trail",
+    "21 CFR Part 11 e-signatures",
+    "Consent versioning"
+   ],
+   "agents": [],
+   "app_name": "Decentralised Trial Coordination"
+  },
+  {
+   "id": "tmf",
+   "name": "Trial Master File",
+   "category": "Clinical Operations",
+   "icon": "pulse",
+   "description": "Essential documents indexed to the TMF reference model with completeness tracking.",
+   "packages": [
+    "workflow",
+    "documents",
+    "reports"
+   ],
+   "roles": [
+    "TMF specialist",
+    "Study manager"
+   ],
+   "workflows": [
+    "Document upload",
+    "Indexing",
+    "QC",
+    "Completeness"
+   ],
+   "data_objects": [
+    "Document",
+    "Artefact",
+    "Study",
+    "QC"
+   ],
+   "integrations": [
+    "EDC connector",
+    "eTMF export"
+   ],
+   "compliance": [
+    "ICH E6 (R3) audit trail",
+    "21 CFR Part 11 e-signatures",
+    "Consent versioning"
+   ],
+   "agents": [],
+   "app_name": "Trial Master File"
+  },
+  {
+   "id": "invpay",
+   "name": "Investigator Payments",
+   "category": "Clinical Operations",
+   "icon": "pulse",
+   "description": "Visit-based site payments with budgets, holdbacks and reconciliation.",
+   "packages": [
+    "workflow",
+    "rules",
+    "integrations",
+    "reports"
+   ],
+   "roles": [
+    "Site",
+    "Finance",
+    "Study manager"
+   ],
+   "workflows": [
+    "Budget setup",
+    "Visit-based accrual",
+    "Payment run",
+    "Reconciliation"
+   ],
+   "data_objects": [
+    "Budget",
+    "Visit",
+    "Payment"
+   ],
+   "integrations": [
+    "EDC connector",
+    "eTMF export"
+   ],
+   "compliance": [
+    "ICH E6 (R3) audit trail",
+    "21 CFR Part 11 e-signatures",
+    "Consent versioning"
+   ],
+   "agents": [
+    {
+     "id": "recon",
+     "name": "Secondary Sales Reconciliation"
+    }
+   ],
+   "app_name": "Investigator Payments"
+  },
+  {
+   "id": "payer",
+   "name": "Payer Contracting",
+   "category": "Market Access",
+   "icon": "card",
+   "description": "Payer and hospital contracts with terms, approvals, renewals and performance.",
+   "packages": [
+    "workflow",
+    "documents",
+    "tasks",
+    "reports"
+   ],
+   "roles": [
+    "Market access lead",
+    "Legal",
+    "Payer"
+   ],
+   "workflows": [
+    "Contract drafting",
+    "Approvals",
+    "Renewals",
+    "Performance"
+   ],
+   "data_objects": [
+    "Contract",
+    "Payer",
+    "Term",
+    "Renewal"
+   ],
+   "integrations": [
+    "ERP connector",
+    "Claims data feed"
+   ],
+   "compliance": [
+    "Contract approval trail",
+    "Maker-checker on payments"
+   ],
+   "agents": [],
+   "app_name": "Payer Contracting"
+  },
+  {
+   "id": "hta",
+   "name": "HTA Dossier Management",
+   "category": "Market Access",
+   "icon": "card",
+   "description": "HTA submissions with evidence packages, country requirements and decision tracking.",
+   "packages": [
+    "workflow",
+    "documents",
+    "tasks",
+    "reports"
+   ],
+   "roles": [
+    "HEOR lead",
+    "Market access lead"
+   ],
+   "workflows": [
+    "Country requirements",
+    "Evidence package",
+    "Submission",
+    "Decision tracking"
+   ],
+   "data_objects": [
+    "Dossier",
+    "Country",
+    "Evidence",
+    "Decision"
+   ],
+   "integrations": [
+    "ERP connector",
+    "Claims data feed"
+   ],
+   "compliance": [
+    "Contract approval trail",
+    "Maker-checker on payments"
+   ],
+   "agents": [],
+   "app_name": "HTA Dossier Management"
+  },
+  {
+   "id": "rebate",
+   "name": "Rebate & Chargeback Management",
+   "category": "Market Access",
+   "icon": "card",
+   "description": "Rebate agreements, claim validation, chargebacks and accruals.",
+   "packages": [
+    "workflow",
+    "rules",
+    "integrations",
+    "reports"
+   ],
+   "roles": [
+    "Finance",
+    "Market access lead",
+    "Customer"
+   ],
+   "workflows": [
+    "Agreements",
+    "Claim validation",
+    "Chargebacks",
+    "Accruals"
+   ],
+   "data_objects": [
+    "Agreement",
+    "Claim",
+    "Chargeback",
+    "Accrual"
+   ],
+   "integrations": [
+    "ERP connector",
+    "Claims data feed"
+   ],
+   "compliance": [
+    "Contract approval trail",
+    "Maker-checker on payments"
+   ],
+   "agents": [
+    {
+     "id": "recon",
+     "name": "Secondary Sales Reconciliation"
+    }
+   ],
+   "app_name": "Rebate & Chargeback Management"
+  },
+  {
+   "id": "pricing",
+   "name": "Price Approval Tracking",
+   "category": "Market Access",
+   "icon": "card",
+   "description": "Price submissions, government negotiations and approved price lists by market.",
+   "packages": [
+    "workflow",
+    "documents",
+    "reports"
+   ],
+   "roles": [
+    "Pricing lead",
+    "Affiliate"
+   ],
+   "workflows": [
+    "Price proposal",
+    "Submission",
+    "Negotiation",
+    "Price list"
+   ],
+   "data_objects": [
+    "Price",
+    "Market",
+    "Submission"
+   ],
+   "integrations": [
+    "ERP connector",
+    "Claims data feed"
+   ],
+   "compliance": [
+    "Contract approval trail",
+    "Maker-checker on payments"
+   ],
+   "agents": [],
+   "app_name": "Price Approval Tracking"
+  },
+  {
+   "id": "approvals",
+   "name": "Approval Workflow",
+   "category": "Cross-functional",
+   "icon": "apps",
+   "description": "Configurable multi-step approvals with delegation, e-signature and audit trail.",
+   "packages": [
+    "workflow",
+    "forms",
+    "rules"
+   ],
+   "roles": [
+    "Requester",
+    "Approver"
+   ],
+   "workflows": [
+    "Request",
+    "Routing rules",
+    "Approval & e-signature",
+    "Audit"
+   ],
+   "data_objects": [
+    "Request",
+    "Approval",
+    "Rule"
+   ],
+   "integrations": [
+    "REST API",
+    "SSO"
+   ],
+   "compliance": [
+    "Immutable audit trail",
+    "Role-based access"
+   ],
+   "agents": [],
+   "app_name": "Approval Workflow"
+  },
+  {
+   "id": "forms",
+   "name": "Forms & Surveys",
+   "category": "Cross-functional",
+   "icon": "apps",
+   "description": "Validated forms and surveys with logic, versions and response analytics.",
+   "packages": [
+    "forms",
+    "communication",
+    "reports"
+   ],
+   "roles": [
+    "Form owner",
+    "Respondent"
+   ],
+   "workflows": [
+    "Form design",
+    "Distribution",
+    "Responses",
+    "Analytics"
+   ],
+   "data_objects": [
+    "Form",
+    "Response",
+    "Version"
+   ],
+   "integrations": [
+    "REST API",
+    "SSO"
+   ],
+   "compliance": [
+    "Immutable audit trail",
+    "Role-based access"
+   ],
+   "agents": [],
+   "app_name": "Forms & Surveys"
+  },
+  {
+   "id": "kb",
+   "name": "SOP Knowledge Assistant",
+   "category": "Cross-functional",
+   "icon": "apps",
+   "description": "Answers staff questions from approved SOPs and policies with citations.",
+   "packages": [
+    "documents",
+    "reports"
+   ],
+   "roles": [
+    "Employee",
+    "Content owner"
+   ],
+   "workflows": [
+    "Knowledge library",
+    "Question answering",
+    "Citations",
+    "Feedback"
+   ],
+   "data_objects": [
+    "Document",
+    "Question",
+    "Answer"
+   ],
+   "integrations": [
+    "REST API",
+    "SSO"
+   ],
+   "compliance": [
+    "Immutable audit trail",
+    "Role-based access"
+   ],
+   "agents": [
+    {
+     "id": "mi",
+     "name": "Medical Inquiry Response"
+    }
+   ],
+   "app_name": "SOP Knowledge Assistant"
+  },
+  {
+   "id": "inthub",
+   "name": "Integration Hub",
+   "category": "Cross-functional",
+   "icon": "apps",
+   "description": "Connectors, mappings and monitored data flows between Zelthy apps and enterprise systems.",
+   "packages": [
+    "integrations",
+    "reports"
+   ],
+   "roles": [
+    "Integration lead",
+    "System owner"
+   ],
+   "workflows": [
+    "Connectors",
+    "Mappings",
+    "Schedules",
+    "Monitoring"
+   ],
+   "data_objects": [
+    "Connector",
+    "Mapping",
+    "Run"
+   ],
+   "integrations": [
+    "REST API",
+    "SSO"
+   ],
+   "compliance": [
+    "Immutable audit trail",
+    "Role-based access"
+   ],
+   "agents": [],
+   "app_name": "Integration Hub"
+  },
+  {
+   "id": "partner",
+   "name": "Partner Portal",
+   "category": "Cross-functional",
+   "icon": "apps",
+   "description": "Portal for vendors, agencies and partners: onboarding, documents, requests and SLAs.",
+   "packages": [
+    "workflow",
+    "crm",
+    "forms",
+    "documents",
+    "communication"
+   ],
+   "roles": [
+    "Partner",
+    "Partner manager"
+   ],
+   "workflows": [
+    "Onboarding",
+    "Documents",
+    "Requests",
+    "SLA tracking"
+   ],
+   "data_objects": [
+    "Partner",
+    "Request",
+    "Document",
+    "SLA"
+   ],
+   "integrations": [
+    "REST API",
+    "SSO"
+   ],
+   "compliance": [
+    "Immutable audit trail",
+    "Role-based access"
+   ],
+   "agents": [],
+   "app_name": "Partner Portal"
+  }
+ ]
+}

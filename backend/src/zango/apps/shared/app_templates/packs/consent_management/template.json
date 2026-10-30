@@ -1,0 +1,131 @@
+{
+  "slug": "consent-management",
+  "name": "Consent Management",
+  "version": "0.1.4",
+  "category": "Patient Services",
+  "icon": "shield",
+  "is_beta": true,
+  "aka": [
+    "consent manager",
+    "consent capture",
+    "DPDP consent",
+    "GDPR consent",
+    "privacy requests",
+    "data subject requests",
+    "re-consent"
+  ],
+  "one_liner": "Consent capture, versioning, withdrawal and proof across channels and countries.",
+  "fits_when": [
+    "patients give consent for several purposes (programme, marketing, sharing with their doctor, research) and each must be recorded separately",
+    "consent texts change over time and every consent must show which version the patient agreed to",
+    "consent is captured on a portal, by phone, on paper or by field staff and needs evidence such as an OTP log or a recording",
+    "patients withdraw consent or ask for a copy, correction or erasure of their data and must get an answer within a legal deadline",
+    "the programme runs in several countries under DPDP, GDPR or similar laws"
+  ],
+  "gives_you": [
+    "Consent policies per purpose and country, with versioned texts approved by the Privacy Officer",
+    "Consent capture on any channel with OTP confirmation and evidence (logs, recordings, signed forms) fingerprinted with SHA-256",
+    "Re-consent flagged automatically when a new version needs it",
+    "Withdrawal, access, correction and erasure requests with a 30-day clock and overdue flags",
+    "A patient 360 page with every consent and request, and a policy 360 with versions and consents"
+  ],
+  "spec_format": "yaml",
+  "spec_root": "app_spec",
+  "spec_dialect": "zango-app/1",
+  "starter": "starter.yaml",
+  "example": "starter.yaml",
+  "references": "references.json",
+  "launch": "direct",
+  "welcome": {
+    "message": "This is the Consent Management template, running on demo data. Switch roles with View as. Tell me what to change: flows, fields, screens, roles or the look. You can also build it as it is.",
+    "suggestions": [
+      "Add a guardian who consents for minors",
+      "Make marketing consent expire after 12 months",
+      "Patients withdraw by replying STOP on WhatsApp",
+      "Use our brand colours"
+    ]
+  },
+  "ported_from": {
+    "source": "Zelthy.html",
+    "id": "consentmgr"
+  },
+  "catalogue": {
+    "description": "One record of every consent a patient gives. Program Managers set up consent policies per purpose and country; the Privacy Officer approves each version of the text; Support Agents and patients capture consent on any channel with evidence; withdrawals and data requests are closed within the legal deadline, and a new version can ask patients to consent again.",
+    "packages": [
+      {
+        "name": "workflow",
+        "description": "State machines, approvals and SLA timers"
+      },
+      {
+        "name": "consent",
+        "description": "Consent capture, withdrawal and proof"
+      },
+      {
+        "name": "documents",
+        "description": "Upload, OCR, versioning and retention"
+      },
+      {
+        "name": "reports",
+        "description": "Dashboards, scheduled reports and exports"
+      }
+    ],
+    "roles": [
+      {
+        "name": "Program Manager",
+        "description": "Owns consent policies and texts and watches consent coverage"
+      },
+      {
+        "name": "Privacy Officer",
+        "description": "Approves policy versions, verifies evidence and closes data requests"
+      },
+      {
+        "name": "Support Agent",
+        "description": "Enrols patients and captures consent on their behalf with evidence"
+      },
+      {
+        "name": "Patient",
+        "description": "Sees and withdraws their consents and raises data requests"
+      }
+    ],
+    "workflows": [
+      {
+        "name": "Consent capture",
+        "description": "Any channel, confirmed by a one-time code, with evidence attached"
+      },
+      {
+        "name": "Version control",
+        "description": "Maker-checker approval of each policy text; re-consent when it changes"
+      },
+      {
+        "name": "Withdrawal handling",
+        "description": "Withdraw in one click; processing for that purpose stops at once"
+      },
+      {
+        "name": "Consent evidence",
+        "description": "OTP logs, recordings and signed forms, fingerprinted and verified"
+      }
+    ],
+    "data_objects": [
+      "Consent Policy",
+      "Policy Version",
+      "Patient",
+      "Consent",
+      "Evidence",
+      "Request"
+    ],
+    "integrations": [
+      "SMS gateway",
+      "WhatsApp Business"
+    ],
+    "compliance": [
+      "21 CFR Part 11 audit trail",
+      "DPDP and GDPR consent",
+      "PII masking by role",
+      "AE hand-off to PV"
+    ],
+    "recommended_agents": [],
+    "app_name_prefill": "Consent Management",
+    "app_prompt_prefill": ""
+  },
+  "changelog": "Redrawn on zango_app 1.1.25: no quick filter is preselected. Template mode: opens on its preview (launch direct); explicit add buttons on Policy Versions and Evidence. Opens on the template's own preview (the kit page), so every form, filter and status change works."
+}

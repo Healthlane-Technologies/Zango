@@ -403,7 +403,12 @@ export function TemplateBuilderPanel({
 		}
 	}, [serverSpec.mode, thinking, reviewCount, previewMode]);
 
-	const [tone, label]: [Tone, string] = spec.is_draft
+	// Template mode: until the first change, the draft is the template itself.
+	const fromTemplate =
+		serverSpec.mode === 'template' && spec.is_draft && (spec.draft_revision ?? 0) <= 1;
+	const [tone, label]: [Tone, string] = fromTemplate
+		? ['accent', `From template v${requirement.template?.version ?? ''}`]
+		: spec.is_draft
 		? ['amber', 'Draft']
 		: spec.status === 'approved'
 			? ['green', 'Approved']

@@ -2245,7 +2245,7 @@ class Spec:
                                               "to": f.get("to") if f["type"] == "link" else None,
                                               "display": f.get("display") if f["type"] == "link" else None}.items()
                             if v is not None} for f in E["fields"]],
-                "quick_filters": [{"key": q["key"], "label": q["label"], "default": bool(q.get("default"))}
+                "quick_filters": [{"key": q["key"], "label": q["label"], "default": False}  # a list opens with no quick filter on, whatever the spec says
                                   for q in tb["quick_filters"]],
                 "row_click": tb.get("row_click") or (E.get("detail_view") or "drawer"),
                 "add_button": tb.get("add_button") or f"Add {E['name']}",

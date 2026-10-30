@@ -60,6 +60,7 @@ class AssemblyTests(unittest.TestCase):
         self.assertEqual(order, sorted(order))
         self.assertIn('http-equiv="Content-Security-Policy"', html)
         self.assertIn("connect-src data: blob:", P.CSP)
+        self.assertIn("'unsafe-eval'", P.CSP)  # the kit page's sketches use new Function
         self.assertIn("//# sourceURL=proto/screens/home.js", html)
         self.assertTrue(html.rstrip().endswith("<script>ZAS.boot()</script>\n</body></html>"))
 

@@ -455,6 +455,21 @@ export function Thread({
 										Loading…
 									</div>
 								)}
+								{isActive && !!d?.welcome_suggestions?.length && !d.is_thinking && (
+									<div className="-mt-[6px] flex flex-wrap gap-2 pl-[38px]" aria-label="Suggestions">
+										{d.welcome_suggestions.map((s) => (
+											<button
+												key={s}
+												type="button"
+												disabled={disabled}
+												onClick={() => send(s)}
+												className="rounded-full border border-border bg-white px-3 py-[5px] text-[12.5px] text-t2 transition-colors hover:border-accent hover:text-accent disabled:opacity-50"
+											>
+												{s}
+											</button>
+										))}
+									</div>
+								)}
 								{isActive && d?.is_thinking && (
 									<div className="msg fresh">
 										<AgentMark />

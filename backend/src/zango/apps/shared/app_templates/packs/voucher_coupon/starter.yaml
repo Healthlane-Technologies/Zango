@@ -1,0 +1,562 @@
+# Voucher & Coupon Management: the template's starting point. Copay and
+# free-trial voucher campaigns, vouchers issued to enrolled patients, pharmacy
+# redemptions checked by fraud rules, and monthly reconciliation and
+# settlement with each pharmacy. In template mode this journey is what the
+# creator sees the moment the app opens; the analyst changes it from the chat.
+spec_version: 1
+
+app:
+  code: voucher_coupon
+  name: Voucher & Coupon Management
+  description: Issue, redeem and reconcile product vouchers and coupons with fraud controls.
+  timezone: Asia/Kolkata
+  locale: en-IN
+  currency: INR
+  theme: { primary: "#7C3AED", secondary: "#64748B" }
+  custom_requirements:
+    - area: integration
+      title: SMS and WhatsApp delivery
+      text: When a voucher is issued, send the patient its code and expiry date by SMS, and by WhatsApp when the patient opted in; resend on request from the voucher page.
+    - area: scheduled
+      title: Voucher expiry
+      text: Every night, move issued vouchers whose expiry date has passed to Expired and set the expiring tag on vouchers that expire within 7 days.
+    - area: integration
+      title: Settlement export
+      text: When a settlement is approved, export its redemption lines as a CSV payment file for Finance and store the returned payment reference on the settlement.
+
+choice_sets:
+  voucher_type:
+    - { id: copay,      label: Copay assistance, color: purple }
+    - { id: free_trial, label: Free trial,       color: teal }
+    - { id: discount,   label: Discount coupon,  color: blue }
+    - { id: bogo,       label: Buy one get one,  color: pink }
+  benefit_kind:
+    - { id: percent, label: Percent off }
+    - { id: amount,  label: Fixed amount off }
+    - { id: free,    label: Free pack }
+  channel:
+    - { id: hcp,      label: Issued by HCP,   color: indigo }
+    - { id: hub,      label: Patient hub,      color: teal }
+    - { id: web,      label: Self sign-up,     color: blue }
+    - { id: field,    label: Field rep,        color: purple }
+  fraud_rule:
+    - { id: velocity,       label: Same patient redeemed twice in 24 hours }
+    - { id: pharmacy_spike, label: Pharmacy redemptions 3x its 30-day average }
+    - { id: amount_cap,     label: Benefit above the campaign cap }
+    - { id: wrong_product,  label: Product not on the campaign }
+    - { id: expired,        label: Voucher expired on the bill date }
+  reject_reason:
+    - { id: fraud,        label: Confirmed fraud }
+    - { id: ineligible,   label: Patient not eligible }
+    - { id: wrong_product, label: Product not covered }
+    - { id: no_invoice,   label: Bill not attached }
+    - { id: duplicate,    label: Duplicate redemption }
+  city:
+    - { id: mumbai,    label: Mumbai }
+    - { id: delhi,     label: Delhi }
+    - { id: bengaluru, label: Bengaluru }
+    - { id: chennai,   label: Chennai }
+    - { id: hyderabad, label: Hyderabad }
+    - { id: pune,      label: Pune }
+
+roles:
+  - name: Program Manager
+    description: Owns voucher campaigns and their budgets, reviews fraud flags and approves pharmacy settlements.
+    landing: dashboard
+    menu:
+      - { page: dashboard,   icon: layout-dashboard }
+      - { page: campaigns,   icon: megaphone }
+      - { page: vouchers,    icon: ticket }
+      - { page: redemptions, icon: scan-line }
+      - { page: settlements, icon: landmark }
+      - group: Master Data
+        icon: database
+        items:
+          - { page: pharmacies }
+          - { page: products }
+
+  - name: Support Agent
+    description: Enrolls patients from the hub, issues and resends vouchers, and answers patient and pharmacy queries.
+    landing: vouchers
+    menu:
+      - { page: vouchers,    icon: ticket }
+      - { page: patients,    icon: users }
+      - { page: redemptions, icon: scan-line }
+
+  - name: Pharmacy
+    description: External login for a partner pharmacy; redeems vouchers at the counter, uploads the bill and sees only its own redemptions and settlements.
+    landing: redemptions
+    menu:
+      - { page: redemptions, label: Redeem & History, icon: scan-line }
+      - { page: settlements, label: My Settlements, icon: landmark }
+
+  - name: Patient
+    description: External login for an enrolled patient; sees their vouchers, codes and expiry dates.
+    landing: vouchers
+    menu:
+      - { page: vouchers, label: My Vouchers, icon: ticket }
+
+pages:
+  - code: dashboard
+    type: dashboard
+    route: /app/dashboard
+    title: Voucher Programme Overview
+    roles: [Program Manager]
+    blocks:
+      - kpis:
+          - { label: Active campaigns, value: { count: campaign, where: "status == live" }, icon: megaphone, tone: purple, go: campaigns }
+          - { label: Vouchers issued, value: { count: voucher }, icon: ticket, tone: indigo, go: vouchers }
+          - { label: Redeemed value, value: { sum: redemption.benefit_amount, where: "status in [approved, settled]" }, format: money, icon: indian-rupee, tone: teal, go: redemptions }
+          - { label: Flagged for fraud, value: { count: redemption, where: "status == flagged" }, icon: shield-alert, tone: red, go: redemptions }
+      - grid:
+          - bars: { title: Vouchers by status, entity: voucher, group_by: status }
+          - bars: { title: Redemptions by pharmacy city, entity: redemption, group_by: city }
+      - list:
+          title: Redemptions waiting for review
+          entity: redemption
+          where: "status == flagged"
+          sort: -created_at
+          primary: redemption_no
+          secondary: pharmacy
+          meta: benefit_amount
+          badge: status
+          limit: 8
+          empty: No redemption is waiting for review.
+  - { code: campaigns,    type: crud,   entity: campaign,   route: /app/campaigns,   title: Campaigns }
+  - { code: campaign_360, type: detail, detail_view: campaign_360, route: "/app/campaigns/:id" }
+  - { code: vouchers,     type: crud,   entity: voucher,    route: /app/vouchers,    title: Vouchers }
+  - { code: patients,     type: crud,   entity: patient,    route: /app/patients,    title: Patients }
+  - { code: redemptions,  type: crud,   entity: redemption, route: /app/redemptions, title: Redemptions }
+  - { code: settlements,  type: crud,   entity: settlement, route: /app/settlements, title: Settlements }
+  - { code: pharmacies,   type: crud,   entity: pharmacy,   route: /app/masters/pharmacies, title: Pharmacies }
+  - { code: products,     type: crud,   entity: product,    route: /app/masters/products,   title: Products }
+
+modules:
+  - code: masters
+    name: Pharmacies & Products
+    description: The partner pharmacy network and the products vouchers can be redeemed against.
+    entities:
+      - code: product
+        name: Product
+        plural: Products
+        kind: master
+        display: name
+        fields:
+          - name:      { type: text, required: true, max_length: 150 }
+          - sku:       { type: text, label: SKU, required: true, unique: true }
+          - pack_size: { type: text, placeholder: "10 tablets" }
+          - mrp:       { type: money, label: MRP, required: true, help: Maximum retail price per pack. }
+          - is_active: { type: boolean, default: true }
+        access:
+          Program Manager: { actions: [view, add, edit, export] }
+        table:
+          columns:
+            - name:      { label: Product, searchable: true, sortable: true }
+            - sku:       { label: SKU, searchable: true }
+            - pack_size: { label: Pack }
+            - mrp:       { label: MRP, format: money, sortable: true }
+            - is_active: { label: Active, filterable: true }
+          default_sort: name
+          add_button: Add Product
+          row_actions:
+            - { key: edit, label: Edit, type: edit }
+        form:
+          create: { fields: [name, sku, pack_size, mrp, is_active] }
+          edit:   { same_as: create }
+
+      - code: pharmacy
+        name: Pharmacy
+        plural: Pharmacies
+        kind: master
+        display: name
+        app_user: { role: Pharmacy, name: contact_name, email: email, create_on: is_active == true }
+        fields:
+          - pharmacy_code: { type: text, label: Code, readonly: true, unique: true, auto: { sequence: "PH-{0000}" } }
+          - name:          { type: text, required: true, max_length: 200 }
+          - city:          { type: choice, choices: city, required: true }
+          - drug_licence:  { type: text, label: Drug licence no., required: true, unique: true }
+          - contact_name:  { type: text, label: Contact, required: true }
+          - email:         { type: email, required: true }
+          - phone:         { type: phone }
+          - is_active:     { type: boolean, label: Partner access, default: true }
+        validation:
+          duplicate_check:
+            rules:
+              - { match: [drug_licence], compare: exact, on_match: block, message: A pharmacy with this drug licence already exists. }
+        access:
+          Program Manager: { actions: [view, add, edit, export] }
+          Support Agent:   { actions: [view] }
+        table:
+          columns:
+            - pharmacy_code: { label: Code, searchable: true }
+            - name:          { label: Pharmacy, searchable: true, sortable: true }
+            - city:          { label: City, filterable: true }
+            - drug_licence:  { label: Licence }
+            - contact_name:  { label: Contact }
+            - is_active:     { label: Partner, filterable: true }
+          default_sort: name
+          add_button: Add Pharmacy
+          row_actions:
+            - { key: edit, label: Edit, type: edit }
+        form:
+          create: { fields: [name, city, drug_licence, contact_name, email, phone, is_active] }
+          edit:   { same_as: create }
+
+  - code: campaigns
+    name: Campaigns
+    description: Voucher and coupon campaigns with their benefit, budget and eligible products.
+    entities:
+      - code: campaign
+        name: Campaign
+        plural: Campaigns
+        kind: hero
+        display: title
+        fields:
+          - campaign_code:  { type: text, label: Code, readonly: true, unique: true, auto: { sequence: "VC-{YY}-{000}" } }
+          - title:          { type: text, label: Campaign name, required: true }
+          - voucher_type:   { type: choice, label: Type, choices: voucher_type, required: true }
+          - product:        { type: link, to: product, required: true, display: name }
+          - benefit_kind:   { type: choice, label: Benefit, choices: benefit_kind, required: true }
+          - benefit_value:  { type: decimal, label: Benefit value, required: true, min: 0, help: "Percent off, amount off, or packs given free." }
+          - max_benefit:    { type: money, label: Cap per redemption, help: Redemptions above this cap are flagged. }
+          - budget:         { type: money, required: true, min: 50000, max: 5000000 }
+          - spent:          { type: money, readonly: true, computed: Sum of approved and settled redemption benefits. }
+          - voucher_limit:  { type: integer, label: Vouchers to issue, required: true, min: 100, max: 50000 }
+          - uses_per_voucher: { type: integer, label: Uses per voucher, default: 1, min: 1, max: 12 }
+          - start_date:     { type: date, required: true }
+          - end_date:       { type: date, required: true }
+          - terms:          { type: long_text, label: Terms shown to patients }
+        validation:
+          rules:
+            - { when: end_date is_set, require_expr: end_date > start_date, message: The end date must be after the start date. }
+        access:
+          Program Manager: { actions: [view, add, edit, export, detail] }
+          Support Agent:   { actions: [view, detail] }
+        workflow:
+          statuses:
+            - { code: draft,     label: Draft,     color: gray, initial: true }
+            - { code: in_review, label: In Review, color: amber }
+            - { code: live,      label: Live,      color: green }
+            - { code: paused,    label: Paused,    color: blue }
+            - { code: closed,    label: Closed,    color: gray, final: true }
+          transitions:
+            - name: submit
+              label: Submit for Review
+              from: draft
+              to: in_review
+              roles: [Program Manager]
+              primary: true
+              condition: { text: "The terms are written and the budget covers at least the voucher limit at the full benefit." }
+              condition_msg: Write the patient terms and check the budget first.
+            - name: go_live
+              label: Go Live
+              from: in_review
+              to: live
+              roles: [Program Manager]
+              primary: true
+              condition: { text: The approver is not the person who created the campaign (maker-checker). }
+              condition_msg: Another Program Manager must approve a campaign you created.
+              on_done: Open voucher issuing for this campaign.
+            - { name: send_back, label: Send Back, from: in_review, to: draft, roles: [Program Manager],
+                form: [ { note: { type: long_text, required: true } } ] }
+            - { name: pause, label: Pause, from: live, to: paused, roles: [Program Manager],
+                form: [ { reason: { type: long_text, required: true } } ],
+                on_done: Stop issuing and redeeming vouchers on this campaign. }
+            - { name: resume, label: Resume, from: paused, to: live, roles: [Program Manager], primary: true }
+            - { name: close, label: Close, from: [live, paused], to: closed, roles: [Program Manager], tone: danger,
+                confirm: "Close this campaign? Unused vouchers stop working today." }
+          tags:
+            - { code: budget_low, label: Budget Low, color: amber, system: true, text: Set when less than 10% of the budget is left. }
+        form:
+          create:
+            roles: [Program Manager]
+            title: New Campaign
+            sections:
+              - { title: Offer, fields: [title, voucher_type, product, benefit_kind, benefit_value, max_benefit] }
+              - { title: Limits, fields: [budget, voucher_limit, uses_per_voucher, start_date, end_date] }
+              - { title: Patient terms, fields: [terms] }
+            after_create: campaign_360
+          edit: { same_as: create, editable_in: [draft] }
+        table:
+          columns:
+            - campaign_code: { label: Code, searchable: true, link_to: campaign_360 }
+            - title:         { label: Campaign, searchable: true, sortable: true }
+            - voucher_type:  { label: Type, filterable: true }
+            - product:       { label: Product, display: name, filterable: true }
+            - budget:        { label: Budget, format: money }
+            - spent:         { label: Spent, format: money }
+            - end_date:      { label: Ends, sortable: true }
+            - status:        { source: status, label: Status, filterable: true }
+          default_sort: -start_date
+          quick_filters:
+            - { label: Live, where: status == live, default: true }
+            - { label: Budget low, where: has_tag budget_low }
+          row_click: campaign_360
+          add_button: New Campaign
+
+  - code: vouchers
+    name: Vouchers
+    description: Patients enrolled in a campaign and the voucher codes issued to them.
+    entities:
+      - code: patient
+        name: Patient
+        plural: Patients
+        kind: master
+        display: full_name
+        app_user: { role: Patient, name: full_name, email: email, create_on: has_login == true }
+        fields:
+          - patient_id:   { type: text, label: Patient ID, readonly: true, unique: true, auto: { sequence: "PT-{000000}" } }
+          - full_name:    { type: text, label: Name, required: true }
+          - mobile:       { type: phone, required: true, unique: true }
+          - email:        { type: email }
+          - city:         { type: choice, choices: city, required: true }
+          - whatsapp_opt_in: { type: boolean, label: WhatsApp opt-in, default: false }
+          - consent:      { type: boolean, label: Consent given, required: true }
+          - has_login:    { type: boolean, label: Portal login, default: false }
+        validation:
+          duplicate_check:
+            rules:
+              - { match: [mobile], compare: exact, on_match: block, message: A patient with this mobile number is already enrolled. }
+        access:
+          Support Agent:   { actions: [view, add, edit, export] }
+          Program Manager: { actions: [view, export] }
+        table:
+          columns:
+            - patient_id: { label: Patient ID, searchable: true }
+            - full_name:  { label: Name, searchable: true, sortable: true }
+            - mobile:     { label: Mobile, searchable: true }
+            - city:       { label: City, filterable: true }
+            - consent:    { label: Consent, filterable: true }
+          default_sort: full_name
+          add_button: Enroll Patient
+          row_actions:
+            - { key: edit, label: Edit, type: edit }
+        form:
+          create: { title: Enroll Patient, fields: [full_name, mobile, email, city, whatsapp_opt_in, consent, has_login] }
+          edit:   { same_as: create }
+
+      - code: voucher
+        name: Voucher
+        plural: Vouchers
+        kind: transactional
+        display: code
+        fields:
+          - code:        { type: text, label: Voucher code, readonly: true, unique: true, auto: { sequence: "VCH-{YY}-{000000}" } }
+          - campaign:    { type: link, to: campaign, required: true, display: title, limit_choices: status == live }
+          - patient:     { type: link, to: patient, required: true, display: full_name }
+          - channel:     { type: choice, label: Issued via, choices: channel, required: true }
+          - issued_on:   { type: date, readonly: true }
+          - expires_on:  { type: date, label: Expires, required: true }
+          - uses_left:   { type: integer, label: Uses left, readonly: true, min: 0, max: 12 }
+        validation:
+          duplicate_check:
+            rules:
+              - { match: [campaign, patient], compare: exact, on_match: block, message: This patient already has a voucher on this campaign. }
+        access:
+          Support Agent:   { actions: [view, add, export] }
+          Program Manager: { actions: [view, export] }
+          Patient:         { actions: [view], rows: { own: patient } }
+        workflow:
+          statuses:
+            - { code: issued,    label: Issued,    color: blue, initial: true }
+            - { code: redeemed,  label: Redeemed,  color: green }
+            - { code: expired,   label: Expired,   color: gray, final: true }
+            - { code: cancelled, label: Cancelled, color: red, final: true }
+          transitions:
+            - { name: use_up, label: Fully Redeemed, from: issued, to: redeemed, trigger: system, text: When uses_left reaches 0 after an approved redemption. }
+            - { name: expire, label: Expire, from: issued, to: expired, trigger: system, text: Nightly when expires_on < today. }
+            - { name: resend, label: Resend Code, from: issued, to: issued, roles: [Support Agent], on_done: Send the code to the patient again by SMS. }
+            - { name: cancel, label: Cancel, from: issued, to: cancelled, roles: [Support Agent, Program Manager], tone: danger,
+                confirm: "Cancel this voucher? The patient can no longer redeem it.",
+                form: [ { reason: { type: long_text, required: true } } ] }
+          tags:
+            - { code: expiring, label: Expiring Soon, color: amber, system: true, text: Set when expires_on is within 7 days. }
+        table:
+          columns:
+            - code:       { label: Code, searchable: true, sortable: true }
+            - patient:    { label: Patient, display: full_name, searchable: true }
+            - campaign:   { label: Campaign, display: title, filterable: true }
+            - channel:    { label: Issued via, filterable: true }
+            - expires_on: { label: Expires, sortable: true }
+            - uses_left:  { label: Uses left }
+            - status:     { source: status, label: Status, filterable: true }
+          default_sort: -issued_on
+          quick_filters:
+            - { label: Active, where: status == issued, default: true }
+            - { label: Expiring soon, where: has_tag expiring }
+          add_button: Issue Voucher
+        form:
+          create: { roles: [Support Agent], title: Issue Voucher, fields: [campaign, patient, channel, expires_on], on_create: "Set issued_on to today, uses_left from the campaign, and send the code to the patient." }
+
+  - code: redemptions
+    name: Redemptions & Settlement
+    description: Pharmacy redemptions checked by the fraud rules, and the monthly settlement with each pharmacy.
+    entities:
+      - code: redemption
+        name: Redemption
+        plural: Redemptions
+        kind: transactional
+        display: redemption_no
+        fields:
+          - redemption_no:  { type: text, label: Redemption, readonly: true, unique: true, auto: { sequence: "RD-{YY}-{000000}" } }
+          - voucher:        { type: link, to: voucher, required: true, display: code, limit_choices: status == issued }
+          - pharmacy:       { type: link, to: pharmacy, display: name, readonly: true, help: The pharmacy of the signed-in user. }
+          - city:           { type: choice, choices: city, readonly: true }
+          - bill_no:        { type: text, label: Bill no., required: true }
+          - bill_date:      { type: date, required: true }
+          - packs:          { type: integer, required: true, min: 1, max: 6 }
+          - bill_amount:    { type: money, label: Bill amount, required: true, min: 0 }
+          - benefit_amount: { type: money, label: Benefit, readonly: true, computed: "The campaign's benefit on the bill, capped at the campaign's cap per redemption." }
+          - bill_file:      { type: file, label: Bill photo, required: true, accept: [pdf, jpg, png] }
+          - fraud_hits:     { type: multi_choice, label: Fraud rules hit, choices: fraud_rule, readonly: true }
+          - settlement:     { type: link, to: settlement, display: settlement_no, readonly: true }
+        validation:
+          duplicate_check:
+            rules:
+              - { match: [pharmacy, bill_no], compare: exact, on_match: block, message: This bill was already redeemed at this pharmacy. }
+        access:
+          Pharmacy:        { actions: [view, add], rows: { own: pharmacy } }
+          Program Manager: { actions: [view, export] }
+          Support Agent:   { actions: [view] }
+        workflow:
+          statuses:
+            - { code: submitted, label: Submitted, color: blue, initial: true }
+            - { code: flagged,   label: Flagged,   color: amber }
+            - { code: approved,  label: Approved,  color: teal }
+            - { code: settled,   label: Settled,   color: green, final: true }
+            - { code: rejected,  label: Rejected,  color: red, final: true }
+          transitions:
+            - { name: auto_approve, label: Approved, from: submitted, to: approved, trigger: system,
+                text: "Right after submit, when no fraud rule is hit: reduce the voucher's uses_left and add the benefit to the campaign's spent." }
+            - { name: flag, label: Flag, from: submitted, to: flagged, trigger: system,
+                text: "Right after submit, when one or more fraud rules are hit; record them in fraud_hits." }
+            - { name: clear, label: Clear & Approve, from: flagged, to: approved, roles: [Program Manager], primary: true,
+                form: [ { review_note: { type: long_text, required: true } } ],
+                on_done: Reduce the voucher's uses_left and add the benefit to the campaign's spent. }
+            - { name: reject, label: Reject, from: [submitted, flagged], to: rejected, roles: [Program Manager], tone: danger,
+                form: [ { reason: { type: choice, choices: reject_reason, required: true } }, { note: { type: long_text } } ],
+                on_done: Email the pharmacy the rejection reason. }
+            - { name: settle, label: Settle, from: approved, to: settled, trigger: system, text: When the settlement holding this redemption is paid. }
+        table:
+          columns:
+            - redemption_no:  { label: Redemption, searchable: true, sortable: true }
+            - voucher:        { label: Voucher, display: code, searchable: true }
+            - pharmacy:       { label: Pharmacy, display: name, filterable: true }
+            - bill_date:      { label: Bill date, sortable: true }
+            - bill_amount:    { label: Bill, format: money }
+            - benefit_amount: { label: Benefit, format: money, sortable: true }
+            - fraud_hits:     { label: Fraud rules }
+            - status:         { source: status, label: Status, filterable: true }
+          default_sort: -created_at
+          quick_filters:
+            - { label: Flagged, where: status == flagged, roles: [Program Manager], default: true }
+            - { label: To settle, where: status == approved }
+          footer_totals: [bill_amount, benefit_amount]
+          add_button: Redeem Voucher
+        form:
+          create: { roles: [Pharmacy], title: Redeem Voucher, fields: [voucher, bill_no, bill_date, packs, bill_amount, bill_file], on_create: "Link to the pharmacy of the logged-in user, copy its city, compute the benefit and run the fraud rules." }
+
+      - code: settlement
+        name: Settlement
+        plural: Settlements
+        kind: transactional
+        display: settlement_no
+        fields:
+          - settlement_no: { type: text, label: Settlement, readonly: true, unique: true, auto: { sequence: "ST-{YY}-{0000}" } }
+          - pharmacy:      { type: link, to: pharmacy, required: true, display: name }
+          - month:         { type: date, label: Month end, required: true }
+          - lines:         { type: integer, label: Redemptions, readonly: true, computed: Count of approved redemptions in the month. }
+          - amount:        { type: money, readonly: true, computed: Sum of the benefit on those redemptions. }
+          - payment_ref:   { type: text, label: Payment ref, readonly: true }
+        validation:
+          duplicate_check:
+            rules:
+              - { match: [pharmacy, month], compare: exact, on_match: block, message: A settlement for this pharmacy and month already exists. }
+        access:
+          Program Manager: { actions: [view, add, export] }
+          Pharmacy:        { actions: [view], rows: { own: pharmacy } }
+        workflow:
+          statuses:
+            - { code: draft,    label: Draft,    color: gray, initial: true }
+            - { code: approved, label: Approved, color: teal }
+            - { code: paid,     label: Paid,     color: green, final: true }
+            - { code: disputed, label: Disputed, color: amber }
+          transitions:
+            - { name: approve, label: Approve, from: draft, to: approved, roles: [Program Manager], primary: true,
+                on_done: Export the payment file for Finance. }
+            - { name: mark_paid, label: Mark Paid, from: approved, to: paid, trigger: system,
+                text: When Finance returns the payment reference; store it and move every redemption on the settlement to Settled. }
+            - { name: dispute, label: Dispute, from: [draft, approved], to: disputed, roles: [Pharmacy],
+                form: [ { note: { type: long_text, required: true } } ],
+                on_done: Notify the Program Manager. }
+            - { name: resolve, label: Resolve, from: disputed, to: draft, roles: [Program Manager], primary: true,
+                form: [ { resolution: { type: long_text, required: true } } ] }
+        table:
+          columns:
+            - settlement_no: { label: Settlement, searchable: true }
+            - pharmacy:      { label: Pharmacy, display: name, filterable: true }
+            - month:         { label: Month end, sortable: true }
+            - lines:         { label: Redemptions }
+            - amount:        { label: Amount, format: money, sortable: true }
+            - payment_ref:   { label: Payment ref }
+            - status:        { source: status, label: Status, filterable: true }
+          default_sort: -month
+          quick_filters:
+            - { label: To approve, where: status == draft, roles: [Program Manager], default: true }
+            - { label: Disputed, where: status == disputed }
+          footer_totals: [amount]
+          add_button: New Settlement
+        form:
+          create: { roles: [Program Manager], fields: [pharmacy, month], on_create: "Attach every approved, unsettled redemption of the pharmacy in that month." }
+
+detail_views:
+  - code: campaign_360
+    hero: campaign
+    title: "{title}"
+    back_to: campaigns
+    layout: header_tabs_sidebar
+    roles: [Program Manager, Support Agent]
+    header:
+      title: title
+      subtitle: ["{campaign_code}", "{product}"]
+      badges: [ { source: status }, { source: tags } ]
+      facts:
+        - { label: Type, field: voucher_type }
+        - { label: Benefit, field: benefit_kind }
+        - { label: Starts, field: start_date }
+        - { label: Ends, field: end_date }
+      actions: { transitions: true, buttons: [ { key: edit, label: Edit, type: edit, roles: [Program Manager] } ] }
+      banners:
+        - { show_when: has_tag budget_low, tone: warning, text: Less than 10% of this campaign's budget is left. }
+    stats:
+      - { label: Vouchers issued, value: { count: voucher, via: campaign }, tone: indigo, link_to_tab: vouchers }
+      - { label: Redeemed, value: { count: voucher, via: campaign, where: status == redeemed }, tone: teal, link_to_tab: vouchers }
+      - { label: Benefit paid, value: { sum: redemption.benefit_amount, via: voucher.campaign, where: "status in [approved, settled]" }, format: money, tone: purple, link_to_tab: redemptions }
+      - { label: Flagged, value: { count: redemption, via: voucher.campaign, where: status == flagged }, tone: red, link_to_tab: redemptions }
+    sidebar:
+      - { type: fields, title: Offer, fields: [product, benefit_kind, benefit_value, max_benefit, uses_per_voucher] }
+      - { type: fields, title: Budget, fields: [budget, spent, voucher_limit] }
+    tabs:
+      - code: vouchers
+        label: Vouchers
+        type: related_table
+        entity: voucher
+        via: campaign
+        count_badge: true
+        add: { label: Issue Voucher }
+        columns: [code, patient, channel, expires_on, uses_left, status]
+      - code: redemptions
+        label: Redemptions
+        type: related_table
+        entity: redemption
+        via: voucher.campaign
+        count_badge: true
+        columns: [redemption_no, voucher, pharmacy, bill_date, benefit_amount, status]
+      - code: activity
+        label: Activity
+        type: timeline
+        sources:
+          - { entity: campaign, events: [created, updated, transition] }
+          - { entity: voucher, via: campaign, events: [created, transition] }
+    states:
+      not_found: { title: Campaign not found, back_to: campaigns }

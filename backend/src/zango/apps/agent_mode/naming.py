@@ -210,12 +210,66 @@ def _parse(text: str) -> dict:
     return data if isinstance(data, dict) else {}
 
 
-def suggest_identity(prompt: str, creds=None, *, timeout: float = 30.0) -> AppIdentity:
+def _complete_via_api(creds, model: str, content: str, timeout: float) -> str:
+    import anthropic
+
+    client = anthropic.Anthropic(api_key=creds.api_key, timeout=timeout)
+    reply = client.messages.create(
+        model=model,
+        max_tokens=300,
+        messages=[{"role": "user", "content": content}],
+    )
+    return "".join(getattr(block, "text", "") or "" for block in (reply.content or []))
+
+
+def _complete_via_sdk(creds, model: str, content: str, timeout: float) -> str:
+    """One tool-less turn through the Claude Code CLI.
+
+    The only route for a subscription login, which the Messages API rejects.
+    """
+    import asyncio
+    import concurrent.futures
+
+    from claude_agent_sdk import AssistantMessage, ClaudeAgentOptions, TextBlock, query
+
+    from .options import agent_home, build_env
+
+    home = agent_home()
+    options = ClaudeAgentOptions(
+        cwd=home,
+        tools=[],
+        max_turns=1,
+        setting_sources=[],
+        model=model or None,
+        system_prompt="You name business applications. Reply with only the JSON asked for.",
+        env=build_env(creds, home),
+    )
+
+    async def run() -> str:
+        chunks = []
+        async for message in query(prompt=content, options=options):
+            if isinstance(message, AssistantMessage):
+                chunks.extend(
+                    block.text
+                    for block in message.content
+                    if isinstance(block, TextBlock)
+                )
+        return "".join(chunks)
+
+    async def bounded() -> str:
+        return await asyncio.wait_for(run(), timeout)
+
+    # A worker with a running loop cannot asyncio.run; give it its own thread.
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+        return pool.submit(lambda: asyncio.run(bounded())).result()
+
+
+def suggest_identity(prompt: str, creds=None, *, timeout: float = 60.0) -> AppIdentity:
     """Ask the model to name the app; fall back to a slug if it cannot.
 
-    Uses the Messages API rather than the Agent SDK: naming needs no tools,
-    no workspace and no session, and starting the Claude Code CLI for one
-    short completion would add seconds to the only step the user is watching.
+    An API key uses the Messages API (no CLI start-up for one short
+    completion); a subscription login goes through the CLI, the only thing
+    that accepts it.
     """
     from .config import load_config
     from .credentials import resolve_credentials
@@ -230,33 +284,19 @@ def suggest_identity(prompt: str, creds=None, *, timeout: float = 30.0) -> AppId
     )
 
     creds = creds or resolve_credentials()
-    # The subscription login only works through the CLI, not the Messages API.
-    if not creds.api_key or not prompt:
+    if not creds.is_usable or not prompt:
         return fallback
 
     cfg = load_config()
-    model = cfg.analyst_model or cfg.model or "claude-opus-5"
+    model = cfg.analyst_model or cfg.model or ""
+    content = _NAME_PROMPT.format(
+        prompt=prompt[:2000], min_len=MIN_NAME_LEN, max_len=MAX_NAME_LEN
+    )
     try:
-        import anthropic
-
-        client = anthropic.Anthropic(api_key=creds.api_key, timeout=timeout)
-        reply = client.messages.create(
-            model=model,
-            max_tokens=300,
-            messages=[
-                {
-                    "role": "user",
-                    "content": _NAME_PROMPT.format(
-                        prompt=prompt[:2000],
-                        min_len=MIN_NAME_LEN,
-                        max_len=MAX_NAME_LEN,
-                    ),
-                }
-            ],
-        )
-        text = "".join(
-            getattr(block, "text", "") or "" for block in (reply.content or [])
-        )
+        if creds.api_key:
+            text = _complete_via_api(creds, model or "claude-opus-5", content, timeout)
+        else:
+            text = _complete_via_sdk(creds, model, content, timeout)
     except Exception:  # noqa: BLE001 - naming must never block a launch
         import logging
 

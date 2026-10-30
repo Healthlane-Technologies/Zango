@@ -431,7 +431,7 @@ html[data-zas-density="compact"] :is(.z-btn,.z-search,.z-sel){height:32px}html[d
       <div class="iss" id="iss" hidden></div>
     </section>
     <div class="pvwrap" id="pvwrap">
-      <div class="pvbar" id="pvbar"></div>
+      <div class="pvbar" id="pvbar" data-zas-chrome></div>
       <div class="pvstage" id="pvstage"><div class="zapp" id="zapp"></div></div>
     </div>
   </main>
@@ -2151,7 +2151,7 @@ function renderSide(){
   const M = S.M; const r = M.role[S.role] || { menu: [] }; const act = activeMenuPage();
   const item = (i, sub, path) => { const p = M.pages[i.page]; if (!p || !canPage(p)) return ''; return `<button class="z-ni ${sub ? 'sub' : ''} ${act === p.code ? 'on' : ''}"${zp(path, i.label || p.title)} data-a="${A(() => go(p.code))}">${ic(i.icon || (p.type === 'custom' || p.type === 'dashboard' ? 'layout-dashboard' : 'list'))}<span>${esc(i.label || p.title)}</span></button>`; };
   const mp = `/roles/@${S.role}/menu`;
-  const nav = r.menu.map((it, n) => it.group ? `<div class="z-ng"${zp(`${mp}/${n}`, it.group)}>${esc(it.group)}</div>${arr(it.items).map((i, k) => item(i, true, `${mp}/${n}/items/${k}`)).join('')}` : item(it, false, `${mp}/${n}`)).join('');
+  const nav = r.menu.map((it, n) => it.group ? `<div class="z-ng nav-group"${zp(`${mp}/${n}`, it.group)}>${esc(it.group)}</div>${arr(it.items).map((i, k) => item(i, true, `${mp}/${n}/items/${k}`)).join('')}` : item(it, false, `${mp}/${n}`)).join('');
   const u = curUser();
   return `<aside class="z-side"><div class="z-brand"><div class="z-logo">${esc(initials(M.app.name || 'App'))}</div><div><b>${esc(M.app.name || 'App')}</b><span>${esc(S.role)}</span></div></div>
     <nav class="z-nav">${nav || '<div class="z-ng">No menu for this role</div>'}</nav>
@@ -2294,7 +2294,7 @@ function renderTable(cfg){
   const cols = cfg.cols.filter(c => !c.roles || c.roles.includes(S.role));
   const quick = arr(cfg.quick).filter(q => roleOK(q));
   const ds = cfg.defaultSort || E.table.default_sort || '-created_at';
-  const st = tState(cfg.key, { sort: ds, qf: (quick.find(q => q.default) || {}).label || null });
+  const st = tState(cfg.key, { sort: ds, qf: null });
   let rows = cfg.rows.slice();
   const qf = quick.find(q => q.label === st.qf); if (qf) rows = rows.filter(r => evalCond(qf.where, { E, row: r }) !== false);
   Object.entries(st.filters).forEach(([k, v]) => { if (v === '') return; const c = cols.find(x => x.key === k); if (!c) return; rows = rows.filter(r => { const cv = cellOf(E, r, c).v; return Array.isArray(cv) ? cv.map(String).includes(v) : String(cv) === v; }); });
@@ -2324,7 +2324,7 @@ function renderTable(cfg){
   const em = cfg.empty || {};
   const emptyHTML = `<div class="z-empty"><div class="ei">${ic('inbox')}</div><b>${esc(st.q || st.qf || Object.values(st.filters).some(Boolean) ? 'No matching records' : em.title || `No ${E.plural.toLowerCase()} yet`)}</b><p>${esc(st.q || st.qf ? 'Try clearing the search or filters.' : em.text || '')}</p>${!st.q && em.cta === 'add' && cfg.addBtn ? cfg.addBtn : ''}</div>`;
   return `${card}${tb}${total ? `<div class="z-tbl-w"><table class="z-t"><thead><tr>${th}</tr></thead><tbody>${body}</tbody>${foot}</table></div>
-    <div class="z-pg"><span>Showing <b>${(st.page - 1) * ps + 1}–${Math.min(total, st.page * ps)}</b> of <b>${total}</b></span><span class="sp"></span>
+    <div class="z-pg" data-zas-chrome><span>Showing <b>${(st.page - 1) * ps + 1}–${Math.min(total, st.page * ps)}</b> of <b>${total}</b></span><span class="sp"></span>
     <button class="z-btn sm" ${st.page <= 1 ? 'disabled' : ''} data-a="${A(() => { if (st.page > 1){ st.page--; render(); } })}">${ic('arrow-left')}Previous</button><button class="z-btn sm" ${st.page >= pages ? 'disabled' : ''} data-a="${A(() => { if (st.page < pages){ st.page++; render(); } })}">Next${ic('arrow-right')}</button></div>` : emptyHTML}</div>`;
 }
 function rowClickFor(E, target){
@@ -2346,7 +2346,7 @@ function renderCrud(E, p){
   const addBtn = canAdd ? `<button class="z-btn pri"${zp(entPath(E) ? `${entPath(E)}/form/create` : '', `${addLabel} form`)} data-a="${A(() => openCreate(E, {}, null, E.table.add_button))}">${ic('plus')}${esc(addLabel)}</button>` : '';
   const exp = can(E, 'export') ? `<button class="z-btn sm" data-a="${A(() => toast('Export', `${rows.length} ${E.plural.toLowerCase()} exported to CSV (simulated).`))}">${ic('download')}Export</button>` : '';
   const sc = E.acc && E.acc[S.role] && E.acc[S.role].rows;
-  return `<div class="z-ph"${zp(`/pages/@${p.code}`, p.title)}><div><h1>${esc(p.title)}</h1><p>${rows.length} records${sc && sc !== 'all' ? ` · scoped to <b>${esc(scopeLabel(sc))}</b>` : ''}</p></div><span class="sp"></span>${addBtn}</div>
+  return `<div class="z-ph"${zp(`/pages/@${p.code}`, p.title)}><div><h1>${esc(p.title)}</h1><p data-zas-chrome>${rows.length} records${sc && sc !== 'all' ? ` · scoped to <b>${esc(scopeLabel(sc))}</b>` : ''}</p></div><span class="sp"></span>${addBtn}</div>
     ${renderTable({ key: 'crud_' + E.code, E, rows, cols: E.cols, rowClick: rowClickFor(E), quick: E.table.quick_filters, right: viewSwitch(p) + exp, empty: { cta: 'add' }, addBtn, footer: E.table.footer_totals, group_by: E.table.group_by, view: curView(p), page: p })}`;
 }
 
@@ -3009,7 +3009,7 @@ function renderDetail(dv, id){
   // tabs
   let cur = tabs.find(t => t.code === S.route.tab) || tabs[0];
   const countOf = t => { if (t.type !== 'related_table' || !t.count_badge) return ''; const T = M.ents[t.entity]; const w = isObj(t.count_badge) ? t.count_badge.where : null; const n = relatedRows(T, t.via, row, t.where).filter(r => !w || evalCond(w, { E: T, row: r }) === true).length; if (isObj(t.count_badge) && !n) return ''; const c = isObj(t.count_badge) && t.count_badge.tone ? tone(t.count_badge.tone) : null; return `<span class="d-cnt" ${c ? `style="background:${c[0]};color:${c[1]}"` : ''}>${n}</span>`; };
-  const tabBar = tabs.length > 1 || (tabs[0] && tabs[0].label) ? `<div class="d-tabs">${tabs.map(t => `<button class="d-tab ${cur === t ? 'on' : ''}"${zp(tabPath(dv, t), `${t.label || titleize(t.code)} tab`)} data-a="${A(() => { S.route.tab = t.code; render(); })}">${t.icon ? ic(t.icon) : ''}${esc(t.label || titleize(t.code))}${countOf(t)}</button>`).join('')}</div>` : '';
+  const tabBar = tabs.length > 1 || (tabs[0] && tabs[0].label) ? `<div class="d-tabs">${tabs.map(t => `<button class="d-tab ${cur === t ? 'on' : ''}" role="tab" aria-selected="${cur === t}"${zp(tabPath(dv, t), `${t.label || titleize(t.code)} tab`)} data-a="${A(() => { S.route.tab = t.code; render(); })}">${t.icon ? ic(t.icon) : ''}${esc(t.label || titleize(t.code))}${countOf(t)}</button>`).join('')}</div>` : '';
   const tabBody = cur ? `<div style="display:contents"${zp(tabPath(dv, cur), `${cur.label || titleize(cur.code || '')} tab`)}>${renderTab(cur, dv, E, row)}</div>` : stateBox('layout-panel-top', 'No tabs', 'Add tabs to this detail view.');
   const side = arr(dv.sidebar).map((s, i) => sectionHTML({ ...s, _side: true, columns: s.columns || 1, _path: `/detail_views/@${dv.code}/sidebar/${i}` }, E, row)).join('');
   const layout = dv.layout || 'header_tabs';

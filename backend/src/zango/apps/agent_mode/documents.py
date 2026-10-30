@@ -361,6 +361,18 @@ def doc_stems(requirement) -> dict:
     return {row.pk: f"{i:02d}-{row.name}" for i, row in enumerate(rows, 1)}
 
 
+def has_design_reference(requirement, message) -> bool:
+    """Whether this template-mode message carries an image or HTML page: a look to apply.
+
+    The end-of-turn check (SpecWorkbench.reference_gap) holds the agent to it."""
+    if getattr(requirement, "mode", "") != "template":
+        return False
+    return any(
+        ct.startswith("image/") or ct == KINDS[".html"]
+        for ct in message.attachments.values_list("content_type", flat=True)
+    )
+
+
 def attachment_note(docs_root, requirement, message) -> str:
     """What the analyst is told about files attached to this chat message ("" for none)."""
     rows = list(
@@ -369,13 +381,33 @@ def attachment_note(docs_root, requirement, message) -> str:
     if not rows or not docs_root:
         return ""
     stems = doc_stems(requirement)
+    # Template mode starts on the template's own prototype; the creator may want it
+    # restyled or drawn again, so both are open to the agent.
+    on_template = getattr(requirement, "mode", "") == "template"
     lines = []
     for row in rows:
         stem = stems.get(row.pk)
         if not stem:
             continue
         path = f"{docs_root}/{stem}"
-        if row.content_type.startswith("image/"):
+        is_image = row.content_type.startswith("image/")
+        if on_template and (is_image or row.content_type == KINDS[".html"]):
+            kind = "an image" if is_image else "an HTML page"
+            where = (
+                f"Read `{path}` to see it."
+                if is_image
+                else f"Its outline is in `{path}.txt`, the source in `{path}`."
+            )
+            lines.append(
+                f"- {row.name}: {kind}. {where} What it is for comes from the user's message, "
+                "not from its type: a look to apply to the existing prototype, a screen to draw "
+                'again, or (HTML) the new prototype itself (then proto_import("'
+                + row.name
+                + '") first). '
+                "If the message doesn't say, treat it as a design reference and apply its look. "
+                "Nothing is off limits."
+            )
+        elif row.content_type.startswith("image/"):
             lines.append(
                 f"- {row.name}: an image. Read `{path}` to see it. In Free design it is a design "
                 "reference, not the prototype: take the look and layout from it and draw the prototype."

@@ -36,7 +36,7 @@ GUIDE = (
     "(one menu drawn for every persona), change the prototype so that persona's menu shows only "
     "its role's items (proto_patch the menu by persona), never the YAML to match a menu the role "
     "shouldn't have; page "
-    "titles → pages[].title; the line under a page title → pages[].subtitle (text, plus `stat: {sum | count, where, format, suffix}` for a live figure); chips that show a count → the quick filter's `count: true`; a screen opened from a list (a create wizard) that must be rebuilt → its own custom page, never `rebuild: true` on the list's page; columns → table.columns, each heading a column's label (a cell's muted second line → the column's `secondary`, an icon or initials before its value → `icon`); status tabs and filter chips → "
+    "titles → pages[].title; the line under a page title → pages[].subtitle (text, plus `stat: {sum | count, where, format, suffix}` for a live figure); chips that show a count → the quick filter's `count: true` (a chip is never preselected: no `default: true`, and the prototype's list opens with none on); a screen opened from a list (a create wizard) that must be rebuilt → its own custom page, never `rebuild: true` on the list's page; columns → table.columns, each heading a column's label (a cell's muted second line → the column's `secondary`, an icon or initials before its value → `icon`); status tabs and filter chips → "
     "table.quick_filters; where a row opens → table.row_click (its 360, `<view>#<tab>` for its "
     "parent's 360 on a tab, or drawer); 360 tabs → detail_views[].tabs, the prototype's tabs "
     "and no others; section and panel headings → a summary section's, sidebar block's or "
@@ -635,7 +635,9 @@ def coverage(doc: dict, bundle_dir) -> dict:
                 ("button", n) for n, c in counts.items() if c * 2 > len(sets)
             }
 
-    imported = manifest.get("source") == "imported"
+    # The kit page is an imported page whose record screens are the platform's own 360: it draws the
+    # YAML as the build does, so only an uploaded page's own layout needs a rebuild.
+    imported = manifest.get("source") == "imported" and not manifest.get("kit")
     records = {
         s.get("id")
         for s in manifest.get("screens") or []

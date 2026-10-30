@@ -59,6 +59,13 @@ class SpecFormat(models.TextChoices):
     YAML = "yaml", "YAML"
 
 
+class LaunchMode(models.TextChoices):
+    # The creator writes a brief and the analyst drafts the requirement from it.
+    BRIEF = "brief", "From a brief"
+    # Template mode: the app opens straight on the template's preview, no brief.
+    DIRECT = "direct", "Open the template as it is"
+
+
 class BindingSource(models.TextChoices):
     SCAFFOLD = "scaffold", "Created from the template"
     REQUIREMENT = "requirement", "Adopted during a requirement"
@@ -127,6 +134,10 @@ class AppTemplateVersion(FullAuditMixin):
         "builder_adapter",
         "references",
         "drafting_md",
+        "launch",
+        "welcome",
+        "prototype_parts",
+        "prototype_hash",
     )
 
     object_uuid = models.UUIDField(
@@ -196,6 +207,18 @@ class AppTemplateVersion(FullAuditMixin):
     references = models.JSONField(default=list, blank=True)
     drafting_md = models.TextField(blank=True, default="")
 
+    # --- template mode: how a new app on this template opens. "direct" opens the
+    # requirement chat on the template's own preview (Free design) with no brief, and
+    # posts ``welcome`` ({message, suggestions[]}) as the first message. The preview is
+    # ``prototype_parts`` ({path: text}, the open prototype's parts): shipped by the pack
+    # (prototype/) or drawn from the starter by the kit when the pack is imported.
+    launch = models.CharField(
+        max_length=16, choices=LaunchMode.choices, default=LaunchMode.BRIEF
+    )
+    welcome = models.JSONField(default=dict, blank=True)
+    prototype_parts = models.JSONField(default=dict, blank=True)
+    prototype_hash = models.CharField(max_length=64, blank=True, default="")
+
     # Set at publish, over every content field and file: the cache key and
     # the on-disk directory name, so it can never go stale.
     content_sha = models.CharField(max_length=64, blank=True, default="")
@@ -226,6 +249,10 @@ class AppTemplateVersion(FullAuditMixin):
     @property
     def has_workspace(self) -> bool:
         return bool(self.workspace_sha)
+
+    @property
+    def is_direct(self) -> bool:
+        return self.launch == LaunchMode.DIRECT
 
     @property
     def has_builder(self) -> bool:

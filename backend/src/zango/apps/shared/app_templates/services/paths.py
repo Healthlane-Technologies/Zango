@@ -53,9 +53,27 @@ def content_sha(version, files=None, *, include_workspace: bool = True) -> str:
         # Attached per platform, not part of the pack.
         payload.pop("workspace_sha", None)
         payload.pop("builder_html", None)
+        # A starting prototype drawn from the starter at import (open_from_kit) follows from
+        # the pack; one the pack ships is part of it.
+        if not payload.get("prototype_parts") or generated_prototype(
+            payload.get("prototype_parts")
+        ):
+            payload.pop("prototype_parts", None)
+            payload.pop("prototype_hash", None)
     if files is None:
         files = version.files.values_list("path", "sha256")
     payload["files"] = sorted([list(pair) for pair in files])
     payload["slug"] = version.template.slug
     blob = json.dumps(payload, sort_keys=True, ensure_ascii=False, default=str)
     return hashlib.sha256(blob.encode("utf-8")).hexdigest()
+
+
+def generated_prototype(parts) -> bool:
+    """Whether a version's prototype parts were drawn by the kit (prototype_kit.KIT_SOURCE)."""
+    try:
+        manifest = json.loads((parts or {}).get("manifest.json") or "{}")
+    except (ValueError, AttributeError):
+        return False
+    return isinstance(manifest, dict) and (
+        manifest.get("source") == "kit" or bool(manifest.get("kit"))
+    )

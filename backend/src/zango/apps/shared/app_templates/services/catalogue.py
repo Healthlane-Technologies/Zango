@@ -74,6 +74,16 @@ class TemplateView:
     # from Agent Mode's skill plugin (see generic.py).
     skill_plugin_name: str = ""
     skill_plugin_dir: str = ""
+    # Template mode: "direct" opens on the template's preview with no brief (welcome +
+    # its starting prototype, open-mode parts).
+    launch: str = "brief"
+    welcome: dict = field(default_factory=dict)
+    prototype_parts: dict = field(default_factory=dict)
+    prototype_hash: str = ""
+
+    @property
+    def is_direct(self) -> bool:
+        return self.launch == "direct" and bool(self.prototype_parts)
 
     @property
     def is_yaml(self) -> bool:
@@ -187,6 +197,10 @@ def build_view(version: AppTemplateVersion) -> TemplateView:
         borrowed_from=(
             f"{generic.template.slug}@{generic.version}" if borrowed else ""
         ),
+        launch=version.launch or "brief",
+        welcome=dict(version.welcome or {}),
+        prototype_parts=dict(version.prototype_parts or {}),
+        prototype_hash=version.prototype_hash or "",
     )
 
 

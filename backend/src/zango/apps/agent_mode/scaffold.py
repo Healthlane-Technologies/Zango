@@ -109,7 +109,7 @@ def launch_app(scaffold) -> None:
 
     from .config import load_config
     from .credentials import resolve_credentials
-    from .naming import suggest_identity, unique_name
+    from .naming import slug_from_prompt, suggest_identity, unique_name
 
     if scaffold.status != ScaffoldStatus.NAMING or scaffold.app_uuid:
         return
@@ -120,7 +120,30 @@ def launch_app(scaffold) -> None:
         return
 
     creds = resolve_credentials()
-    identity = suggest_identity(scaffold.prompt, creds)
+    if scaffold.app_label:
+        # The creator named it (an app from a template): no model call.
+        from .naming import AppIdentity, sanitize_name
+
+        version = scaffold.template_version
+        identity = AppIdentity(
+            name=sanitize_name(slug_from_prompt(scaffold.app_label))
+            or sanitize_name(scaffold.app_label)
+            or "new_app",
+            label=scaffold.app_label,
+            description=(version.template.one_liner if version is not None else "")[
+                :500
+            ],
+            source="creator",
+        )
+    else:
+        # A template opened with no brief and no name: the agent names it from the template.
+        version = scaffold.template_version
+        seed = scaffold.prompt or (
+            f"{version.template.name}: {version.template.one_liner}"
+            if version is not None
+            else ""
+        )
+        identity = suggest_identity(seed, creds)
     name = unique_name(identity.name)
 
     # A template with a workspace: the new app starts from its skeleton
@@ -227,7 +250,12 @@ def handoff_requirement(scaffold):
     from zango.apps.shared.app_templates.models import BindingSource
 
     from .app_templates import get_template
-    from .models import AgentRequirement, AgentRequirementMessage, MessageRole
+    from .models import (
+        AgentRequirement,
+        AgentRequirementMessage,
+        MessageRole,
+        RequirementStatus,
+    )
     from .template_binding import bind_app, seed_template_requirement
 
     tenant = _tenant_for(scaffold)
@@ -253,9 +281,16 @@ def handoff_requirement(scaffold):
     # move into the app's requirement.
     documents = list(scaffold.documents.all()) if template else []
 
+    from .template_mode import is_direct, seed_direct, welcome_text
+
+    # Template mode: a "direct" template opens on its own preview. With no brief nothing runs:
+    # the welcome is the first message and the creator can Commit at revision 1.
+    direct = is_direct(template)
+    prompt = (scaffold.prompt or "").strip()
+
     with schema_context(tenant.schema_name):
         requirement = AgentRequirement(
-            initial_prompt=scaffold.prompt,
+            initial_prompt=scaffold.prompt or "",
             title=(
                 template.name if template else scaffold.app_label or scaffold.prompt
             )[:80],
@@ -263,7 +298,15 @@ def handoff_requirement(scaffold):
             is_thinking=True,
             preview_mode=getattr(scaffold, "preview_mode", "") or "kit",
         )
-        if template:
+        if direct:
+            seed_direct(requirement, template)
+            requirement.reference_id = scaffold.reference_id
+            if prompt or documents:
+                # A brief given anyway is the first change the analyst makes to the template.
+                requirement.initial_prompt = scaffold.prompt
+                requirement.is_thinking = True
+                requirement.status = RequirementStatus.GATHERING
+        elif template:
             seed_template_requirement(requirement, template)
             requirement.reference_id = scaffold.reference_id
             requirement.mode = (
@@ -282,12 +325,22 @@ def handoff_requirement(scaffold):
                 pages=doc.pages,
                 sheets=doc.sheets,
             )
-        AgentRequirementMessage.objects.create(
-            requirement=requirement,
-            seq=1,
-            role=MessageRole.USER,
-            content=scaffold.prompt,
-        )
+        seq = 1
+        if direct:
+            AgentRequirementMessage.objects.create(
+                requirement=requirement,
+                seq=seq,
+                role=MessageRole.ASSISTANT,
+                content=welcome_text(template),
+            )
+            seq += 1
+        if not direct or prompt or documents:
+            AgentRequirementMessage.objects.create(
+                requirement=requirement,
+                seq=seq,
+                role=MessageRole.USER,
+                content=scaffold.prompt or "",
+            )
 
     # Back on the public schema: the scaffold row and the binding live there.
     if template:
@@ -301,7 +354,8 @@ def handoff_requirement(scaffold):
 
     # ATOMIC_REQUESTS wraps the calling view, so nothing above is visible to a
     # worker yet. Dispatching now would race the rows' visibility.
-    transaction.on_commit(lambda: _dispatch_first_turn(requirement, tenant))
+    if requirement.is_thinking:
+        transaction.on_commit(lambda: _dispatch_first_turn(requirement, tenant))
     return str(requirement.object_uuid), tenant
 
 

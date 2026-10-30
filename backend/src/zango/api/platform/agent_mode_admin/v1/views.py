@@ -324,6 +324,7 @@ class AgentAppScaffoldCreateView(ZangoGenericPlatformAPIView):
 
             prompt = (request.data.get("prompt") or "").strip()
             reference = (request.data.get("reference") or "").strip()[:64]
+            direct = False
 
             from zango.apps.agent_mode.documents import DocumentError, read_uploads
 
@@ -373,7 +374,10 @@ class AgentAppScaffoldCreateView(ZangoGenericPlatformAPIView):
                         },
                         400,
                     )
-                if not prompt:
+                if not prompt and not documents and template_version.is_direct:
+                    # Template mode: no brief. The app opens on the template's preview.
+                    direct = True
+                elif not prompt:
                     catalogue = template_version.catalogue or {}
                     prompt = (
                         catalogue.get("app_prompt_prefill")
@@ -390,10 +394,11 @@ class AgentAppScaffoldCreateView(ZangoGenericPlatformAPIView):
                     400,
                 )
 
-            if not prompt:
+            if not prompt and not direct:
                 return get_api_response(
                     False, {"message": "Describe what you want to build."}, 400
                 )
+            app_label = " ".join(str(request.data.get("app_name") or "").split())[:120]
             if len(prompt) > self.MAX_PROMPT_CHARS:
                 return get_api_response(
                     False, {"message": "That description is too long."}, 400
@@ -404,10 +409,12 @@ class AgentAppScaffoldCreateView(ZangoGenericPlatformAPIView):
                 prompt=prompt,
                 reference_id=reference if template_version else "",
                 template_version=template_version,
+                # The creator's name for the app (any template): no naming call.
+                app_label=app_label,
+                # Every new app opens on the HTML prototype; the creator changes the design in chat.
                 preview_mode=(
                     "open"
-                    if (request.data.get("preview_mode") or "") == "open"
-                    and getattr(dj_settings, "AGENT_MODE_OPEN_PROTOTYPE", True)
+                    if getattr(dj_settings, "AGENT_MODE_OPEN_PROTOTYPE", True)
                     else "kit"
                 ),
                 created_by_label=(getattr(user, "email", "") or str(user or ""))[:255],

@@ -99,8 +99,8 @@ export interface ScaffoldInput {
 	reference?: string;
 	/** Files to draft from (pdf, docx, xlsx, csv, txt, md). */
 	documents?: File[];
-	/** 'open': the agent writes a free-design prototype next to the spec. */
-	preview_mode?: 'open' | 'kit';
+	/** The app's name, as the creator typed it (a template opened as it is, with no brief). */
+	app_name?: string;
 }
 
 /** Multipart: the ask, the template, and any documents (one `documents` part per file). */
@@ -109,10 +109,10 @@ export const createScaffold = ({
 	template_slug,
 	reference,
 	documents,
-	preview_mode,
+	app_name,
 }: ScaffoldInput) => {
 	const body = new FormData();
-	if (preview_mode) body.append('preview_mode', preview_mode);
+	if (app_name) body.append('app_name', app_name);
 	if (prompt) body.append('prompt', prompt);
 	if (template_slug) body.append('template_slug', template_slug);
 	if (reference) body.append('reference', reference);

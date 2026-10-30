@@ -353,6 +353,38 @@ the draft everything already agreed in this conversation (one
 spec_replace_section per section), so the preview beside the chat shows their
 app; then carry on with the interview."""
 
+# Template mode (template_mode.py): the app opened on the template's own preview, no brief.
+_TEMPLATE_OPENED = """\
+## This app was opened on a template, as it is
+
+Template: {name} (slug `{slug}`, version {version}). Its vocabulary is in `{schema}`; the
+spec is YAML rooted at `{root}`.
+
+The user picked this template, named the app and has been looking at its full preview: the
+template's spec (already in the draft) drawn by the kit page, which is the prototype
+(`body.html`, `imported/*`). That is the agreed baseline. They have not written a brief; their
+message below is the first change they want.
+
+- Edit, don't interview. Make the change they ask for in this turn, then say in a sentence or
+  two what changed. Ask only when the request is genuinely ambiguous, and then one short
+  question with options, never a questionnaire. Do not re-describe the template to them.
+- The preview draws the YAML: change the spec with the spec tools and the preview follows on its
+  own (pages, columns, filters, forms, fields, statuses and their buttons, roles, menus, the demo
+  data). Do not run the first-draft steps for the whole app.
+- A reference they attach (screenshot, sketch, brand guide, a page to match) is about the look, not
+  the data: apply it to the prototype (`proto_design`, `proto_patch`) in this turn. Changing only
+  labels or fields in the YAML does not apply it.
+- The design is completely open. Do exactly what the user says, in their words, labels and layout.
+  Colours, fonts, radius and density go in `app.design` (proto_design keeps `tokens.css`). Anything
+  else is yours to change in the prototype: proto_patch `imported/bridge.css`, `body.html` or the
+  kit page's scripts, or draw a screen again (screen-writer) when that matches the request better
+  than patching. Never approximate an instruction with the nearest thing the YAML can say. Keep the
+  YAML in step with whatever the prototype now shows. A screen you were not asked about stays as
+  the template builds it.
+- They press Commit for build when the preview is right. Never ask whether to finish, mark it
+  ready or build.
+"""
+
 _TEMPLATE_CHANGE_DRAFT = """\
 This is a change to an app that already runs on the template. The draft
 below is the journey the app was last approved on; change only what the user
@@ -448,6 +480,16 @@ def _template_mode_block(requirement, template) -> str:
     )
 
 
+def _template_opened_block(template) -> str:
+    return _TEMPLATE_OPENED.format(
+        name=template.name,
+        slug=template.slug,
+        version=template.version or "current",
+        schema=template.file_path("schema"),
+        root=template.spec_root or "the top level",
+    )
+
+
 def compose_analyst_prompt(
     requirement, ctx, user_message: str, docs_dir: str = ""
 ) -> str:
@@ -479,7 +521,10 @@ def compose_analyst_prompt(
 
     # A requirement bound to a template up front skips the offer entirely.
     bound = requirement.template if getattr(requirement, "template_slug", "") else None
-    if bound is not None and getattr(requirement, "mode", "") == "draft":
+    opened = bound is not None and getattr(requirement, "mode", "") == "template"
+    if opened:
+        templates = "\n" + _template_opened_block(bound)
+    elif bound is not None and getattr(requirement, "mode", "") == "draft":
         templates = "\n" + _template_draft_block(requirement, bound, docs_dir)
     elif bound is not None:
         templates = "\n" + _template_mode_block(requirement, bound)
@@ -490,7 +535,9 @@ def compose_analyst_prompt(
         )
 
     closing = (
-        "Draft now; do not ask questions before the journey is written."
+        "Make the change now, in the spec and the prototype, then tell them what changed."
+        if opened
+        else "Draft now; do not ask questions before the journey is written."
         if bound is not None and getattr(requirement, "mode", "") == "draft"
         else "Read the workspace first, then ask your opening questions."
     )
@@ -549,7 +596,7 @@ _PREVIEW_TOOLS_APPEND = (
 )
 
 
-_OPEN_PROTOTYPE_APPEND = (
+_OPEN_PROTOTYPE_HEAD = (
     '\n\nOPEN PROTOTYPE MODE. The user turned on "Free design": next to the YAML you '
     "write a working HTML prototype of their app, in any look, and that prototype is the "
     "preview they see. Load the zango-prototype skill before your first prototype write "
@@ -557,6 +604,10 @@ _OPEN_PROTOTYPE_APPEND = (
     "- Write the prototype in parts with the mcp__spec__proto_* tools, never as one big "
     "file; change it later with proto_patch. Call proto_outline first in any turn that "
     "touches it.\n"
+)
+
+# The first draft of an app drawn from scratch. Template mode starts on an existing prototype.
+_OPEN_FIRST_DRAFT = (
     "- First draft: as soon as the interview tells you who uses the app, what moves "
     "through it and who decides, write manifest.json, tokens.css, app.css, data.js, "
     "shell.js and the home screen yourself, so the user sees their app within minutes. "
@@ -564,6 +615,9 @@ _OPEN_PROTOTYPE_APPEND = (
     '"screen-writer"), several in ONE message so they run in parallel, each with a '
     "brief: screen id, purpose, personas, records and fields, actions and their outcomes, "
     "states to show. Review what they report and fix shared parts yourself.\n"
+)
+
+_OPEN_PROTOTYPE_BODY = (
     "- Keep the YAML in step in the same turn: every persona is a role, every screen maps "
     'to a page (or is marked "only": "prototype" in the manifest, like a sign-in '
     "screen), every action is a transition or a custom requirement.\n"
@@ -584,7 +638,7 @@ _OPEN_PROTOTYPE_APPEND = (
     "- The build follows the YAML, so the YAML says everything each screen shows, in the "
     "prototype's own words: menu items, labels, groups and order per role (a screen not built "
     "stays in the menu through its entry's `menu`), page titles, list columns, status tabs "
-    "(quick_filters), 360 tabs, sections, sidebar panels, dashboard blocks, buttons and field "
+    "(quick_filters: never `default: true`, a list opens with no chip selected), 360 tabs, sections, sidebar panels, dashboard blocks, buttons and field "
     "labels. A 360 has the prototype's tabs and no others; a section heading is a section's or "
     "panel's `title`, not a field of that name. Each persona's menu in the prototype is its "
     "role's `roles[].menu`, exactly; when a role gets less than the prototype's menu shows, "
@@ -599,6 +653,10 @@ _OPEN_PROTOTYPE_APPEND = (
     "their screen in the prototype is the sketch. Contracts (data, acceptance) still apply.\n"
     "- A [Preview: …] note names the screen and persona the user was on; locate the text "
     "with proto_find, then patch only what they asked for.\n"
+)
+
+# What to do with uploads when the prototype is drawn from scratch.
+_OPEN_UPLOADS = (
     "- If the user uploaded an HTML file (their app, or a prototype to match), that file IS the "
     "prototype: call proto_import with its name in your first turn, before writing the spec, "
     "and never redraw it. Skip it only if the user says the file is a reference, not the app. "
@@ -612,6 +670,35 @@ _OPEN_PROTOTYPE_APPEND = (
     "preview pane stays blank (and the spec cannot be approved) until the prototype has parts, "
     "so never end a turn that has a spec but no prototype: ask your interview questions only "
     "after the first draft is on screen, and say which parts you took from the references."
+)
+
+_OPEN_PROTOTYPE_APPEND = (
+    _OPEN_PROTOTYPE_HEAD + _OPEN_FIRST_DRAFT + _OPEN_PROTOTYPE_BODY + _OPEN_UPLOADS
+)
+
+
+_TEMPLATE_MODE_APPEND = (
+    "\n\nTEMPLATE MODE. The app opened on a template's own prototype, so it already exists: "
+    "edit it. Do not draw the app from scratch, do not run the first-draft steps and do not "
+    "interview. The design is completely open: do exactly what the user says, in their words, "
+    "labels and layout, and never approximate an instruction with the nearest thing the YAML can "
+    "say. Patch the prototype (proto_patch) or draw a screen again (screen-writer) whichever "
+    "matches the request.\n"
+    "- References are applied, not just read. A screenshot, photo or sketch, a brand guide, or an "
+    "HTML page the user calls a reference (or does not say what it is for) is a design reference: "
+    "read it, and BEFORE you reply restyle the prototype from it with proto_patch (the stylesheet, "
+    "body.html or the kit page's scripts) and proto_design: the palette, type, radius, density and "
+    "layout it shows. A reply that only changes labels or fields in the YAML has not applied it. "
+    "Change the YAML as well only where the reference shows different content, and keep it in "
+    "step with what the prototype now shows. Say which parts you took from the reference.\n"
+    "- An HTML page the user says is their app, or a screen to redraw, is not a reference: "
+    "proto_import it, or draw that screen again, as they ask.\n"
+    "- Never ask whether to build.\n"
+    "- After every visual change, and before you reply, look at the result with proto_look "
+    "(the screen you changed, as the persona who sees it): check for overlapping or clipped "
+    "text, broken cards and anything that is not what the user asked, fix it and look again. "
+    "Only say a change is done once you have looked; if proto_look can't render here, say you "
+    "could not check it."
 )
 
 
@@ -726,7 +813,14 @@ def build_analyst_options(
             )
         kwargs["system_prompt"] = {
             **kwargs["system_prompt"],
-            "append": kwargs["system_prompt"]["append"] + _OPEN_PROTOTYPE_APPEND,
+            "append": kwargs["system_prompt"]["append"]
+            + (
+                # Template mode edits an existing prototype: it has no first draft and
+                # takes uploads as references, so those two parts are left out.
+                _OPEN_PROTOTYPE_HEAD + _OPEN_PROTOTYPE_BODY + _TEMPLATE_MODE_APPEND
+                if getattr(requirement, "mode", "") == "template"
+                else _OPEN_PROTOTYPE_APPEND
+            ),
         }
     if cfg.analyst_model:
         kwargs["model"] = cfg.analyst_model

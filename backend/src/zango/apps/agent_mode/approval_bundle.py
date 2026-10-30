@@ -492,8 +492,148 @@ def prototype_libraries(parts: dict) -> list:
     return found
 
 
+# ---------------------------------------------------------------------------
+# Change map: what changed against the baseline (template mode, T4)
+# ---------------------------------------------------------------------------
+
+# Share of a screen's lines that changed above which it is "rewritten" (a full port) rather than
+# "edited" (port the patch). Plan §11 open question; a fixed share keeps the tag computed.
+REWRITE_SHARE = 0.6
+GLOBAL_PARTS = ("tokens.css", "app.css", "shell.js")
+CHANGE_TAGS = ("unchanged", "restyled", "edited", "rewritten", "new")
+
+
+def _lines(text: str) -> list[str]:
+    """A part as diff lines: markup is split between tags, so one long line of HTML diffs by
+    element rather than as a whole."""
+    return re.sub(r">(?=<)", ">\n", text or "").splitlines(keepends=True)
+
+
+def _screen_text(parts: dict, manifest: dict, sid: str) -> str:
+    """Everything that is one screen's own: its manifest entry, its script and its stylesheet."""
+    entry = next((s for s in manifest.get("screens") or [] if s.get("id") == sid), None)
+    return "".join(
+        [
+            json.dumps(entry, sort_keys=True, ensure_ascii=False) + "\n"
+            if entry
+            else "",
+            parts.get(f"screens/{sid}.js") or "",
+            parts.get(f"screens/{sid}.css") or "",
+        ]
+    )
+
+
+def _is_screen_part(path: str) -> bool:
+    return path.startswith("screens/")
+
+
+def change_map(
+    parts: dict, baseline_parts: dict | None, label: str = ""
+) -> tuple[dict, dict]:
+    """``(changes, patches)``: per screen of ``parts``, how it differs from ``baseline_parts``.
+
+    changes = {"baseline", "global": {part: changed|unchanged, "other": …}, "screens": {id: tag},
+               "removed": [ids]}; patches = {screen id: unified diff} for edited screens.
+    Tags: unchanged (identical, no global change), restyled (identical, the global look changed),
+    edited (changed, mostly the same markup), rewritten (mostly new), new (not in the baseline).
+    """
+    import difflib
+
+    from .prototype import manifest_of
+
+    base = baseline_parts or {}
+    manifest, _ = manifest_of(parts)
+    base_manifest, _ = manifest_of(base) if base else ({}, [])
+    base_ids = {s.get("id") for s in base_manifest.get("screens") or []}
+
+    glob = {
+        p: ("changed" if (parts.get(p) or "") != (base.get(p) or "") else "unchanged")
+        for p in GLOBAL_PARTS
+    }
+    # Shared parts other than those (data.js, lib/*, imported/*): any change counts as global.
+    # (The kit page's YAML and bridge are not its look: the build follows the spec, so a change there
+    # is the spec's change, not a restyle.)
+    from .prototype_kit import BRIDGE_PART, SPEC_PART
+
+    others = sorted(
+        p
+        for p in set(parts) | set(base)
+        if p not in GLOBAL_PARTS
+        and p not in (SPEC_PART, BRIDGE_PART)
+        and p != "manifest.json"
+        and not _is_screen_part(p)
+    )
+    glob["other"] = (
+        "changed"
+        if any((parts.get(p) or "") != (base.get(p) or "") for p in others)
+        else "unchanged"
+    )
+    if base and (
+        manifest.get("fonts"),
+        manifest.get("libraries"),
+        manifest.get("roles"),
+    ) != (
+        base_manifest.get("fonts"),
+        base_manifest.get("libraries"),
+        base_manifest.get("roles"),
+    ):
+        glob["other"] = "changed"
+    look_changed = any(v == "changed" for v in glob.values())
+
+    screens: dict = {}
+    patches: dict = {}
+    for s in manifest.get("screens") or []:
+        sid = s.get("id")
+        if not sid:
+            continue
+        if not base or sid not in base_ids:
+            screens[sid] = "new"
+            continue
+        now, before = (
+            _screen_text(parts, manifest, sid),
+            _screen_text(base, base_manifest, sid),
+        )
+        if now == before:
+            screens[sid] = "restyled" if look_changed else "unchanged"
+            continue
+        a, b = _lines(before), _lines(now)
+        ratio = difflib.SequenceMatcher(None, a, b, autojunk=False).ratio()
+        if 1 - ratio > REWRITE_SHARE:
+            screens[sid] = "rewritten"
+        else:
+            screens[sid] = "edited"
+            patches[sid] = "".join(
+                difflib.unified_diff(
+                    a,
+                    b,
+                    fromfile=f"baseline/screens/{sid}",
+                    tofile=f"approved/screens/{sid}",
+                )
+            )
+    changes = {
+        "baseline": label or ("none" if not base else "baseline"),
+        "global": glob,
+        "screens": screens,
+        "removed": sorted(i for i in base_ids if i and i not in screens),
+    }
+    return changes, patches
+
+
+def write_change_map(out_dir, parts: dict, baseline) -> dict:
+    """changes.json and screens/<id>/diff.patch under ``out_dir``; ``baseline`` is (label, parts)."""
+    label, base = baseline if baseline else ("", {})
+    changes, patches = change_map(parts, base, label)
+    out = Path(out_dir)
+    (out / "changes.json").write_text(json.dumps(changes, indent=2), encoding="utf-8")
+    for sid, patch in patches.items():
+        folder = out / "screens" / sid
+        folder.mkdir(parents=True, exist_ok=True)
+        (folder / "diff.patch").write_text(patch, encoding="utf-8")
+    return changes
+
+
 def write_prototype_bundle(
-    parts: dict, out_dir, *, design=None, python=None, soon=None
+    parts: dict, out_dir, *, design=None, python=None, soon=None, baseline=None
 ) -> dict:
     """``out_dir`` (``.zas/bundle/prototype``) for an open-mode requirement; returns capture.json.
 
@@ -554,13 +694,17 @@ def write_prototype_bundle(
         except (ValueError, OSError) as exc:
             capture["probe"] = f"failed: {exc}"
     (out / "capture.json").write_text(json.dumps(capture, indent=2), encoding="utf-8")
+    # Template mode: what changed against the baseline, so the build ports only that.
+    changes = write_change_map(out, parts, baseline) if baseline is not None else None
+    if changes is not None:
+        capture["changes"] = changes
     (out / "index.md").write_text(
-        prototype_index_md(capture, manifest, design), encoding="utf-8"
+        prototype_index_md(capture, manifest, design, changes=changes), encoding="utf-8"
     )
     return capture
 
 
-def prototype_index_md(capture: dict, manifest: dict, design=None) -> str:
+def prototype_index_md(capture: dict, manifest: dict, design=None, changes=None) -> str:
     """The table the build reads first: every prototype screen, its roles and its files."""
     tokens = (design or {}).get("tokens") or {}
     fonts = (design or {}).get("fonts") or {}
@@ -588,8 +732,32 @@ def prototype_index_md(capture: dict, manifest: dict, design=None) -> str:
             else "not recorded in the spec; read the `:root` variables in `prototype.html`."
         ),
         "",
-        "| Screen | Title | Roles | Record | Files | Problems |",
-        "|---|---|---|---|---|---|",
+    ]
+    tags = (changes or {}).get("screens") or {}
+    if changes is not None:
+        glob = changes.get("global") or {}
+        changed = [k for k, v in glob.items() if v == "changed"]
+        lines += [
+            f"**Change map** (`changes.json`) against {changes.get('baseline')}: read the Change "
+            "column first and do only what it says (`references/open-mode.md`, \"Change map\"). "
+            + (
+                "Shared look changed: " + ", ".join(f"`{c}`" for c in changed) + "."
+                if changed
+                else "The shared look (tokens.css, app.css, shell) did not change."
+            )
+            + (
+                " Removed screens: "
+                + ", ".join(f"`{r}`" for r in changes["removed"])
+                + "."
+                if changes.get("removed")
+                else ""
+            ),
+            "",
+        ]
+    lines += [
+        "| Screen | Title | Roles | Record | Files | Problems |"
+        + (" Change |" if changes is not None else ""),
+        "|---|---|---|---|---|---|" + ("---|" if changes is not None else ""),
     ]
     for s in capture.get("screens") or []:
         shot_roles = [r["role"] for r in s.get("roles") or [] if r.get("files")]
@@ -618,10 +786,15 @@ def prototype_index_md(capture: dict, manifest: dict, design=None) -> str:
         if s.get("only") == "prototype":
             title += " · prototype-only"
         files = f"screens/{s['id']}/" if shot_roles else "none"
+        change = ""
+        if changes is not None:
+            tag = tags.get(s["id"], "new")
+            change = f" {tag}" + (" (`diff.patch`)" if tag == "edited" else "") + " |"
         lines.append(
             f"| `{s['id']}` | {title} | {roles or '-'} | {record} | {files} | "
             + ("; ".join(problems[:3]).replace("|", "/") or "")
             + " |"
+            + change
         )
     no_ref = [
         s["id"]

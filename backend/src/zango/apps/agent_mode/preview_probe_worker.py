@@ -430,9 +430,16 @@ OPEN_GO_JS = """async ([screen, role]) => {
   window.scrollTo(0, 0);
   document.querySelectorAll('.z-persona, .z-toast').forEach(n => n.remove());
   const text = (document.body.innerText || '').trim();
+  // A custom screen whose sketch threw (or was refused by the page's policy) draws a red box
+  // rather than raising a page error: report it like one.
+  const boxes = Array.from(document.querySelectorAll('.pv-err'))
+    .map(n => (n.innerText || '').replace(/\\s+/g, ' ').trim()).filter(Boolean);
   return {
     record,
-    errors: (ZAS.errors || []).slice(before).map(e => (e.part ? e.part + ': ' : '') + e.message),
+    errors: [...new Set([
+      ...(ZAS.errors || []).slice(before).map(e => (e.part ? e.part + ': ' : '') + e.message),
+      ...boxes,
+    ])],
     blank: text.length < 20,
     height: Math.max(document.documentElement.scrollHeight, document.body.scrollHeight),
   };

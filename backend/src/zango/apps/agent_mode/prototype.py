@@ -48,10 +48,14 @@ FONT_HOST = "https://fonts.googleapis.com/"
 # Icons for the starter's ZAS.I(name); the prototype may load other libraries itself.
 LUCIDE_URL = "https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"
 
+# 'unsafe-eval': the template kit page runs a custom screen's `preview` sketch with
+# new Function. Nothing the page runs can reach out (default-src 'none', connect-src
+# data/blob, an opaque-origin sandbox), so it only allows what the page already runs.
 CSP = "; ".join(
     [
         "default-src 'none'",
-        "script-src 'unsafe-inline' " + " ".join(h.rstrip("/") for h in LIBRARY_HOSTS),
+        "script-src 'unsafe-inline' 'unsafe-eval' "
+        + " ".join(h.rstrip("/") for h in LIBRARY_HOSTS),
         "style-src 'unsafe-inline' https://fonts.googleapis.com",
         "font-src https://fonts.gstatic.com data:",
         "img-src data: blob:",
@@ -831,7 +835,8 @@ def design_tokens(parts: dict) -> dict:
     chains are resolved so each token is a concrete value.
     """
     manifest, _ = manifest_of(parts)
-    if not is_imported(manifest) and "tokens.css" in parts:
+    # (The kit page keeps the look it resolves to in tokens.css too; its own stylesheet holds defaults.)
+    if (not is_imported(manifest) or manifest.get("kit")) and "tokens.css" in parts:
         sources = ["tokens.css"]
     else:
         sources = [p for p in parts if p.endswith(".css")]
