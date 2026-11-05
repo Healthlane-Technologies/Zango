@@ -1,7 +1,7 @@
 {
   "slug": "voucher-coupon",
   "name": "Voucher & Coupon Management",
-  "version": "0.1.5",
+  "version": "0.1.14",
   "category": "Patient Services",
   "icon": "gift",
   "is_beta": true,
@@ -25,7 +25,7 @@
     "Patient enrollment with consent and voucher issue with SMS or WhatsApp delivery",
     "Pharmacy redemption with bill upload, automatic benefit and fraud rules",
     "A fraud review queue and monthly pharmacy settlements",
-    "A campaign 360 page and a programme dashboard"
+    "A full record page for every campaign, voucher, patient, redemption, settlement, pharmacy and product, and a programme dashboard"
   ],
   "spec_format": "yaml",
   "spec_root": "app_spec",
@@ -125,5 +125,5 @@
     "app_name_prefill": "Voucher & Coupon Management",
     "app_prompt_prefill": ""
   },
-  "changelog": "Redrawn on zango_app 1.1.25: no quick filter is preselected. Template mode: opens on the template's own preview (the kit page, drawn from this YAML), so every list, form, filter, status change and row action works as in the preview."
+  "changelog": "0.1.14: record headers show the code once, with no field repeated from the facts line. 0.1.13: patients see the redemptions of their own vouchers, Support Agents see settlements (pharmacy queries). 0.1.12: every record opens as a full page with an Overview card: voucher, patient, redemption, settlement, pharmacy and product pages (stepper, facts, stats, related tables, activity), the campaign page opens on Overview, and every list row opens its record. Redrawn on zango_app 1.1.35: record codes head the title line. Redrawn on 1.1.32: record header facts as one meta line under the title, side cards as label-value rows. Redrawn on 1.1.31: the default preview design (soft-grey rail, page header band with the record count, role switcher, status tabs, filter panel beside the table, mono record codes, row chevrons; record pages with an icon tile, pills on the title line, tabs in the header band, section heads with icon tiles). Redrawn on 1.1.25: no quick filter is preselected. Template mode: opens on the template's own preview (the kit page, drawn from this YAML), so every list, form, filter, status change and row action works as in the preview."
 }

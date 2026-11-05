@@ -10,6 +10,7 @@ import * as SLOTS from "../custom/slots";
 import { getDetailComponent } from "./Detail360";
 import { ToastHost } from "./ui";
 import { EmptyState, ZasTable } from "./kit";
+import { RenderedCrud, sharedRenderer } from "./RenderedPage";
 
 function detailUuid(params: Record<string, string | undefined>): string | null {
   // AppBuilder registers "<route>" and matches "<route>/*": the tail arrives in params["*"]
@@ -41,6 +42,8 @@ function ListPageInner({ pageCode, toolbar }: { pageCode: string; toolbar?: Reac
       </div>
     );
   }
+  // the preview's own renderer draws the page (zas-render.js); toolbar extras stay on the React table for now
+  if (!toolbar && sharedRenderer()) return <RenderedCrud pageCode={pageCode} />;
   return (
     <div className="zas zas-page" data-zas="page" data-zas-key={pageCode}>
       <ZasTable entity={page.entity as string} endpoint={E.endpoint} page={{ code: pageCode, title: page.title }}

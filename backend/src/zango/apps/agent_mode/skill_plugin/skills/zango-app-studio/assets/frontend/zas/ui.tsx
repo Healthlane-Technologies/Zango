@@ -46,15 +46,18 @@ export function Chip({ label, tone: t, zasKey }: { label: React.ReactNode; tone?
 
 export const Nil = () => <span className="zas-nil">—</span>;
 
-export function Panel({ title, actions, children, zasKey, order, className, icon, note, kit }: {
+export function Panel({ title, actions, children, zasKey, order, className, icon, note, kit, tile }: {
   title?: React.ReactNode; actions?: React.ReactNode; children: React.ReactNode; zasKey?: string; order?: number; className?: string;
   /** Sketch kit: a header icon, a muted note on the right, and the kit block this panel draws (parity). */
   icon?: string; note?: React.ReactNode; kit?: string;
+  /** The 360's sections (the kit page's .d-panel > h3): an icon tile before the title. */
+  tile?: string;
 }) {
   return (
     <div className={cx("zas-panel", className)} data-zas="panel" data-zas-key={zasKey} data-zas-order={order}
       data-zas-kit={kit} data-zas-title={kit && typeof title === "string" ? title : undefined}>
-      {title !== undefined && <h3>{icon && <Icon name={icon} />}{title}<span className="zas-sp" />{note && <span className="zas-knote">{note}</span>}{actions}</h3>}
+      {title !== undefined && <h3>{tile ? <><span className="zas-dic"><Icon name={tile} /></span><span className="zas-dht"><b>{title}</b></span></>
+        : <>{icon && <Icon name={icon} />}{title}</>}<span className="zas-sp" />{note && <span className="zas-knote">{note}</span>}{actions}</h3>}
       {children}
     </div>
   );
@@ -113,6 +116,10 @@ export function Value({ v, format }: { v: FieldValue | null | undefined; format?
   if (t === "url") return <a className="zas-link" href={String(v.value)} target="_blank" rel="noreferrer">{v.display}</a>;
   return <>{v.display}</>;
 }
+
+/** The record a 360 page shows ("CP-001"), so a row opened from one of its tables can say "Back to CP-001". */
+export const RecordLabelCtx = React.createContext<string>("");
+export const CODE_RE = /^[A-Z][A-Z0-9]{0,6}[-\/]\d[\w-]*$/;  // a record code (table cells, the 360 title line) ("CP-006"): mono, as the kit draws it
 
 export function FieldGrid({ fields, columns = 2 }: { fields: FieldValue[]; columns?: number }) {
   return (

@@ -1224,6 +1224,12 @@ class StudioBuild:
         shutil.copyfile(
             self.zas_dir / "spec.ui.json", fe / "src" / "custom" / "spec.ui.json"
         )
+        # the spec as written: zas/zas-render.js builds the same model from it as the preview
+        raw_spec = self.zas_dir / "spec.raw.json"
+        (fe / "src" / "custom" / "spec.raw.json").write_text(
+            raw_spec.read_text(encoding="utf-8") if raw_spec.is_file() else "{}",
+            encoding="utf-8",
+        )
         # zas/kit.tsx imports the app's kit; an app without one keeps the empty stub (never overwritten)
         kit, stubs = (
             fe / "src" / "custom" / "kit",

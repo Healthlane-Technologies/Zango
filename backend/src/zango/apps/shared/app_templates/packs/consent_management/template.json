@@ -1,7 +1,7 @@
 {
   "slug": "consent-management",
   "name": "Consent Management",
-  "version": "0.1.4",
+  "version": "0.1.10",
   "category": "Patient Services",
   "icon": "shield",
   "is_beta": true,
@@ -128,5 +128,5 @@
     "app_name_prefill": "Consent Management",
     "app_prompt_prefill": ""
   },
-  "changelog": "Redrawn on zango_app 1.1.25: no quick filter is preselected. Template mode: opens on its preview (launch direct); explicit add buttons on Policy Versions and Evidence. Opens on the template's own preview (the kit page), so every form, filter and status change works."
+  "changelog": "Redrawn on zango_app 1.1.35: record codes head the title line; the policy page shows its Draft → Live stepper. Redrawn on 1.1.32: record header facts as one meta line under the title, side cards as label-value rows. Redrawn on 1.1.31: the default preview design (soft-grey rail, page header band with the record count, role switcher, status tabs, filter panel beside the table, mono record codes, row chevrons; record pages with an icon tile, pills on the title line, tabs in the header band, section heads with icon tiles). Redrawn on 1.1.25: no quick filter is preselected. Template mode: opens on its preview (launch direct); explicit add buttons on Policy Versions and Evidence. Opens on the template's own preview (the kit page), so every form, filter and status change works."
 }

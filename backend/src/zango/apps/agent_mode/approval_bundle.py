@@ -448,9 +448,15 @@ def standard_md(screens: list) -> list:
                 )
             if sh.get("user_in_sidebar"):
                 lines.append(
-                    "- User card at the bottom of the sidebar (avatar, name, role): "
-                    '`navbarConfig.customBottomContent`, root `data-zas="shell-user"`; '
-                    "`topbarConfig.showProfile: false` so it is not shown twice."
+                    (
+                        "- User card under the sidebar header, above the menu (avatar, name, role; it "
+                        "switches the role): inside `navbarConfig.customLogo` below the brand, root "
+                        '`data-zas="shell-user"`; '
+                        if sh.get("user_top")
+                        else "- User card at the bottom of the sidebar (avatar, name, role): "
+                        '`navbarConfig.customBottomContent`, root `data-zas="shell-user"`; '
+                    )
+                    + "`topbarConfig.showProfile: false` so it is not shown twice."
                 )
             if sh.get("topbar"):
                 n = sh.get("topbar_actions") or 0

@@ -125,11 +125,17 @@ pages:
   - { code: campaigns,    type: crud,   entity: campaign,   route: /app/campaigns,   title: Campaigns }
   - { code: campaign_360, type: detail, detail_view: campaign_360, route: "/app/campaigns/:id" }
   - { code: vouchers,     type: crud,   entity: voucher,    route: /app/vouchers,    title: Vouchers }
+  - { code: voucher_360,  type: detail, detail_view: voucher_360, route: "/app/vouchers/:id" }
   - { code: patients,     type: crud,   entity: patient,    route: /app/patients,    title: Patients }
+  - { code: patient_360,  type: detail, detail_view: patient_360, route: "/app/patients/:id" }
   - { code: redemptions,  type: crud,   entity: redemption, route: /app/redemptions, title: Redemptions }
+  - { code: redemption_360, type: detail, detail_view: redemption_360, route: "/app/redemptions/:id" }
   - { code: settlements,  type: crud,   entity: settlement, route: /app/settlements, title: Settlements }
+  - { code: settlement_360, type: detail, detail_view: settlement_360, route: "/app/settlements/:id" }
   - { code: pharmacies,   type: crud,   entity: pharmacy,   route: /app/masters/pharmacies, title: Pharmacies }
+  - { code: pharmacy_360, type: detail, detail_view: pharmacy_360, route: "/app/masters/pharmacies/:id" }
   - { code: products,     type: crud,   entity: product,    route: /app/masters/products,   title: Products }
+  - { code: product_360,  type: detail, detail_view: product_360, route: "/app/masters/products/:id" }
 
 modules:
   - code: masters
@@ -148,7 +154,7 @@ modules:
           - mrp:       { type: money, label: MRP, required: true, help: Maximum retail price per pack. }
           - is_active: { type: boolean, default: true }
         access:
-          Program Manager: { actions: [view, add, edit, export] }
+          Program Manager: { actions: [view, add, edit, export, detail] }
         table:
           columns:
             - name:      { label: Product, searchable: true, sortable: true }
@@ -157,6 +163,7 @@ modules:
             - mrp:       { label: MRP, format: money, sortable: true }
             - is_active: { label: Active, filterable: true }
           default_sort: name
+          row_click: product_360
           add_button: Add Product
           row_actions:
             - { key: edit, label: Edit, type: edit }
@@ -184,8 +191,8 @@ modules:
             rules:
               - { match: [drug_licence], compare: exact, on_match: block, message: A pharmacy with this drug licence already exists. }
         access:
-          Program Manager: { actions: [view, add, edit, export] }
-          Support Agent:   { actions: [view] }
+          Program Manager: { actions: [view, add, edit, export, detail] }
+          Support Agent:   { actions: [view, detail] }
         table:
           columns:
             - pharmacy_code: { label: Code, searchable: true }
@@ -195,6 +202,7 @@ modules:
             - contact_name:  { label: Contact }
             - is_active:     { label: Partner, filterable: true }
           default_sort: name
+          row_click: pharmacy_360
           add_button: Add Pharmacy
           row_actions:
             - { key: edit, label: Edit, type: edit }
@@ -318,8 +326,8 @@ modules:
             rules:
               - { match: [mobile], compare: exact, on_match: block, message: A patient with this mobile number is already enrolled. }
         access:
-          Support Agent:   { actions: [view, add, edit, export] }
-          Program Manager: { actions: [view, export] }
+          Support Agent:   { actions: [view, add, edit, export, detail] }
+          Program Manager: { actions: [view, export, detail] }
         table:
           columns:
             - patient_id: { label: Patient ID, searchable: true }
@@ -328,6 +336,7 @@ modules:
             - city:       { label: City, filterable: true }
             - consent:    { label: Consent, filterable: true }
           default_sort: full_name
+          row_click: patient_360
           add_button: Enroll Patient
           row_actions:
             - { key: edit, label: Edit, type: edit }
@@ -353,9 +362,9 @@ modules:
             rules:
               - { match: [campaign, patient], compare: exact, on_match: block, message: This patient already has a voucher on this campaign. }
         access:
-          Support Agent:   { actions: [view, add, export] }
-          Program Manager: { actions: [view, export] }
-          Patient:         { actions: [view], rows: { own: patient } }
+          Support Agent:   { actions: [view, add, export, detail] }
+          Program Manager: { actions: [view, export, detail] }
+          Patient:         { actions: [view, detail], rows: { own: patient } }
         workflow:
           statuses:
             - { code: issued,    label: Issued,    color: blue, initial: true }
@@ -384,6 +393,7 @@ modules:
           quick_filters:
             - { label: Active, where: status == issued, default: true }
             - { label: Expiring soon, where: has_tag expiring }
+          row_click: voucher_360
           add_button: Issue Voucher
         form:
           create: { roles: [Support Agent], title: Issue Voucher, fields: [campaign, patient, channel, expires_on], on_create: "Set issued_on to today, uses_left from the campaign, and send the code to the patient." }
@@ -415,9 +425,10 @@ modules:
             rules:
               - { match: [pharmacy, bill_no], compare: exact, on_match: block, message: This bill was already redeemed at this pharmacy. }
         access:
-          Pharmacy:        { actions: [view, add], rows: { own: pharmacy } }
-          Program Manager: { actions: [view, export] }
-          Support Agent:   { actions: [view] }
+          Pharmacy:        { actions: [view, add, detail], rows: { own: pharmacy } }
+          Program Manager: { actions: [view, export, detail] }
+          Support Agent:   { actions: [view, detail] }
+          Patient:         { actions: [view, detail], rows: { own: voucher.patient } }
         workflow:
           statuses:
             - { code: submitted, label: Submitted, color: blue, initial: true }
@@ -452,6 +463,7 @@ modules:
             - { label: Flagged, where: status == flagged, roles: [Program Manager], default: true }
             - { label: To settle, where: status == approved }
           footer_totals: [bill_amount, benefit_amount]
+          row_click: redemption_360
           add_button: Redeem Voucher
         form:
           create: { roles: [Pharmacy], title: Redeem Voucher, fields: [voucher, bill_no, bill_date, packs, bill_amount, bill_file], on_create: "Link to the pharmacy of the logged-in user, copy its city, compute the benefit and run the fraud rules." }
@@ -473,8 +485,9 @@ modules:
             rules:
               - { match: [pharmacy, month], compare: exact, on_match: block, message: A settlement for this pharmacy and month already exists. }
         access:
-          Program Manager: { actions: [view, add, export] }
-          Pharmacy:        { actions: [view], rows: { own: pharmacy } }
+          Program Manager: { actions: [view, add, export, detail] }
+          Pharmacy:        { actions: [view, detail], rows: { own: pharmacy } }
+          Support Agent:   { actions: [view, detail] }
         workflow:
           statuses:
             - { code: draft,    label: Draft,    color: gray, initial: true }
@@ -505,6 +518,7 @@ modules:
             - { label: To approve, where: status == draft, roles: [Program Manager], default: true }
             - { label: Disputed, where: status == disputed }
           footer_totals: [amount]
+          row_click: settlement_360
           add_button: New Settlement
         form:
           create: { roles: [Program Manager], fields: [pharmacy, month], on_create: "Attach every approved, unsettled redemption of the pharmacy in that month." }
@@ -520,6 +534,7 @@ detail_views:
       title: title
       subtitle: ["{campaign_code}", "{product}"]
       badges: [ { source: status }, { source: tags } ]
+      stepper: { steps: [draft, in_review, live] }
       facts:
         - { label: Type, field: voucher_type }
         - { label: Benefit, field: benefit_kind }
@@ -537,6 +552,13 @@ detail_views:
       - { type: fields, title: Offer, fields: [product, benefit_kind, benefit_value, max_benefit, uses_per_voucher] }
       - { type: fields, title: Budget, fields: [budget, spent, voucher_limit] }
     tabs:
+      - code: overview
+        label: Overview
+        type: summary
+        sections:
+          - { title: Offer, columns: 3, fields: [campaign_code, title, voucher_type, product, benefit_kind, benefit_value, max_benefit, uses_per_voucher] }
+          - { title: Budget & dates, columns: 3, fields: [budget, spent, voucher_limit, start_date, end_date] }
+          - { title: Terms shown to patients, icon: align-left, columns: 1, fields: [terms], show_when: terms is_set }
       - code: vouchers
         label: Vouchers
         type: related_table
@@ -560,3 +582,271 @@ detail_views:
           - { entity: voucher, via: campaign, events: [created, transition] }
     states:
       not_found: { title: Campaign not found, back_to: campaigns }
+
+  - code: voucher_360
+    hero: voucher
+    title: "{code}"
+    back_to: vouchers
+    layout: header_tabs_sidebar
+    roles: [Support Agent, Program Manager, Patient]
+    header:
+      title: patient
+      subtitle: ["{code}"]
+      badges: [ { source: status }, { source: tags } ]
+      stepper: { steps: [issued, redeemed] }
+      facts:
+        - { label: Campaign, field: campaign }
+        - { label: Issued via, field: channel }
+        - { label: Expires, field: expires_on }
+        - { label: Uses left, field: uses_left }
+      actions: { transitions: true }
+      banners:
+        - { show_when: has_tag expiring, tone: warning, text: This voucher expires within 7 days. }
+    stats:
+      - { label: Redemptions, value: { count: redemption, via: voucher }, tone: indigo, link_to_tab: redemptions }
+      - { label: Benefit paid, value: { sum: redemption.benefit_amount, via: voucher, where: "status in [approved, settled]" }, format: money, tone: teal, link_to_tab: redemptions }
+      - { label: Uses left, value: { field: uses_left }, tone: purple }
+    sidebar:
+      - { type: fields, title: Patient, fields: [patient, channel] }
+      - { type: fields, title: Validity, fields: [issued_on, expires_on, uses_left] }
+    tabs:
+      - code: overview
+        label: Overview
+        type: summary
+        sections:
+          - { title: Voucher details, columns: 3, fields: [code, campaign, patient, channel, issued_on, expires_on, uses_left] }
+      - code: redemptions
+        label: Redemptions
+        type: related_table
+        entity: redemption
+        via: voucher
+        count_badge: true
+        columns: [redemption_no, pharmacy, bill_date, bill_amount, benefit_amount, status]
+      - code: activity
+        label: Activity
+        type: timeline
+        sources:
+          - { entity: voucher, events: [created, updated, transition] }
+          - { entity: redemption, via: voucher, events: [created, transition] }
+    states:
+      not_found: { title: Voucher not found, back_to: vouchers }
+
+  - code: patient_360
+    hero: patient
+    title: "{full_name}"
+    back_to: patients
+    layout: header_tabs_sidebar
+    roles: [Support Agent, Program Manager]
+    header:
+      title: full_name
+      subtitle: ["{patient_id}"]
+      facts:
+        - { label: Mobile, field: mobile }
+        - { label: City, field: city }
+        - { label: Consent, field: consent }
+        - { label: WhatsApp, field: whatsapp_opt_in }
+      actions: { buttons: [ { key: edit, label: Edit, type: edit, roles: [Support Agent] } ] }
+    stats:
+      - { label: Vouchers, value: { count: voucher, via: patient }, tone: indigo, link_to_tab: vouchers }
+      - { label: Active, value: { count: voucher, via: patient, where: status == issued }, tone: teal, link_to_tab: vouchers }
+      - { label: Redeemed, value: { count: voucher, via: patient, where: status == redeemed }, tone: purple, link_to_tab: vouchers }
+    sidebar:
+      - { type: fields, title: Contact, fields: [mobile, email, city] }
+      - { type: fields, title: Preferences, fields: [whatsapp_opt_in, consent, has_login] }
+    tabs:
+      - code: overview
+        label: Overview
+        type: summary
+        sections:
+          - { title: Patient details, columns: 3, fields: [patient_id, full_name, mobile, email, city] }
+          - { title: Consent & access, columns: 3, fields: [consent, whatsapp_opt_in, has_login] }
+      - code: vouchers
+        label: Vouchers
+        type: related_table
+        entity: voucher
+        via: patient
+        count_badge: true
+        columns: [code, campaign, channel, expires_on, uses_left, status]
+        add: { label: Issue Voucher, prefill: { patient: hero } }
+      - code: activity
+        label: Activity
+        type: timeline
+        sources:
+          - { entity: patient, events: [created, updated] }
+          - { entity: voucher, via: patient, events: [created, transition] }
+    states:
+      not_found: { title: Patient not found, back_to: patients }
+
+  - code: redemption_360
+    hero: redemption
+    title: "{redemption_no}"
+    back_to: redemptions
+    layout: header_tabs_sidebar
+    roles: [Pharmacy, Program Manager, Support Agent, Patient]
+    header:
+      title: pharmacy
+      subtitle: ["{redemption_no}"]
+      badges: [ { source: status } ]
+      stepper: { steps: [submitted, approved, settled] }
+      facts:
+        - { label: Voucher, field: voucher }
+        - { label: Bill date, field: bill_date }
+        - { label: Bill amount, field: bill_amount }
+        - { label: Benefit, field: benefit_amount }
+      actions: { transitions: true }
+      banners:
+        - { show_when: status == flagged, tone: warning, text: Fraud rules were hit. Review the bill before you approve or reject. }
+    sidebar:
+      - { type: fields, title: Bill, fields: [bill_no, bill_date, packs, bill_amount, bill_file] }
+      - { type: fields, title: Settlement, fields: [benefit_amount, settlement] }
+    tabs:
+      - code: overview
+        label: Overview
+        type: summary
+        sections:
+          - { title: Redemption details, columns: 3, fields: [redemption_no, voucher, pharmacy, city, settlement] }
+          - { title: Bill, columns: 3, fields: [bill_no, bill_date, packs, bill_amount, benefit_amount, bill_file] }
+          - { title: Fraud rules hit, icon: shield-alert, columns: 1, fields: [fraud_hits], show_when: fraud_hits is_set }
+      - code: activity
+        label: Activity
+        type: timeline
+        sources:
+          - { entity: redemption, events: [created, updated, transition] }
+    states:
+      not_found: { title: Redemption not found, back_to: redemptions }
+
+  - code: settlement_360
+    hero: settlement
+    title: "{settlement_no}"
+    back_to: settlements
+    layout: header_tabs_sidebar
+    roles: [Program Manager, Pharmacy, Support Agent]
+    header:
+      title: pharmacy
+      subtitle: ["{settlement_no}"]
+      badges: [ { source: status } ]
+      stepper: { steps: [draft, approved, paid] }
+      facts:
+        - { label: Month end, field: month }
+        - { label: Redemptions, field: lines }
+        - { label: Amount, field: amount }
+        - { label: Payment ref, field: payment_ref }
+      actions: { transitions: true }
+    stats:
+      - { label: Redemptions, value: { count: redemption, via: settlement }, tone: indigo, link_to_tab: redemptions }
+      - { label: Benefit, value: { sum: redemption.benefit_amount, via: settlement }, format: money, tone: teal, link_to_tab: redemptions }
+    sidebar:
+      - { type: fields, title: Payment, fields: [month, amount, payment_ref] }
+    tabs:
+      - code: overview
+        label: Overview
+        type: summary
+        sections:
+          - { title: Settlement details, columns: 3, fields: [settlement_no, pharmacy, month, lines, amount, payment_ref] }
+      - code: redemptions
+        label: Redemptions
+        type: related_table
+        entity: redemption
+        via: settlement
+        count_badge: true
+        columns: [redemption_no, voucher, bill_date, bill_amount, benefit_amount, status]
+      - code: activity
+        label: Activity
+        type: timeline
+        sources:
+          - { entity: settlement, events: [created, updated, transition] }
+          - { entity: redemption, via: settlement, events: [transition] }
+    states:
+      not_found: { title: Settlement not found, back_to: settlements }
+
+  - code: pharmacy_360
+    hero: pharmacy
+    title: "{name}"
+    back_to: pharmacies
+    layout: header_tabs_sidebar
+    roles: [Program Manager, Support Agent]
+    header:
+      title: name
+      subtitle: ["{pharmacy_code}"]
+      facts:
+        - { label: City, field: city }
+        - { label: Licence, field: drug_licence }
+        - { label: Contact, field: contact_name }
+        - { label: Partner access, field: is_active }
+      actions: { buttons: [ { key: edit, label: Edit, type: edit, roles: [Program Manager] } ] }
+    stats:
+      - { label: Redemptions, value: { count: redemption, via: pharmacy }, tone: indigo, link_to_tab: redemptions }
+      - { label: Flagged, value: { count: redemption, via: pharmacy, where: status == flagged }, tone: red, link_to_tab: redemptions }
+      - { label: Benefit paid, value: { sum: redemption.benefit_amount, via: pharmacy, where: "status in [approved, settled]" }, format: money, tone: teal, link_to_tab: redemptions }
+    sidebar:
+      - { type: fields, title: Contact, fields: [contact_name, email, phone] }
+    tabs:
+      - code: overview
+        label: Overview
+        type: summary
+        sections:
+          - { title: Pharmacy details, columns: 3, fields: [pharmacy_code, name, city, drug_licence, is_active] }
+          - { title: Contact, columns: 3, fields: [contact_name, email, phone] }
+      - code: redemptions
+        label: Redemptions
+        type: related_table
+        entity: redemption
+        via: pharmacy
+        count_badge: true
+        columns: [redemption_no, voucher, bill_date, bill_amount, benefit_amount, status]
+      - code: settlements
+        label: Settlements
+        type: related_table
+        entity: settlement
+        via: pharmacy
+        count_badge: true
+        columns: [settlement_no, month, lines, amount, payment_ref, status]
+      - code: activity
+        label: Activity
+        type: timeline
+        sources:
+          - { entity: pharmacy, events: [created, updated] }
+          - { entity: redemption, via: pharmacy, events: [created, transition] }
+    states:
+      not_found: { title: Pharmacy not found, back_to: pharmacies }
+
+  - code: product_360
+    hero: product
+    title: "{name}"
+    back_to: products
+    layout: header_tabs_sidebar
+    roles: [Program Manager]
+    header:
+      title: name
+      subtitle: ["{sku}"]
+      facts:
+        - { label: Pack, field: pack_size }
+        - { label: MRP, field: mrp }
+        - { label: Active, field: is_active }
+      actions: { buttons: [ { key: edit, label: Edit, type: edit } ] }
+    stats:
+      - { label: Campaigns, value: { count: campaign, via: product }, tone: indigo, link_to_tab: campaigns }
+      - { label: Live, value: { count: campaign, via: product, where: status == live }, tone: teal, link_to_tab: campaigns }
+    sidebar:
+      - { type: fields, title: Product, fields: [sku, pack_size, mrp, is_active] }
+    tabs:
+      - code: overview
+        label: Overview
+        type: summary
+        sections:
+          - { title: Product details, columns: 3, fields: [name, sku, pack_size, mrp, is_active] }
+      - code: campaigns
+        label: Campaigns
+        type: related_table
+        entity: campaign
+        via: product
+        count_badge: true
+        columns: [campaign_code, title, voucher_type, budget, end_date, status]
+      - code: activity
+        label: Activity
+        type: timeline
+        sources:
+          - { entity: product, events: [created, updated] }
+          - { entity: campaign, via: product, events: [created, transition] }
+    states:
+      not_found: { title: Product not found, back_to: products }

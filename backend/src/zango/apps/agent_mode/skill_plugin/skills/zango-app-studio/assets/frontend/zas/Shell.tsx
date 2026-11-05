@@ -249,8 +249,8 @@ function NavItems({ items, groups, path, counts = {} }: { items: PlatformItem[];
 export function makeShell(options: ShellOptions = {}): React.FC<LayoutProps> {
   const o = { layout: "side" as const, tone: "light" as const, groups: "headings" as const, width: 240, ...options };
   const userAt = o.user || (o.layout === "top" ? "top" : "side");
-  const showTop = o.layout === "top" || !!o.topbar || userAt === "top";
-  const sideUser = o.sideUser || SPEC.app.shell?.user || "bottom";
+  const showTop = o.layout === "top" || !!(o.topbar ?? SPEC.app.shell?.topbar) || userAt === "top";
+  const sideUser = o.sideUser || SPEC.app.shell?.user || "top";
 
   function ZasShell({ menu = [], profileInfo = {}, appLogo, children }: LayoutProps) {
     const { pathname } = useLocation();

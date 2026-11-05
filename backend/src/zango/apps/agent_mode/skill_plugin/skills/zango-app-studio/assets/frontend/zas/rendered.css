@@ -1,0 +1,7 @@
+/* A page body drawn by zas-render.js inside the React shell (RenderedPage.tsx). In the preview the
+   kit's .zapp / .z-content are the app's frame and scroll area; here the shell (Shell.tsx) is the
+   frame and scrolls, so they only carry the kit's tokens and padding. Goes away when the shell is
+   drawn by zas-render.js too (AGENT_MODE_SHARED_RENDERER_PLAN.html, P2). */
+.zr-page.zapp { height: auto; min-height: 100%; overflow: visible; }
+.zr-page > .z-content { overflow: visible; }
+.zr-pop-root { position: relative; z-index: 1000; }

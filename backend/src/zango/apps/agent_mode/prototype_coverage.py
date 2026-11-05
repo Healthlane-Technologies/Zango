@@ -16,6 +16,7 @@ both directions (what the preview shows a persona is what its role gets).
 
 from __future__ import annotations
 
+import copy
 import importlib.util
 import json
 import re
@@ -574,9 +575,69 @@ def list_gaps(doc: dict, maps: str, per: dict, norm, words) -> dict:
     return gaps
 
 
+@lru_cache(maxsize=1)
+def spec_check_module():
+    """skill ``scripts/spec_check.py``, loaded by path (its ``auto_views`` is the one rule)."""
+    from zango.apps.shared.app_templates.services.generic import studio_plugin_dir
+
+    path = (
+        Path(studio_plugin_dir())
+        / "skills"
+        / "zango-app-studio"
+        / "scripts"
+        / "spec_check.py"
+    )
+    spec = importlib.util.spec_from_file_location("zas_spec_check", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def with_generated(doc: dict) -> dict:
+    """``doc`` plus what the kit and the build generate from it (spec_check.auto_views): a record
+    page for each entity with a list page and no detail view, and the Overview tab every detail
+    view without a summary/fields tab opens on. What the generator draws is not something the
+    YAML must say."""
+    try:
+        S = spec_check_module().Spec(copy.deepcopy(doc), "")
+        S.build()
+        M = S.M
+    except Exception:  # noqa: BLE001 - a spec that doesn't build is lint's to report
+        return doc
+    if not M:
+        return doc
+    doc = copy.deepcopy(doc)
+    views = [v for v in _items(doc.get("detail_views")) if isinstance(v, dict)]
+    by_code = {v.get("code"): v for v in views}
+    for code, V in M["detail_views"].items():
+        if V.get("auto"):
+            views.append(copy.deepcopy(V))
+            continue
+        tabs = V.get("tabs") or []
+        own = by_code.get(code)
+        if (
+            own is not None
+            and tabs
+            and tabs[0].get("code") == "overview"
+            and not any(
+                isinstance(t, dict) and t.get("code") == "overview"
+                for t in _items(own.get("tabs"))
+            )
+        ):
+            own["tabs"] = [copy.deepcopy(tabs[0])] + list(_items(own.get("tabs")))
+    doc["detail_views"] = views
+    doc["pages"] = list(_items(doc.get("pages"))) + [
+        {k: v for k, v in P.items() if k != "export"}
+        for P in M["pages"].values()
+        if P.get("auto")
+    ]
+    return doc
+
+
 def coverage(doc: dict, bundle_dir) -> dict:
     """``{"menu": [gap], "screens": [{id, maps, gaps: {kind: [label]}}], "rebuild": {id: {kind: [label]}}}``
     for the capture in ``bundle_dir`` (``write_prototype_bundle``'s output)."""
+    doc = with_generated(doc)
     lm = landmarks_module()
     norm = lm.norm
     bundle = Path(bundle_dir)

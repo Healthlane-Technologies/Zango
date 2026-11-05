@@ -3,13 +3,13 @@
 // ZasDetailPage. Everything role- or condition-dependent arrives already filtered
 // in data.zas (contracts §8); this component only lays it out.
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, ArrowRightCircle, Check, CircleX, Pencil, Tag as TagIcon, X, Zap } from "lucide-react";
 import * as api from "./api";
 import { SPEC, detailUrl, pageUrl, tone, viewUrl } from "./config";
 import { ConfirmDialog, FormDialog, useDialog } from "./dialogs";
 import * as SLOTS from "../custom/slots";
-import { CopyButton, Icon, Menu, Skeleton, StateBox, ToastHost, Value, cx, useStuck } from "./ui";
+import { CODE_RE, CopyButton, Icon, Menu, RecordLabelCtx, Skeleton, StateBox, ToastHost, Value, cx, useStuck } from "./ui";
 import { Badge, Banner, Button, EmptyState, FieldGrid, Panel, StatTile, Tabs, Timeline, ZasTable } from "./kit";
 import type { DetailResponse, SpecTab, SpecView, ZasPayload } from "./types";
 import type { MenuItemDef } from "./ui";
@@ -40,7 +40,7 @@ function Stepper({ steps, exits, status, hero }: { steps: string[]; exits: Recor
         const state = off !== null || i < at || (i === at && at === last) ? "done" : i === at ? "cur" : "";
         return (
           <div key={code} className={cx("zas-step", state)} data-zas="step" data-zas-key={code}>
-            <i>{state === "done" ? <Check /> : i + 1}</i><span>{S[code]?.label || code}</span>
+            <i>{state === "done" || state === "cur" ? <Check /> : i + 1}</i><span>{S[code]?.label || code}</span>
           </div>
         );
       })}
@@ -53,7 +53,16 @@ function Stepper({ steps, exits, status, hero }: { steps: string[]; exits: Recor
   );
 }
 
-function Header({ data }: { data: DetailResponse }) {
+/** The icon of the menu item that opens this entity's list (the kit page's entityIcon). */
+function entityIcon(listPage?: string | null): string | null {
+  if (!listPage) return null;
+  for (const m of Object.values(SPEC.menus || {}))
+    for (const it of m.items.flatMap((x) => (x.group ? x.items || [] : [x])))
+      if (it.page === listPage && it.icon) return it.icon;
+  return null;
+}
+
+function Header({ data, tabs }: { data: DetailResponse; tabs?: React.ReactNode }) {
   const d = useDetail();
   const z = d.zas;
   const navigate = useNavigate();
@@ -62,6 +71,7 @@ function Header({ data }: { data: DetailResponse }) {
   const stuck = useStuck(ref);
   const sticky = !!d.view.sticky_header;
   const hero = SPEC.entities[d.view.hero];
+  const tileIcon = entityIcon(hero?.list_page);
 
   const done = () => { dlg.close(); d.refresh(); };
   const runTransition = (t: ZasPayload["actions"]["transitions"][number]) => {
@@ -132,19 +142,40 @@ function Header({ data }: { data: DetailResponse }) {
   }));
 
   const h = z.header;
+  // a record code leading the subtitle ("PT-000006") heads the title line in mono, the name under it
+  const subParts = (h.subtitle || "").split(" · ");
+  const code = !stuck && CODE_RE.test(subParts[0].trim()) ? subParts[0].trim() : null;
+  const subRest = code ? subParts.slice(1).join(" · ") : "";
   return (
-    <div ref={ref} className={cx("zas-dhead", sticky && "sticky")} data-zas="header">
+    <div ref={ref} className={cx("zas-dhead", sticky && "sticky", tabs ? "has-tabs" : undefined)} data-zas="header">
       <div className="zas-dtop">
-        <div className="zas-av" style={stuck ? { width: 36, height: 36, fontSize: 13, borderRadius: 10 } : undefined}>
-          {h.avatar.image ? <img src={h.avatar.image} alt="" /> : h.avatar.initials}
+        <div className={cx("zas-av", !h.avatar.image && tileIcon && "ico")} style={stuck ? { width: 36, height: 36, fontSize: 13, borderRadius: 10 } : undefined}>
+          {h.avatar.image ? <img src={h.avatar.image} alt="" /> : tileIcon ? <Icon name={tileIcon} /> : h.avatar.initials}
         </div>
         <div className="zas-dtt">
-          <h1 data-zas="title">{h.title}</h1>
-          {!stuck && h.subtitle && <div className="zas-dsub" data-zas="subtitle">{h.subtitle}</div>}
-          {h.badges.length > 0 && (
-            <div className="zas-dbadges">{h.badges.map((b) => b.kind === "tag"
-              ? <span key={b.key} className={cx("zas-chip", `zt-${tone(b.tone)}`)} data-zas="badge" data-zas-key={b.key} data-zas-tone={tone(b.tone)}>{b.label}</span>
-              : <Badge key={b.key} label={b.label} tone={b.tone} zasKey={b.key} />)}</div>
+          <h1 data-zas="title"><span className={code ? "zas-dcode" : undefined}>{code || h.title}</span>
+            {h.badges.length > 0 && (
+              <span className="zas-dbadges">{h.badges.map((b) => b.kind === "tag"
+                ? <span key={b.key} className={cx("zas-chip", `zt-${tone(b.tone)}`)} data-zas="badge" data-zas-key={b.key} data-zas-tone={tone(b.tone)}>{b.label}</span>
+                : <Badge key={b.key} label={b.label} tone={b.tone} zasKey={b.key} />)}</span>
+            )}
+          </h1>
+          {code && <div className="zas-dh2">{h.title}</div>}
+          {!code && !stuck && h.subtitle && <div className="zas-dsub" data-zas="subtitle">{h.subtitle}</div>}
+          {!stuck && (h.facts.length > 0 || (code && subRest)) && (
+            <div className="zas-dfacts">
+              {code && subRest && <div className="zas-dfact" data-zas="subtitle"><b>{subRest}</b></div>}
+              {h.facts.map((f) => (
+                <div className="zas-dfact" title={f.label} key={f.key} data-zas="fact" data-zas-key={f.key} data-zas-order={f.order}>
+                  <span>{f.label}</span>
+                  <b className={f.emphasis ? "em" : undefined}>
+                    {f.link ? <a className="zas-link" onClick={() => { const u = viewUrl(f.link!.view, f.link!.uuid); if (u) navigate(u); }}>{f.display ?? "—"}</a>
+                      : f.type ? <Value v={{ key: f.key, label: f.label, type: f.format || f.type, value: f.value, display: f.display }} /> : (f.display ?? "—")}
+                    {f.copy && f.display && <CopyButton text={String(f.value ?? f.display)} />}
+                  </b>
+                </div>
+              ))}
+            </div>
           )}
         </div>
         <div className="zas-dacts">
@@ -160,21 +191,8 @@ function Header({ data }: { data: DetailResponse }) {
       {!stuck && d.view.stepper && (
         <Stepper steps={d.view.stepper.steps} exits={d.view.stepper.exits || {}} status={z.record.status} hero={d.view.hero} />
       )}
-      {!stuck && h.facts.length > 0 && (
-        <div className="zas-dfacts">
-          {h.facts.map((f) => (
-            <div className="zas-dfact" key={f.key} data-zas="fact" data-zas-key={f.key} data-zas-order={f.order}>
-              <span>{f.label}</span>
-              <b className={f.emphasis ? "em" : undefined}>
-                {f.link ? <a className="zas-link" onClick={() => { const u = viewUrl(f.link!.view, f.link!.uuid); if (u) navigate(u); }}>{f.display ?? "—"}</a>
-                  : f.type ? <Value v={{ key: f.key, label: f.label, type: f.format || f.type, value: f.value, display: f.display }} /> : (f.display ?? "—")}
-                {f.copy && f.display && <CopyButton text={String(f.value ?? f.display)} />}
-              </b>
-            </div>
-          ))}
-        </div>
-      )}
       {!stuck && h.banners.map((b) => <Banner key={b.order} tone={b.tone} order={b.order}>{b.text}</Banner>)}
+      {tabs}
       {dlg.dialog}
     </div>
   );
@@ -188,13 +206,13 @@ function Panels({ list }: { list: ZasPayload["panels"][string] }) {
     <>
       {list.map((p) => {
         if (p.type === "fields") {
-          return <Panel key={p.key} title={p.title} zasKey={p.key} order={p.order}><FieldGrid fields={p.fields || []} columns={p.columns || (p.key.startsWith("sidebar") ? 1 : 2)} /></Panel>;
+          return <Panel key={p.key} title={p.title} zasKey={p.key} order={p.order} tile="file-text"><FieldGrid fields={p.fields || []} columns={p.columns || (p.key.startsWith("sidebar") ? 1 : 2)} /></Panel>;
         }
         if (p.type === "mini_table") {
           const mt = d.zas.mini_tables[p.key];
           const T = mt && SPEC.entities[mt.entity];
           return (
-            <Panel key={p.key} title={p.title} zasKey={p.key} order={p.order}
+            <Panel key={p.key} title={p.title} zasKey={p.key} order={p.order} tile="list"
               actions={mt?.see_all_tab ? <button type="button" className="zas-link" onClick={() => d.goTab(mt.see_all_tab as string)}>See all <ArrowRight /></button> : undefined}>
               {!mt || !mt.rows.length ? <EmptyState title={`No ${T?.plural.toLowerCase() || "records"} yet`} zasKey={p.key} /> : (
                 <table className="zas-t"><tbody>
@@ -214,9 +232,9 @@ function Panels({ list }: { list: ZasPayload["panels"][string] }) {
         if (p.type === "custom") {
           const slotName = d.view.sidebar.find((s) => s.key === p.key)?.slot
             || (SPEC.slots && Object.values(SPEC.slots).find((s) => s.data_key === p.key)?.export);
-          return <Panel key={p.key} title={p.title} zasKey={p.key} order={p.order}><Slot name={slotName} dataKey={p.key} /></Panel>;
+          return <Panel key={p.key} title={p.title} zasKey={p.key} order={p.order} tile="file-text"><Slot name={slotName} dataKey={p.key} /></Panel>;
         }
-        if (p.type === "timeline") return <Panel key={p.key} title={p.title} zasKey={p.key} order={p.order}><TimelineBlock limit={6} /></Panel>;
+        if (p.type === "timeline") return <Panel key={p.key} title={p.title} zasKey={p.key} order={p.order} tile="history"><TimelineBlock limit={6} /></Panel>;
         return null;
       })}
     </>
@@ -254,8 +272,8 @@ function RelatedTab({ tab, canAdd }: { tab: SpecTab; canAdd: boolean }) {
 function TabBody({ tab, canAdd }: { tab: SpecTab; canAdd: boolean }) {
   const d = useDetail();
   if (tab.type === "related_table") return <RelatedTab tab={tab} canAdd={canAdd} />;
-  if (tab.type === "timeline") return <Panel title={tab.label} zasKey={tab.code}><TimelineBlock tab={tab.code} /></Panel>;
-  if (tab.type === "custom") return <Panel title={tab.label} zasKey={tab.code}><Slot name={tab.slot} dataKey={tab.code} /></Panel>;
+  if (tab.type === "timeline") return <Panel title={tab.label} zasKey={tab.code} tile="history"><TimelineBlock tab={tab.code} /></Panel>;
+  if (tab.type === "custom") return <Panel title={tab.label} zasKey={tab.code} tile="file-text"><Slot name={tab.slot} dataKey={tab.code} /></Panel>;
   const list = d.zas.panels[tab.code] || [];
   if (!list.length) return <EmptyState title="Nothing to show here yet" zasKey={tab.code} />;
   return <Panels list={list} />;
@@ -265,6 +283,7 @@ function Page({ viewCode, uuid, initial }: { viewCode: string; uuid: string; ini
   const view = SPEC.detail_views[viewCode];
   const hero = SPEC.entities[view.hero];
   const navigate = useNavigate();
+  const fromRecord = (useLocation().state as { zasBack?: string } | null)?.zasBack;
   const [data, setData] = useState<DetailResponse | null>(initial?.zas ? initial : null);
   const [err, setErr] = useState<string | null>(null);
   // ?tab=<code> opens a tab (a list row whose row_click is "<view>#<tab>")
@@ -311,20 +330,24 @@ function Page({ viewCode, uuid, initial }: { viewCode: string; uuid: string; ini
   const ctx: Ctx = { view, viewCode, zas: z, endpoint: hero.endpoint, uuid, refresh: load, goTab: setTab };
   const side = z.panels.sidebar || [];
   const layout = view.layout || "header_tabs";
+  // the tab bar sits at the foot of the header band, full width (the kit page's .d-head .d-tabs)
+  const tabBar = tabs.length > 0 ? <Tabs current={cur?.code || ""} onChange={setTab}
+    tabs={tabs.map((t) => ({ code: t.code, label: t.label, icon: t.icon, count: counts[t.code]?.count, tone: counts[t.code]?.count_tone }))} /> : undefined;
   const main = (
     <div style={{ minWidth: 0 }}>
-      {tabs.length > 0 && <Tabs current={cur?.code || ""} onChange={setTab}
-        tabs={tabs.map((t) => ({ code: t.code, label: t.label, icon: t.icon, count: counts[t.code]?.count, tone: counts[t.code]?.count_tone }))} />}
       {cur ? <TabBody key={cur.code} tab={cur} canAdd={!!counts[cur.code]?.can_add} /> : <EmptyState title="No tabs" />}
     </div>
   );
-  const rail = side.length && layout !== "header_tabs" ? <div data-zas="rail" data-zas-layout={layout} style={{ minWidth: 0 }}><Panels list={side} /></div> : null;
+  const rail = side.length && layout !== "header_tabs" ? <div className="zas-drail" data-zas="rail" data-zas-layout={layout} style={{ minWidth: 0 }}><Panels list={side} /></div> : null;
 
+  const lead = (z.header.subtitle || "").split(" · ")[0].trim();
   return (
     <DetailCtx.Provider value={ctx}>
+     <RecordLabelCtx.Provider value={CODE_RE.test(lead) ? lead : z.header.title}>
       <div className="zas zas-page" data-zas="page" data-zas-key={view.page || viewCode} data-zas-layout={layout}>
-        {back && <div className="zas-crumbs"><a onClick={() => navigate(back)}>{SPEC.pages[view.back_to as string]?.title}</a><span>/</span><b>{z.header.title}</b></div>}
-        <Header data={data} />
+        {fromRecord ? <div className="zas-dback" data-zas="back" data-zas-chrome><a onClick={() => navigate(-1)}><ArrowLeft className="zi" />Back to {fromRecord}</a></div>
+          : back && <div className="zas-dback" data-zas="back" data-zas-chrome><a onClick={() => navigate(back)}><ArrowLeft className="zi" />Back to {SPEC.pages[view.back_to as string]?.title}</a></div>}
+        <Header data={data} tabs={tabBar} />
         {z.stats.length > 0 && (
           <div className="zas-stats">
             {z.stats.map((s) => <StatTile key={s.key} zasKey={s.key} order={s.order} label={s.label} value={s.value} format={s.format}
@@ -336,6 +359,7 @@ function Page({ viewCode, uuid, initial }: { viewCode: string; uuid: string; ini
           {rail && layout === "header_sidebar_tabs_left" ? <>{rail}{main}</> : <>{main}{rail}</>}
         </div>
       </div>
+     </RecordLabelCtx.Provider>
     </DetailCtx.Provider>
   );
 }

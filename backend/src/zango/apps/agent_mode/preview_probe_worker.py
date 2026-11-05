@@ -81,6 +81,7 @@ LAYOUT_JS = """([kind, pageCode, viewIndex]) => {
       brand: text(q('.z-side .z-brand b')),
       brand_role: text(q('.z-side .z-brand span')),
       user_in_sidebar: !!q('.z-side .z-user'),
+      user_top: !!q('.z-side .z-user.top'),
       topbar: !!q('.z-top'),
       topbar_title: text(q('.z-top .z-crumbs')),
       topbar_actions: [...document.querySelectorAll('#zapp .z-top .z-ib')].length,

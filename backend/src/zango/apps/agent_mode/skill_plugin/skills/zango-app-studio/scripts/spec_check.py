@@ -8,6 +8,7 @@ everything the build needs.
 Writes into <workspace>/.zas/:
     spec.resolved.json   the normalised spec + derived names (every later phase reads this)
     spec.ui.json         the frontend config (copied to frontend/src/custom/ in Phase 6)
+    spec.raw.json        the spec as written, as JSON (copied there too; zas-render.js builds from it)
     holes.md             every plain-language item, with a stable ID and target function
     plan.md              build order, names, endpoints, pages per role
     issues.md            lint findings (also printed)
@@ -60,7 +61,7 @@ BANNER_TONES = {"info", "warning", "danger", "success"}
 LAYOUTS = {"header_tabs", "header_tabs_sidebar", "header_sidebar_tabs_left"}
 COLUMN_SOURCES = {"field", "status", "tags", "computed", "path"}
 FORMATS = {"money", "percent", "number", "date", "datetime", "days", None}
-SHELL_USER = ("bottom", "top")
+SHELL_USER = ("top", "bottom")
 STAT_FORMATS = {"money", "percent", "number", "days", None}
 BUILTIN = {
     "id": {"type": "integer", "label": "ID"},
@@ -553,13 +554,72 @@ def norm_entity(e, mod, sets):
         ras.append(a)
     tb["row_actions"] = ras
     tb["footer_totals"] = arr(tb.get("footer_totals"))
-    tb["row_chevron"] = tb.get("row_chevron", False)
+    tb["row_chevron"] = tb.get("row_chevron", True)  # a chevron at the end of clickable rows (default on)
+    tb["status_tabs"] = tb.get("status_tabs", True)  # All + a tab per status above the table, when no quick filters
     E["table"] = tb
     E["access"] = norm_access(e.get("access") or tb.get("access"))
     E["form"] = copy.deepcopy(e.get("form") or {})
     E["validation"] = copy.deepcopy(e.get("validation") or {})
     E["custom_requirements"] = arr(e.get("custom_requirements"))
     return E
+
+
+LONG_TYPES = ("long_text", "json")
+
+
+def auto_views(ents, pages, dvs):
+    """Every record opens full page. An entity with a list page and no detail view gets a generated
+    one (<entity>_record: code + title, the workflow stepper, a tab per entity that links to it,
+    Activity), and every detail view opens on Overview (all fields; long text in its own panel)
+    unless it already has a summary/fields tab. The Studio preview (app-studio.html autoViews)
+    applies the same rules, so what the creator saw is what gets built."""
+    for E in ents.values():
+        lp = pages.get(E.get("list_page") or "")
+        if E.get("detail_view") or not lp:
+            continue
+        code = E["code"] + "_record"
+        if code in dvs or code in pages:
+            continue
+        flds = E["fields"]
+        code_key = next((f["key"] for f in flds if isinstance(f.get("auto"), dict) and f["auto"].get("sequence")), None)
+        tk = E["display"] if E.get("display") and E["display"] != code_key else next(
+            (f["key"] for f in flds if f["key"] != code_key and f["type"] in ("text", "link")), E.get("display"))
+        facts = [{"label": f["label"], "field": f["key"]} for f in flds
+                 if f["key"] not in (tk, code_key) and f["type"] in ("choice", "link")][:4]
+        wf = E.get("workflow")
+        steps = [s["code"] for s in (wf or {}).get("statuses", []) if not s.get("final") or s.get("color") == "green"]
+        kids = [(T, f["key"]) for T in ents.values() if T is not E
+                for f in T["fields"] if f["type"] == "link" and f.get("to") == E["code"]]
+        tabs, seen = [], set()
+        for T, via in kids:
+            c = T["code"] if T["code"] not in seen else f"{T['code']}_{via}"
+            seen.add(T["code"])
+            tabs.append({"code": c, "label": T["plural"], "type": "related_table", "entity": T["code"], "via": via,
+                         "count_badge": True, "columns": [x["key"] for x in T["table"]["columns"] if x["key"] != via]})
+        tabs.append({"code": "activity", "label": "Activity", "type": "timeline",
+                     "sources": [{"entity": E["code"]}] + [{"entity": T["code"], "via": via} for T, via in kids]})
+        side = [c["key"] for c in E["table"]["columns"] if c["key"] in E["fmap"] and c["key"] not in (code_key, tk)][:5]
+        header = {"title": tk, "subtitle": [f"{{{code_key}}}"] if code_key else [],
+                  "badges": [{"source": "status"}] if wf else [], "facts": facts,
+                  "actions": {"transitions": True,
+                              "buttons": [{"key": "edit", "label": "Edit", "type": "edit"}] if (E.get("form") or {}).get("edit") else []}}
+        if len(steps) >= 2:
+            header["stepper"] = {"steps": steps}
+        dvs[code] = {"code": code, "hero": E["code"], "auto": True, "back_to": lp["code"], "layout": "header_tabs_sidebar",
+                     "header": header, "tabs": tabs,
+                     "sidebar": [{"type": "fields", "title": f"{E['name']} summary", "fields": side}] if side else []}
+        pages[code] = {"code": code, "type": "detail", "detail_view": code, "auto": True, "title": E["name"],
+                       "route": str(lp.get("route") or f"/app/{E['code']}").rstrip("/") + "/:id", "export": "Page_" + code}
+    for V in dvs.values():
+        H = ents.get(V.get("hero"))
+        if not H or any(isinstance(t, dict) and (t.get("code") == "overview" or t.get("type") in ("summary", "fields"))
+                        for t in V["tabs"]):
+            continue
+        secs = [{"type": "fields", "title": f"{H['name']} details", "columns": 3,
+                 "fields": [f["key"] for f in H["fields"] if f["type"] not in LONG_TYPES]}]
+        secs += [{"type": "fields", "title": f["label"], "icon": "align-left", "fields": [f["key"]], "columns": 1,
+                  "show_when": f"{f['key']} is_set"} for f in H["fields"] if f["type"] in LONG_TYPES]
+        V["tabs"] = [{"code": "overview", "label": "Overview", "type": "summary", "auto": True, "sections": secs}] + V["tabs"]
 
 
 def form_items(E, fc, depth=0):
@@ -632,16 +692,20 @@ class Spec:
         app["ui"] = {"radius": ui["radius"], "density": ui["density"]}
         sh = app.get("shell")
         if sh is not None and not isinstance(sh, dict):
-            L.error("app.shell", "app.shell is {user: bottom | top}")
+            L.error("app.shell", "app.shell is {user: top | bottom, topbar: true | false}")
             sh = {}
         sh = dict(sh or {})
         if sh.get("user") is not None and sh["user"] not in SHELL_USER:
             L.error("app.shell.user", f"app.shell.user {sh['user']!r} is not one of {', '.join(SHELL_USER)}")
-        unknown = sorted(set(sh) - {"user"})
+        if sh.get("topbar") is not None and not isinstance(sh["topbar"], bool):
+            L.error("app.shell.topbar", "app.shell.topbar is true or false")
+        unknown = sorted(set(sh) - {"user", "topbar"})
         if unknown:
-            L.error("app.shell", f"app.shell does not know {', '.join(unknown)} (only user)")
-        # where the sidebar's user card sits: its bottom (default) or its top, above the menu
-        app["shell"] = {"user": sh["user"] if sh.get("user") in SHELL_USER else "bottom"}
+            L.error("app.shell", f"app.shell does not know {', '.join(unknown)} (only user and topbar)")
+        # where the sidebar's user card (the role switcher) sits: under the brand (default) or at the
+        # bottom; and whether a top bar is drawn (off by default: the page header band carries the title)
+        app["shell"] = {"user": sh["user"] if sh.get("user") in SHELL_USER else "top",
+                        "topbar": sh.get("topbar") is True}
         if app.get("design") is not None:
             css, font_url, bad = design_css(app.get("design"))
             for b in bad:
@@ -731,6 +795,11 @@ class Spec:
             H = ents.get(V.get("hero"))
             if H and not H.get("detail_view"):
                 H["detail_view"] = V["code"]
+        auto_views(ents, pages, dvs)
+        for V in dvs.values():
+            if V.get("auto"):
+                V["page"] = V["code"]
+                ents[V["hero"]]["detail_view"] = V["code"]
 
         self.M = {"spec_version": 1, "skill_version": SKILL_VERSION, "app": app, "choice_sets": sets,
                   "roles": R, "modules": mods, "entities": ents, "pages": pages, "detail_views": dvs,
@@ -1585,6 +1654,8 @@ class Spec:
                 chk_roles(cw, c["roles"])
         if not isinstance(tb.get("row_chevron"), bool):
             L.error(tw + ".row_chevron", "row_chevron is true or false")
+        if not isinstance(tb.get("status_tabs"), bool):
+            L.error(tw + ".status_tabs", "status_tabs is true or false")
         ds = tb.get("default_sort")
         if ds and ds.lstrip("-") not in E["fmap"] and ds.lstrip("-") not in BUILTIN:
             L.error(tw + ".default_sort", f"{ds!r} is not a field")
@@ -2146,12 +2217,12 @@ class Spec:
             return bool(a) and not a.get("none") and action in a["actions"]
         dv_list = dvs.values() if isinstance((dvs := M["detail_views"]), dict) else dvs
         for V in dv_list:
-            viewers = V.get("roles") or [r for r in M["roles"] if can(V["hero"], r, "detail")]
+            viewers = V.get("roles") or [r for r in M["roles"] if can(V["hero"], r, "view" if V.get("auto") else "detail")]
             for t in V.get("tabs") or []:
                 if t.get("type") != "related_table" or not t.get("entity"):
                     continue
                 hidden = [r for r in viewers if not can(t["entity"], r, "view")]
-                if hidden:
+                if hidden and not V.get("auto"):  # a generated view lists every linked entity; hiding is expected
                     self.L.warn(f"detail_views.{V['code']}.tabs.{t.get('code')}",
                                 f"hidden for {', '.join(hidden)}: no view access to {t['entity']}",
                                 f"add {', '.join(hidden)} to {t['entity']}.access with [view] if they should see it")
@@ -2370,7 +2441,7 @@ class Spec:
         out = {"app": {"code": M["app"].get("code"), "name": M["app"]["name"],
                        "description": M["app"].get("description", ""), "locale": M["app"]["locale"],
                        "currency": M["app"]["currency"], "brand": M["app"]["theme"]["primary"], "ui": M["app"]["ui"],
-                       "shell": M["app"].get("shell") or {"user": "bottom"},
+                       "shell": M["app"].get("shell") or {"user": "top", "topbar": False},
                        **({"design": M["app"]["design_ui"]} if M["app"].get("design_ui") else {}),
                        "roles": [{"name": r["name"], "description": r.get("description", "")} for r in M["roles"].values()],
                        "modules": [{"code": m["code"], "name": m["name"], "description": m.get("description", "")}
@@ -2408,7 +2479,8 @@ class Spec:
                 "row_click": tb.get("row_click") or (E.get("detail_view") or "drawer"),
                 "add_button": tb.get("add_button") or f"Add {E['name']}",
                 "footer_totals": tb["footer_totals"],
-                **({"row_chevron": True} if tb.get("row_chevron") is True else {}),
+                "row_chevron": tb.get("row_chevron") is not False,
+                "status_tabs": tb.get("status_tabs") is not False,
                 "parents": {k: {"hero": v["hero"], "fk": v["fk"]} for k, v in E["parents"].items()},
                 "navigate": {a["key"]: a["to"] for a in tb["row_actions"]
                              if a["type"] == "navigate" and isinstance(a.get("to"), str)},
@@ -2441,7 +2513,7 @@ class Spec:
                     item["slot"] = pascal(s.get("title") or item["key"])
                 side.append(item)
             out["detail_views"][V["code"]] = {
-                "hero": V["hero"], "layout": V.get("layout", "header_tabs"), "back_to": V.get("back_to"),
+                "hero": V["hero"], "layout": V.get("layout", "header_tabs"), "back_to": V.get("back_to"), "auto": bool(V.get("auto")),
                 "page": V.get("page"), "states": V.get("states") or {}, "tabs": tabs, "sidebar": side,
                 "sticky_header": any("sticky" in str(cr.get("title", "")).lower() for cr in arr(V.get("custom_requirements"))),
             }
@@ -2710,6 +2782,16 @@ def strip_internal(M):
     return M
 
 
+class JsYamlLoader(yaml.SafeLoader):
+    """YAML as the preview's js-yaml reads it (YAML 1.2 booleans): yes/no/on/off stay text."""
+
+
+JsYamlLoader.yaml_implicit_resolvers = {
+    k: [r for r in v if r[0] != "tag:yaml.org,2002:bool"] for k, v in yaml.SafeLoader.yaml_implicit_resolvers.items()}
+JsYamlLoader.add_implicit_resolver(
+    "tag:yaml.org,2002:bool", re.compile(r"^(?:true|True|TRUE|false|False|FALSE)$"), list("tTfF"))
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("spec")
@@ -2751,6 +2833,9 @@ def main(argv=None):
             json.dump(resolved, f, indent=1, ensure_ascii=False, default=str)
         with open(os.path.join(out, "spec.ui.json"), "w", encoding="utf-8") as f:
             json.dump(S.ui_json(), f, indent=1, ensure_ascii=False)
+        # the spec as written: the runtime's zas-render.js builds its model from it, as the preview does
+        with open(os.path.join(out, "spec.raw.json"), "w", encoding="utf-8") as f:
+            json.dump(yaml.load(text, Loader=JsYamlLoader), f, ensure_ascii=False, default=str)
         with open(os.path.join(out, "holes.md"), "w", encoding="utf-8") as f:
             f.write(S.holes_md())
         with open(os.path.join(out, "plan.md"), "w", encoding="utf-8") as f:

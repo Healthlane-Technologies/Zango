@@ -57,6 +57,58 @@ def _cell_icon(obj, icon):
     return (icon.get("map") or {}).get(str(raw), icon.get("default"))
 
 
+def _user_name(u):
+    return (getattr(u, "name", None) or str(u)) if u is not None else None
+
+
+def _raw_fields(E, obj, rel, depth):
+    """``obj``'s fields as zas-render.js reads a row: values by key, a link as the linked record's
+    object_uuid (that record goes in ``rel`` one level deep, so a column path like vendor.city
+    resolves), an app_user link as the user's name."""
+    from . import records as zr
+
+    out = {}
+    for f in E["fields"]:
+        k, t = f["key"], f.get("type")
+        if t == "multi_link":  # a mapping model in Zango: not a column value
+            continue
+        try:
+            v = getattr(obj, k, None)
+        except Exception:
+            continue
+        if t == "link":
+            if f.get("to") == "app_user":
+                out[k] = _user_name(v)
+                continue
+            uid = getattr(v, "object_uuid", None)
+            out[k] = str(uid) if uid else None
+            if uid and depth > 0 and f.get("to") in zs.entities():
+                bucket = rel.setdefault(f["to"], {})
+                if str(uid) not in bucket:
+                    bucket[str(uid)] = None  # a cycle back here stops at the placeholder
+                    bucket[str(uid)] = _raw_row(zs.entity(f["to"]), v, rel, depth - 1)
+            continue
+        out[k] = zr._jsonable(v)
+    return out
+
+
+def _iso(v):
+    return v.isoformat() if hasattr(v, "isoformat") else v
+
+
+def _raw_row(E, obj, rel, depth=1):
+    row = {"id": str(obj.object_uuid), **_raw_fields(E, obj, rel, depth)}
+    row["created_at"] = _iso(getattr(obj, "created_at", None))
+    row["modified_at"] = _iso(getattr(obj, "modified_at", None))
+    row["created_by"] = _user_name(getattr(obj, "created_by", None)) if getattr(obj, "created_by_id", None) else None
+    if (E.get("workflow") or {}).get("statuses"):
+        row["status"] = zx.current_status(obj)
+        row["tags"] = sorted(zx.current_tags(obj))
+    else:
+        row["tags"] = []
+    return row
+
+
 class _FormRecord:
     """Lets expressions read live form values (and fall back to the instance).
 
@@ -156,7 +208,12 @@ class ZasTableMixin:
             cells = [c for c in (E.get("table") or {}).get("columns", []) if c.get("secondary") or c.get("icon")]
             pills = [(c["key"], c["badge"]) for c in (E.get("table") or {}).get("columns", [])
                      if (c.get("badge") or {}).get("ast")]
-            ctx = access.expr_ctx(self._zas_request())
+            req = self._zas_request()
+            ctx = access.expr_ctx(req)
+            # ?zas_raw=1: also the record as the shared renderer reads it (zas-render.js), and the
+            # records its links point at (`rel`, on the first row: {entity: {uuid: row}})
+            raw = req is not None and req.GET.get("zas_raw") == "1"
+            rel = {}
             for row, d in zip(rows, data):
                 obj = d["obj"]
                 links = {}
@@ -193,7 +250,14 @@ class ZasTableMixin:
                             z.setdefault("icon", {})[c["key"]] = icon
                     except Exception:
                         logger.exception("zas: cell %s.%s", self.zas_entity, c["key"])
+                if raw:
+                    try:
+                        z["raw"] = _raw_row(E, obj, rel)
+                    except Exception:
+                        logger.exception("zas: raw row for %s", self.zas_entity)
                 row["zas"] = z
+            if raw and rows and "zas" in rows[0]:
+                rows[0]["zas"]["rel"] = rel
         except Exception:
             logger.exception("zas: row extras for %s", self.zas_entity)
         return rows

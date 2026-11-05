@@ -469,6 +469,7 @@ detail_views:
       title: title
       subtitle: ["{policy_code}", "{country}"]
       badges: [ { source: status } ]
+      stepper: { steps: [draft, live] }
       facts:
         - { label: Purpose, field: purpose }
         - { label: Legal basis, field: legal_basis }

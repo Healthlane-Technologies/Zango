@@ -548,6 +548,25 @@ class DesignFeatureSpecTests(unittest.TestCase):
         self.assertEqual(uc["status"]["progress"], {"steps": ["draft", "pending_approval", "approved", "closed"]})
         self.assertTrue(ui["row_chevron"])
 
+    def test_chevron_and_status_tabs_are_on_by_default(self):
+        S, errs = self.run_spec(lambda raw: None)
+        self.assertEqual(errs, [])
+        ui = S.ui_json()["entities"]["purchase_order"]
+        self.assertTrue(ui["row_chevron"])
+        self.assertTrue(ui["status_tabs"])
+
+        def off(raw):
+            tb = self.ent(raw, "purchase_order")["table"]
+            tb["row_chevron"] = False
+            tb["status_tabs"] = False
+        S, errs = self.run_spec(off)
+        self.assertEqual(errs, [])
+        ui = S.ui_json()["entities"]["purchase_order"]
+        self.assertFalse(ui["row_chevron"])
+        self.assertFalse(ui["status_tabs"])
+        _, errs = self.run_spec(lambda raw: self.ent(raw, "purchase_order")["table"].update(status_tabs="yes"))
+        self.assertIn("status_tabs is true or false", " | ".join(errs))
+
     def test_progress_true_is_the_workflow_order(self):
         def edit(raw):
             self.ent(raw, "purchase_order")["table"]["columns"][6] = {"status": {"source": "status", "progress": True}}
@@ -621,9 +640,12 @@ class DesignFeatureSpecTests(unittest.TestCase):
     def test_shell_user(self):
         S, errs = self.run_spec(lambda raw: raw["app"].update(shell={"user": "top"}))
         self.assertEqual(errs, [])
-        self.assertEqual(S.ui_json()["app"]["shell"], {"user": "top"})
+        self.assertEqual(S.ui_json()["app"]["shell"], {"user": "top", "topbar": False})
         S, _ = self.run_spec(lambda raw: None)
-        self.assertEqual(S.ui_json()["app"]["shell"], {"user": "bottom"})
+        self.assertEqual(S.ui_json()["app"]["shell"], {"user": "top", "topbar": False})
+        S, errs = self.run_spec(lambda raw: raw["app"].update(shell={"user": "bottom", "topbar": True}))
+        self.assertEqual(errs, [])
+        self.assertEqual(S.ui_json()["app"]["shell"], {"user": "bottom", "topbar": True})
         _, errs = self.run_spec(lambda raw: raw["app"].update(shell={"user": "left", "nav": "dark"}))
         text = " | ".join(errs)
         self.assertIn("app.shell.user 'left'", text)
@@ -636,7 +658,7 @@ class KitDesignFeatureTests(unittest.TestCase):
     def test_the_kit_renders_each_feature_with_its_classes(self):
         page = KIT_PAGE.read_text(encoding="utf-8")
         for needle in ("function listStats(", "function stepperHTML(", 'class="z-cpill"', 'class="z-cprog"',
-                       'class="chev"', 'class="z-ni-n"', "M.app.shell.user === 'top'"):
+                       'class="chev"', 'class="z-ni-n"', "M.app.shell.user === 'bottom'"):
             self.assertIn(needle, page)
 
     def test_the_runtime_draws_the_twins(self):

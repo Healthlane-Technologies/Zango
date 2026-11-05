@@ -80,7 +80,7 @@ class ZasDetail:
             role = access.role_name(request)
             hero = V["hero"]
             denied = (V.get("roles") and role not in V["roles"]) or \
-                (zs.entity(hero).get("access") and not access.can(hero, "detail", role))
+                (zs.entity(hero).get("access") and not access.can(hero, "view" if V.get("auto") else "detail", role))
             if denied:
                 return get_api_response(success=True, response_content={"zas": self._zas_state("no_access")}, status=200)
             try:
@@ -187,7 +187,7 @@ class ZasDetail:
                 item.update(value=v["value"], display=v["display"], type=v["type"])
                 if f.get("link_to") and v.get("uuid"):
                     tv = zs.view(f["link_to"]) if f["link_to"] in zs.load()["detail_views"] else None
-                    if tv and access.can(tv["hero"], "detail", self._zas_role) is not False:
+                    if tv and access.can(tv["hero"], "view" if tv.get("auto") else "detail", self._zas_role) is not False:
                         item["link"] = {"view": f["link_to"], "uuid": v["uuid"]}
             if item.get("display") in (None, "") and f.get("fallback") is not None:
                 item["display"] = f["fallback"]

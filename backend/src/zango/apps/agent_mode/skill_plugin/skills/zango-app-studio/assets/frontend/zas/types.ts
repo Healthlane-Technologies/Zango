@@ -19,7 +19,7 @@ export interface SpecEntity {
   choices: Record<string, Record<string, { label: string; tone?: Tone | null }>>;
   columns: SpecColumn[];
   quick_filters: { key: string; label: string; default: boolean }[];
-  row_click: string; add_button: string; footer_totals: string[]; row_chevron?: boolean;
+  row_click: string; add_button: string; footer_totals: string[]; row_chevron?: boolean; status_tabs?: boolean;
   parents: Record<string, { hero: string; fk: string | null }>;
   navigate: Record<string, string>; field_links: Record<string, string>; downloads?: string[];
   fields?: SpecField[];
@@ -47,7 +47,7 @@ export interface SpecPage { type: "crud" | "detail" | "custom"; route: string; t
 export interface MenuItem { page?: string; label?: string; icon?: string; group?: string; items?: MenuItem[]; count?: boolean }
 export interface SpecUi {
   app: { code: string; name: string; description: string; locale: string; currency: string; brand: string; ui?: { radius?: "sharp" | "rounded" | "soft"; density?: "compact" | "comfortable" }; design?: { css?: string; font_url?: string | null; fonts?: Record<string, string> };
-    shell?: { user?: "bottom" | "top" }; roles: { name: string; description: string }[];
+    shell?: { user?: "top" | "bottom"; topbar?: boolean }; roles: { name: string; description: string }[];
     modules: { code: string; name: string; description: string }[] };
   pages: Record<string, SpecPage>;
   entities: Record<string, SpecEntity>;

@@ -116,9 +116,9 @@ prototype: {...}        # open mode only
 `code` (snake_case), `name`, `description`, `timezone` (e.g. Asia/Kolkata),
 `locale` (en-IN), `currency` (ISO code, INR), `theme: {primary, secondary}`
 (hex colours; the preview uses `primary` as the brand colour),
-`ui: {radius, density}` for the look, `shell: {user: bottom | top}` (where
-the sidebar's user card sits: its bottom, the default, or its top above the
-menu), and `custom_requirements` for app-wide needs (SSO, audit export…).
+`ui: {radius, density}` for the look, `shell: {user: top | bottom, topbar}`
+(where the sidebar's user card, the role switcher, sits: under the brand, the
+default, or at the bottom; `topbar: true` adds a top bar, off by default), and `custom_requirements` for app-wide needs (SSO, audit export…).
 
 `ui` is the whole of what the look can be, as choices the preview and the
 built app make the same way: `radius` sharp · rounded (default) · soft and
@@ -628,7 +628,8 @@ row menu automatically.
     - due_date: { label: Due, badge: { label: Overdue, when: "due_date < today", tone: red } }   # a pill after the value
     - status:   { source: status, progress: true }        # a step bar and "Step 2 of 4" under the status
     - status:   { source: status, progress: { steps: [received, in_progress, completed] } }
-  row_chevron: true                                       # a chevron at the end of rows that open something
+  row_chevron: true                                       # a chevron at the end of rows that open something (default; false hides it)
+  status_tabs: true                                       # All + a tab per status above the table when there are no quick_filters (default; false hides them)
 ```
 
 `badge` shows its `label` after the value on the rows where `when` holds.
@@ -706,6 +707,29 @@ left from (the furthest `from` of the transitions into it):
   header:
     stepper: { steps: [draft, submitted, approved, active] }   # rejected shows as an end marker
 ```
+
+When the first `header.subtitle` value is a record code (`PT-000006`,
+`VN-101`: capitals, a dash or slash, then a digit), it heads the title line in
+mono with the badges, and `header.title` moves under it. The rest of the
+subtitle and the `facts` then share one line under the name. The step the
+record is in shows a green tick too (it has been reached), still ringed as current.
+
+Every record opens as a full page, never a side drawer:
+
+- An entity with a list page but no detail view gets one generated,
+  `<entity>_record` at `<list route>/:id`. It has the record code with the
+  `display` name under it, the first choice/link fields as facts, a stepper
+  over the non-final statuses (plus a green final one), a tab for every entity
+  that links to it, Activity, and a summary card of its table columns. Anyone
+  who can `view` the entity can open it; the generated page needs no `detail`.
+- Every detail view opens on **Overview**: all fields in three columns, each
+  long text in its own panel. A view that already has a `summary` or `fields`
+  tab (or a tab coded `overview`) keeps its own.
+- A row in any table, a related tab included, opens that record's page, and
+  its Back returns to the record or list it came from.
+
+Write a detail view only when the generated one is not enough (stats, custom
+tabs, a different header).
 
 ## What the checks enforce
 

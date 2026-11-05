@@ -6,13 +6,13 @@
 // Why not CrudHandler: crud 2.0.0 renders its own header/toolbar/drawer (no inline select
 // filters, no group_by or footer totals, a generic "#" drawer, and headerProps.customLeft/
 // RightActions are not rendered). Its endpoints are reused unchanged.
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ChevronRight, ChevronsUpDown, Download, EllipsisVertical, Inbox, Paperclip, Plus, Search } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUp, Calendar, ChevronLeft, ChevronRight, ChevronsUpDown, Download, EllipsisVertical, Filter, Inbox, Paperclip, Plus, Search, X } from "lucide-react";
 import * as api from "./api";
 import { SPEC, date, detailUrl, money, number, pageUrl, parentTabUrl, percent, tone, viewUrl } from "./config";
 import { ConfirmDialog, FormDialog, useDialog } from "./dialogs";
-import { Icon, Menu, Nil, Skeleton, Value, cx, useToast } from "./ui";
+import { Icon, Menu, Nil, Skeleton, Value, cx, useToast, CODE_RE, RecordLabelCtx } from "./ui";
 import { Badge, Banner, Button, Chip, Drawer, EmptyState, Timeline } from "./kit";
 import type { MenuItemDef } from "./ui";
 import type { FieldValue, SpecColumn, SpecEntity } from "./types";
@@ -72,9 +72,12 @@ function StepProgress({ steps, code, children }: { steps: string[]; code?: strin
 /** The value, then table.columns[].badge's pill on the rows where its `when` holds (row zas.badge). */
 function CellBody(p: CellProps) {
   const pill = p.row.zas?.badge?.[p.col.key];
+  const raw = strip(p.row[p.col.key]);
+  const code = p.col.source !== "status" && typeof raw === "string" && CODE_RE.test(raw.trim());
+  const base = code ? <span className="zas-code"><CellValue {...p} /></span> : <CellValue {...p} />;
   const value = pill
-    ? <><CellValue {...p} /><span className={cx("zas-cpill", `zt-${tone(pill.tone)}`)} data-zas="cell-badge" data-zas-key={p.col.key}>{pill.label}</span></>
-    : <CellValue {...p} />;
+    ? <>{base}<span className={cx("zas-cpill", `zt-${tone(pill.tone)}`)} data-zas="cell-badge" data-zas-key={p.col.key}>{pill.label}</span></>
+    : base;
   return p.col.progress ? <StepProgress steps={p.col.progress.steps} code={p.row.zas?.status}>{value}</StepProgress> : value;
 }
 
@@ -161,6 +164,7 @@ export function ZasTable(p: ZasTableProps) {
   const [q, setQ] = useState("");
   const [dq, setDq] = useState("");
   const [filters, setFilters] = useState<Record<string, string>>({});
+  const [fopen, setFopen] = useState(false);  // the filter panel beside the table (the crud table's)
   const [qf, setQf] = useState<string | null | undefined>(undefined);  // undefined = not chosen yet (use the default)
   const [sort, setSort] = useState<{ key: string; desc: boolean } | null>(null);
   const [pageNo, setPageNo] = useState(1);
@@ -194,9 +198,12 @@ export function ZasTable(p: ZasTableProps) {
   const tiles = p.page ? SPEC.pages[p.page.code]?.stats || [] : [];
   const tileValues = p.page ? meta?.zas?.stats?.[p.page.code] : undefined;
   const clickable = (p.rowClick || E.row_click) !== "none";
-  const chev = !!E.row_chevron;  // table.row_chevron: a chevron in a last cell of clickable rows
+  const chev = E.row_chevron !== false;  // table.row_chevron (default on): a chevron in a last cell of clickable rows
   const activeQf = qf === undefined ? (quick.find((x) => x.default)?.key ?? null) : qf;
   const filterCols = cols.filter((c) => c.filterable);
+  // table.status_tabs (default on): no quick filters, a filterable status column → All + a tab per status,
+  // the same column filter as the panel's Status
+  const statusCol = !quick.length && E.status_tabs !== false && Object.keys(E.statuses).length ? filterCols.find((c) => c.source === "status") : undefined;
 
   useEffect(() => {
     if (!meta) return;
@@ -232,6 +239,7 @@ export function ZasTable(p: ZasTableProps) {
       onClose={dlg.close} onDone={() => { dlg.close(); changed(); }} />);
   const canAdd = !!(p.addLabel && meta?.has_add_perm);
 
+  const fromRecord = useContext(RecordLabelCtx);
   const onRow = (r: Row) => {
     const rc = p.rowClick || E.row_click;
     if (!rc || rc === "none") return;
@@ -247,7 +255,8 @@ export function ZasTable(p: ZasTableProps) {
       if (u && !here.endsWith(u.split("?")[0].replace(/\/$/, ""))) { navigate(u); return; }
     }
     const V = SPEC.detail_views[rc];
-    if (V && V.hero === p.entity) { const u = viewUrl(rc, r.object_uuid); if (u) { navigate(u); return; } }
+    // opened from a record's tab, its Back returns there ("Back to CP-001")
+    if (V && V.hero === p.entity) { const u = viewUrl(rc, r.object_uuid); if (u) { navigate(u, fromRecord ? { state: { zasBack: fromRecord } } : undefined); return; } }
     setDrawer(r.object_uuid);
   };
 
@@ -285,7 +294,9 @@ export function ZasTable(p: ZasTableProps) {
   };
 
   const pages = Math.max(1, Math.ceil(total / ps));
-  const filtered = !!(dq || activeQf || Object.values(filters).some(Boolean));
+  const nFilters = Object.values(filters).filter(Boolean).length;
+  const filtered = !!(dq || activeQf || nFilters);
+  const setFilter = (k: string, v: string) => { setFilters((f) => ({ ...f, [k]: v })); setPageNo(1); };
   const hasActs = (rows || []).some((r) => (r.row_actions || []).length);
 
   // group rows (within the page, like the preview)
@@ -304,7 +315,7 @@ export function ZasTable(p: ZasTableProps) {
     <>
       {p.page && (
         <div className="zas-ph">
-          <div><h1>{p.page.title}</h1><p>{subtitle ?? (rows ? `${number(total)} ${total === 1 ? "record" : "records"}` : " ")}</p></div>
+          <div><h1>{p.page.title} {rows && <span className="zas-hc" data-zas-chrome>({number(total)})</span>}</h1>{subtitle && <p>{subtitle}</p>}</div>
           <span className="zas-sp" />
           {addBtn}
         </div>
@@ -323,15 +334,16 @@ export function ZasTable(p: ZasTableProps) {
           ))}
         </div>
       )}
+      <div className={fopen && filterCols.length ? "zas-lwrap" : undefined} style={fopen && filterCols.length ? undefined : { display: "contents" }}>
       <div className="zas-card" data-zas="panel" data-zas-key={p.zasKey || p.entity}>
         <div className="zas-tb">
           <label className="zas-search"><Search />
             <input placeholder={`Search ${E.plural.toLowerCase()}`} value={q} onChange={(e) => setQ(e.target.value)} aria-label={`Search ${E.plural}`} />
           </label>
-          {filterCols.map((c) => <FilterSelect key={c.key} E={E} col={c} meta={meta} value={filters[c.key] || ""}
-            onChange={(v) => { setFilters((f) => ({ ...f, [c.key]: v })); setPageNo(1); }} />)}
           {quick.length > 0 && (
             <div className="zas-chips" role="group" aria-label="Quick filters">
+              <button type="button" className={cx("zas-qf", !activeQf && "on")} aria-pressed={!activeQf} data-zas-chrome
+                onClick={() => { setQf(null); setPageNo(1); }}>All</button>
               {quick.map((x, i) => (
                 <button key={x.key} type="button" className={cx("zas-qf", activeQf === x.key && "on")} aria-pressed={activeQf === x.key}
                   data-zas="quick-filter" data-zas-key={x.key} data-zas-order={i}
@@ -340,9 +352,23 @@ export function ZasTable(p: ZasTableProps) {
               ))}
             </div>
           )}
+          {statusCol && (
+            <div className="zas-chips" role="group" aria-label="Status">
+              <button type="button" className={cx("zas-qf", !filters[statusCol.key] && "on")} aria-pressed={!filters[statusCol.key]} data-zas-chrome
+                onClick={() => setFilter(statusCol.key, "")}>All</button>
+              {Object.entries(E.statuses).map(([code, st]) => (
+                <button key={code} type="button" className={cx("zas-qf", filters[statusCol.key] === code && "on")} aria-pressed={filters[statusCol.key] === code}
+                  data-zas-chrome onClick={() => setFilter(statusCol.key, code)}>{st.label}</button>
+              ))}
+            </div>
+          )}
           <span className="zas-sp" />
           {p.toolbar}
           {meta?.has_download_perm && !p.footer?.length && <Button icon={<Download />} onClick={exportRows} zasKey="export">Export</Button>}
+          {filterCols.length > 0 && (
+            <button type="button" className={cx("zas-ibb", fopen && "on")} aria-label="Filters" aria-pressed={fopen} data-zas="filters" data-zas-chrome
+              onClick={() => setFopen((o) => !o)}><Filter />{nFilters > 0 && <span className="zas-fbadge">{nFilters}</span>}</button>
+          )}
           {!p.page && addBtn}
         </div>
         {err || loadErr ? <div style={{ padding: 14 }} data-zas="load-error"><Banner tone="danger">{err || loadErr}</Banner></div>
@@ -399,13 +425,16 @@ export function ZasTable(p: ZasTableProps) {
               {(pages > 1 || !p.footer?.length) && (
                 <div className="zas-pg">
                   <span>Showing <b>{(pageNo - 1) * ps + 1}–{Math.min(total, pageNo * ps)}</b> of <b>{number(total)}</b></span>
+                  <span className="zas-pgsz">{ps} / page</span>
                   <span className="zas-sp" />
-                  <Button size="sm" icon={<ArrowLeft />} disabled={pageNo <= 1} onClick={() => setPageNo((n) => n - 1)}>Previous</Button>
-                  <Button size="sm" disabled={pageNo >= pages} onClick={() => setPageNo((n) => n + 1)}>Next<ArrowRight /></Button>
+                  <Pager page={pageNo} pages={pages} onPage={setPageNo} />
                 </div>
               )}
             </>
           )}
+      </div>
+      {fopen && filterCols.length > 0 && <FilterPanel E={E} cols={filterCols} meta={meta} filters={filters} onChange={setFilter}
+        onClear={() => { setFilters({}); setPageNo(1); }} onClose={() => setFopen(false)} />}
       </div>
       {drawer && <RecordDrawer entity={p.entity} uuid={drawer} onClose={() => setDrawer(null)} onChanged={changed} />}
       {dlg.dialog}
@@ -418,23 +447,89 @@ function TriggerButton({ open }: { open: (anchor?: HTMLElement | null) => void }
   return <button type="button" className="zas-kebab" aria-label="Row actions" onClick={(e) => { e.stopPropagation(); open(e.currentTarget); }}><EllipsisVertical /></button>;
 }
 
-function FilterSelect({ E, col, meta, value, onChange }: { E: SpecEntity; col: SpecColumn; meta: Meta | null; value: string; onChange: (v: string) => void }) {
+// The crud table's filters: a "Filters" card beside the table with one control per filterable column.
+// The crud endpoint matches a text filter exactly (iexact) and takes a date range as {"start","end"}.
+function filterOpts(E: SpecEntity, col: SpecColumn, meta: Meta | null): [string, string][] | null {
   const linkOpts = meta?.zas?.filter_options?.[col.key] || [];  // linked display values among this role's rows
-  let opts: [string, string][] = [];
-  if (col.source === "status") opts = Object.entries(E.statuses).map(([k, s]) => [k, s.label]);
-  else if (E.choices?.[col.key]) opts = Object.entries(E.choices[col.key]).map(([k, c]) => [k, c.label]);
-  else if (col.type === "link") opts = linkOpts.map((v) => [v, v]);
-  else if (col.type === "boolean") opts = [["true", "Yes"], ["false", "No"]];
-  else {
-    const mc = meta?.columns.find((c) => c.name === col.key);
-    opts = (mc?.choices || []).map((c) => [c.id, c.label]);
-  }
+  if (col.source === "status") return Object.entries(E.statuses).map(([k, s]) => [k, s.label]);
+  if (E.choices?.[col.key]) return Object.entries(E.choices[col.key]).map(([k, c]) => [k, c.label]);
+  if (col.type === "link") return linkOpts.map((v) => [v, v]);
+  if (col.type === "boolean") return [["true", "Yes"], ["false", "No"]];
+  const mc = meta?.columns.find((c) => c.name === col.key);
+  if (mc?.choices?.length) return mc.choices.map((c) => [String(c.id), c.label]);
+  return null;
+}
+
+function DateRange({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const init = (() => { try { const j = JSON.parse(value || "{}"); return { start: j.start || "", end: j.end || "" }; } catch { return { start: "", end: "" }; } })();
+  const [r, setR] = useState(init);
+  useEffect(() => { if (!value) setR({ start: "", end: "" }); }, [value]);
+  const set = (k: "start" | "end", v: string) => {
+    const n = { ...r, [k]: v }; setR(n);
+    if (n.start && n.end) onChange(JSON.stringify(n));  // applied once both ends are set, as crud does
+    else if (!n.start && !n.end) onChange("");
+  };
   return (
-    <select className="zas-sel" value={value} onChange={(e) => onChange(e.target.value)} aria-label={`Filter by ${col.label}`}
-      data-zas="filter" data-zas-key={col.key}>
-      <option value="">{col.label}: All</option>
-      {opts.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-    </select>
+    <div className="zas-fin zas-fdate">
+      <input type="date" value={r.start} onChange={(e) => set("start", e.target.value)} aria-label="From" />
+      <ArrowRight /><input type="date" value={r.end} onChange={(e) => set("end", e.target.value)} aria-label="To" /><Calendar />
+    </div>
+  );
+}
+
+function FilterPanel({ E, cols, meta, filters, onChange, onClear, onClose }: {
+  E: SpecEntity; cols: SpecColumn[]; meta: Meta | null; filters: Record<string, string>;
+  onChange: (k: string, v: string) => void; onClear: () => void; onClose: () => void;
+}) {
+  return (
+    <aside className="zas-card zas-fpanel" data-zas="filter-panel" data-zas-chrome>
+      <div className="zas-fph"><b>Filters</b><button type="button" className="zas-ib" aria-label="Close filters" onClick={onClose}><X /></button></div>
+      <div className="zas-fpb">
+        {cols.map((col) => {
+          const v = filters[col.key] || "";
+          const opts = filterOpts(E, col, meta);
+          const isDate = col.type === "date" || col.type === "datetime";
+          return (
+            <div key={col.key} className="zas-ff" data-zas="filter" data-zas-key={col.key}>
+              <span>{col.label}</span>
+              {opts ? (
+                <select className="zas-fin" value={v} onChange={(e) => onChange(col.key, e.target.value)} aria-label={`Filter by ${col.label}`}>
+                  <option value="">Select {col.label}</option>
+                  {opts.map(([o, l]) => <option key={o} value={o}>{l}</option>)}
+                </select>
+              ) : isDate ? <DateRange value={v} onChange={(x) => onChange(col.key, x)} />
+                : (
+                  <label className="zas-fin zas-ftext"><Search />
+                    <input value={v} placeholder={`Search ${col.label.toLowerCase()}`} aria-label={`Filter by ${col.label}`}
+                      onChange={(e) => onChange(col.key, e.target.value)} />
+                  </label>
+                )}
+            </div>
+          );
+        })}
+      </div>
+      <div className="zas-fpf"><span>Results update as you choose.</span>
+        <button type="button" className="zas-flink" onClick={onClear}>Clear all</button>
+        <Button size="sm" variant="primary" onClick={onClose}>Done</Button>
+      </div>
+    </aside>
+  );
+}
+
+function Pager({ page, pages, onPage }: { page: number; pages: number; onPage: (n: number) => void }) {
+  const nums = pages <= 7 ? Array.from({ length: pages }, (_, i) => i + 1)
+    : [...new Set([1, page - 1, page, page + 1, pages])].filter((n) => n >= 1 && n <= pages).sort((a, b) => a - b);
+  return (
+    <span className="zas-pager">
+      <button type="button" disabled={page <= 1} aria-label="Previous page" onClick={() => onPage(page - 1)}><ChevronLeft /></button>
+      {nums.map((n, i) => (
+        <React.Fragment key={n}>
+          {i > 0 && n - nums[i - 1] > 1 && <span className="gap">…</span>}
+          <button type="button" className={n === page ? "on" : undefined} aria-current={n === page ? "page" : undefined} onClick={() => onPage(n)}>{n}</button>
+        </React.Fragment>
+      ))}
+      <button type="button" disabled={page >= pages} aria-label="Next page" onClick={() => onPage(page + 1)}><ChevronRight /></button>
+    </span>
   );
 }
 
