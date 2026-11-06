@@ -12,13 +12,17 @@ import {
 	Button,
 	ConfirmModal,
 	EmptyState,
+	Icon,
+	ProviderLogo,
 	RowMenu,
 	Table,
 	Toolbar,
 	type Column,
 } from '@/ui';
 import { InUseModal, ProviderStatus, serviceLabel, StatStrip } from './parts';
+import { ConnectDrawer } from './ConnectDrawer';
 import { ProviderDrawer } from './ProviderDrawer';
+import '@/ai/ai.css';
 
 export function ProvidersTab({ appId }: { appId: string }) {
 	const { data, isLoading, error, refetch } = useProviders(appId);
@@ -32,7 +36,10 @@ export function ProvidersTab({ appId }: { appId: string }) {
 	);
 	const [blocked, setBlocked] = useState<Array<{ id: number; name: string }> | null>(null);
 
+	const [connecting, setConnecting] = useState<number | null>(null);
 	const onBlocked = (err: unknown) => setBlocked(inUseAgents(err));
+	const waiting = data?.filter((p) => p.is_enabled && !p.connected) ?? [];
+	const connectingRow = data?.find((p) => p.id === connecting);
 	const editing = typeof drawer === 'number' ? data?.find((p) => p.id === drawer) : undefined;
 
 	const columns: Column<Provider>[] = [
@@ -41,9 +48,17 @@ export function ProvidersTab({ appId }: { appId: string }) {
 			header: 'Provider',
 			cell: (p) => (
 				<div className="nm">
+					<ProviderLogo slug={p.provider_slug} size={30} />
 					<div className="min-w-0">
 						<b>{p.name}</b>
-						<small>{p.description || serviceLabel(p.provider_slug)}</small>
+						{p.source === 'platform' ? (
+							<small className="zai-src">
+								<Icon name="shield" />
+								Platform account {p.platform_account?.name ?? ''}
+							</small>
+						) : (
+							<small>{p.description || serviceLabel(p.provider_slug)}</small>
+						)}
 					</div>
 				</div>
 			),
@@ -89,10 +104,17 @@ export function ProvidersTab({ appId }: { appId: string }) {
 					items={[
 						{ label: 'Edit', icon: 'pen', onSelect: () => setDrawer(p.id) },
 						{
-							label: 'Check credentials',
-							icon: 'check',
-							onSelect: () => validate.mutate({ id: p.id }),
+							label: p.is_placeholder ? 'Connect' : 'Change connection',
+							icon: 'key',
+							onSelect: () => setConnecting(p.id),
 						},
+						p.is_placeholder
+							? null
+							: {
+									label: 'Check credentials',
+									icon: 'check',
+									onSelect: () => validate.mutate({ id: p.id }),
+								},
 						p.is_enabled
 							? {
 									label: 'Disable',
@@ -122,6 +144,30 @@ export function ProvidersTab({ appId }: { appId: string }) {
 
 	return (
 		<>
+			{waiting.length > 0 && (
+				<div className="zai-banner">
+					<span className="ic">
+						<Icon name="key" />
+					</span>
+					<span className="min-w-0 flex-1">
+						<b>
+							{waiting.length === 1
+								? `${waiting[0].name} can't call the AI yet`
+								: `${waiting.length} providers can't call the AI yet`}
+						</b>
+						<small>
+							{waiting[0].connection_problem
+								? `${waiting[0].connection_problem[0].toUpperCase()}${waiting[0].connection_problem.slice(1)}. `
+								: ''}
+							Its agents are set up and start working as soon as it's connected. Saving records
+							still works meanwhile.
+						</small>
+					</span>
+					<Button variant="primary" icon="key" onClick={() => setConnecting(waiting[0].id)}>
+						Connect
+					</Button>
+				</div>
+			)}
 			<StatStrip
 				items={[
 					['Providers', data?.length],
@@ -167,6 +213,18 @@ export function ProvidersTab({ appId }: { appId: string }) {
 					appId={appId}
 					provider={editing}
 					onClose={() => setDrawer(null)}
+					onConnect={() => {
+						setDrawer(null);
+						setConnecting(editing.id);
+					}}
+				/>
+			)}
+			{connectingRow && (
+				<ConnectDrawer
+					key={connectingRow.id}
+					appId={appId}
+					provider={connectingRow}
+					onClose={() => setConnecting(null)}
 				/>
 			)}
 

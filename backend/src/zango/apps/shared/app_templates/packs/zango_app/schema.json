@@ -2833,7 +2833,7 @@
         },
         "model": {
           "type": "string",
-          "description": "Default model, e.g. claude-sonnet-4-5. Default: the service's usual model."
+          "description": "Default model, e.g. claude-sonnet-5-5. Default: the service's usual model."
         },
         "monthly_budget_usd": {
           "type": "number",

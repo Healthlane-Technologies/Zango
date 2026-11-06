@@ -124,9 +124,6 @@ class ProviderFetchModelsViewAPIV1(ZangoGenericPlatformAPIView):
             return get_api_response(
                 False, {"message": "provider_slug is required"}, 400
             )
-        if not isinstance(config, dict) or not config:
-            return get_api_response(False, {"message": "config is required"}, 400)
-
         try:
             from zango.ai.providers.registry import get_provider_class
 
@@ -134,6 +131,23 @@ class ProviderFetchModelsViewAPIV1(ZangoGenericPlatformAPIView):
         except Exception:
             return get_api_response(
                 False, {"message": f"Unknown provider: {provider_slug}"}, 400
+            )
+        needs = [
+            f
+            for f in getattr(provider_cls, "config_fields", [])
+            if f.get("required") and f.get("options_from") != "supported_models"
+        ]
+        if not isinstance(config, dict) or (needs and not config):
+            return get_api_response(False, {"message": "config is required"}, 400)
+        available = getattr(provider_cls, "available", None)
+        if callable(available) and not available():
+            return get_api_response(
+                False,
+                {
+                    "message": f"{provider_cls.display_name} is switched off in this setup.",
+                    "error_type": "auth_error",
+                },
+                400,
             )
 
         try:
@@ -364,6 +378,124 @@ class ProviderValidateViewAPIV1(ZangoGenericPlatformAPIView):
                 )
         except AppLLMProvider.DoesNotExist:
             return get_api_response(False, {"message": "Provider not found"}, 404)
+        except Exception as e:
+            return get_api_response(False, {"message": str(e)}, 500)
+
+
+def _platform_account_row(acc):
+    from zango.ai.providers.registry import PROVIDER_REGISTRY
+
+    cls = PROVIDER_REGISTRY.get(acc.provider_slug)
+    return {
+        "uuid": str(acc.uuid),
+        "name": acc.name,
+        "description": acc.description,
+        "provider_slug": acc.provider_slug,
+        "service_name": getattr(cls, "display_name", acc.provider_slug),
+        "default_model": acc.default_model,
+        "models": acc.model_list or getattr(cls, "supported_models", []) or [],
+        "is_default": acc.is_default,
+    }
+
+
+@method_decorator(set_app_schema_path, name="dispatch")
+class PlatformAccountsForAppViewAPIV1(ZangoGenericPlatformAPIView):
+    """
+    GET /api/v1/apps/<app_uuid>/ai/providers/platform-accounts/
+    The platform's working AI accounts this app can link to. No credentials.
+    """
+
+    def get(self, request, app_uuid, *args, **kwargs):
+        try:
+            from zango.apps.shared.platform_settings.models import PlatformAIAccount
+
+            rows = [
+                _platform_account_row(a)
+                for a in PlatformAIAccount.objects.filter(
+                    is_enabled=True, is_validated=True
+                )
+            ]
+            return get_api_response(True, {"accounts": rows}, 200)
+        except Exception as e:
+            return get_api_response(False, {"message": str(e)}, 500)
+
+
+@method_decorator(set_app_schema_path, name="dispatch")
+class ProviderConnectViewAPIV1(ZangoGenericPlatformAPIView):
+    """
+    POST /api/v1/apps/<app_uuid>/ai/providers/<provider_id>/connect/
+    Give an AI account working credentials, keeping its agents linked:
+      {"source": "platform", "account_uuid": "...", "default_model"?: "..."}
+      {"source": "own", "provider_slug": "...", "config": {...}, "default_model": "...",
+       "model_ids"?: [...]}
+    Own keys are checked live first. Agents on a model the new service doesn't offer
+    move to the new default model.
+    """
+
+    def post(self, request, app_uuid, provider_id, *args, **kwargs):
+        from zango.ai.accounts import check_credentials, connect_own, link_platform
+        from zango.ai.providers.registry import PROVIDER_REGISTRY
+        from zango.apps.shared.platform_settings.models import PlatformAIAccount
+
+        try:
+            provider = AppLLMProvider.objects.get(id=provider_id)
+        except AppLLMProvider.DoesNotExist:
+            return get_api_response(False, {"message": "Provider not found"}, 404)
+        d = request.data or {}
+        model = (d.get("default_model") or "").strip() or None
+        try:
+            if d.get("source") == "platform":
+                acc = PlatformAIAccount.objects.filter(
+                    uuid=d.get("account_uuid")
+                ).first()
+                if acc is None or not acc.usable:
+                    return get_api_response(
+                        False,
+                        {"message": "That platform AI account isn't available."},
+                        400,
+                    )
+                out = link_platform(provider, acc, model)
+            elif d.get("source") == "own":
+                slug = (d.get("provider_slug") or "").strip()
+                config = d.get("config") or {}
+                if slug not in PROVIDER_REGISTRY:
+                    return get_api_response(
+                        False, {"message": f"Unknown AI service '{slug}'."}, 400
+                    )
+                needs = [
+                    f
+                    for f in getattr(PROVIDER_REGISTRY[slug], "config_fields", [])
+                    if f.get("required") and f.get("options_from") != "supported_models"
+                ]
+                if not isinstance(config, dict) or (needs and not config):
+                    return get_api_response(
+                        False,
+                        {"message": "Enter the credentials for this service."},
+                        400,
+                    )
+                ok, error, models = check_credentials(slug, config, model)
+                if not ok:
+                    return get_api_response(
+                        False, {"message": error, "error_type": "auth_error"}, 400
+                    )
+                wanted = set(d.get("model_ids") or [])
+                if wanted:
+                    models = [m for m in models if m.get("id") in wanted] or models
+                out = connect_own(provider, slug, config, model or "", models)
+            else:
+                return get_api_response(
+                    False, {"message": "source must be 'platform' or 'own'"}, 400
+                )
+            provider.refresh_from_db()
+            return get_api_response(
+                True,
+                {
+                    "message": "Connected.",
+                    "provider": AppLLMProviderListSerializer(provider).data,
+                    **out,
+                },
+                200,
+            )
         except Exception as e:
             return get_api_response(False, {"message": str(e)}, 500)
 

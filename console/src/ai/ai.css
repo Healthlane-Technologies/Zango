@@ -1,0 +1,694 @@
+/* AI accounts: Platform → Settings → AI accounts, and App → AI → Connect. */
+
+/* ---------- service tiles ---------- */
+.zai-svc {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+	gap: 10px;
+}
+.zai-svc-t {
+	position: relative;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 14px;
+	text-align: left;
+	background: var(--panel);
+	border: 1px solid var(--border);
+	border-radius: 12px;
+	transition:
+		border-color 0.15s,
+		box-shadow 0.15s,
+		transform 0.15s var(--ease);
+}
+.zai-svc-t:hover {
+	border-color: var(--border-2);
+	transform: translateY(-1px);
+	box-shadow: 0 4px 14px -6px rgba(24, 24, 27, 0.14);
+}
+.zai-svc-t.on {
+	border-color: var(--accent);
+	box-shadow: 0 0 0 3px var(--ring);
+}
+.zai-svc-t b {
+	display: block;
+	font-size: 13.5px;
+	color: var(--t1);
+}
+.zai-svc-t small {
+	display: block;
+	font-size: 12px;
+	color: var(--t3);
+	margin-top: 1px;
+}
+.zai-radio {
+	margin-left: auto;
+	flex: none;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 18px;
+	height: 18px;
+	border-radius: 999px;
+	border: 1.5px solid var(--border-2);
+	color: #fff;
+}
+.zai-svc-t.on .zai-radio,
+.zai-pick.on .zai-radio {
+	background: var(--accent);
+	border-color: var(--accent);
+}
+.zai-radio svg {
+	width: 11px;
+	height: 11px;
+	stroke-width: 3;
+}
+
+/* ---------- credentials ---------- */
+.zai-cred > .field > span:first-child {
+	font-weight: 550;
+	color: var(--t1);
+	font-size: 12.5px;
+}
+.zai-secret {
+	position: relative;
+}
+.zai-secret > svg {
+	position: absolute;
+	left: 10px;
+	top: 50%;
+	width: 14px;
+	height: 14px;
+	transform: translateY(-50%);
+	color: var(--t4);
+	pointer-events: none;
+}
+.zai-secret .input {
+	padding-left: 30px;
+}
+.zai-note {
+	display: flex;
+	gap: 8px;
+	align-items: flex-start;
+	padding: 10px 12px;
+	border-radius: 10px;
+	background: var(--green-soft);
+	color: var(--green-t);
+	font-size: 12.5px;
+	line-height: 1.45;
+}
+.zai-note svg {
+	flex: none;
+	width: 15px;
+	height: 15px;
+	margin-top: 1px;
+}
+.zai-note a {
+	color: inherit;
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
+
+/* ---------- models ---------- */
+.zai-models {
+	border: 1px solid var(--border);
+	border-radius: 12px;
+	overflow: hidden;
+	max-height: 340px;
+	overflow-y: auto;
+}
+.zai-model {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 0 12px;
+	border-top: 1px solid var(--border-soft);
+	background: var(--panel);
+}
+.zai-model:first-child {
+	border-top: 0;
+}
+.zai-model:not(.on) {
+	background: var(--bg);
+}
+.zai-model:not(.on) .zai-model-b b {
+	color: var(--t3);
+}
+.zai-model.def {
+	background: var(--accent-soft);
+}
+.zai-model input {
+	width: 14px;
+	height: 14px;
+	accent-color: var(--accent);
+	flex: none;
+}
+.zai-model-b {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 10px 0;
+	text-align: left;
+}
+.zai-model-b b {
+	display: block;
+	font-size: 13px;
+	font-weight: 550;
+	color: var(--t1);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.zai-model-b small {
+	display: block;
+	font-size: 11px;
+	color: var(--t4);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.zai-chips {
+	margin-left: auto;
+	display: flex;
+	gap: 4px;
+	flex: none;
+}
+.zai-chips i {
+	font-style: normal;
+	font-size: 11px;
+	padding: 2px 6px;
+	border-radius: 6px;
+	background: var(--subtle);
+	color: var(--t3);
+}
+.zai-star {
+	flex: none;
+	font-size: 11.5px;
+	font-weight: 550;
+	padding: 3px 8px;
+	border-radius: 999px;
+	color: var(--t3);
+	border: 1px solid transparent;
+}
+.zai-model:hover .zai-star:not(:disabled) {
+	border-color: var(--border);
+	background: var(--panel);
+}
+.zai-star.on,
+.zai-model:hover .zai-star.on {
+	color: #fff;
+	background: var(--accent);
+	border-color: var(--accent);
+}
+.zai-star:disabled {
+	visibility: hidden;
+}
+
+/* ---------- wizard steps ---------- */
+.zai-steps {
+	display: flex;
+	gap: 6px;
+	margin: 0 0 18px;
+	padding: 0;
+	list-style: none;
+	counter-reset: s;
+}
+.zai-steps li {
+	flex: 1;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 12.5px;
+	color: var(--t4);
+	padding-bottom: 10px;
+	border-bottom: 2px solid var(--border-soft);
+}
+.zai-steps li span {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 20px;
+	height: 20px;
+	border-radius: 999px;
+	font-size: 11px;
+	font-weight: 600;
+	background: var(--subtle);
+	color: var(--t3);
+}
+.zai-steps li span svg {
+	width: 11px;
+	height: 11px;
+	stroke-width: 3;
+}
+.zai-steps li.on {
+	color: var(--t1);
+	font-weight: 550;
+	border-color: var(--accent);
+}
+.zai-steps li.on span {
+	background: var(--accent);
+	color: #fff;
+}
+.zai-steps li.done {
+	color: var(--t2);
+	border-color: var(--green);
+}
+.zai-steps li.done span {
+	background: var(--green);
+	color: #fff;
+}
+
+/* ---------- hero (no accounts yet) ---------- */
+.zai-hero {
+	position: relative;
+	overflow: hidden;
+	border-radius: 16px;
+	border: 1px solid var(--border);
+	background:
+		radial-gradient(900px 260px at 100% -40%, rgba(79, 70, 229, 0.12), transparent 60%),
+		radial-gradient(600px 240px at -10% 120%, rgba(13, 148, 136, 0.1), transparent 60%),
+		var(--panel);
+	padding: 32px;
+	display: grid;
+	grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+	gap: 28px;
+	align-items: center;
+}
+@media (max-width: 860px) {
+	.zai-hero {
+		grid-template-columns: 1fr;
+		padding: 22px;
+	}
+}
+.zai-hero h2 {
+	font-size: 22px;
+	line-height: 1.25;
+	letter-spacing: -0.02em;
+	color: var(--t1);
+	font-weight: 650;
+}
+.zai-hero p {
+	margin-top: 8px;
+	color: var(--t2);
+	font-size: 13.5px;
+	line-height: 1.55;
+	max-width: 520px;
+}
+.zai-points {
+	margin-top: 18px;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+.zai-points div {
+	display: flex;
+	gap: 10px;
+	align-items: flex-start;
+	font-size: 13px;
+	color: var(--t2);
+}
+.zai-points div svg {
+	flex: none;
+	width: 16px;
+	height: 16px;
+	margin-top: 1px;
+	color: var(--accent);
+}
+.zai-points b {
+	color: var(--t1);
+	font-weight: 600;
+}
+.zai-orbit {
+	position: relative;
+	height: 200px;
+}
+.zai-orbit .zpl {
+	position: absolute;
+	box-shadow:
+		0 10px 30px -10px rgba(24, 24, 27, 0.25),
+		inset 0 0 0 1px rgba(24, 24, 27, 0.06);
+	animation: zai-float 6s ease-in-out infinite;
+}
+.zai-orbit .zpl:nth-child(1) {
+	left: 8%;
+	top: 18%;
+}
+.zai-orbit .zpl:nth-child(2) {
+	left: 46%;
+	top: 0;
+	animation-delay: -1.5s;
+}
+.zai-orbit .zpl:nth-child(3) {
+	left: 70%;
+	top: 46%;
+	animation-delay: -3s;
+}
+.zai-orbit .zpl:nth-child(4) {
+	left: 26%;
+	top: 60%;
+	animation-delay: -4.5s;
+}
+.zai-orbit-core {
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	transform: translate(-50%, -50%);
+	width: 74px;
+	height: 74px;
+	border-radius: 22px;
+	background: linear-gradient(135deg, var(--accent), var(--violet));
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: #fff;
+	box-shadow: 0 16px 40px -12px rgba(79, 70, 229, 0.55);
+}
+.zai-orbit-core svg {
+	width: 32px;
+	height: 32px;
+}
+@keyframes zai-float {
+	0%,
+	100% {
+		transform: translateY(0);
+	}
+	50% {
+		transform: translateY(-6px);
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.zai-orbit .zpl {
+		animation: none;
+	}
+}
+
+/* ---------- account cards ---------- */
+.zai-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+	gap: 14px;
+}
+.zai-card {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+	padding: 16px;
+	background: var(--panel);
+	border: 1px solid var(--border);
+	border-radius: 14px;
+	box-shadow: var(--sh-card);
+	cursor: pointer;
+	transition:
+		border-color 0.15s,
+		box-shadow 0.15s,
+		transform 0.15s var(--ease);
+}
+.zai-card:hover {
+	border-color: var(--border-2);
+	box-shadow: 0 8px 24px -12px rgba(24, 24, 27, 0.2);
+	transform: translateY(-1px);
+}
+.zai-card.def {
+	border-color: rgba(79, 70, 229, 0.45);
+	background: linear-gradient(180deg, var(--accent-soft), var(--panel) 46%);
+}
+.zai-card.off {
+	opacity: 0.72;
+}
+.zai-card-h {
+	display: flex;
+	align-items: flex-start;
+	gap: 12px;
+}
+.zai-card-h b {
+	display: block;
+	font-size: 14px;
+	color: var(--t1);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.zai-card-h small {
+	display: block;
+	color: var(--t3);
+	font-size: 12px;
+	margin-top: 2px;
+}
+.zai-default {
+	white-space: nowrap;
+	flex: none;
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	font-size: 11px;
+	font-weight: 600;
+	color: var(--accent-t);
+	background: var(--panel);
+	border: 1px solid rgba(79, 70, 229, 0.3);
+	padding: 2px 7px;
+	border-radius: 999px;
+}
+.zai-default svg {
+	width: 11px;
+	height: 11px;
+}
+.zai-stats {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 8px;
+}
+.zai-stats div {
+	padding: 8px 10px;
+	border-radius: 10px;
+	background: var(--bg);
+	border: 1px solid var(--border-soft);
+	min-width: 0;
+}
+.zai-card.def .zai-stats div {
+	background: rgba(255, 255, 255, 0.7);
+}
+.zai-stats small {
+	display: block;
+	font-size: 11px;
+	color: var(--t3);
+}
+.zai-stats b {
+	display: block;
+	margin-top: 2px;
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--t1);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.zai-card-f {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 12px;
+	color: var(--t3);
+}
+.zai-card-f .err {
+	color: var(--red-t);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.zai-add {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	min-height: 178px;
+	border: 1.5px dashed var(--border-2);
+	border-radius: 14px;
+	color: var(--t3);
+	font-size: 13px;
+	transition:
+		border-color 0.15s,
+		color 0.15s,
+		background 0.15s;
+}
+.zai-add:hover {
+	border-color: var(--accent);
+	color: var(--accent-t);
+	background: var(--accent-soft);
+}
+.zai-add .zai-add-i {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 34px;
+	height: 34px;
+	border-radius: 10px;
+	background: var(--subtle);
+}
+.zai-add:hover .zai-add-i {
+	background: var(--panel);
+}
+
+/* ---------- how it works ---------- */
+.zai-how {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 0;
+	margin-top: 22px;
+	border: 1px solid var(--border);
+	border-radius: 14px;
+	background: var(--panel);
+	overflow: hidden;
+}
+@media (max-width: 860px) {
+	.zai-how {
+		grid-template-columns: 1fr;
+	}
+}
+.zai-how > div {
+	display: flex;
+	gap: 12px;
+	padding: 16px;
+	border-left: 1px solid var(--border-soft);
+}
+.zai-how > div:first-child {
+	border-left: 0;
+}
+.zai-how .n {
+	flex: none;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 26px;
+	height: 26px;
+	border-radius: 8px;
+	background: var(--accent-soft);
+	color: var(--accent-t);
+	font-size: 12px;
+	font-weight: 650;
+}
+.zai-how b {
+	display: block;
+	font-size: 13px;
+	color: var(--t1);
+}
+.zai-how small {
+	display: block;
+	margin-top: 2px;
+	font-size: 12px;
+	line-height: 1.45;
+	color: var(--t3);
+}
+
+/* ---------- app: connect choices ---------- */
+.zai-choice {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 10px;
+	margin-bottom: 18px;
+}
+.zai-pick {
+	display: flex;
+	align-items: flex-start;
+	gap: 12px;
+	padding: 14px;
+	text-align: left;
+	border: 1px solid var(--border);
+	border-radius: 12px;
+	background: var(--panel);
+	transition:
+		border-color 0.15s,
+		box-shadow 0.15s;
+}
+.zai-pick:hover {
+	border-color: var(--border-2);
+}
+.zai-pick.on {
+	border-color: var(--accent);
+	box-shadow: 0 0 0 3px var(--ring);
+}
+.zai-pick b {
+	display: block;
+	font-size: 13.5px;
+	color: var(--t1);
+}
+.zai-pick small {
+	display: block;
+	margin-top: 2px;
+	font-size: 12px;
+	line-height: 1.45;
+	color: var(--t3);
+}
+.zai-pick:disabled {
+	opacity: 0.55;
+	cursor: not-allowed;
+}
+.zai-pick .ic {
+	flex: none;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 34px;
+	height: 34px;
+	border-radius: 10px;
+	background: var(--accent-soft);
+	color: var(--accent-t);
+}
+.zai-pick .ic svg {
+	width: 17px;
+	height: 17px;
+}
+.zai-acc {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+/* ---------- app: connection banner ---------- */
+.zai-banner {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	margin-bottom: 16px;
+	padding: 14px 16px;
+	border-radius: 14px;
+	border: 1px solid #fcd9a8;
+	background: linear-gradient(90deg, var(--amber-soft), var(--panel));
+}
+.zai-banner .ic {
+	flex: none;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 36px;
+	height: 36px;
+	border-radius: 10px;
+	background: #fff;
+	color: var(--amber);
+	box-shadow: inset 0 0 0 1px #fcd9a8;
+}
+.zai-banner b {
+	display: block;
+	font-size: 13.5px;
+	color: var(--t1);
+}
+.zai-banner small {
+	display: block;
+	font-size: 12.5px;
+	color: var(--t2);
+	margin-top: 1px;
+}
+.zai-src {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	font-size: 11.5px;
+	color: var(--t3);
+}
+.zai-src svg {
+	width: 12px;
+	height: 12px;
+}

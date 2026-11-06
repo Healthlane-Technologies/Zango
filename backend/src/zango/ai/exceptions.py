@@ -25,6 +25,22 @@ class ProviderDisabled(ZangoAIError):
         super().__init__(f"Provider '{provider_name}' is disabled.")
 
 
+class ProviderNotConnected(ZangoAIError):
+    """The AppLLMProvider has no working credentials yet.
+
+    A placeholder account (created by App Studio without a key), or one linked to a
+    platform AI account that is missing, switched off or failing its check.
+    """
+
+    def __init__(self, provider_name, reason=""):
+        self.provider_name = provider_name
+        self.reason = reason
+        super().__init__(
+            f"Provider '{provider_name}' is not connected"
+            + (f": {reason}" if reason else ". Add a key in App → AI → Providers.")
+        )
+
+
 class ProviderConfigInvalid(ZangoAIError):
     """The provider config failed validation."""
 

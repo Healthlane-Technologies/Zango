@@ -23,3 +23,10 @@ try:
     from . import bedrock  # noqa: F401
 except ImportError:
     pass
+
+try:
+    from . import (
+        claude_subscription,  # noqa: F401  (local testing; hidden unless switched on)
+    )
+except ImportError:
+    pass

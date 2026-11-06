@@ -10,7 +10,7 @@ Branch: `feat/ai-agents-console-p0` (from `feat/agent-mode-default-preview-desig
 | P0 | Console AI page at parity with the classic App Panel (`/platform/apps/:id/ai`) | done (4006629a); UI polish later |
 | P1 | `ai:` spec section, schema/rules, checker, analyst interview stage 7a, preview, review panel | done |
 | P2 | Build: `zas_core/ai.py` runtime, holes, `zango_platform.py ai` step (placeholder + agents) | code + tests done; end-to-end build of the example app not run yet |
-| P3 | Placeholder support in Zango (`is_placeholder`, `…/connect/`, `ProviderNotConnected`), Connect pause, AI tests | not started |
+| P3 | Hybrid: platform AI accounts (default linked at build) + placeholder support (`is_placeholder`, `…/connect/`, `ProviderNotConnected`); then Connect pause, AI tests | P3a code done; P3b not started |
 
 ## P0 checklist
 
@@ -77,6 +77,37 @@ Facts for running things:
 - Preview check: copy `app-studio.html` to scratchpad, serve with `python3 -m http.server`, load the example YAML into `src.value` + `parse()` via the Chrome JS tool.
 - Local app with AI data: `EnrollmentAgent` (834cb82a-a5d0-4af9-a0c7-3b5c29d06434). Console at localhost:5173/console needs a login.
 - Commit bundles (`backend/src/zango/assets/console`) with console changes; pre-commit runs ruff-format and detect-secrets (use `# pragma: allowlist secret` on fake keys).
+
+## P3a: platform AI accounts (hybrid), 2026-11-06
+
+Decision (user): hybrid. A platform admin connects an AI service once in Platform → Settings → AI accounts
+(stored in the DB, encrypted; nothing in .env or settings). The build links each app's `app-llm` to the
+default account; with no working default it makes a placeholder as before.
+
+- [x] `PlatformAIAccount` (public schema, `platform_settings` 0002): service, encrypted config, model list,
+      default model, per-app monthly cap, one default, on/off, last check.
+- [x] `AppLLMProvider` (ai 0002): `source` own|platform, `platform_account_uuid`, `is_placeholder`;
+      `_decrypt_config`/`get_provider_class` read the platform account at call time (key rotation reaches
+      every app); `connection_problem()` / `is_connected`; `get_client` raises `ProviderNotConnected`.
+- [x] `zango.ai.accounts`: `check_credentials`, `link_platform`, `connect_own` (agents on a model the new
+      service lacks move to the new default), `apps_linked_to`. Platform cap is a ceiling on the app budget.
+- [x] API `/api/v1/platform/ai-accounts/` (super admins): list (+ services, apps using), create (live check),
+      check, get/put (key replace re-checked), delete (409 while apps use it), validate.
+- [x] App API: `providers/platform-accounts/`, `providers/<id>/connect/` (platform or own key); list serializer
+      adds source/platform_account/is_placeholder/connected/connection_problem; platform/placeholder rows hide config.
+- [x] Build: `ensure_ai_account` links to the default (or upgrades a placeholder); runtime `_client` uses `is_connected`.
+- [x] Console: Settings → AI accounts (hero, cards, connect wizard, edit drawer, logos); App → AI → Providers
+      banner, logos, Connect drawer (platform account or own key), linked-key card in the edit drawer.
+- [x] Tests: `test_ai_build` 19 green. Local DB migrated (all 68 apps).
+- [x] Claude subscription for local testing (`ai/providers/claude_subscription.py`): same switch as Build with AI
+      (`AGENT_MODE_AUTH=subscription` + `CLAUDE_CODE_OAUTH_TOKEN` + DEBUG), one tool-less turn through the Claude
+      Code CLI per call; no tools, no files, schema asked for not enforced, cost 0. Hidden and "not connected"
+      when the switch is off. The build prefers it for new and waiting accounts.
+- [x] Claude Opus 5.5 / Sonnet 5.5 in the Anthropic model list (per-model cache-read price); Sonnet 5.5 is
+      the recommended default and the spec default (pack 1.1.41, re-imported locally).
+- [x] Checked in Chrome: Settings → AI accounts (empty state, wizard, card, drawer), App → AI → Providers
+      (logos, Connect drawer both ways). Local DB has a platform account `claude-subscription-main` (default).
+- [ ] P3b: Connect pause at the end of the build, real-AI test step, report section.
 
 ## Notes / decisions
 

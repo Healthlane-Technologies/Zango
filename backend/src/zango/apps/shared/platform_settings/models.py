@@ -8,6 +8,8 @@ timezone or theme out from under its users.
 
 from __future__ import annotations
 
+import uuid
+
 from django.db import models
 
 from zango.core.model_mixins import FullAuditMixin
@@ -86,3 +88,111 @@ class PlatformSettings(FullAuditMixin):
             "language": self.default_language,
         }
         return {k: v for k, v in mapping.items() if v}
+
+
+class PlatformAIAccount(FullAuditMixin):
+    """An AI service account set up once for the whole platform (public schema).
+
+    Apps link to it instead of holding their own key: an app's ``AppLLMProvider``
+    with ``source="platform"`` reads this account's credentials when it calls the AI,
+    so a key is rotated here once and every linked app follows. Budgets and usage
+    stay per app, on the app's own provider row.
+
+    App Studio links the spec's AI account to the default account when one is set
+    up and working; otherwise it creates a placeholder for the app creator to fill.
+    The key lives only in ``config_encrypted`` (never in settings or the env) and no
+    API returns it; see ``masked_config()``.
+    """
+
+    uuid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True, default="")
+    provider_slug = models.CharField(
+        max_length=50, help_text="Registered provider class, e.g. 'anthropic'"
+    )
+    config_encrypted = models.BinaryField(null=True, blank=True)
+    default_model = models.CharField(max_length=100, blank=True, default="")
+    # [{id, name, context_window?, ...}] the apps may pick from; empty = the service's list
+    model_list = models.JSONField(default=list, blank=True)
+    app_monthly_budget_usd = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Monthly cap given to each app that links to this account. Null = none.",
+    )
+    is_default = models.BooleanField(default=False)
+    is_enabled = models.BooleanField(default=True)
+    is_validated = models.BooleanField(default=False)
+    last_validated_at = models.DateTimeField(null=True, blank=True)
+    validation_error = models.TextField(blank=True, default="")
+
+    class Meta:
+        db_table = "platform_ai_account"
+        ordering = ["-is_default", "name"]
+        verbose_name = "Platform AI account"
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.provider_slug})"
+
+    @property
+    def usable(self) -> bool:
+        return bool(self.is_enabled and self.is_validated and self.config_encrypted)
+
+    @classmethod
+    def default(cls) -> "PlatformAIAccount | None":
+        """The working default account, or None."""
+        acc = cls.objects.filter(is_default=True).first()
+        return acc if acc is not None and acc.usable else None
+
+    def provider_class(self):
+        from zango.ai.providers.registry import get_provider_class
+
+        return get_provider_class(self.provider_slug)
+
+    def secret_fields(self) -> list[str]:
+        from zango.ai.providers.registry import PROVIDER_REGISTRY
+
+        cls = PROVIDER_REGISTRY.get(self.provider_slug)
+        fields = getattr(cls, "config_fields", []) if cls else []
+        return [f["name"] for f in fields if f.get("type") == "secret"] or ["api_key"]
+
+    def get_config(self) -> dict:
+        """Decrypt the stored config. In memory only; never serialize this."""
+        if not self.config_encrypted:
+            return {}
+        from zango.ai.encryption import decrypt_config
+
+        return decrypt_config(self.config_encrypted)
+
+    def set_config(self, config: dict) -> None:
+        from zango.ai.encryption import encrypt_config
+
+        self.config_encrypted = encrypt_config(config)
+
+    def masked_config(self) -> dict:
+        from zango.ai.encryption import mask_config
+
+        try:
+            return mask_config(self.get_config(), self.secret_fields())
+        except Exception:  # noqa: BLE001
+            return {}
+
+    def model_ids(self) -> list[str]:
+        ids = [m.get("id") for m in self.model_list or [] if m.get("id")]
+        if ids:
+            return ids
+        try:
+            return [
+                m["id"] for m in getattr(self.provider_class(), "supported_models", [])
+            ]
+        except Exception:  # noqa: BLE001
+            return []
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        # one default at a time
+        if self.is_default:
+            type(self).objects.exclude(pk=self.pk).filter(is_default=True).update(
+                is_default=False
+            )

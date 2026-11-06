@@ -22,11 +22,13 @@ import {
 	Field,
 	Input,
 	SectionTitle,
+	ProviderLogo,
 	Select,
 	Skeleton,
 	Switch,
 	toast,
 } from '@/ui';
+import { ServicePicker } from '@/ai/parts';
 import { serviceLabel } from './parts';
 
 /** Config fields that belong in `config` (default_model is a top-level body field). */
@@ -49,15 +51,20 @@ export function ProviderDrawer({
 	appId,
 	provider,
 	onClose,
+	onConnect,
 }: {
 	appId: string;
 	/** Omitted: add a new provider. */
 	provider?: Provider;
 	onClose: () => void;
+	/** Opens the Connect drawer (platform account or own key). */
+	onConnect?: () => void;
 }) {
 	const available = useAvailableProviders(appId);
 	const qc = useQueryClient();
 	const editing = provider != null;
+	// Credentials come from a platform account, or are still missing: change them via Connect.
+	const linked = editing && (provider.source === 'platform' || provider.is_placeholder);
 
 	const [slug, setSlug] = useState(provider?.provider_slug ?? '');
 	const svc = available.data?.find((p) => p.slug === slug);
@@ -217,7 +224,9 @@ export function ProviderDrawer({
 			title={editing ? provider.name : 'Add provider'}
 			subtitle={
 				editing
-					? `${serviceLabel(provider.provider_slug)} · credentials are stored encrypted`
+					? linked
+						? `${serviceLabel(provider.provider_slug)} · ${provider.is_placeholder ? 'not connected yet' : 'uses a platform AI account'}`
+						: `${serviceLabel(provider.provider_slug)} · credentials are stored encrypted`
 					: 'Credentials are checked with the service, then stored encrypted for this app.'
 			}
 			footer={
@@ -235,34 +244,41 @@ export function ProviderDrawer({
 					{available.isLoading ? (
 						<Skeleton height={64} />
 					) : (
-						<div className="grid grid-cols-2 gap-2">
-							{(available.data ?? []).map((p) => (
-								<button
-									key={p.slug}
-									type="button"
-									onClick={() => pickService(p.slug)}
-									className={cx(
-										'rounded-lg border px-3 py-2.5 text-left transition-colors',
-										p.slug === slug
-											? 'border-accent bg-accent-soft'
-											: 'border-border bg-panel hover:bg-hover',
-									)}
-								>
-									<b className="block text-[13px] text-t1">{p.display_name}</b>
-									<small className="text-t3">
-										{p.supported_models.length
-											? `${p.supported_models.length} known models`
-											: 'Models listed from your account'}
-									</small>
-								</button>
-							))}
-						</div>
+						<ServicePicker services={available.data ?? []} value={slug} onChange={pickService} />
 					)}
+				</>
+			)}
+
+			{svc && linked && (
+				<>
+					<SectionTitle>Key</SectionTitle>
+					<div className="flex items-center gap-3 rounded-[12px] border border-[var(--border)] px-3.5 py-3">
+						<ProviderLogo slug={provider.platform_account?.provider_slug ?? provider.provider_slug} size={34} />
+						<span className="min-w-0 flex-1">
+							<b className="block text-[13px] text-t1">
+								{provider.is_placeholder
+									? 'Waiting for a key'
+									: `Platform account ${provider.platform_account?.name ?? ''}`}
+							</b>
+							<small className="text-[12px] text-t3">
+								{provider.is_placeholder
+									? 'Made by App Studio. Its agents start working once it is connected.'
+									: 'Managed in Platform → Settings → AI accounts. This app never sees the key.'}
+							</small>
+						</span>
+						{onConnect && (
+							<Button size="sm" variant={provider.is_placeholder ? 'primary' : 'secondary'} onClick={onConnect}>
+								{provider.is_placeholder ? 'Connect' : 'Change'}
+							</Button>
+						)}
+					</div>
 				</>
 			)}
 
 			{svc && (
 				<>
+					{!linked && (
+						<>
 					<SectionTitle>Credentials</SectionTitle>
 					{editing && (
 						<p className="mb-3 text-[12px] text-t3">
@@ -334,6 +350,8 @@ export function ProviderDrawer({
 						<p className="mt-2 text-[12px] text-amber-t">
 							Check the new credentials before saving.
 						</p>
+					)}
+						</>
 					)}
 
 					{(models || editing) && (

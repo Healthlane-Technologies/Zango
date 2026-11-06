@@ -25,6 +25,8 @@ export interface ProviderModelInfo {
 	supports_tools: boolean;
 	supports_vision: boolean;
 	supports_streaming: boolean;
+	/** The model suggested as the default for a new account. */
+	recommended?: boolean;
 }
 
 export interface ConfigField {
@@ -62,6 +64,21 @@ export interface Provider {
 	name: string;
 	description: string;
 	provider_slug: string;
+	/** `platform`: uses a platform AI account's key (Platform → Settings → AI accounts). */
+	source: 'own' | 'platform';
+	platform_account: {
+		uuid: string;
+		name: string;
+		provider_slug: string;
+		is_enabled: boolean;
+		is_validated: boolean;
+	} | null;
+	/** Made by App Studio without a key; its agents wait for a connection. */
+	is_placeholder: boolean;
+	/** Can call the AI now. */
+	connected: boolean;
+	/** Why not, in words ("" when connected). */
+	connection_problem: string;
 	default_model: string | null;
 	is_enabled: boolean;
 	is_validated: boolean;
@@ -834,4 +851,46 @@ export const money = (v: string | number | null | undefined, digits = 2) => {
 /** `{{name}}` slots in order of first appearance. */
 export function templateVars(content: string): string[] {
 	return [...new Set([...content.matchAll(/\{\{(\w+)\}\}/g)].map((m) => m[1]))];
+}
+
+/* ---------- connecting an AI account ---------- */
+
+/** A platform AI account an app can link to (no credentials). */
+export interface PlatformAccountOption {
+	uuid: string;
+	name: string;
+	description: string;
+	provider_slug: string;
+	service_name: string;
+	default_model: string;
+	models: ProviderModelInfo[];
+	is_default: boolean;
+}
+
+export function usePlatformAccounts(appId: string) {
+	return useQuery({
+		queryKey: [...aiKeys.all(appId), 'platform-accounts'],
+		queryFn: () =>
+			api<{ accounts: PlatformAccountOption[] }>(`${base(appId)}/providers/platform-accounts/`).then(
+				(r) => r.accounts,
+			),
+	});
+}
+
+export type ConnectBody =
+	| { source: 'platform'; account_uuid: string; default_model?: string }
+	| {
+			source: 'own';
+			provider_slug: string;
+			config: Record<string, unknown>;
+			default_model: string;
+			model_ids?: string[];
+	  };
+
+export function connectProvider(appId: string, id: number, body: ConnectBody) {
+	return api<{ message: string; provider: Provider; default_model: string; moved: number }>(
+		`${base(appId)}/providers/${id}/connect/`,
+		'POST',
+		body,
+	);
 }

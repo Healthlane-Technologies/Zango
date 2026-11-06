@@ -15,7 +15,7 @@ or result handling.
 
 | Part | Who | Where |
 |---|---|---|
-| The AI account `app-llm` (service and model from `ai.provider`, **no key**) | platform, before `zango_platform.py ai` | App → AI → Providers |
+| The AI account `app-llm`: linked to the platform's default AI account when one is set up, otherwise a placeholder with the service and model from `ai.provider` and **no key** | platform, before `zango_platform.py ai` | App → AI → Providers |
 | The instructions: one `ai_prompt` hole per helper | **you** | `backend/<module>/ai/<code>.system.md`, `.user.md` |
 | Custom tools: one `ai_tool` hole per `tools[].code` | **you** | `backend/<module>/tools.py` |
 | Calls from hand-written code (`uses_ai` on a custom requirement) | **you**, inside that requirement's hole | `run_from_code("<code>", …)` |
@@ -131,7 +131,7 @@ def app__req__1():
 - **Loop guard.** AI writes fire no triggers.
 - **Who can run it and see the answer.** The helper's `roles`. A trigger's `roles` narrows that for
   clicks.
-- **Unavailable runs.** A placeholder account, a missing key, an agent that is switched off, or an
+- **Unavailable runs.** A placeholder account, a platform account that is off or failing, a missing key, an agent that is switched off, or an
   account over budget ends the run as `unavailable`. Users see "AI isn't set up for this app yet",
   and saving still works.
 
@@ -158,7 +158,11 @@ def screening(ctx):
 ## Platform step (for reference)
 
 `zango_platform.py ai` runs after `sync` and does four things:
-1. It checks that the account exists. If it doesn't, the build creates it first, through the ORM.
+1. It checks that the account exists. If it doesn't, the build creates it first, through the ORM:
+   linked to the platform's default AI account (Platform → Settings → AI accounts) when there is a
+   working one, so the AI works from the first build; otherwise a placeholder that waits for a key.
+   A placeholder from an earlier build is linked as soon as a platform default exists. The model
+   the agents get is the account's `default_model`, so never assume the spec's model in a prompt.
 2. It syncs tools, and fails if a tool the spec lists is still not registered.
 3. It uploads prompts, and fails if a prompt file is missing or empty.
 4. It creates or updates the agents:

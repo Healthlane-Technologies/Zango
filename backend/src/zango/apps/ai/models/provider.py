@@ -9,7 +9,11 @@ from django.db.models import F
 from django.utils import timezone
 
 from zango.ai.encryption import decrypt_config
-from zango.ai.exceptions import BudgetExceeded, ProviderDisabled
+from zango.ai.exceptions import (
+    BudgetExceeded,
+    ProviderDisabled,
+    ProviderNotConnected,
+)
 from zango.core.model_mixins import FullAuditMixin
 
 
@@ -81,6 +85,25 @@ class AppLLMProvider(FullAuditMixin):
         help_text="Timestamp of last budget reset",
     )
 
+    # Where the credentials come from: this app's own config, or a platform AI
+    # account (public schema) that many apps share. Usage and budget stay here.
+    SOURCE_OWN = "own"
+    SOURCE_PLATFORM = "platform"
+    source = models.CharField(
+        max_length=16,
+        default=SOURCE_OWN,
+        choices=[(SOURCE_OWN, "This app's key"), (SOURCE_PLATFORM, "Platform account")],
+    )
+    platform_account_uuid = models.UUIDField(
+        null=True,
+        blank=True,
+        help_text="PlatformAIAccount.uuid when source is 'platform'",
+    )
+    is_placeholder = models.BooleanField(
+        default=False,
+        help_text="Created without credentials (App Studio); waiting for a key or a platform account",
+    )
+
     # Status
     is_enabled = models.BooleanField(default=True)
     is_validated = models.BooleanField(
@@ -104,11 +127,47 @@ class AppLLMProvider(FullAuditMixin):
     def __str__(self):
         return f"{self.name} ({self.provider_slug})"
 
+    def platform_account(self):
+        """The linked PlatformAIAccount, or None (own key, or the link is gone)."""
+        if self.source != self.SOURCE_PLATFORM or not self.platform_account_uuid:
+            return None
+        from zango.apps.shared.platform_settings.models import PlatformAIAccount
+
+        return PlatformAIAccount.objects.filter(uuid=self.platform_account_uuid).first()
+
+    def connection_problem(self) -> str:
+        """Why this provider can't call the AI yet ("" when it can)."""
+        if self.is_placeholder:
+            return "waiting for a key"
+        try:
+            available = getattr(self.get_provider_class(), "available", None)
+        except Exception:  # noqa: BLE001
+            return f"the AI service '{self.provider_slug}' is not installed"
+        if callable(available) and not available():
+            return "its AI service is switched off in this setup"
+        if self.source == self.SOURCE_PLATFORM:
+            acc = self.platform_account()
+            if acc is None:
+                return "the platform AI account it used is gone"
+            if not acc.is_enabled:
+                return f"the platform AI account '{acc.name}' is switched off"
+            if not acc.is_validated:
+                return (
+                    f"the platform AI account '{acc.name}' failed its credential check"
+                )
+            return ""
+        return "" if self.is_validated else "its credentials have not been checked"
+
+    @property
+    def is_connected(self) -> bool:
+        return self.is_enabled and not self.connection_problem()
+
     def get_provider_class(self):
         """Returns the registered provider class for this config's provider_slug."""
         from zango.ai.providers.registry import get_provider_class
 
-        return get_provider_class(self.provider_slug)
+        acc = self.platform_account()
+        return get_provider_class(acc.provider_slug if acc else self.provider_slug)
 
     def get_client(self):
         """
@@ -119,6 +178,14 @@ class AppLLMProvider(FullAuditMixin):
         """
         if not self.is_enabled:
             raise ProviderDisabled(self.name)
+        if (
+            self.is_placeholder
+            or self.source == self.SOURCE_PLATFORM
+            or callable(getattr(self.get_provider_class(), "available", None))
+        ):
+            problem = self.connection_problem()
+            if problem:
+                raise ProviderNotConnected(self.name, problem)
 
         self.check_and_reset_budget()
 
@@ -133,7 +200,12 @@ class AppLLMProvider(FullAuditMixin):
         return provider_cls(config)
 
     def _decrypt_config(self) -> dict:
-        """Decrypt config_encrypted and return as dict."""
+        """Decrypt the credentials: the linked platform account's, or this row's own."""
+        if self.source == self.SOURCE_PLATFORM:
+            acc = self.platform_account()
+            if acc is None:
+                raise ProviderNotConnected(self.name, self.connection_problem())
+            return acc.get_config()
         return decrypt_config(self.config_encrypted)
 
     def record_usage(self, usage, cost: float):

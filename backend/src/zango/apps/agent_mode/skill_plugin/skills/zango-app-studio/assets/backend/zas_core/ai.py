@@ -237,7 +237,10 @@ def _client(a):
         raise Unavailable(UNAVAILABLE)
     ag = client._agent
     p = ag.provider
-    if not ag.is_enabled or p is None or not p.is_enabled or getattr(p, "is_placeholder", False) or not p.is_validated:
+    if not ag.is_enabled or p is None or not p.is_enabled:
+        raise Unavailable(UNAVAILABLE)
+    connected = getattr(p, "is_connected", None)  # Zango with platform AI accounts
+    if connected is False or (connected is None and not p.is_validated):
         raise Unavailable(UNAVAILABLE)
     return client
 

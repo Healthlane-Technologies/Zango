@@ -27,3 +27,4 @@ export { Table, type Column } from './Table';
 export { TemplateBadge } from './TemplateBadge';
 export { toast, Toaster } from './toast';
 export { Checkbox, Switch, SwitchField, SwitchRow } from './Toggle';
+export { ProviderLogo, SERVICES, serviceMeta, type ServiceMeta } from './ProviderLogo';

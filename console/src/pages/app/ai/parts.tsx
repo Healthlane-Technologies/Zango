@@ -42,6 +42,20 @@ export function ProviderStatus({ p }: { p: Provider }) {
 				Disabled
 			</Badge>
 		);
+	if (p.is_placeholder)
+		return (
+			<Badge tone="amber" dot>
+				Waiting for a key
+			</Badge>
+		);
+	if (p.source === 'platform' && !p.connected)
+		return (
+			<span title={p.connection_problem}>
+				<Badge tone="red" dot>
+					Platform account unavailable
+				</Badge>
+			</span>
+		);
 	if (p.validation_error)
 		return (
 			<Badge tone="red" dot>

@@ -762,7 +762,7 @@ custom requirements: AI is for judgement on text and documents.
 
 ```yaml
 ai:
-  provider: { kind: anthropic, model: claude-sonnet-4-5, monthly_budget_usd: 50 }   # the kind of account, never a key
+  provider: { kind: anthropic, model: claude-sonnet-5-5, monthly_budget_usd: 50 }   # the kind of account, never a key
   agents:
     - code: response_drafter                  # snake_case, unique
       name: Response drafter

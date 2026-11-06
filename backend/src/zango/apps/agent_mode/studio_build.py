@@ -1624,9 +1624,11 @@ class StudioBuild:
         try:
             out = ensure_ai_account(self.app_name, ai)
             result.stdout_tail = f"AI account {out['name']}: {out['status']}" + (
-                ""
+                f" (uses the platform account {out['via']})"
+                if out.get("via")
+                else ""
                 if out["connected"]
-                else " (no key yet: App → AI → Providers → Add key)"
+                else " (no key yet: App → AI → Providers → Connect)"
             )
         except Exception as exc:  # noqa: BLE001
             logger.exception("agent_mode: AI account for %s", self.app_name)

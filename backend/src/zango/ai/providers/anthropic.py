@@ -20,10 +20,36 @@ from zango.ai.providers.registry import register_provider
 
 @register_provider("anthropic", "Anthropic", icon="anthropic.svg")
 class AnthropicProvider(BaseLLMProvider):
-    # Pricing sourced from https://docs.anthropic.com/en/docs/about-claude/models (May 2026)
+    # Pricing sourced from https://docs.anthropic.com/en/docs/about-claude/models (May 2026);
+    # Claude 5.5 from https://platform.claude.com/docs/en/about-claude/pricing (Nov 2026).
     # Only active and deprecated (not yet retired) models are listed.
     supported_models = [
         # ── Active models ──────────────────────────────────────────────────
+        {
+            "id": "claude-opus-5-5",
+            "name": "Claude Opus 5.5",
+            "context_window": 1000000,
+            "max_output_tokens": 128000,
+            "input_cost_per_mtok": 4.00,
+            "output_cost_per_mtok": 20.00,
+            "cache_read_cost_per_mtok": 0.20,
+            "supports_tools": True,
+            "supports_vision": True,
+            "supports_streaming": True,
+        },
+        {
+            "id": "claude-sonnet-5-5",
+            "name": "Claude Sonnet 5.5",
+            "context_window": 1000000,
+            "max_output_tokens": 128000,
+            "input_cost_per_mtok": 2.00,
+            "output_cost_per_mtok": 10.00,
+            "cache_read_cost_per_mtok": 0.10,
+            "recommended": True,  # the default suggested for new accounts
+            "supports_tools": True,
+            "supports_vision": True,
+            "supports_streaming": True,
+        },
         {
             "id": "claude-opus-4-7",
             "name": "Claude Opus 4.7",

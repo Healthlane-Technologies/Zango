@@ -12,6 +12,7 @@ from .views import (
     InvocationDetailViewAPIV1,
     InvocationListViewAPIV1,
     InvocationStatsViewAPIV1,
+    PlatformAccountsForAppViewAPIV1,
     PromptActivateViewAPIV1,
     PromptCompareViewAPIV1,
     PromptDetailViewAPIV1,
@@ -19,6 +20,7 @@ from .views import (
     PromptVersionDetailViewAPIV1,
     PromptVersionPromoteViewAPIV1,
     PromptVersionsListViewAPIV1,
+    ProviderConnectViewAPIV1,
     ProviderDetailViewAPIV1,
     ProviderFetchModelsViewAPIV1,
     ProviderModelToggleViewAPIV1,
@@ -36,6 +38,7 @@ urlpatterns = [
     # Available providers (registry metadata) — must come before <int:provider_id>
     path("providers/available/", AvailableProvidersViewAPIV1.as_view()),
     path("providers/fetch-models/", ProviderFetchModelsViewAPIV1.as_view()),
+    path("providers/platform-accounts/", PlatformAccountsForAppViewAPIV1.as_view()),
     # Provider CRUD
     path("providers/", ProvidersListViewAPIV1.as_view()),
     path("providers/<int:provider_id>/", ProviderDetailViewAPIV1.as_view()),
@@ -43,6 +46,10 @@ urlpatterns = [
     path(
         "providers/<int:provider_id>/validate/",
         ProviderValidateViewAPIV1.as_view(),
+    ),
+    path(
+        "providers/<int:provider_id>/connect/",
+        ProviderConnectViewAPIV1.as_view(),
     ),
     path(
         "providers/<int:provider_id>/toggle/",

@@ -1111,7 +1111,7 @@ detail_views:
 #  The build creates each helper as a Zango AI agent on one provider. The spec names the
 #  kind of account only, never a key: the creator adds the key in the console.
 ai:
-  provider: { kind: anthropic, model: claude-sonnet-4-5, monthly_budget_usd: 50 }
+  provider: { kind: anthropic, model: claude-sonnet-5-5, monthly_budget_usd: 50 }
   agents:
     - code: invoice_reader
       name: Invoice reader

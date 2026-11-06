@@ -1270,7 +1270,7 @@ class Spec:
             if code in used and "task" not in events:
                 L.warn(w + ".triggers", f"{', '.join(used[code])} calls this helper from code: add {{event: task}}")
 
-    AI_DEFAULT_MODEL = {"anthropic": "claude-sonnet-4-5", "openai": "gpt-4o", "azure_openai": "gpt-4o",
+    AI_DEFAULT_MODEL = {"anthropic": "claude-sonnet-5-5", "openai": "gpt-4o", "azure_openai": "gpt-4o",
                         "bedrock": "anthropic.claude-sonnet-4-5"}
     AI_JSON_TYPE = {"text": "string", "long_text": "string", "integer": "integer", "decimal": "number",
                     "boolean": "boolean", "date": "string", "choice": "string"}

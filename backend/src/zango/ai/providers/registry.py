@@ -45,6 +45,10 @@ def get_available_providers() -> list[dict]:
     """
     providers = []
     for slug, cls in PROVIDER_REGISTRY.items():
+        # a service can be switched off for this setup (e.g. the local-testing subscription)
+        available = getattr(cls, "available", None)
+        if callable(available) and not available():
+            continue
         providers.append(
             {
                 "slug": cls.slug,

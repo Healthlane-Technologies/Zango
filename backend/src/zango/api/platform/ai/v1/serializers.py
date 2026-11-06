@@ -40,6 +40,9 @@ class AppLLMProviderListSerializer(serializers.ModelSerializer):
     masked_config = serializers.SerializerMethodField()
     budget_status = serializers.SerializerMethodField()
     enabled_models = AppLLMProviderModelSerializer(many=True, read_only=True)
+    platform_account = serializers.SerializerMethodField()
+    connected = serializers.SerializerMethodField()
+    connection_problem = serializers.SerializerMethodField()
 
     class Meta:
         model = AppLLMProvider
@@ -48,6 +51,11 @@ class AppLLMProviderListSerializer(serializers.ModelSerializer):
             "name",
             "description",
             "provider_slug",
+            "source",
+            "platform_account",
+            "is_placeholder",
+            "connected",
+            "connection_problem",
             "default_model",
             "is_enabled",
             "is_validated",
@@ -77,8 +85,28 @@ class AppLLMProviderListSerializer(serializers.ModelSerializer):
     def get_models_count(self, obj):
         return obj.enabled_models.count()
 
+    def get_platform_account(self, obj):
+        acc = obj.platform_account()
+        if acc is None:
+            return None
+        return {
+            "uuid": str(acc.uuid),
+            "name": acc.name,
+            "provider_slug": acc.provider_slug,
+            "is_enabled": acc.is_enabled,
+            "is_validated": acc.is_validated,
+        }
+
+    def get_connected(self, obj):
+        return obj.is_connected
+
+    def get_connection_problem(self, obj):
+        return obj.connection_problem()
+
     def get_masked_config(self, obj):
         """Return config with secrets masked."""
+        if obj.source == obj.SOURCE_PLATFORM or obj.is_placeholder:
+            return {}  # the platform account's key is not this app's to see
         try:
             config = obj._decrypt_config()
             provider_cls = PROVIDER_REGISTRY.get(obj.provider_slug)
@@ -240,6 +268,8 @@ class AppLLMProviderUpdateSerializer(serializers.Serializer):
 
     def update(self, instance, validated_data):
         config = validated_data.pop("config", None)
+        if instance.source == instance.SOURCE_PLATFORM or instance.is_placeholder:
+            config = None  # credentials change only through providers/<id>/connect/
 
         if config is not None:
             # If config contains masked secret values, preserve existing values

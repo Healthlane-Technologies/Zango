@@ -1,6 +1,7 @@
 import { useSearchParams } from 'react-router-dom';
 import { Page, PageHeader, Tabs } from '@/ui';
 import { AgentModeTab } from './settings/AgentModeTab';
+import { AiAccountsTab } from './settings/AiAccountsTab';
 import { GeneralTab } from './settings/GeneralTab';
 import { LogConnectorsTab } from './settings/LogConnectorsTab';
 import { PlatformLogsTab } from './settings/PlatformLogsTab';
@@ -10,6 +11,12 @@ const TABS = [
 		value: 'general',
 		label: 'General',
 		description: 'Domains and defaults applied to every newly created app.',
+	},
+	{
+		value: 'ai',
+		label: 'AI accounts',
+		description:
+			"AI services the apps' AI helpers use. Connect once here; new apps link to the default account.",
 	},
 	{
 		value: 'agent',
@@ -51,6 +58,7 @@ export function PlatformSettingsPage() {
 			/>
 			<p className="mb-4 text-t3">{active.description}</p>
 			{tab === 'general' && <GeneralTab />}
+			{tab === 'ai' && <AiAccountsTab />}
 			{tab === 'agent' && <AgentModeTab />}
 			{tab === 'connectors' && <LogConnectorsTab />}
 			{tab === 'logs' && <PlatformLogsTab onConfigure={() => go('connectors')} />}

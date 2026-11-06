@@ -1082,3 +1082,23 @@
 		animation: none;
 	}
 }
+
+/* ---------- AI service logos (ui/ProviderLogo.tsx) ---------- */
+.zpl {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	box-shadow: inset 0 0 0 1px rgba(24, 24, 27, 0.06);
+}
+.zpl-m {
+	display: inline-flex;
+}
+.zpl-m svg {
+	width: 100%;
+	height: 100%;
+}
+.zpl-t {
+	font-weight: 600;
+	color: var(--t2);
+}
