@@ -97,6 +97,10 @@ condition:
 | `tab.type`         | summary, related_table, timeline, fields, custom                                       |
 | colours            | gray, blue, green, amber, red, purple, teal, indigo, pink                              |
 | `custom_requirements[].area` | backend, frontend, integration, permission, notification, scheduled, report  |
+| `ai.provider.kind` | anthropic, openai, azure_openai, bedrock                                             |
+| AI trigger `event` | create, update, delete, transition, tag, schedule, button, form_assist, chat, task     |
+| AI `output.kind`   | fields, text, markdown                                                                 |
+| AI `review`        | suggest (a person accepts it), none (written straight away), show (displayed only)    |
 
 ## Top level
 
@@ -108,6 +112,7 @@ roles: [...]
 pages: [...]
 modules: [...]
 detail_views: [...]     # optional
+ai: {...}               # optional: AI helpers (see `ai`)
 prototype: {...}        # open mode only
 ```
 
@@ -437,6 +442,18 @@ Write `event`, never `on` (YAML reads `on` as true). `spec_mark_ready` is
 refused while a custom part has no `acceptance` or a notification or
 scheduled requirement has no `trigger`.
 
+Hand-written code that calls an AI helper names it in `uses_ai` (the helper
+has an `{event: task}` trigger):
+
+```yaml
+  - area: scheduled
+    title: Nightly safety inbox
+    text: Each night, pull new requests from the safety inbox, triage each with AI and assign the urgent ones.
+    trigger: { event: schedule, cron: "0 2 * * *" }
+    uses_ai: [request_triage]
+    acceptance: [Urgent requests from the inbox are assigned by 06:00.]
+```
+
 ## `modules` and entities
 
 A module is one backend folder: `code`, `name`, `description`, `entities`.
@@ -731,6 +748,95 @@ Every record opens as a full page, never a side drawer:
 Write a detail view only when the generated one is not enough (stats, custom
 tabs, a different header).
 
+## `ai`
+
+AI helpers the app uses: drafting a reply, reading a document into a form,
+classifying a record, summarising a case, answering questions about a record.
+The build creates each helper as a Zango AI agent (prompts, tools, output
+format) and wires it to its triggers; the preview simulates it with
+`preview.sample`, so nothing calls an AI while the spec is drafted.
+
+Write a helper when the brief asks the app to read, sort, summarise, draft or
+answer. Plain rules ("flag invoices over 1 lakh") stay expressions or
+custom requirements: AI is for judgement on text and documents.
+
+```yaml
+ai:
+  provider: { kind: anthropic, model: claude-sonnet-4-5, monthly_budget_usd: 50 }   # the kind of account, never a key
+  agents:
+    - code: response_drafter                  # snake_case, unique
+      name: Response drafter
+      purpose: Draft the reply to a medical information request using only approved answers.
+      instructions: Use only the standard responses. Say "no approved answer" when none fits.   # tone, rules, limits
+      entity: mi_request                      # the record it works on
+      context:                                # only these are sent to the AI
+        fields: [question, topic, product.name]
+        related: [ { entity: standard_response, via: product, fields: [title, body], limit: 5 } ]
+        files: [attachment]                   # file / image fields attached as documents
+      output: { kind: markdown, to: response_draft }   # text / markdown → one text or long_text field
+      review: suggest                         # suggest (default) | none | show
+      triggers:
+        - { event: transition, transition: start_response }
+        - { event: button, label: Redraft, roles: [MI Specialist] }
+      tools: [ { use: search_records, entity: standard_response } ]
+      access: { roles: [MI Specialist, Medical Reviewer] }
+      acceptance:
+        - The draft cites at least one approved standard response.
+      preview:
+        sample: "Dear Dr Rao, thank you for your question about dosing in renal impairment…"
+        toast: Drafting a reply for {request_ref}
+```
+
+**Provider.** `kind` (default anthropic), `model` (default: the service's usual
+model), `name` (default app-llm), `monthly_budget_usd`. The build creates the
+account in Zango without a key; the creator adds the key in the console (App →
+AI). Never ask for, or write, a key.
+
+**What it reads.** `context.fields` are paths on the entity (`link.field`
+allowed); `related` lists records linked to it (`via` is the link field on the
+related entity; it may be left out when there is exactly one); `files` are file
+or image fields. Nothing else of the record reaches the AI.
+
+**What it produces.** `output.kind`:
+
+| kind | the AI returns | written to |
+|---|---|---|
+| `fields` | named values: `fields: [{key, type, description, choices?, to?}]`; `type` is text, long_text, integer, decimal, boolean, date, choice or multi_choice | each value's `to` field; values without `to` are only shown |
+| `text` / `markdown` | a piece of writing | `to`: a text or long_text field; without `to` it is only shown |
+
+**Who checks it.** `review: suggest` (default) shows the answer as a card on the
+record: Use, Edit, Discard. `none` writes it straight away (only for low-risk
+values; the checker warns when a workflow condition reads the field). `show`
+displays it and writes nothing (summaries, chat).
+
+**When it runs** (`triggers`, one or more):
+
+| event | keys | runs |
+|---|---|---|
+| `create` / `delete` | — | in the background after the record is saved / removed |
+| `update` | `fields`: run when one of these changes | in the background; never list a field the helper writes |
+| `transition` | `transition` | after that transition |
+| `tag` | `tag` | when the tag is set |
+| `schedule` | `cron` | on a schedule, over the records `when` selects (or once, with no entity) |
+| `button` | `label`, `where` (record \| row \| list), `roles` | when a person clicks it |
+| `form_assist` | `from`: file fields, `label`, `roles` | "Fill from document" next to the upload; fills the unsaved form (needs `kind: fields`) |
+| `chat` | `label`, `roles`, `where` | an "Ask AI" panel on the record (text or markdown; `memory: {window}` keeps the conversation) |
+| `task` | — | only from hand-written code: a custom requirement lists it in `uses_ai` |
+
+Any trigger takes `when` (an expression on the record) to narrow it.
+
+**Tools.** `{use: search_records | read_record, entity}` lets it look up
+records (scoped to the person it runs for); `{code, text, safety}` asks the
+build for a custom tool (`safety`: read_only, write, external).
+
+**Access.** `access.roles` may run it and see its results; buttons and chat
+default to these roles.
+
+**Contract.** Like custom work, each helper carries `acceptance` (each line
+becomes a test, run against a faked AI answer) and `preview.sample` (a realistic
+answer: the text, or `{key: value}` for kind fields). `spec_mark_ready` is
+refused without them.
+
 ## What the checks enforce
 
 Structural (a change is refused): unknown keys at the fixed levels (app,
@@ -742,7 +848,10 @@ role named anywhere is declared; pages point at existing entities and detail
 views; transitions and `editable_in` use statuses of their own workflow; form
 fields and `display` are fields of the entity; `choices: <code>` names a
 declared choice set; link fields have `to`; choice fields have `choices`;
-codes, names and keys are unique in their scope.
+codes, names and keys are unique in their scope; AI helpers name existing
+entities, fields, roles, transitions and tags, write only to fields their
+answer fits, never run on a change to a field they write, and every
+`{event: task}` helper is listed in some `uses_ai`.
 
 Build checks (errors until fixed): the build skill's own checker runs with
 every validation and reports what the build would stop on — prose cut at an

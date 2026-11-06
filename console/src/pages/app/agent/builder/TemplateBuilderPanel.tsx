@@ -27,6 +27,7 @@ import { ancestors } from './pointer';
 import type { BuilderProps } from './registry';
 import type { Schema } from './schema';
 import { ReviewPanel } from './ReviewPanel';
+import { aiAgents } from './aiHelpers';
 import { SectionDetails } from './SectionDetails';
 import { SectionNav, type SectionState } from './SectionNav';
 import { orderedSections, sectionCount, sectionOf, type BuilderSection } from './sections';
@@ -126,6 +127,7 @@ export function TemplateBuilderPanel({
 	const doc = parsed.value;
 	// How much of the app the build writes by hand (custom screens and requirements).
 	const custom = useMemo(() => customWork(doc), [doc]);
+	const aiCount = useMemo(() => aiAgents(doc).length, [doc]);
 	const thinking = requirement.is_thinking;
 	const locked = !editable || thinking || spec.status === 'approved' || draft.reviewing;
 	// Unsaved edits have no "changed by agent"; a conflict under review shows the agent's.
@@ -614,6 +616,17 @@ export function TemplateBuilderPanel({
 												.join(' · ')}
 										</span>
 									)}
+									{aiCount > 0 && (
+										<button
+											type="button"
+											className="pv-pill custom"
+											title="AI helpers: the build creates them; they need an AI account, added in App → AI"
+											onClick={() => setTab('review')}
+										>
+											<Icon name="bot" size={12} />
+											{aiCount} AI helper{aiCount > 1 ? 's' : ''}
+										</button>
+									)}
 									{changed.length > 0 && !thinking && (
 										<button
 											type="button"
@@ -984,6 +997,7 @@ export function TemplateBuilderPanel({
 					)}
 					{tab === 'review' && (
 						<ReviewPanel
+							doc={doc}
 							appId={appId}
 							reqId={requirement.uuid}
 							decisions={decisions}

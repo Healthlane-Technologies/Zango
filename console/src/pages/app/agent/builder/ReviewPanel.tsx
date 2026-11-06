@@ -10,6 +10,7 @@ import {
 } from '@/api/agentMode';
 import type { UploadedDocument } from '@/api/scaffolds';
 import { Badge, Button, cx, Icon, type Tone } from '@/ui';
+import { AiHelpers, aiAgents } from './aiHelpers';
 import type { BuilderSection } from './sections';
 
 // The review side of one-pass drafting: the agent drafts the whole journey, then lists
@@ -41,6 +42,8 @@ interface ReviewPanelProps {
 	/** Save unsaved edits first, so the agent applies answers to what is on screen. */
 	flush: () => Promise<boolean>;
 	onShowInYaml: (pointer: string) => void;
+	/** The spec on screen, for the AI helpers summary. */
+	doc?: unknown;
 }
 
 export type DecisionsProps = Pick<
@@ -326,6 +329,10 @@ export function ReviewPanel(props: ReviewPanelProps & { flagsOnly?: boolean }) {
 			</div>
 		);
 	}
+	const ai = <AiHelpers appId={props.appId} doc={props.doc} />;
+	if (!decisions.length && !flags.length && aiAgents(props.doc).length) {
+		return <div className="rv">{ai}</div>;
+	}
 	if (!decisions.length && !flags.length) {
 		return (
 			<div className="card">
@@ -342,6 +349,7 @@ export function ReviewPanel(props: ReviewPanelProps & { flagsOnly?: boolean }) {
 		<div className="rv">
 			{decisions.length > 0 && <Decisions {...props} />}
 			{flags.length > 0 && <Flags {...props} />}
+			{ai}
 			{decisions.length === 0 && (
 				<p className="rv-done">
 					<Icon name="check" size={13} /> No open decisions.

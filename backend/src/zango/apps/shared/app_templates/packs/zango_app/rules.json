@@ -434,5 +434,142 @@
       "equals": "custom"
     },
     "message": "This custom sidebar section has no preview sketch, so the preview shows a placeholder. Add `preview` (SCHEMA.md: Custom screens with a preview)."
+  },
+  {
+    "id": "ai_agent_code_unique",
+    "kind": "unique",
+    "level": "error",
+    "path": "/ai/agents/*",
+    "key": "code",
+    "message": "Two AI helpers share the code \"{value}\"."
+  },
+  {
+    "id": "ai_agent_entity_known",
+    "kind": "ref",
+    "level": "error",
+    "source": "/ai/agents/*/entity",
+    "target": "/modules/*/entities/*",
+    "key": "code",
+    "message": "The AI helper works on entity \"{value}\", which no module declares."
+  },
+  {
+    "id": "ai_related_entity_known",
+    "kind": "ref",
+    "level": "error",
+    "source": "/ai/agents/*/context/related/*/entity",
+    "target": "/modules/*/entities/*",
+    "key": "code",
+    "message": "The AI helper reads related entity \"{value}\", which no module declares."
+  },
+  {
+    "id": "ai_tool_entity_known",
+    "kind": "ref",
+    "level": "error",
+    "source": "/ai/agents/*/tools/*/entity",
+    "target": "/modules/*/entities/*",
+    "key": "code",
+    "message": "The AI tool searches entity \"{value}\", which no module declares."
+  },
+  {
+    "id": "ai_access_role_known",
+    "kind": "ref",
+    "level": "error",
+    "source": "/ai/agents/*/access/roles",
+    "target": "/roles/*",
+    "key": "name",
+    "message": "\"{value}\" is not a declared role."
+  },
+  {
+    "id": "ai_trigger_role_known",
+    "kind": "ref",
+    "level": "error",
+    "source": "/ai/agents/*/triggers/*/roles",
+    "target": "/roles/*",
+    "key": "name",
+    "message": "\"{value}\" is not a declared role."
+  },
+  {
+    "id": "ai_uses_known",
+    "kind": "ref",
+    "level": "error",
+    "source": "/modules/*/entities/*/custom_requirements/*/uses_ai",
+    "target": "/ai/agents/*",
+    "key": "code",
+    "message": "The requirement uses AI helper \"{value}\", which ai.agents does not declare."
+  },
+  {
+    "id": "ai_app_uses_known",
+    "kind": "ref",
+    "level": "error",
+    "source": "/app/custom_requirements/*/uses_ai",
+    "target": "/ai/agents/*",
+    "key": "code",
+    "message": "The requirement uses AI helper \"{value}\", which ai.agents does not declare."
+  },
+  {
+    "id": "ai_button_label",
+    "kind": "required_when",
+    "level": "error",
+    "path": "/ai/agents/$1/triggers/$2/label",
+    "if": {
+      "path": "/ai/agents/*/triggers/*/event",
+      "equals": "button"
+    },
+    "message": "An AI button needs a label (\"Summarise\", \"Draft reply\")."
+  },
+  {
+    "id": "ai_schedule_cron",
+    "kind": "required_when",
+    "level": "error",
+    "path": "/ai/agents/$1/triggers/$2/cron",
+    "if": {
+      "path": "/ai/agents/*/triggers/*/event",
+      "equals": "schedule"
+    },
+    "message": "A scheduled AI helper needs cron (e.g. \"0 8 * * 1\")."
+  },
+  {
+    "id": "ai_transition_name",
+    "kind": "required_when",
+    "level": "error",
+    "path": "/ai/agents/$1/triggers/$2/transition",
+    "if": {
+      "path": "/ai/agents/*/triggers/*/event",
+      "equals": "transition"
+    },
+    "message": "Name the transition that runs this AI helper."
+  },
+  {
+    "id": "ai_tag_code",
+    "kind": "required_when",
+    "level": "error",
+    "path": "/ai/agents/$1/triggers/$2/tag",
+    "if": {
+      "path": "/ai/agents/*/triggers/*/event",
+      "equals": "tag"
+    },
+    "message": "Name the tag that runs this AI helper."
+  },
+  {
+    "id": "ai_form_assist_from",
+    "kind": "required_when",
+    "level": "error",
+    "path": "/ai/agents/$1/triggers/$2/from",
+    "if": {
+      "path": "/ai/agents/*/triggers/*/event",
+      "equals": "form_assist"
+    },
+    "message": "Fill-from-document needs `from`: the file fields whose upload fills the form."
+  },
+  {
+    "id": "ai_fields_output",
+    "kind": "required_when",
+    "level": "error",
+    "path": "/ai/agents/$1/output/fields",
+    "if": {
+      "path": "/ai/agents/*/output/kind",
+      "equals": "fields"
+    },
+    "message": "An AI helper with kind: fields lists the fields it returns."
   }
 ]

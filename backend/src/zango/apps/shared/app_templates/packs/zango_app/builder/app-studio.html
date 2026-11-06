@@ -348,6 +348,28 @@ textarea.z-in{height:auto;padding:9px 11px;resize:vertical;line-height:1.45}
 .note.info{background:#F9FAFB;border-color:#EAECF0;color:#475467}
 .note.dev{background:#F4F3FF;border-color:#D9D6FE;color:#4A1FB8}
 .note b{font-weight:650}
+.z-btn.ai{border-color:#D9D6FE;color:#5925DC;background:#F9F8FF}
+.z-btn.ai:hover{background:#F4F3FF}
+.ai-cards{display:grid;gap:10px;margin:0 0 14px}
+.ai-card{border:1px solid #D9D6FE;background:linear-gradient(180deg,#F9F8FF,#fff);border-radius:12px;padding:12px 14px}
+.ai-hd{display:flex;align-items:center;gap:8px;font-size:13px;color:#4A1FB8;margin-bottom:8px}
+.ai-hd .lucide{font-size:15px}
+.ai-tag{font-size:11px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:#6941C6}
+.ai-sim{margin-left:auto;font-size:11px;color:#98A2B3}
+.ai-think{display:inline-flex;align-items:center;gap:6px;margin-left:auto;font-size:12px;color:#6941C6}
+.ai-think .lucide{animation:aispin 1s linear infinite}
+@keyframes aispin{to{transform:rotate(360deg)}}
+.ai-txt{font-size:13px;line-height:1.55;color:#344054}
+.ai-kv{display:flex;gap:12px;padding:4px 0;font-size:13px;border-bottom:1px dashed #EAECF0}
+.ai-kv:last-child{border-bottom:0}
+.ai-kv span{width:200px;flex:none;color:#667085}
+.ai-kv i{font-style:normal;color:#98A2B3;font-size:11.5px}
+.ai-kv b{font-weight:550;color:#101828}
+.ai-ft{display:flex;gap:8px;margin-top:10px}
+.ai-chat{display:grid;gap:8px;max-height:320px;overflow:auto;margin-bottom:10px}
+.ai-msg{padding:8px 11px;border-radius:10px;font-size:13px;max-width:85%}
+.ai-msg.me{justify-self:end;background:#F2F4F7;color:#101828}
+.ai-msg.ai{background:#F4F3FF;border:1px solid #D9D6FE}
 .flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 
 /* toast */
@@ -3245,7 +3267,7 @@ function formModal(o){
       if (o.extra) h += o.extra();
       return h;
     },
-    left: () => `<button class="z-btn ghost sm" data-a="${A(() => autofill(o.E, o.sections.flatMap(s => s.defs), st))}">${ic('wand-sparkles')}Autofill</button>`,
+    left: () => `<button class="z-btn ghost sm" data-a="${A(() => autofill(o.E, o.sections.flatMap(s => s.defs), st))}">${ic('wand-sparkles')}Autofill</button>${aiFormButtons(o)}`,
     extraBtn: () => st.warns && st.warns.length && !(st.banner && st.banner.length) ? `<button class="z-btn" data-a="${A(() => o.onSave(true))}">Save anyway</button>` : '',
     submit: () => o.onSave(false)
   });
@@ -3299,7 +3321,9 @@ function openEdit(E, row){
       const nv = coerce(defs, st.vals); const changed = Object.keys(nv).filter(k => String(nv[k]) !== String(row[k]));
       changed.forEach(k => { S.audit.unshift({ t: new Date().toISOString(), e: E.code, id: row.id, ev: 'updated', user: curUser(), text: `${E.fmap[k] ? E.fmap[k].label : k}: ${txt(E.fmap[k], row[k]) || '—'} → ${txt(E.fmap[k], nv[k]) || '—'}` }); });
       Object.assign(row, nv); row.modified_at = new Date().toISOString(); computeAll();
-      closeModal(); toast('Saved', changed.length ? `${changed.length} field${changed.length > 1 ? 's' : ''} updated` : 'No changes'); render();
+      closeModal(); toast('Saved', changed.length ? `${changed.length} field${changed.length > 1 ? 's' : ''} updated` : 'No changes');
+      if (changed.length) simulateEffects(E, row, 'update', null, changed);
+      render();
     } });
 }
 function confirmDelete(E, row){
@@ -3344,11 +3368,115 @@ function openTransition(E, row, t){
 }
 /* Typed custom requirements (trigger + preview.toast) show their side effect when the user does
    the thing that triggers them: "Email to the primary contact (simulated)". */
-function simulateEffects(E, row, on, name){
+function simulateEffects(E, row, on, name, changed){
+  aiOnEvent(E, row, on, name, changed);
   const reqs = arr(S.M.app.custom_requirements).concat(arr(E.custom_requirements));
   reqs.filter(cr => isObj(cr) && isObj(cr.trigger) && cr.trigger.event === on && (!cr.trigger.entity || cr.trigger.entity === E.code)
       && (on !== 'transition' || cr.trigger.transition === name) && (on !== 'tag' || cr.trigger.tag === name))
     .forEach((cr, i) => setTimeout(() => toast(cr.title || 'Automatic', interp((cr.preview && cr.preview.toast) || cr.text || '', E, row) + ' (simulated)'), 250 * (i + 1)));
+}
+/* AI helpers (spec `ai.agents`), simulated: every answer is the helper's preview.sample, after a
+   short "thinking" pause, so the creator can judge the feature without an AI account or cost.
+   review: suggest → a card on the record (Use / Discard); none → written straight away; show → shown. */
+const AI_THINK_MS = 900;
+const aiState = () => S.ai || (S.ai = { busy: {}, cards: {}, chat: {} });
+const aiAgents = E => arr(S.M && S.M.spec && S.M.spec.ai && S.M.spec.ai.agents).filter(a => isObj(a) && a.code && (!E || a.entity === E.code));
+const aiName = a => a.name || titleize(a.code);
+function aiRoleOK(a, t){ const rs = arr((t && t.roles) || (a.access && a.access.roles)); return !rs.length || rs.includes(S.role); }
+function aiTrigs(a, ev){ return arr(a.triggers).filter(t => isObj(t) && t.event === ev); }
+function aiSample(a){
+  const s = a.preview && a.preview.sample;
+  if (s != null) return s;
+  return (a.output || {}).kind === 'fields' ? {} : `${aiName(a)} would answer here (add preview.sample to the spec).`;
+}
+/* {field: value} the answer writes on the record (only fields the entity has). */
+function aiWrites(a, E){
+  const out = a.output || {}, sample = aiSample(a), w = {};
+  if (out.kind === 'fields' && isObj(sample)) arr(out.fields).forEach(f => { if (isObj(f) && f.to && E.fmap[f.to] && sample[f.key] !== undefined) w[f.to] = sample[f.key]; });
+  else if (out.to && E.fmap[out.to] && typeof sample === 'string') w[out.to] = sample;
+  return w;
+}
+function aiAnswerHTML(a, E){
+  const out = a.output || {}, sample = aiSample(a);
+  if (out.kind === 'fields' && isObj(sample)) {
+    const shown = f => { const tf = E && f.to && E.fmap[f.to]; return tf ? txt(tf, sample[f.key], E) || String(sample[f.key]) : String(sample[f.key]); };
+    const rows = arr(out.fields).filter(f => isObj(f) && sample[f.key] !== undefined).map(f => { const tf = E && f.to && E.fmap[f.to]; return `<div class="ai-kv"><span>${esc(tf ? tf.label : titleize(f.key))}${tf ? '' : ' <i>(shown only)</i>'}</span><b>${esc(shown(f)).replace(/\n/g, '<br>')}</b></div>`; });
+    return rows.join('') || '<div class="ai-txt">—</div>';
+  }
+  return `<div class="ai-txt">${esc(typeof sample === 'string' ? sample : JSON.stringify(sample, null, 2)).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>')}</div>`;
+}
+function aiRun(a, E, row){
+  const st = aiState(), key = `${E.code}:${row.id}:${a.code}`;
+  if (st.busy[key]) return;
+  st.busy[key] = true; delete st.cards[key]; render();
+  setTimeout(() => {
+    delete st.busy[key];
+    const review = a.review || 'suggest', w = aiWrites(a, E);
+    if (review === 'none' && Object.keys(w).length){
+      aiApply(a, E, row, w, 'AI filled in');
+    } else st.cards[key] = { code: a.code, review };
+    render();
+  }, AI_THINK_MS);
+}
+function aiApply(a, E, row, w, verb){
+  Object.assign(row, w); row.modified_at = new Date().toISOString(); computeAll();
+  const what = Object.keys(w).map(k => (E.fmap[k] || {}).label || k).join(', ');
+  S.audit.unshift({ t: row.modified_at, e: E.code, id: row.id, ev: 'updated', user: aiName(a) + ' (AI)', text: `${verb}: ${what}` });
+  toast(`${verb} ${what}`, `${aiName(a)} (simulated)`);
+}
+/* Background triggers: create / update / transition / tag / delete. */
+function aiOnEvent(E, row, on, name, changed){
+  aiAgents(E).forEach((a, i) => {
+    const hit = aiTrigs(a, on).find(t => (on !== 'transition' || t.transition === name) && (on !== 'tag' || t.tag === name)
+      && (on !== 'update' || !arr(t.fields).length || arr(t.fields).some(k => arr(changed).includes(k)))
+      && (!t.when || evalCond(t.when, { E, row }) !== false));
+    if (!hit) return;
+    const note = (a.preview && a.preview.toast) ? interp(a.preview.toast, E, row) : a.purpose || aiName(a);
+    setTimeout(() => { toast(`✦ ${aiName(a)}`, `${note} (simulated)`); if (on !== 'delete') aiRun(a, E, row); }, 300 * (i + 1));
+  });
+}
+/* Buttons and "Ask AI" on the record header. */
+function aiHeroButtons(E, row){
+  const out = [];
+  aiAgents(E).forEach(a => {
+    aiTrigs(a, 'button').filter(t => (t.where || 'record') !== 'list' && aiRoleOK(a, t) && (!t.when || evalCond(t.when, { E, row }) !== false))
+      .forEach(t => out.push({ label: t.label || aiName(a), icon: t.icon || 'sparkles', cls: 'ai', run: () => aiRun(a, E, row) }));
+    aiTrigs(a, 'chat').filter(t => aiRoleOK(a, t)).forEach(t => out.push({ label: t.label || 'Ask AI', icon: t.icon || 'message-circle', cls: 'ai', run: () => aiChat(a, E, row) }));
+  });
+  return out;
+}
+function aiCardsHTML(E, row){
+  const st = aiState();
+  return aiAgents(E).map(a => {
+    const key = `${E.code}:${row.id}:${a.code}`;
+    if (st.busy[key]) return `<div class="ai-card"><div class="ai-hd">${ic('sparkles')}<b>${esc(aiName(a))}</b><span class="ai-think">${ic('loader-circle')}Thinking…</span></div></div>`;
+    const c = st.cards[key]; if (!c) return '';
+    const w = aiWrites(a, E), canUse = c.review === 'suggest' && Object.keys(w).length && can(E, 'edit');
+    const close = () => { delete st.cards[key]; render(); };
+    return `<div class="ai-card"${zp(`/ai/agents/@${a.code}`, aiName(a))}><div class="ai-hd">${ic('sparkles')}<b>${esc(aiName(a))}</b><span class="ai-tag">${c.review === 'suggest' ? 'AI suggestion · waiting for you' : 'AI'}</span><span class="ai-sim">simulated</span></div>${aiAnswerHTML(a, E)}
+      <div class="ai-ft">${canUse ? `<button class="z-btn pri sm" data-a="${A(() => { aiApply(a, E, row, w, 'Used AI suggestion for'); close(); })}">${ic('check')}Use</button>` : ''}<button class="z-btn sm" data-a="${A(close)}">${c.review === 'suggest' ? 'Discard' : 'Dismiss'}</button></div></div>`;
+  }).join('');
+}
+function aiChat(a, E, row){
+  const st = aiState(), key = `${E.code}:${row.id}:${a.code}`, log = st.chat[key] || (st.chat[key] = []);
+  const ui = { q: '' };
+  openModal({ title: aiName(a), sub: esc(plain(E, row, E.display)) + ' · simulated answers', icon: 'sparkles', submitLabel: 'Ask',
+    body: () => `<div class="ai-chat">${log.length ? log.map(m => `<div class="ai-msg ${m.who}">${m.who === 'ai' ? aiAnswerHTML(a, E) : esc(m.text)}</div>`).join('') : `<div class="note info">${ic('info')}<div>${esc(a.purpose || 'Ask a question about this record.')}</div></div>`}</div>
+      <textarea class="z-in" rows="2" placeholder="Ask a question" data-in="${A(v => { ui.q = v; })}"></textarea>`,
+    submit: () => { if (!ui.q.trim()) return; log.push({ who: 'me', text: ui.q.trim() }); ui.q = ''; renderModal(); setTimeout(() => { log.push({ who: 'ai' }); renderModal(); }, AI_THINK_MS); } });
+}
+/* Fill from document: a button in the create/edit form fills the unsaved form from the sample. */
+function aiFormButtons(o){
+  if (!o.E) return '';
+  const keys = new Set(o.sections.flatMap(s => s.defs.map(d => d.key)));
+  return aiAgents(o.E).flatMap(a => aiTrigs(a, 'form_assist').filter(t => aiRoleOK(a, t)).map(t => {
+    const fill = () => {
+      const w = aiWrites(a, o.E), got = Object.keys(w).filter(k => keys.has(k));
+      setTimeout(() => { got.forEach(k => { o.st.vals[k] = w[k]; }); renderModal(); toast(`✦ ${t.label || 'Filled from document'}`, `${got.length} field${got.length === 1 ? '' : 's'} filled: check them before saving (simulated)`); }, AI_THINK_MS);
+      toast(`✦ ${aiName(a)}`, 'Reading the document… (simulated)');
+    };
+    return `<button class="z-btn sm ai" data-a="${A(fill)}">${ic('sparkles')}${esc(t.label || 'Fill from document')}</button>`;
+  })).join('');
 }
 function applyTransition(E, row, t, vals, defs){
   const from = row.status; row.status = t.to; Object.assign(row, vals); row.modified_at = new Date().toISOString();
@@ -3366,7 +3494,9 @@ function openTag(E, row, tg, on){
     const vals = coerce(defs, st.vals); Object.assign(row, vals);
     row.tags = on ? [...new Set(row.tags.concat(tg.code))] : row.tags.filter(x => x !== tg.code);
     S.audit.unshift({ t: new Date().toISOString(), e: E.code, id: row.id, ev: 'tag', on, tag: tg.code, user: curUser(), text: '', note: defs.filter(f => !empty(vals[f.key])).map(f => `${f.label}: ${txt(f, vals[f.key])}`).join(' · ') });
-    closeModal(); toast(`${on ? 'Tagged' : 'Tag removed'}: ${tg.label}`, plain(E, row, E.display), side.on_done); render(); };
+    closeModal(); toast(`${on ? 'Tagged' : 'Tag removed'}: ${tg.label}`, plain(E, row, E.display), side.on_done);
+    if (on) simulateEffects(E, row, 'tag', tg.code);
+    render(); };
   openModal({ title: `${on ? 'Mark' : 'Remove'} ${tg.label}`, sub: esc(plain(E, row, E.display)), icon: 'tag', tone: tg.color, submitLabel: on ? 'Apply tag' : 'Remove tag', disabled: () => !cb().ok,
     body: () => `${side.confirm || side.confirmation_message ? `<div style="color:#475467">${esc(side.confirm || side.confirmation_message)}</div>` : ''}${cb().html}${defs.length ? `<div class="fg">${defs.map(f => fieldHTML(f, st, { E })).join('')}</div>` : ''}${side.on_done ? `<div class="note dev">${ic('zap')}<div><b>After:</b> ${esc(side.on_done)}</div></div>` : ''}`,
     submit: () => { if (cb().ok) go2(); } });
@@ -3398,6 +3528,8 @@ function heroButtons(dv, E, row){
   });
   if (acts.tags !== false && E.wf) E.wf.tags.filter(t => !t.system).forEach((t, i) => { const on = row.tags.includes(t.code); const side = on ? t.disable : t.enable; if (!side || (side.roles.length && !side.roles.includes(S.role))) return; more.push({ group: more.some(m => m.group === 'Tags') ? null : 'Tags', label: (on ? 'Remove ' : 'Mark ') + t.label, icon: 'tag', run: () => openTag(E, row, t, !on) }); });
   if (E.wf) E.wf.trs.filter(t => t.system && t.from.includes(row.status)).forEach((t, i) => more.push({ group: i === 0 ? 'Simulate system' : null, label: t.label, icon: 'cpu', muted: true, run: () => openTransition(E, row, t) }));
+  // one AI action stays visible; the rest go in the ⋯ menu under "AI"
+  aiHeroButtons(E, row).forEach((b, i) => { if (i === 0) out.push(b); else more.push({ ...b, group: more.some(m => m.group === 'AI') ? null : 'AI' }); });
   out.sort((a, b) => (a.cls === 'pri') - (b.cls === 'pri'));
   return out.map(b => `<button class="z-btn ${b.cls || ''}" data-a="${A(b.run)}">${ic(b.icon)}${esc(b.label)}</button>`).join('') + (more.length ? `<button class="z-btn" style="padding:0 10px" data-a="${A((e, el) => openPop(el, more))}">${ic('ellipsis')}</button>` : '');
 }
@@ -3522,7 +3654,8 @@ function renderDetail(dv, id){
   // the tab bar sits at the foot of the header band, full width
   const head = `<div class="d-head${tabBar ? ' has-tabs' : ''}"${zp(`${dvp}/header`, '360 header')}>${headTop}${tabBar}</div>`;
   const body = side && layout !== 'header_tabs' ? (layout === 'header_sidebar_tabs_left' ? `<div class="d-body sl"><div class="d-rail">${side}</div><div>${tabBody}</div></div>` : `<div class="d-body sr"><div>${tabBody}</div><div class="d-rail">${side}</div></div>`) : `<div class="d-body"><div>${tabBody}</div></div>`;
-  return head + (stats ? `<div class="d-stats">${stats}</div>` : '') + body;
+  const ai = aiCardsHTML(E, row);
+  return head + (stats ? `<div class="d-stats">${stats}</div>` : '') + (ai ? `<div class="ai-cards">${ai}</div>` : '') + body;
 }
 /* header.stepper: the hero's lifecycle (true = every status in order, or {steps}). Steps before the
    record's status are done; a status off the steps (rejected) ends the line where the record left

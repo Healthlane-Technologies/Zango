@@ -804,7 +804,8 @@ class Spec:
         self.M = {"spec_version": 1, "skill_version": SKILL_VERSION, "app": app, "choice_sets": sets,
                   "roles": R, "modules": mods, "entities": ents, "pages": pages, "detail_views": dvs,
                   "app_custom_requirements": arr(app.get("custom_requirements")),
-                  "prototype_raw": s.get("prototype")}
+                  "prototype_raw": s.get("prototype"),
+                  "ai": s.get("ai") if isinstance(s.get("ai"), dict) else {}}
 
     # ---------- path resolution ----------
     def resolve(self, E, path, allow_form=False, allow_reverse=False, allow_txn=False):
@@ -1113,6 +1114,145 @@ class Spec:
                 sum(1 for x in steps if order.index(x) < order.index(code)) - 1
         hd["stepper"] = {"steps": steps, "exits": exits}
 
+    # ---------- AI helpers (ai.agents) ----------
+    AI_OUT_FITS = {  # AI output type -> entity field types it may be written to
+        "text": {"text", "long_text", "email", "phone", "url"},
+        "long_text": {"long_text", "text"},
+        "integer": {"integer", "decimal", "money", "percent"},
+        "decimal": {"decimal", "money", "percent"},
+        "boolean": {"boolean"},
+        "date": {"date", "datetime"},
+        "choice": {"choice", "text"},
+        "multi_choice": {"multi_choice"},
+    }
+    AI_RECORD_EVENTS = {"create", "update", "delete", "transition", "tag", "button", "form_assist", "chat"}
+
+    def lint_ai(self, reqs, chk_roles):
+        """ai.agents: what they read and write exists and fits, triggers make sense, and every
+        {event: task} helper is called by some custom requirement (uses_ai)."""
+        M, L = self.M, self.L
+        ai, ents = M.get("ai") or {}, M["entities"]
+        agents = [a for a in arr(ai.get("agents")) if isinstance(a, dict)]
+        prov = ai.get("provider") or {}
+        if agents and not isinstance(prov, dict):
+            L.error("ai.provider", "ai.provider is a mapping: { kind: anthropic }")
+        codes = {a.get("code") for a in agents}
+        used = defaultdict(list)
+        for w, cr, _owner in reqs:
+            for c in arr((cr or {}).get("uses_ai") if isinstance(cr, dict) else None):
+                used[c].append(w)
+                if c not in codes:
+                    L.error(w + ".uses_ai", f"AI helper {c!r} is not in ai.agents")
+        for a in agents:
+            code = a.get("code") or "?"
+            w = f"ai.agents.{code}"
+            E = ents.get(a.get("entity")) if a.get("entity") else None
+            if a.get("entity") and E is None:
+                L.error(w + ".entity", f"entity {a['entity']!r} not found")
+                continue
+            trigs = [t for t in arr(a.get("triggers")) if isinstance(t, dict)]
+            events = {t.get("event") for t in trigs}
+            if E is None and events & self.AI_RECORD_EVENTS:
+                L.error(w + ".entity", "this helper runs on a record (" + ", ".join(sorted(events & self.AI_RECORD_EVENTS))
+                        + "), so it needs entity")
+            ctx = a.get("context") or {}
+            for p in arr(ctx.get("fields")):
+                if E is not None:
+                    kind, info = self.resolve(E, p)
+                    if kind is None:
+                        L.error(w + ".context.fields", info)
+            for i, rel in enumerate(arr(ctx.get("related"))):
+                T = ents.get((rel or {}).get("entity"))
+                if not T:
+                    continue  # rules.json reports the unknown entity
+                via = rel.get("via")
+                links = [f["key"] for f in T["fields"] if f["type"] == "link" and E is not None and f.get("to") == E["code"]]
+                if via and via not in links:
+                    L.error(f"{w}.context.related[{i}].via", f"{T['code']}.{via} is not a link to {(E or {}).get('code', '?')}")
+                elif not via and E is not None and len(links) != 1:
+                    L.error(f"{w}.context.related[{i}]", f"{T['code']} has {len(links)} links to {E['code']}: name the one to follow with via")
+                for p in arr(rel.get("fields")):
+                    if self.resolve(T, p)[0] is None:
+                        L.error(f"{w}.context.related[{i}].fields", f"{p!r} is not a field of {T['code']}")
+            for p in arr(ctx.get("files")):
+                f = (E or {}).get("fmap", {}).get(p) if E is not None else None
+                if E is not None and (not f or f["type"] not in ("file", "image")):
+                    L.error(w + ".context.files", f"{p!r} is not a file or image field of {E['code']}")
+            out = a.get("output") or {}
+            writes = set()
+            if out.get("kind") in ("text", "markdown") and out.get("to"):
+                f = (E or {}).get("fmap", {}).get(out["to"]) if E is not None else None
+                if not f:
+                    L.error(w + ".output.to", f"{out['to']!r} is not a field of {(E or {}).get('code', 'the entity')}")
+                elif f["type"] not in ("text", "long_text"):
+                    L.error(w + ".output.to", f"{out['to']!r} is a {f['type']} field; writing goes into text or long_text")
+                writes.add(out["to"])
+            for of in arr(out.get("fields")) if out.get("kind") == "fields" else []:
+                if not isinstance(of, dict) or not of.get("to"):
+                    continue
+                f = (E or {}).get("fmap", {}).get(of["to"]) if E is not None else None
+                ow = f"{w}.output.fields.{of.get('key', '?')}"
+                if not f:
+                    L.error(ow + ".to", f"{of['to']!r} is not a field of {(E or {}).get('code', 'the entity')}")
+                    continue
+                if f["type"] not in self.AI_OUT_FITS.get(of.get("type"), set()):
+                    L.error(ow + ".to", f"a {of.get('type')} answer does not fit {of['to']!r} ({f['type']})")
+                writes.add(of["to"])
+            if out.get("kind") in ("text", "markdown") and out.get("fields"):
+                L.warn(w + ".output.fields", "fields is only read for kind: fields")
+            review = a.get("review") or "suggest"
+            if writes and review == "none" and E is not None and E.get("workflow"):
+                gated = {fld for t in E["workflow"].get("transitions", []) for fld in re.findall(r"\w+", str(t.get("condition") or ""))}
+                hit = sorted(writes & gated)
+                if hit:
+                    L.warn(w + ".review", f"review: none writes {', '.join(hit)}, which a workflow condition reads: "
+                           "an unchecked AI answer can move the record", "Use review: suggest so a person confirms it.")
+            wf = (E or {}).get("workflow") or {}
+            for i, t in enumerate(trigs):
+                tw, ev = f"{w}.triggers[{i}]", t.get("event")
+                if ev == "transition" and t.get("transition") and t["transition"] not in {x["name"] for x in wf.get("transitions", [])}:
+                    L.error(tw, f"{t['transition']!r} is not a transition of {(E or {}).get('code', '?')}")
+                if ev == "tag" and t.get("tag") and t["tag"] not in {x["code"] for x in wf.get("tags", [])}:
+                    L.error(tw, f"{t['tag']!r} is not a tag of {(E or {}).get('code', '?')}")
+                if ev == "update":
+                    for fk in arr(t.get("fields")):
+                        if E is not None and fk not in E["fmap"]:
+                            L.error(tw + ".fields", f"{fk!r} is not a field of {E['code']}")
+                    loop = sorted(writes & set(arr(t.get("fields")))) if t.get("fields") else sorted(writes)
+                    if loop:
+                        L.error(tw, f"the helper writes {', '.join(loop)} and runs when it changes: it would run itself again",
+                                "List the fields it reads under fields:, not the ones it writes.")
+                if ev == "form_assist":
+                    for fk in arr(t.get("from")):
+                        f = (E or {}).get("fmap", {}).get(fk) if E is not None else None
+                        if E is not None and (not f or f["type"] not in ("file", "image")):
+                            L.error(tw + ".from", f"{fk!r} is not a file or image field of {E['code']}")
+                    if out.get("kind") != "fields":
+                        L.error(tw, "fill-from-document needs output kind: fields (one value per form field)")
+                if ev in ("button", "form_assist", "chat") and t.get("roles"):
+                    chk_roles(tw + ".roles", t["roles"])
+                if t.get("when") and E is not None:
+                    self.check_expr(E, t["when"], tw + ".when")
+                if ev == "task" and code not in used:
+                    L.error(tw, "nothing calls this helper: list it in a custom requirement's uses_ai")
+            if a.get("memory") and "chat" not in events:
+                L.error(w + ".memory", "memory is only for chat helpers")
+            if "chat" in events and out.get("kind") == "fields":
+                L.error(w + ".output.kind", "a chat helper answers in text or markdown")
+            if a.get("access"):
+                chk_roles(w + ".access.roles", (a["access"] or {}).get("roles"))
+            for i, tl in enumerate(arr(a.get("tools"))):
+                if not isinstance(tl, dict):
+                    continue
+                if bool(tl.get("use")) == bool(tl.get("code")):
+                    L.error(f"{w}.tools[{i}]", "a tool is either built in ({use, entity}) or custom ({code, text})")
+                elif tl.get("use") and not tl.get("entity"):
+                    L.error(f"{w}.tools[{i}]", f"{tl['use']} needs the entity it reads")
+                elif tl.get("code") and not tl.get("text"):
+                    L.error(f"{w}.tools[{i}]", "a custom tool needs text: what it does")
+            if code in used and "task" not in events:
+                L.warn(w + ".triggers", f"{', '.join(used[code])} calls this helper from code: add {{event: task}}")
+
     def lint(self):
         M, L = self.M, self.L
         ents, roles, pages, dvs = M["entities"], M["roles"], M["pages"], M["detail_views"]
@@ -1208,6 +1348,8 @@ class Spec:
                 L.error(w + ".trigger", f"{trig.get('tag')!r} is not a tag of {(T or {}).get('code', '?')}")
             if trig.get("event") == "schedule" and not trig.get("cron"):
                 L.error(w + ".trigger", "a scheduled requirement needs cron (e.g. \"0 2 * * *\")")
+
+        self.lint_ai(reqs, chk_roles)
 
         for E in ents.values():
             self.lint_entity(E, chk_roles)

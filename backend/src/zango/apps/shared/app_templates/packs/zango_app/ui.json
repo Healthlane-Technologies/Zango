@@ -5,6 +5,7 @@
     { "id": "roles", "title": "Who uses it", "pointer": "/roles", "hint": "Every role that signs in, where it lands and the menu it sees.", "order": 3 },
     { "id": "pages", "title": "Pages", "pointer": "/pages", "hint": "Every screen: list (crud), 360 (detail) or custom, with its route.", "order": 4 },
     { "id": "modules", "title": "Data and workflows", "pointer": "/modules", "hint": "Modules and their entities: fields, access, workflow, forms and list tables.", "order": 5 },
-    { "id": "detail_views", "title": "360 pages", "pointer": "/detail_views", "hint": "Header, stats, sidebar and tabs of each hero's 360 page.", "order": 6 }
+    { "id": "detail_views", "title": "360 pages", "pointer": "/detail_views", "hint": "Header, stats, sidebar and tabs of each hero's 360 page.", "order": 6 },
+    { "id": "ai", "title": "AI helpers", "pointer": "/ai", "hint": "What the app's AI helpers do, what they read and write, and when they run.", "order": 7 }
   ]
 }

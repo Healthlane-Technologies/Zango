@@ -58,6 +58,21 @@ def contract_gaps(doc) -> list:
                     f"trigger: when this {cr['area']} happens (event: transition, create, schedule…)",
                 )
             )
+    ai = doc.get("ai") if isinstance(doc, dict) else None
+    for i, agent in enumerate(
+        (ai or {}).get("agents") or [] if isinstance(ai, dict) else []
+    ):
+        if not isinstance(agent, dict):
+            continue
+        path = (
+            f"/ai/agents/@{agent['code']}" if agent.get("code") else f"/ai/agents/{i}"
+        )
+        if not agent.get("acceptance"):
+            gaps.append((path, "acceptance: how anyone can tell this AI helper works"))
+        if (agent.get("preview") or {}).get("sample") in (None, "", {}, []):
+            gaps.append(
+                (path, "preview.sample: a realistic answer for the preview to show")
+            )
     return gaps
 
 

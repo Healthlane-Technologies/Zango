@@ -97,7 +97,8 @@ speak:
 
 > entity, model, field, schema, database, table, foreign key, many-to-many,
 > CRUD, workflow package, policy, role matrix, React, frontend, component,
-> custom page, API, async task, MVP, scope creep, migration, module
+> custom page, API, async task, MVP, scope creep, migration, module, LLM,
+> model (the AI kind), prompt, agent, provider, token, API key
 
 Say this instead:
 
@@ -110,6 +111,7 @@ Say this instead:
 | Focus of the work | "Which one or two things does your team spend most of the day inside?" |
 | Branding | "What should the sign-in screen call your product?" · "Any brand colours we should use?" |
 | Background work | "Should anything happen automatically — a nightly summary, a reminder?" |
+| AI help | "Should the app draft the reply for you, or read the uploaded form and fill it in?" · "Should a person check what it wrote before it's used?" |
 | Scope / MVP | "Shall we leave that out of the first version and add it once you're using it?" |
 
 Work out the technical shape silently. Ask only about the business.
@@ -237,6 +239,16 @@ it is what the specification must pin down:
 - **Branding** — the product name the sign-in screen should carry, and any
   brand colours. Ask once, near the end; it is quick and it is always used.
 - **Background work** (scheduled jobs, long operations) becomes async tasks.
+- **AI help** becomes `ai.agents` (pack SCHEMA.md, `ai`). Listen for reading
+  documents, sorting or flagging, summarising, drafting, and answering questions
+  about a record. For each, pin down in plain words: what it does, what it may
+  read, what it produces and where that goes, when it runs, and whether a person
+  confirms it first ("a person confirms" → `review: suggest`, "automatically" →
+  `review: none`, "just show me" → `review: show`). Write a realistic
+  `preview.sample` so the preview shows it, and `acceptance` lines. Never ask
+  for, or accept, an AI key: the user adds it later in the console. The only
+  account question is which service the company already uses, if any
+  (default Anthropic).
 
 ## Aim small, and say so plainly
 
@@ -332,6 +344,10 @@ One short paragraph: what the app is for and who uses it.
 
 ### Automatic actions
 - None in this version.
+
+### Help from AI
+- Drafts the reply to each request from the approved answers; the specialist
+  reviews it before sending.
 
 ### Not in this version
 - Patients booking their own appointments

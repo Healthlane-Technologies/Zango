@@ -1101,3 +1101,79 @@ detail_views:
           - { entity: invoice, via: purchase_order, events: [created, transition] }
     states:
       not_found: { title: Purchase order not found, back_to: purchase_orders }
+
+# -----------------------------------------------------------------------------
+#  AI HELPERS  →  Zango AI agents (SCHEMA.md, ai)
+# -----------------------------------------------------------------------------
+#  The build creates each helper as a Zango AI agent on one provider. The spec names the
+#  kind of account only, never a key: the creator adds the key in the console.
+ai:
+  provider: { kind: anthropic, model: claude-sonnet-4-5, monthly_budget_usd: 50 }
+  agents:
+    - code: invoice_reader
+      name: Invoice reader
+      purpose: Read the uploaded invoice PDF and fill in the invoice number, date and amount.
+      instructions: Copy values exactly as printed. Leave a value empty when the PDF does not show it.
+      entity: invoice
+      context: { files: [file] }
+      output:
+        kind: fields
+        fields:
+          - { key: invoice_no,   type: text,    to: invoice_no,   description: The invoice number as printed }
+          - { key: invoice_date, type: date,    to: invoice_date, description: The invoice date }
+          - { key: amount,       type: decimal, to: amount,       description: The invoice total including tax }
+      review: suggest
+      triggers:
+        - { event: form_assist, from: [file], label: Fill from PDF, roles: [Vendor User] }
+      run: inline
+      acceptance:
+        - Uploading a clear invoice PDF fills invoice number, date and amount, and the vendor can change them before saving.
+        - A value missing from the PDF stays empty.
+      preview:
+        sample: { invoice_no: INV-2041, invoice_date: "2026-10-28", amount: 184500 }
+
+    - code: vendor_screening
+      name: Vendor screening
+      purpose: Rate a vendor's risk from its details when it is submitted for approval, with the reasons.
+      instructions: >-
+        Use only the vendor's details. Rate high when GSTIN or PAN is missing for a manufacturer
+        or the credit limit is unusually large for the category. Say why in two or three bullets.
+      entity: vendor
+      context: { fields: [legal_name, vendor_type, category.name, gstin, pan, city.name, credit_limit, payment_terms] }
+      output:
+        kind: fields
+        fields:
+          - { key: risk_rating, type: choice, to: risk_rating, description: "low, medium or high" }
+          - { key: reasons, type: long_text, description: Two or three bullets explaining the rating }
+      review: suggest
+      triggers:
+        - { event: transition, transition: submit }
+        - { event: button, label: Re-screen, roles: [Procurement Manager] }
+      access: { roles: [Procurement Executive, Procurement Manager] }
+      acceptance:
+        - Submitting a vendor shows a suggested risk rating with reasons to the Procurement Manager.
+        - Accepting the suggestion sets risk_rating; discarding leaves it unchanged.
+      preview:
+        sample: { risk_rating: medium, reasons: "- GSTIN present and valid\n- Credit limit is above the category's usual range" }
+        toast: Screening {legal_name} for risk
+
+    - code: vendor_assistant
+      name: Vendor assistant
+      purpose: Answer questions about one vendor using its record, contracts and purchase orders.
+      entity: vendor
+      context:
+        fields: [legal_name, vendor_type, payment_terms, credit_limit, risk_rating]
+        related:
+          - { entity: contract, fields: [contract_ref, status, start_date, end_date], limit: 20 }
+          - { entity: purchase_order, fields: [po_ref, status, total_amount, order_date], limit: 20 }
+      output: { kind: markdown }
+      review: show
+      triggers:
+        - { event: chat, label: Ask about this vendor, roles: [Procurement Manager] }
+      memory: { window: 10 }
+      tools:
+        - { use: search_records, entity: invoice }
+      acceptance:
+        - Asking "how much have we ordered this year?" answers from the vendor's purchase orders.
+      preview:
+        sample: "This vendor has **4 purchase orders** this year worth ₹18.2 lakh; one is awaiting acknowledgement."

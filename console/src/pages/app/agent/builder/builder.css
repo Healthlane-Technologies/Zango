@@ -795,6 +795,47 @@
 	gap: 6px;
 	margin-top: 8px;
 }
+.rv-ai {
+	margin: 0;
+	padding: 6px 14px;
+	list-style: none;
+}
+.rv-ai li {
+	display: flex;
+	gap: 9px;
+	padding: 8px 0;
+	font-size: 13px;
+	color: var(--t2);
+	border-bottom: 1px solid var(--border-soft);
+}
+.rv-ai li:last-child {
+	border-bottom: 0;
+}
+.rv-ai li > svg {
+	margin-top: 3px;
+	color: var(--violet);
+	flex: none;
+}
+.rv-ai b {
+	color: var(--t1);
+	font-weight: 600;
+}
+.rv-ai small {
+	display: block;
+	margin-top: 2px;
+	color: var(--t3);
+	font-size: 12px;
+}
+.rv-ai-note {
+	margin: 0;
+	padding: 10px 14px;
+	border-top: 1px solid var(--border);
+	font-size: 12.5px;
+	color: var(--t3);
+}
+.rv-ai-note a {
+	color: var(--accent);
+}
 .rv-done {
 	display: inline-flex;
 	align-items: center;

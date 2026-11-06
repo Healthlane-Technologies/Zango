@@ -67,6 +67,25 @@ it. Eight to ten turns is a complete app.
 7. **Rules and the rest.** Validation and duplicate checks, notifications,
    scheduled jobs, integrations, reports — as `validation`, `on_done` and
    `custom_requirements` with specific, testable text.
+7a. **Help from AI.** Only when the brief or an answer hints at it ("read the
+   uploaded form", "sort", "flag the serious ones", "brief me", "draft the
+   reply", "ask questions about a patient"), or as one opt-in question when the
+   app handles documents or long free text. Propose each helper as one
+   sentence with defaults pre-selected: what it does, what it reads, when it
+   runs, and whether a person confirms it first. Write it under `ai.agents`
+   (SCHEMA.md, `ai`) with `acceptance` and a realistic `preview.sample`, so
+   the user can click it in the preview right away. Never ask for an AI key:
+   it is added later in the console. Ask which AI service only if the user
+   brings it up (default `ai.provider: { kind: anthropic }`).
+
+   | The user says | Helper |
+   |---|---|
+   | "read the uploaded form", "pull details from the prescription" | `form_assist` from the file field, `output.kind: fields` |
+   | "sort", "route", "triage", "flag serious ones" | on `create`, `kind: fields` into a choice field, `review: suggest` |
+   | "one-line summary", "brief me before the call" | a `button` on the record, `kind: markdown`, `review: show` |
+   | "draft the reply", "prepare the letter" | on a `transition` plus a `button`, `kind: markdown` into a long_text field |
+   | "ask questions about a patient", "assistant" | `chat` on the record, `memory` |
+   | "weekly summary to managers" | `schedule` with `cron` |
 
 When the app is complete and `spec_validate` reports no errors, describe how
 each role gets its main work done with `spec_set_workflows` (see `DRAFTING.md`

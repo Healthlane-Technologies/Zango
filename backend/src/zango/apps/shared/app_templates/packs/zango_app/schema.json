@@ -197,6 +197,9 @@
         "$ref": "#/$defs/detailView"
       }
     },
+    "ai": {
+      "$ref": "#/$defs/ai"
+    },
     "prototype": {
       "type": "object",
       "additionalProperties": false,
@@ -634,6 +637,13 @@
               "type": "string"
             }
           }
+        },
+        "uses_ai": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "AI helpers (ai.agents codes) this hand-written code calls; each has an {event: task} trigger."
         }
       }
     },
@@ -2789,6 +2799,400 @@
         "type": "string"
       },
       "description": "Uploaded documents or pages the screen follows (\"doc:2#p3\")."
+    },
+    "aiProvider": {
+      "type": "object",
+      "additionalProperties": false,
+      "title": "AI account",
+      "description": "Which AI service the app needs: the kind of account, never a key. The build creates it in Zango as a placeholder; the creator adds the key in the console.",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "anthropic",
+            "openai",
+            "azure_openai",
+            "bedrock"
+          ],
+          "description": "The AI service. Default anthropic."
+        },
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*$",
+          "description": "The provider's name in Zango. Default app-llm."
+        },
+        "model": {
+          "type": "string",
+          "description": "Default model, e.g. claude-sonnet-4-5. Default: the service's usual model."
+        },
+        "monthly_budget_usd": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Monthly spend limit for the account."
+        }
+      }
+    },
+    "aiTrigger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "event"
+      ],
+      "title": "When it runs",
+      "description": "create / update / delete / transition / tag / schedule run in the background; button, form_assist and chat are things a person clicks; task means hand-written code calls it (a custom requirement lists it in uses_ai).",
+      "properties": {
+        "event": {
+          "type": "string",
+          "enum": [
+            "create",
+            "update",
+            "delete",
+            "transition",
+            "tag",
+            "schedule",
+            "button",
+            "form_assist",
+            "chat",
+            "task"
+          ]
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "update: run only when one of these fields changes."
+        },
+        "transition": {
+          "type": "string",
+          "description": "transition: the transition name on the agent's entity."
+        },
+        "tag": {
+          "type": "string",
+          "description": "tag: the tag code on the agent's entity."
+        },
+        "cron": {
+          "type": "string",
+          "description": "schedule: a cron line, e.g. \"0 8 * * 1\"."
+        },
+        "label": {
+          "type": "string",
+          "description": "button / form_assist / chat: the button text."
+        },
+        "where": {
+          "type": "string",
+          "enum": [
+            "record",
+            "row",
+            "list"
+          ],
+          "description": "button / chat: on the record page (default), on each list row, or above the list."
+        },
+        "roles": {
+          "$ref": "#/$defs/roles",
+          "description": "button / form_assist / chat: who sees it (default: access.roles)."
+        },
+        "from": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "form_assist: the file fields whose upload fills the form."
+        },
+        "icon": {
+          "type": "string"
+        },
+        "when": {
+          "$ref": "#/$defs/expr",
+          "description": "Only when this holds for the record."
+        }
+      }
+    },
+    "aiOutputField": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "type"
+      ],
+      "properties": {
+        "key": {
+          "$ref": "#/$defs/code"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "text",
+            "long_text",
+            "integer",
+            "decimal",
+            "boolean",
+            "date",
+            "choice",
+            "multi_choice"
+          ]
+        },
+        "description": {
+          "type": "string",
+          "description": "What the AI should put here."
+        },
+        "choices": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ],
+          "description": "choice / multi_choice: a choice_sets code or the allowed values. Default: the target field's choices."
+        },
+        "to": {
+          "type": "string",
+          "description": "The entity field this value is written to. Omit to only show it."
+        }
+      }
+    },
+    "aiOutput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind"
+      ],
+      "title": "What it produces",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "fields",
+            "text",
+            "markdown"
+          ],
+          "description": "fields: named values (a JSON answer); text / markdown: a piece of writing."
+        },
+        "fields": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/aiOutputField"
+          },
+          "description": "kind fields: each value the AI returns."
+        },
+        "to": {
+          "type": "string",
+          "description": "kind text / markdown: the entity field the writing goes into. Omit to only show it."
+        }
+      }
+    },
+    "aiTool": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "A built-in tool ({use, entity}) or a custom one the build writes ({code, text}).",
+      "properties": {
+        "use": {
+          "type": "string",
+          "enum": [
+            "search_records",
+            "read_record"
+          ]
+        },
+        "entity": {
+          "type": "string"
+        },
+        "code": {
+          "$ref": "#/$defs/code"
+        },
+        "text": {
+          "type": "string",
+          "description": "Custom tool: what it does, in plain words."
+        },
+        "safety": {
+          "type": "string",
+          "enum": [
+            "read_only",
+            "write",
+            "external"
+          ],
+          "description": "Custom tool: read_only (default), write, or external (calls another system)."
+        }
+      }
+    },
+    "aiAgent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "purpose",
+        "output",
+        "triggers"
+      ],
+      "title": "AI helper",
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/code"
+        },
+        "name": {
+          "type": "string"
+        },
+        "purpose": {
+          "type": "string",
+          "description": "What it does, in one or two sentences. Becomes the core of its instructions."
+        },
+        "instructions": {
+          "type": "string",
+          "description": "Extra rules, tone and limits (\"use only approved answers; say unknown if unsure\")."
+        },
+        "entity": {
+          "type": "string",
+          "description": "The record it works on. Required unless it only runs on a schedule or from code."
+        },
+        "context": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "What it may read. Only these are sent to the AI.",
+          "properties": {
+            "fields": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Field paths on the entity (link.field allowed)."
+            },
+            "related": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "entity"
+                ],
+                "properties": {
+                  "entity": {
+                    "type": "string"
+                  },
+                  "via": {
+                    "type": "string",
+                    "description": "The link field on that entity that points at this record."
+                  },
+                  "fields": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100
+                  },
+                  "where": {
+                    "$ref": "#/$defs/expr"
+                  }
+                }
+              }
+            },
+            "files": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "File or image fields whose documents are attached."
+            }
+          }
+        },
+        "output": {
+          "$ref": "#/$defs/aiOutput"
+        },
+        "review": {
+          "type": "string",
+          "enum": [
+            "suggest",
+            "none",
+            "show"
+          ],
+          "description": "suggest (default): a person accepts, edits or discards it; none: written straight away; show: displayed only."
+        },
+        "triggers": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/aiTrigger"
+          }
+        },
+        "tools": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/aiTool"
+          }
+        },
+        "access": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "roles": {
+              "$ref": "#/$defs/roles"
+            }
+          },
+          "description": "Who may run it and see its results (default: every role that can edit the entity)."
+        },
+        "run": {
+          "type": "string",
+          "enum": [
+            "async",
+            "inline"
+          ],
+          "description": "async (default for record events): in the background; inline: the person waits for it."
+        },
+        "memory": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "window": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          },
+          "description": "chat only: how many past exchanges it remembers."
+        },
+        "acceptance": {
+          "$ref": "#/$defs/acceptance"
+        },
+        "preview": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "What the preview shows instead of a real AI call.",
+          "properties": {
+            "sample": {
+              "description": "A realistic answer: the text, or {key: value} for kind fields."
+            },
+            "toast": {
+              "type": "string",
+              "description": "The note shown when a background trigger fires."
+            }
+          }
+        }
+      }
+    },
+    "ai": {
+      "type": "object",
+      "additionalProperties": false,
+      "title": "AI helpers",
+      "description": "AI helpers the app uses (SCHEMA.md, ai). The build creates them as Zango AI agents.",
+      "properties": {
+        "provider": {
+          "$ref": "#/$defs/aiProvider"
+        },
+        "agents": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/aiAgent"
+          }
+        }
+      }
     }
   }
 }

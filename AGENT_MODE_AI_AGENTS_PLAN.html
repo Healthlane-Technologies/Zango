@@ -321,7 +321,7 @@ footer{padding:40px 0 70px;color:var(--ink-3);font-size:13px;border-top:1px soli
 <span class="k">context</span>: { <span class="k">fields</span>: [question, topic, product] }</div>
     <div class="l"><b>What does it produce, and where does it go?</b></div>
     <div class="r"><span class="k">output</span>: { <span class="k">kind</span>: markdown,
-  <span class="k">writes</span>: [{ <span class="k">draft</span>: { <span class="k">to</span>: response_draft } }] }</div>
+  <span class="k">to</span>: response_draft }</div>
     <div class="l"><b>When does it run?</b><br><span class="muted small">See the 10 trigger types in the Reference</span></div>
     <div class="r"><span class="k">triggers</span>:
   - { <span class="k">event</span>: transition, <span class="k">transition</span>: start_response }
@@ -348,7 +348,7 @@ footer{padding:40px 0 70px;color:var(--ink-3);font-size:13px;border-top:1px soli
   <span class="k">agents</span>:
     - <span class="k">code</span>, <span class="k">name</span>, <span class="k">purpose</span>, <span class="k">instructions</span>       <span class="c"># → AppLLMAgent + its prompts</span>
       <span class="k">entity</span>, <span class="k">context</span>: { <span class="k">fields</span>, <span class="k">related</span>, <span class="k">files</span> }  <span class="c"># → {{variables}} and LLMFile attachments</span>
-      <span class="k">output</span>: { <span class="k">kind</span>: fields|text|markdown, <span class="k">writes</span> }  <span class="c"># fields → JSON output schema</span>
+      <span class="k">output</span>: { <span class="k">kind</span>: fields|text|markdown, <span class="k">to</span>, <span class="k">fields</span>: [{key, type, to}] }  <span class="c"># fields → JSON output schema</span>
       <span class="k">review</span>: suggest|none|show
       <span class="k">triggers</span>: [...]                                <span class="c"># create|update|delete|transition|tag|schedule|button|form_assist|chat|task</span>
       <span class="k">tools</span>: [{ <span class="k">use</span>: search_records, <span class="k">entity</span> }, { <span class="k">code</span>, <span class="k">text</span> }]
