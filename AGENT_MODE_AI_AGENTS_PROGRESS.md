@@ -39,7 +39,9 @@ Route `apps/:appId/ai` (sidebar item "AI"), pages under `console/src/pages/app/a
 - [x] Preview (kit `app-studio.html`, simulated with `preview.sample`): AI button on the record header (first visible, rest in ⋯ under "AI"), suggestion card (Use / Discard; review none writes straight away; show = Dismiss), background triggers on create/update/transition/tag with a toast then the card, "Fill from …" in create/edit forms, "Ask AI" chat modal. `zas_render --write` synced kit.css.
 - [x] Console review tab: "Help from AI" section (one sentence per helper, when it runs, who checks it, link to App → AI) and an "N AI helpers" pill
 - [x] Tests: `test_ai_spec.py` (6); 217 related tests green. `test_skill_plugin` has 8 failures that pre-date this branch (same on a clean stash).
-- Not done in P1 (by design): `where: row|list` buttons are not drawn on list rows yet (row menu lives in zas-render.js); the resolved `ai` model / holes for the build are P2.
+- [x] AI anywhere (pack 1.1.40): `where: record | row | list | form` on button/chat triggers; `type: ai` 360 tabs, summary sections and sidebar panels (`agent`, `title`). Shared renderer (`zas-render.js`) owns `aiAgents/aiClicks/aiListButtons`, adds AI items to `rowActions` (group "AI") and list-header buttons, and calls `H.act('ai', {E, row|rows, agent, trigger})`; the kit host answers in a dialog (Use writes to the row). Checker: `where` only on button/chat, chat not in forms, form buttons need kind fields, `type: ai` names a helper on the hero. Example: row "Screen risk", list "Summarise" (spend_summary), vendor_360 sidebar "Risk screening". 246 related tests green.
+- [x] Local DB re-imported: zango-app 1.1.40 published (`import_pack(publish_now=True)` from `Zelthy3_projects/local_dev_project`).
+- P2 must implement `act('ai')` in the runtime host (`RenderedPage.tsx`) and the React record/form surfaces for every placement above.
 
 ## Notes / decisions
 
@@ -49,5 +51,6 @@ Route `apps/:appId/ai` (sidebar item "AI"), pages under `console/src/pages/app/a
 
 ## Log
 
+- 2026-11-06: AI placements everywhere (rows, list header, forms, 360 tabs/panels); pack 1.1.40 re-imported locally.
 - 2026-11-06: P1 done. Output shape settled on `output: {kind, to}` / `fields: [{key, type, to}]` (plan doc updated from `writes`). Local DB keeps pack 1.1.38 until `import_pack(publish_now=True)` (see memory note) — reimport before trying the preview in Agent Mode.
 - 2026-11-06: branch created; API contract + classic feature inventory written (scratchpad); all five tabs implemented; tsc + build green. Next: side-by-side check in Chrome on app `EnrollmentAgent` (834cb82a-…), which has 5 providers and 54 invocations.

@@ -946,6 +946,9 @@ detail_views:
             ${items.map(i => `<div style="display:flex;gap:8px;align-items:center;padding:4px 0;font-size:13px">
               <span style="color:${i.done ? '#079455' : '#98A2B3'}">${ctx.icon(i.done ? 'circle-check' : 'circle')}</span>
               <span style="${i.done ? '' : 'color:#667085'}">${ctx.esc(i.label)}</span></div>`).join('')}`;
+      - type: ai                              # an AI helper's answer for this vendor, with Run
+        agent: vendor_screening
+        title: Risk screening
 
     tabs:
       - code: overview
@@ -1149,6 +1152,7 @@ ai:
       triggers:
         - { event: transition, transition: submit }
         - { event: button, label: Re-screen, roles: [Procurement Manager] }
+        - { event: button, label: Screen risk, where: row, roles: [Procurement Manager] }   # in each list row's menu
       access: { roles: [Procurement Executive, Procurement Manager] }
       acceptance:
         - Submitting a vendor shows a suggested risk rating with reasons to the Procurement Manager.
@@ -1177,3 +1181,17 @@ ai:
         - Asking "how much have we ordered this year?" answers from the vendor's purchase orders.
       preview:
         sample: "This vendor has **4 purchase orders** this year worth ₹18.2 lakh; one is awaiting acknowledgement."
+
+    - code: spend_summary
+      name: Spend summary
+      purpose: Summarise the purchase orders on screen for a manager - totals, the largest vendors and anything overdue.
+      entity: purchase_order
+      context: { fields: [po_ref, vendor.legal_name, total_amount, status, expected_by] }
+      output: { kind: markdown }
+      review: show
+      triggers:
+        - { event: button, label: Summarise, where: list, roles: [Procurement Manager, Finance] }   # on the list page header
+      acceptance:
+        - The summary's total matches the sum of the purchase orders on screen.
+      preview:
+        sample: "**12 open POs, ₹38.4 lakh.** Pioneer Pharma is 41% of it. Two are past their expected date."

@@ -54,8 +54,8 @@ PAGE_TYPES = {"crud", "detail", "custom"}
 # app.ui: the look, as choices tokens.css maps to values (references/design-system.md)
 UI_RADIUS = ("sharp", "rounded", "soft")
 UI_DENSITY = ("compact", "comfortable")
-TAB_TYPES = {"summary", "related_table", "timeline", "fields", "custom"}
-SECTION_TYPES = {"fields", "mini_table", "custom", "timeline", "stats"}
+TAB_TYPES = {"summary", "related_table", "timeline", "fields", "custom", "ai"}
+SECTION_TYPES = {"fields", "mini_table", "custom", "timeline", "stats", "ai"}
 TONES = {"gray", "blue", "green", "amber", "red", "purple", "teal", "indigo", "pink"}
 BANNER_TONES = {"info", "warning", "danger", "success"}
 LAYOUTS = {"header_tabs", "header_tabs_sidebar", "header_sidebar_tabs_left"}
@@ -1127,6 +1127,17 @@ class Spec:
     }
     AI_RECORD_EVENTS = {"create", "update", "delete", "transition", "tag", "button", "form_assist", "chat"}
 
+    def chk_ai_panel(self, node, H, where):
+        """A 360 tab or panel of type ai shows one helper that works on the hero."""
+        code = node.get("agent")
+        agent = next((a for a in arr((self.M.get("ai") or {}).get("agents")) if isinstance(a, dict) and a.get("code") == code), None)
+        if not code:
+            self.L.error(where, "a type: ai tab or panel names its helper: agent: <ai.agents code>")
+        elif agent is None:
+            self.L.error(where + ".agent", f"AI helper {code!r} is not in ai.agents")
+        elif H is not None and agent.get("entity") != H["code"]:
+            self.L.error(where + ".agent", f"{code} works on {agent.get('entity')!r}, not on this page's {H['code']}")
+
     def lint_ai(self, reqs, chk_roles):
         """ai.agents: what they read and write exists and fits, triggers make sense, and every
         {event: task} helper is called by some custom requirement (uses_ai)."""
@@ -1229,6 +1240,12 @@ class Spec:
                             L.error(tw + ".from", f"{fk!r} is not a file or image field of {E['code']}")
                     if out.get("kind") != "fields":
                         L.error(tw, "fill-from-document needs output kind: fields (one value per form field)")
+                if t.get("where") and ev not in ("button", "chat"):
+                    L.error(tw + ".where", "where is for button and chat triggers")
+                if t.get("where") == "form" and ev != "button":
+                    L.error(tw + ".where", "a chat cannot sit inside a form: use where: record or list")
+                if t.get("where") == "form" and out.get("kind") != "fields":
+                    L.error(tw, "a button in a form fills form fields: it needs output kind: fields")
                 if ev in ("button", "form_assist", "chat") and t.get("roles"):
                     chk_roles(tw + ".roles", t["roles"])
                 if t.get("when") and E is not None:
@@ -2007,6 +2024,8 @@ class Spec:
                 chk_roles(sw, sec["roles"])
             if sec.get("show_when"):
                 sec["show_when_ast"] = self.check_expr(H, sec["show_when"], sw + ".show_when")
+            if t == "ai":
+                self.chk_ai_panel(sec, H, sw)
             if t == "fields":
                 for it in kv(sec.get("fields")):
                     chk_path(sw, it["key"])
@@ -2057,6 +2076,8 @@ class Spec:
                 chk_roles(tw, t["roles"])
             if t.get("show_when"):
                 t["show_when_ast"] = self.check_expr(H, t["show_when"], tw + ".show_when")
+            if tt == "ai":
+                self.chk_ai_panel(t, H, tw)
             if tt in ("summary", "fields"):
                 for j, sec in enumerate(arr(t.get("sections"))):
                     chk_section(sec, f"{tw}.sections[{j}]", f"{t['code']}_{j + 1}")

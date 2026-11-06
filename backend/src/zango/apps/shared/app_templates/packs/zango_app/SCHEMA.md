@@ -91,10 +91,10 @@ condition:
 | `row_action.type`  | edit, form, confirm, navigate, download, delete                                        |
 | column `source`    | field, status, tags, computed, path                                                    |
 | column `format`    | money, percent, number, date, datetime, days (no `integer`/`decimal`: use `number`)    |
-| sidebar section `type` | fields, mini_table, custom, timeline, stats                                        |
+| sidebar section `type` | fields, mini_table, custom, timeline, stats, ai                                    |
 | banner `tone`      | info, warning, danger, success                                                         |
 | `page.type`        | crud, detail, dashboard, custom                                                        |
-| `tab.type`         | summary, related_table, timeline, fields, custom                                       |
+| `tab.type`         | summary, related_table, timeline, fields, custom, ai                                   |
 | colours            | gray, blue, green, amber, red, purple, teal, indigo, pink                              |
 | `custom_requirements[].area` | backend, frontend, integration, permission, notification, scheduled, report  |
 | `ai.provider.kind` | anthropic, openai, azure_openai, bedrock                                             |
@@ -824,6 +824,24 @@ displays it and writes nothing (summaries, chat).
 | `task` | — | only from hand-written code: a custom requirement lists it in `uses_ai` |
 
 Any trigger takes `when` (an expression on the record) to narrow it.
+
+**Where it shows.** AI can sit anywhere a person works:
+
+| Place | How |
+|---|---|
+| Record page header | `button` or `chat` with `where: record` (the default) |
+| A list row's menu (list pages and related tables) | `button` / `chat` with `where: row` |
+| The list page header | `button` / `chat` with `where: list`; it works on the rows the person sees (`review: show`) |
+| Inside the create / edit form | `form_assist` (from an upload) or `button` with `where: form` (from what is typed so far); both need `kind: fields` and fill the unsaved form |
+| A 360 tab, summary section or sidebar panel | `{ type: ai, agent: <code>, title }`: the helper's latest answer for the record, with a Run button |
+| Without a click | `create` / `update` / `transition` / `tag` / `schedule` / `task`; a `suggest` answer appears as a card on the record (or in its `type: ai` panel) |
+
+```yaml
+detail_views:
+  - code: vendor_360
+    sidebar:
+      - { type: ai, agent: vendor_screening, title: Risk screening }
+```
 
 **Tools.** `{use: search_records | read_record, entity}` lets it look up
 records (scoped to the person it runs for); `{code, text, safety}` asks the

@@ -13,7 +13,8 @@
  *   fact(kind, E, row, c)            a column's per-row extras: badge, highlight, secondary, icon
  *   options(E, c, f)                 a link filter's options
  *   act(name, payload)               what a click does: render, go, drawer, create, export, menu,
- *                                    row_action, edit, delete, transition, tag
+ *                                    row_action, edit, delete, transition, tag, ai ({E, row?, rows?,
+ *                                    agent, trigger}: run an AI helper on a record or a list)
  *   preview                          true in the Studio: draw the data-zas-path pointing marks
  *
  * memory() is the in-memory data half of a host (the preview's demo rows in S.db). The app's host
@@ -538,7 +539,7 @@ function renderCrud(E, p){
   const sc = E.acc && E.acc[S.role] && E.acc[S.role].rows;
   const sub = pageSubtitle(E, p, rows);
   // the record count sits in the title ("Vendors (12)"); the line under it is the page's subtitle, if any
-  return `<div class="z-ph"${zp(`/pages/@${p.code}`, p.title)}><div><h1>${esc(p.title)} <span class="z-hc" data-zas-chrome>(${H.stat(E, rows, null)})</span></h1>${sub != null ? `<p>${esc(sub)}</p>` : sc && sc !== 'all' ? `<p data-zas-chrome>Scoped to <b>${esc(scopeLabel(sc))}</b></p>` : ''}</div><span class="sp"></span>${addBtn}</div>
+  return `<div class="z-ph"${zp(`/pages/@${p.code}`, p.title)}><div><h1>${esc(p.title)} <span class="z-hc" data-zas-chrome>(${H.stat(E, rows, null)})</span></h1>${sub != null ? `<p>${esc(sub)}</p>` : sc && sc !== 'all' ? `<p data-zas-chrome>Scoped to <b>${esc(scopeLabel(sc))}</b></p>` : ''}</div><span class="sp"></span>${aiListButtons(E, rows)}${addBtn}</div>
     ${listStats(E, p, rows)}${renderTable({ key: 'crud_' + E.code, E, rows, cols: E.cols, rowClick: rowClickFor(E), quick: E.table.quick_filters, right: viewSwitch(p) + exp, empty: { cta: 'add' }, addBtn, footer: E.table.footer_totals, group_by: E.table.group_by, view: curView(p), page: p })}`;
 }
 
@@ -644,6 +645,27 @@ function tlViewHTML(cfg, v, rows){
 }
 function editableNow(E, row){ const ed = E.form.edit; if (!ed) return false; if (ed.editable_in && E.wf && !arr(ed.editable_in).includes(row.status)) return false; return true; }
 function trAllowed(t, row){ return !t.system && t.from.includes(row.status) && (!t.roles.length || t.roles.includes(S.role)); }
+/* AI helpers (spec ai.agents): where a person can run them. `where` on a button / chat trigger:
+   record (the record page, default), row (a list row's menu), list (the list page header),
+   form (inside the create / edit form). The host runs them (act 'ai'). */
+const aiAgents = E => arr(S.M && S.M.spec && S.M.spec.ai && S.M.spec.ai.agents).filter(a => isObj(a) && a.code && (!E || a.entity === E.code));
+const aiName = a => a.name || titleize(a.code);
+const aiTrigs = (a, ev) => arr(a.triggers).filter(t => isObj(t) && t.event === ev);
+function aiRoleOK(a, t){ const rs = arr((t && t.roles) || (a.access && a.access.roles)); return !rs.length || rs.includes(S.role); }
+/* [{agent, trigger}] a person may click at `where` (on `row` when given). */
+function aiClicks(E, where, row){
+  const out = [];
+  aiAgents(E).forEach(a => arr(a.triggers).forEach(t => {
+    if (!isObj(t) || !['button', 'chat'].includes(t.event) || (t.where || 'record') !== where || !aiRoleOK(a, t)) return;
+    if (row && t.when && evalCond(t.when, { E, row }) === false) return;
+    out.push({ agent: a, trigger: t });
+  }));
+  return out;
+}
+const aiLabel = (c) => c.trigger.label || (c.trigger.event === 'chat' ? 'Ask AI' : aiName(c.agent));
+function aiListButtons(E, rows){
+  return aiClicks(E, 'list').map(c => `<button class="z-btn ai"${zp(`/ai/agents/@${c.agent.code}`, aiName(c.agent))} data-a="${A(() => H.act('ai', { E, rows, agent: c.agent, trigger: c.trigger }))}">${ic(c.trigger.icon || (c.trigger.event === 'chat' ? 'message-circle' : 'sparkles'))}${esc(aiLabel(c))}</button>`).join('');
+}
 function rowActions(E, row, opts){
   opts = opts || {}; const items = [];
   E.ractions.forEach(a => {
@@ -653,6 +675,7 @@ function rowActions(E, row, opts){
     items.push({ label: a.label, icon: { edit: 'pencil', form: 'square-pen', confirm: 'send', navigate: 'external-link', download: 'download' }[a.type] || 'zap', run: () => H.act('row_action', { E, row, a }) });
   });
   if (!E.ractions.some(a => a.type === 'edit') && can(E, 'edit') && editableNow(E, row) && roleOK(E.form.edit)) items.unshift({ label: 'Edit', icon: 'pencil', run: () => H.act('edit', { E, row }) });
+  aiClicks(E, 'row', row).forEach((c, i) => items.push({ group: i === 0 ? 'AI' : null, label: aiLabel(c), icon: c.trigger.icon || 'sparkles', run: () => H.act('ai', { E, row, agent: c.agent, trigger: c.trigger }) }));
   if (can(E, 'delete')) items.push({ label: 'Delete', icon: 'trash-2', tone: 'danger', run: () => H.act('delete', { E, row }) });
   if (E.wf){
     const trs = E.wf.trs.filter(t => trAllowed(t, row));
@@ -731,5 +754,5 @@ function memory(){
   };
 }
 
-return Object.freeze({ use, memory, visibleRows, menuHTML, bind, esc, arr, isObj, titleize, empty, hash, pad, todayISO, kv, resetActs, actAt, A, iconOK, ic, paintIcons, TONES, tone, badge, chip, AVC, avColor, initials, BUILTIN, BUILTIN_F, normChoices, normField, normCodes, normAccess, normCol, normEntity, VIEW_TYPES, VIEW_LABEL, normViews, build, LONG_TYPES, autoViews, rowsOf, getRow, curUser, UNK, rp, knownPath, lit, cmp, combine, evalStr, evalCond, condTexts, condExprs, LOCALE, money, fdate, fdt, rel, txt, plain, interp, fmt, can, scopeLabel, canPage, roleOK, showOK, AUTO_PATHS, zp, entPath, stateBox, colsFor, cellOf, CODE_RE, cellHTML, initialsOf, cellIcon, tState, filterOpts, filterKind, filterOn, filterHit, filterPanel, sortKey, renderTable, rowClickFor, pageSubtitle, listStats, renderCrud, curView, viewSwitch, viewHTML, cardInner, groupsFor, moveMode, kanbanHTML, cardsHTML, ymd, calendarHTML, tlViewHTML, editableNow, trAllowed, rowActions, fmtStat });
+return Object.freeze({ use, memory, visibleRows, menuHTML, bind, esc, arr, isObj, titleize, empty, hash, pad, todayISO, kv, resetActs, actAt, A, iconOK, ic, paintIcons, TONES, tone, badge, chip, AVC, avColor, initials, BUILTIN, BUILTIN_F, normChoices, normField, normCodes, normAccess, normCol, normEntity, VIEW_TYPES, VIEW_LABEL, normViews, build, LONG_TYPES, autoViews, rowsOf, getRow, curUser, UNK, rp, knownPath, lit, cmp, combine, evalStr, evalCond, condTexts, condExprs, LOCALE, money, fdate, fdt, rel, txt, plain, interp, fmt, can, scopeLabel, canPage, roleOK, showOK, AUTO_PATHS, zp, entPath, stateBox, colsFor, cellOf, CODE_RE, cellHTML, initialsOf, cellIcon, tState, filterOpts, filterKind, filterOn, filterHit, filterPanel, sortKey, renderTable, rowClickFor, pageSubtitle, listStats, renderCrud, curView, viewSwitch, viewHTML, cardInner, groupsFor, moveMode, kanbanHTML, cardsHTML, ymd, calendarHTML, tlViewHTML, editableNow, trAllowed, rowActions, fmtStat, aiAgents, aiName, aiTrigs, aiRoleOK, aiClicks, aiLabel, aiListButtons });
 })();

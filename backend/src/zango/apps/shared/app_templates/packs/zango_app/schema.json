@@ -1863,7 +1863,8 @@
             "related_table",
             "timeline",
             "fields",
-            "custom"
+            "custom",
+            "ai"
           ]
         },
         "entity": {
@@ -1897,6 +1898,10 @@
         },
         "refs": {
           "$ref": "#/$defs/refs"
+        },
+        "agent": {
+          "type": "string",
+          "description": "type: ai — the AI helper (ai.agents code) whose answer this tab shows, with a Run button."
         }
       }
     },
@@ -1999,7 +2004,8 @@
                   "mini_table",
                   "custom",
                   "timeline",
-                  "stats"
+                  "stats",
+                  "ai"
                 ]
               },
               "tone": {
@@ -2024,6 +2030,10 @@
               },
               "refs": {
                 "$ref": "#/$defs/refs"
+              },
+              "agent": {
+                "type": "string",
+                "description": "type: ai — the AI helper whose answer this panel shows."
               }
             }
           }
@@ -2884,9 +2894,10 @@
           "enum": [
             "record",
             "row",
-            "list"
+            "list",
+            "form"
           ],
-          "description": "button / chat: on the record page (default), on each list row, or above the list."
+          "description": "button / chat: on the record page (default), in each list row's menu, on the list page's header, or (button) inside the create / edit form."
         },
         "roles": {
           "$ref": "#/$defs/roles",

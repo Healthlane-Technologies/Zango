@@ -343,6 +343,9 @@ textarea.z-in{height:auto;padding:9px 11px;resize:vertical;line-height:1.45}
 .ai-msg{padding:8px 11px;border-radius:10px;font-size:13px;max-width:85%}
 .ai-msg.me{justify-self:end;background:#F2F4F7;color:#101828}
 .ai-msg.ai{background:#F4F3FF;border:1px solid #D9D6FE}
+.ai-panel h3 .ai-sim{margin-left:0;margin-right:8px}
+.ai-pb{padding:12px 14px}
+.ai-empty{font-size:13px;color:#667085}
 .flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 
 /* toast */

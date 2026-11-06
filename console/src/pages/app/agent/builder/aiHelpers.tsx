@@ -19,9 +19,13 @@ const WHEN: Record<string, (t: Node) => string> = {
 	transition: (t) => `after “${str(t.transition)}”`,
 	tag: (t) => `when tagged “${str(t.tag)}”`,
 	schedule: (t) => `on a schedule (${str(t.cron)})`,
-	button: (t) => `from a “${str(t.label) || 'AI'}” button`,
+	button: (t) =>
+		`from a “${str(t.label) || 'AI'}” button ${
+			{ row: 'in each list row', list: 'on the list', form: 'in the form' }[str(t.where)] ??
+			'on the record'
+		}`,
 	form_assist: (t) => `from “${str(t.label) || 'Fill from document'}” in the form`,
-	chat: () => 'as an “Ask AI” chat on the record',
+	chat: (t) => `as an “Ask AI” chat ${str(t.where) === 'list' ? 'on the list' : 'on the record'}`,
 	task: () => 'from the app’s own background logic',
 };
 

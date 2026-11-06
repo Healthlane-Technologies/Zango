@@ -77,6 +77,9 @@ it. Eight to ten turns is a complete app.
    the user can click it in the preview right away. Never ask for an AI key:
    it is added later in the console. Ask which AI service only if the user
    brings it up (default `ai.provider: { kind: anthropic }`).
+   Put it where the person works: on the record page, in each list row's
+   menu, on the list header, inside the form, or as a tab or side panel of
+   the 360 page (SCHEMA.md, `ai`, "Where it shows").
 
    | The user says | Helper |
    |---|---|

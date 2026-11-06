@@ -34,7 +34,7 @@ class AiSpecTests(AppTemplatesTestBase):
         doc = self.doc()
         self.assertEqual(
             [a["code"] for a in doc["ai"]["agents"]],
-            ["invoice_reader", "vendor_screening", "vendor_assistant"],
+            ["invoice_reader", "vendor_screening", "vendor_assistant", "spend_summary"],
         )
         self.assertEqual(self.errors(doc), [])
 
@@ -103,3 +103,18 @@ class AiSpecTests(AppTemplatesTestBase):
         message = str(refused.exception)
         self.assertIn("/ai/agents/@vendor_assistant", message)
         self.assertIn("preview.sample", message)
+
+    def test_helpers_can_sit_in_rows_lists_forms_and_360_panels(self):
+        doc = self.doc()
+        self.assertEqual(self.errors(doc), [])  # the example has a row button, a list button and a panel
+        screening = self.agent(doc, "vendor_screening")
+        screening["triggers"].append({"event": "create", "where": "row"})  # where is for clicks
+        self.agent(doc, "vendor_assistant")["triggers"].append({"event": "chat", "where": "form"})
+        dv = doc["detail_views"][0]
+        dv["tabs"].append({"code": "ai_brief", "label": "AI brief", "type": "ai"})  # no agent
+        dv["sidebar"].append({"type": "ai", "agent": "spend_summary"})  # works on purchase orders
+        messages = "\n".join(self.errors(doc))
+        self.assertIn("where is for button and chat triggers", messages)
+        self.assertIn("a chat cannot sit inside a form", messages)
+        self.assertIn("names its helper", messages)
+        self.assertIn("spend_summary works on 'purchase_order', not on this page's vendor", messages)
