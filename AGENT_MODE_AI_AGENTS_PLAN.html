@@ -1,0 +1,810 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Agents in App Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F7F7FB; --surface:#FFFFFF; --surface-2:#F2F1F8; --ink:#16131F; --ink-2:#4A4660; --ink-3:#7C7892;
+  --line:#E6E4EF; --line-2:#D8D5E4;
+  --brand:#5B3DF5; --brand-soft:#EEEAFE; --brand-ink:#3B22C4;
+  --ok:#0E9F6E; --ok-soft:#E3F6EE; --warn:#B86E00; --warn-soft:#FDF3DC; --bad:#D92D20; --bad-soft:#FDECEA;
+  --teal:#0F766E; --teal-soft:#E0F2EF; --pink:#BE185D; --pink-soft:#FCE7F3; --blue:#1D4ED8; --blue-soft:#E0EAFF;
+  --code-bg:#14111F; --code-ink:#E8E6F3; --code-key:#B9A8FF; --code-str:#7EE2B8; --code-com:#8D88A6;
+  --shadow:0 1px 2px rgba(22,19,31,.04),0 8px 28px rgba(22,19,31,.06);
+  --radius:14px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F0D17; --surface:#17141F; --surface-2:#1E1A2A; --ink:#F1EFF8; --ink-2:#C2BED6; --ink-3:#8D88A6;
+    --line:#2A2638; --line-2:#36314A; --brand:#8B74FF; --brand-soft:#241E43; --brand-ink:#C4B8FF;
+    --ok:#34D399; --ok-soft:#10261E; --warn:#FBBF24; --warn-soft:#2A2110; --bad:#F87171; --bad-soft:#2C1416;
+    --teal:#5EEAD4; --teal-soft:#0F2624; --pink:#F9A8D4; --pink-soft:#2E1424; --blue:#93B4FF; --blue-soft:#16203A;
+    --code-bg:#0B0912; --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 28px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F0D17; --surface:#17141F; --surface-2:#1E1A2A; --ink:#F1EFF8; --ink-2:#C2BED6; --ink-3:#8D88A6;
+  --line:#2A2638; --line-2:#36314A; --brand:#8B74FF; --brand-soft:#241E43; --brand-ink:#C4B8FF;
+  --ok:#34D399; --ok-soft:#10261E; --warn:#FBBF24; --warn-soft:#2A2110; --bad:#F87171; --bad-soft:#2C1416;
+  --teal:#5EEAD4; --teal-soft:#0F2624; --pink:#F9A8D4; --pink-soft:#2E1424; --blue:#93B4FF; --blue-soft:#16203A;
+  --code-bg:#0B0912; --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 28px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:15.5px/1.65 Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--brand)}
+code{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:.84em;background:var(--surface-2);border:1px solid var(--line);padding:1px 6px;border-radius:6px;overflow-wrap:anywhere}
+.wrap{max-width:1120px;margin:0 auto;padding:0 28px}
+@media (max-width:640px){.wrap{padding:0 16px}}
+p{margin:0 0 12px}
+.muted{color:var(--ink-3)} .small{font-size:13.5px}
+
+/* top */
+.top{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--bg) 85%,transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:14px;height:56px}
+.mark{display:flex;align-items:center;gap:10px;font-weight:700;white-space:nowrap}
+.mark i{width:24px;height:24px;border-radius:7px;background:linear-gradient(135deg,var(--brand),#C026D3)}
+.rail{display:flex;gap:3px;overflow-x:auto;scrollbar-width:none;flex:1}
+.rail a{display:flex;align-items:center;gap:6px;color:var(--ink-3);text-decoration:none;font-size:12.5px;font-weight:500;padding:5px 9px;border-radius:8px;white-space:nowrap}
+.rail a b{width:19px;height:19px;border-radius:6px;background:var(--surface-2);display:grid;place-items:center;font-size:10.5px;color:var(--ink-2)}
+.rail a.on{color:var(--ink);background:var(--surface)}
+.rail a.on b{background:var(--brand);color:#fff}
+.themebtn{border:1px solid var(--line);background:var(--surface);color:var(--ink-2);border-radius:8px;padding:5px 10px;font:500 12px Inter;cursor:pointer}
+
+/* hero */
+.hero{padding:56px 0 30px}
+.eyebrow{display:inline-block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--brand-ink);background:var(--brand-soft);padding:5px 12px;border-radius:99px}
+h1{font-size:clamp(30px,4.6vw,48px);line-height:1.08;letter-spacing:-.03em;margin:16px 0 12px;font-weight:800}
+h1 em{font-style:normal;background:linear-gradient(90deg,var(--brand),#C026D3);-webkit-background-clip:text;background-clip:text;color:transparent}
+.lead{font-size:18px;color:var(--ink-2);max-width:760px}
+
+/* cast */
+.cast{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:26px 0 8px}
+@media (max-width:900px){.cast{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.who{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.who .av{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-size:15px;margin-bottom:6px}
+.who b{display:block;font-size:14px}
+.who small{color:var(--ink-2);font-size:12.5px;line-height:1.45;display:block}
+.a-you{background:var(--brand-soft);color:var(--brand-ink)}
+.a-analyst{background:var(--teal-soft);color:var(--teal)}
+.a-platform{background:var(--surface-2);color:var(--ink-2)}
+.a-build{background:var(--pink-soft);color:var(--pink)}
+.a-user{background:var(--blue-soft);color:var(--blue)}
+
+/* journey map */
+.journey{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px;margin:28px 0 0}
+@media (max-width:980px){.journey{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media (max-width:560px){.journey{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.jstep{display:block;text-decoration:none;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;position:relative;transition:transform .15s,border-color .15s}
+.jstep:hover{transform:translateY(-2px);border-color:var(--brand)}
+.jstep .n{font:600 11px "JetBrains Mono";color:var(--ink-3)}
+.jstep b{display:block;font-size:13.5px;line-height:1.3;margin:4px 0 8px}
+.jstep .tag{font-size:11px;font-weight:600;padding:2px 7px;border-radius:99px;display:inline-block}
+.jstep.act{border:2px solid var(--brand);background:linear-gradient(170deg,var(--brand-soft),var(--surface))}
+.jstep.act::before{content:"YOU ACT HERE";position:absolute;top:-9px;right:10px;font:700 9.5px Inter;letter-spacing:.06em;background:var(--brand);color:#fff;padding:2px 7px;border-radius:99px}
+
+/* example banner */
+.example{display:flex;gap:16px;align-items:flex-start;background:var(--surface);border:1px dashed var(--line-2);border-radius:var(--radius);padding:16px 18px;margin:26px 0 0}
+.example .ic{font-size:22px;line-height:1}
+.example b{display:block}
+
+/* process sections */
+.proc{padding:52px 0 40px;border-top:1px solid var(--line);scroll-margin-top:60px}
+.ph{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+.big{width:44px;height:44px;border-radius:13px;background:var(--ink);color:var(--surface);display:grid;place-items:center;font:800 18px Inter;flex:none}
+.proc.you .big{background:var(--brand);color:#fff}
+h2{font-size:27px;letter-spacing:-.02em;margin:0;line-height:1.2}
+.actors{display:flex;gap:6px;flex-wrap:wrap}
+.actor{font-size:12px;font-weight:600;padding:3px 9px;border-radius:99px}
+.oneline{font-size:17px;color:var(--ink-2);max-width:780px;margin:10px 0 22px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+@media (max-width:900px){.cols{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+.pad{padding:18px 20px}
+.lbl{font:700 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin-bottom:10px}
+ol.steps{list-style:none;margin:0;padding:0;counter-reset:s}
+ol.steps li{counter-increment:s;display:flex;gap:12px;padding:9px 0;border-bottom:1px dashed var(--line)}
+ol.steps li:last-child{border-bottom:0}
+ol.steps li::before{content:counter(s);flex:none;width:22px;height:22px;border-radius:7px;background:var(--surface-2);color:var(--ink-2);display:grid;place-items:center;font-size:11.5px;font-weight:700;margin-top:2px}
+ol.steps li span.by{font-size:11px;font-weight:600;padding:1px 7px;border-radius:99px;margin-left:6px;white-space:nowrap}
+ul.clean{margin:4px 0 0;padding-left:18px;color:var(--ink-2)}
+ul.clean li{margin:5px 0}
+
+/* details (under the hood) */
+details.hood{margin-top:16px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+details.hood summary{cursor:pointer;list-style:none;padding:12px 16px;font-weight:600;font-size:14px;display:flex;align-items:center;gap:10px}
+details.hood summary::-webkit-details-marker{display:none}
+details.hood summary::before{content:"▸";color:var(--ink-3);transition:transform .15s}
+details.hood[open] summary::before{transform:rotate(90deg)}
+details.hood summary small{color:var(--ink-3);font-weight:500}
+details.hood .in{padding:0 18px 16px;font-size:14px;color:var(--ink-2)}
+pre{background:var(--code-bg);color:var(--code-ink);border-radius:12px;padding:14px 16px;overflow-x:auto;font:12.5px/1.6 "JetBrains Mono",monospace;margin:10px 0}
+pre .k{color:var(--code-key)} pre .s{color:var(--code-str)} pre .c{color:var(--code-com)}
+
+/* translate (plain ↔ yaml) */
+.xlate{display:grid;grid-template-columns:1fr 1.15fr;gap:0;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:var(--surface)}
+@media (max-width:900px){.xlate{grid-template-columns:1fr}}
+.xlate .row{display:contents}
+.xlate .l,.xlate .r{padding:11px 16px;border-bottom:1px solid var(--line);font-size:14px}
+.xlate .l{color:var(--ink)}
+.xlate .r{background:var(--surface-2);font:12.5px/1.55 "JetBrains Mono",monospace;color:var(--ink-2);white-space:pre-wrap}
+.xlate .hd{font:700 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);background:var(--surface)}
+.xlate .r.hd{background:var(--surface-2)}
+
+/* mock */
+.mock{border-radius:12px;overflow:hidden;border:1px solid var(--line-2);background:var(--surface);box-shadow:var(--shadow);font-size:13px}
+.mbar{height:30px;background:var(--surface-2);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:6px;padding:0 12px}
+.mbar i{width:9px;height:9px;border-radius:50%;background:var(--line-2)}
+.mbar span{margin-left:10px;font:11px "JetBrains Mono";color:var(--ink-3)}
+.mbody{padding:14px 16px}
+.mrow{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);align-items:center;flex-wrap:wrap}
+.mrow:last-child{border-bottom:0}
+.btnm{display:inline-flex;border-radius:8px;padding:6px 11px;font-size:12px;font-weight:600;border:1px solid var(--line-2);color:var(--ink);background:var(--surface)}
+.btnm.pri{background:var(--brand);border-color:var(--brand);color:#fff}
+.field{border:1px solid var(--line-2);border-radius:8px;padding:7px 10px;color:var(--ink-3);font-size:12.5px;margin:4px 0 10px}
+.flab{font-size:11.5px;font-weight:600;color:var(--ink-2)}
+.bub{padding:9px 12px;border-radius:12px;font-size:12.5px;line-height:1.5;margin-bottom:8px}
+.bub.ai{background:var(--surface-2);border:1px solid var(--line)}
+.bub.me{background:var(--brand);color:#fff;margin-left:30px}
+.opt{display:flex;gap:8px;align-items:center;font-size:12.5px;padding:5px 0}
+.opt i{width:14px;height:14px;border-radius:50%;border:2px solid var(--line-2);flex:none}
+.opt.sel i{border-color:var(--brand);background:radial-gradient(circle,var(--brand) 40%,transparent 45%)}
+.sugg{border:1px solid color-mix(in srgb,var(--brand) 40%,var(--line));border-radius:10px;padding:12px;background:linear-gradient(170deg,var(--brand-soft),var(--surface))}
+.sugg .t{font-size:11px;font-weight:700;color:var(--brand-ink);letter-spacing:.04em}
+
+/* who-does-what split */
+.split{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:900px){.split{grid-template-columns:1fr}}
+.split .card h4{margin:0 0 4px;font-size:15px;display:flex;gap:8px;align-items:center}
+
+/* callouts */
+.callout{border-left:3px solid var(--brand);background:var(--surface);border-radius:0 12px 12px 0;padding:13px 17px;margin:16px 0 0;border-top:1px solid var(--line);border-right:1px solid var(--line);border-bottom:1px solid var(--line);font-size:14.5px}
+.callout.warn{border-left-color:var(--warn)}
+.callout.ok{border-left-color:var(--ok)}
+.callout b.t{display:block;margin-bottom:3px}
+
+/* trigger cards */
+.trig{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:900px){.trig{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.trig{grid-template-columns:1fr}}
+.trig .card{padding:14px 16px}
+.trig .ico{font-size:20px}
+.trig b{display:block;margin:4px 0 2px}
+.trig small{display:block;color:var(--ink-2);font-size:13px;line-height:1.5}
+.trig .eg{margin-top:8px;font-size:12.5px;color:var(--ink-3);font-style:italic}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;white-space:nowrap}
+.p-new{background:var(--brand-soft);color:var(--brand-ink)}
+.p-ok{background:var(--ok-soft);color:var(--ok)}
+.p-warn{background:var(--warn-soft);color:var(--warn)}
+.p-bad{background:var(--bad-soft);color:var(--bad)}
+
+/* tables */
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-3);font-weight:600;background:var(--surface-2)}
+tr:last-child td{border-bottom:0}
+.tbl{overflow-x:auto;border-radius:var(--radius);border:1px solid var(--line);background:var(--surface)}
+.tbl table{min-width:640px}
+
+.part{padding:48px 0 10px;border-top:3px solid var(--ink)}
+.part h2{font-size:32px}
+.part p{color:var(--ink-2);max-width:760px}
+footer{padding:40px 0 70px;color:var(--ink-3);font-size:13px;border-top:1px solid var(--line)}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div class="mark"><i></i>AI Agents</div>
+    <nav class="rail" id="rail">
+      <a href="#p1"><b>1</b>Describe</a>
+      <a href="#p2"><b>2</b>Blueprint</a>
+      <a href="#p3"><b>3</b>Preview</a>
+      <a href="#p4"><b>4</b>Build</a>
+      <a href="#p5"><b>5</b>Connect AI</a>
+      <a href="#p6"><b>6</b>Test</a>
+      <a href="#p7"><b>7</b>Use</a>
+      <a href="#p8"><b>8</b>Operate</a>
+      <a href="#ref"><b>＋</b>Reference</a>
+    </nav>
+    <button class="themebtn" id="themeBtn" type="button">Theme</button>
+  </div>
+</header>
+
+<main class="wrap">
+
+<div class="hero">
+  <span class="eyebrow">Plan · step by step</span>
+  <h1>How an <em>AI agent</em> gets into an App Studio app</h1>
+  <p class="lead">Follow one app from the first chat to the running product. Each step below says what happens, who does it and what you see on screen. The technical detail for developers sits in a collapsed <b>“Under the hood”</b> box at the end of each step.</p>
+
+  <div class="cast">
+    <div class="who"><div class="av a-you">🙋</div><b>You (app creator)</b><small>Describe the app, approve it, and connect an AI account once</small></div>
+    <div class="who"><div class="av a-analyst">💬</div><b>Analyst</b><small>The AI that interviews you and writes the blueprint</small></div>
+    <div class="who"><div class="av a-platform">⚙️</div><b>Platform</b><small>Zango itself. It runs the fixed, repeatable setup steps</small></div>
+    <div class="who"><div class="av a-build">🛠️</div><b>Build agent</b><small>The AI that writes the app's code, prompts and tests</small></div>
+    <div class="who"><div class="av a-user">👩‍⚕️</div><b>App user</b><small>The person who uses the finished app every day</small></div>
+  </div>
+
+  <div class="journey">
+    <a class="jstep" href="#p1"><span class="n">STEP 1</span><b>Describe the app</b><span class="tag a-analyst">Analyst</span></a>
+    <a class="jstep" href="#p2"><span class="n">STEP 2</span><b>AI goes into the blueprint</b><span class="tag a-analyst">Analyst</span></a>
+    <a class="jstep" href="#p3"><span class="n">STEP 3</span><b>See it in the preview</b><span class="tag a-you">You</span></a>
+    <a class="jstep" href="#p4"><span class="n">STEP 4</span><b>Build the app</b><span class="tag a-build">Platform + Build</span></a>
+    <a class="jstep act" href="#p5"><span class="n">STEP 5</span><b>Connect an AI account</b><span class="tag a-you">You</span></a>
+    <a class="jstep" href="#p6"><span class="n">STEP 6</span><b>Test the AI</b><span class="tag a-platform">Platform</span></a>
+    <a class="jstep" href="#p7"><span class="n">STEP 7</span><b>AI at work in the app</b><span class="tag a-user">App user</span></a>
+    <a class="jstep" href="#p8"><span class="n">STEP 8</span><b>Watch runs &amp; cost</b><span class="tag a-you">You</span></a>
+  </div>
+
+  <div class="example">
+    <div class="ic">📌</div>
+    <div><b>The example used on every step: Medical Information Requests</b>
+    <span class="muted">Doctors send questions about a medicine. The app should (a) work out what each question is about and whether it reports a side effect, and (b) draft a reply from approved answers. A medical reviewer still approves every reply before it goes out.</span></div>
+  </div>
+</div>
+
+<!-- ============ STEP 1 ============ -->
+<section class="proc" id="p1">
+  <div class="ph"><div class="big">1</div><h2>You describe the app; the analyst spots where AI helps</h2>
+    <div class="actors"><span class="actor a-you">You</span><span class="actor a-analyst">Analyst</span></div></div>
+  <p class="oneline">You never say “AI agent”. You describe your work, the analyst notices phrases like <i>“read the form”</i>, <i>“draft the reply”</i> or <i>“flag serious cases”</i>, and asks a clickable yes/no.</p>
+
+  <div class="cols">
+    <div class="card pad">
+      <div class="lbl">What happens</div>
+      <ol class="steps">
+        <li><div>You type: <i>“Doctors email us questions. We need to sort them, check for side-effect reports and send an approved answer.”</i></div></li>
+        <li><div>The analyst hears <b>“sort them”</b> (classify), <b>“side-effect reports”</b> (flag) and <b>“send an answer”</b> (draft).</div></li>
+        <li><div>It asks <b>3 short questions</b> with its suggestion already ticked. You can just press Send.</div></li>
+        <li><div>It never asks about models, prompts or API keys. It only asks about the provider if you mention “Azure” or “our company AI account”.</div></li>
+      </ol>
+    </div>
+    <div class="mock">
+      <div class="mbar"><i></i><i></i><i></i><span>console · Agent · chat</span></div>
+      <div class="mbody">
+        <div class="bub me">Doctors email us questions. We need to sort them, check for side-effect reports and send an approved answer.</div>
+        <div class="bub ai"><b>A few questions about help from AI:</b>
+          <div style="margin-top:8px"><div class="flab">Should the app suggest what each question is about, and flag possible side effects?</div>
+            <div class="opt sel"><i></i>Yes — suggest, a person confirms</div><div class="opt"><i></i>Yes — set it automatically</div><div class="opt"><i></i>No</div></div>
+          <div style="margin-top:8px"><div class="flab">Should the app draft the reply from your approved answers?</div>
+            <div class="opt sel"><i></i>Yes — draft it for the specialist to edit</div><div class="opt"><i></i>No — specialists write it</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3 style="margin:26px 0 10px;font-size:17px">The phrases the analyst listens for</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>You say something like…</th><th>The analyst understands</th><th>It will propose</th></tr></thead>
+    <tbody>
+      <tr><td>“read the uploaded form”, “pull details from the prescription”</td><td>Extract</td><td>AI fills in fields from a document</td></tr>
+      <tr><td>“sort”, “route”, “flag serious ones”, “triage”</td><td>Classify</td><td>AI suggests a category or flag</td></tr>
+      <tr><td>“one-line summary”, “brief me before the call”</td><td>Summarise</td><td>A “Summarise” button</td></tr>
+      <tr><td>“draft the reply”, “prepare the letter”</td><td>Draft</td><td>AI writes a draft for a person to edit</td></tr>
+      <tr><td>“ask questions about a patient”, “assistant”</td><td>Chat</td><td>An “Ask AI” panel on the record</td></tr>
+      <tr><td>“weekly summary to managers”</td><td>Digest</td><td>A scheduled AI summary</td></tr>
+      <tr><td>“every night, pull from the inbox and sort them with AI”</td><td>AI as one step of custom logic</td><td>A custom requirement with <code>uses_ai</code>, plus an AI helper with a <code>task</code> trigger</td></tr>
+    </tbody>
+  </table></div>
+
+  <details class="hood"><summary>Under the hood <small>· files that change</small></summary><div class="in">
+    <ul class="clean">
+      <li><code>packs/zango_app/INTERVIEW.md</code>: new stage <b>7a “Help from AI”</b>, asked only when a cue appears, or as one opt-in question when the app has documents or free text.</li>
+      <li><code>packs/zango_app/DRAFTING.md</code>: when the user uploads an SOP or RFP, map the cues straight into AI agents.</li>
+      <li><code>skill_plugin/skills/zango-requirements-analyst/SKILL.md</code>: add “AI help → <code>ai.agents</code>” to its hidden checklist. Words like “model” and “prompt” go on the banned list for talking to the user.</li>
+      <li>The answer “a person confirms” sets <code>review: suggest</code>, and “automatically” sets <code>review: none</code>.</li>
+    </ul>
+  </div></details>
+</section>
+
+<!-- ============ STEP 2 ============ -->
+<section class="proc" id="p2">
+  <div class="ph"><div class="big">2</div><h2>The AI need goes into the app's blueprint</h2>
+    <div class="actors"><span class="actor a-analyst">Analyst</span></div></div>
+  <p class="oneline">The blueprint (<code>app_spec.yaml</code>) gets a new <b><code>ai:</code></b> section. Each AI helper is written as answers to six plain questions: what it does, what it reads, what it produces, when it runs, who checks it, and how we know it works.</p>
+
+  <div class="xlate">
+    <div class="l hd">The plain question</div><div class="r hd">How it's written in the blueprint</div>
+    <div class="l"><b>Which AI account does the app need?</b><br><span class="muted small">What kind of account, never the key itself</span></div>
+    <div class="r"><span class="k">provider</span>: { <span class="k">kind</span>: anthropic, <span class="k">name</span>: app-llm }</div>
+    <div class="l"><b>What is this helper for?</b></div>
+    <div class="r"><span class="k">code</span>: response_drafter
+<span class="k">purpose</span>: <span class="s">"Draft the reply using only approved answers."</span></div>
+    <div class="l"><b>Which record does it work on, and what may it read?</b><br><span class="muted small">Only these fields are sent to the AI</span></div>
+    <div class="r"><span class="k">entity</span>: mi_request
+<span class="k">context</span>: { <span class="k">fields</span>: [question, topic, product] }</div>
+    <div class="l"><b>What does it produce, and where does it go?</b></div>
+    <div class="r"><span class="k">output</span>: { <span class="k">kind</span>: markdown,
+  <span class="k">writes</span>: [{ <span class="k">draft</span>: { <span class="k">to</span>: response_draft } }] }</div>
+    <div class="l"><b>When does it run?</b><br><span class="muted small">See the 10 trigger types in the Reference</span></div>
+    <div class="r"><span class="k">triggers</span>:
+  - { <span class="k">event</span>: transition, <span class="k">transition</span>: start_response }
+  - { <span class="k">event</span>: button, <span class="k">label</span>: Redraft, <span class="k">roles</span>: [MI Specialist] }</div>
+    <div class="l"><b>Does a person check it first?</b></div>
+    <div class="r"><span class="k">review</span>: suggest     <span class="c"># suggest = person accepts · none = auto · show = display only</span></div>
+    <div class="l"><b>Who can use it?</b></div>
+    <div class="r"><span class="k">access</span>: { <span class="k">roles</span>: [MI Specialist, Medical Reviewer] }</div>
+    <div class="l"><b>How do we know it works?</b><br><span class="muted small">Becomes a test</span></div>
+    <div class="r"><span class="k">acceptance</span>:
+  - <span class="s">The draft cites at least one approved answer.</span></div>
+    <div class="l"><b>What should the preview show?</b></div>
+    <div class="r"><span class="k">preview</span>: { <span class="k">sample</span>: { <span class="k">draft</span>: <span class="s">"Dear Dr Rao, thank you…"</span> } }</div>
+  </div>
+
+  <div class="callout">
+    <b class="t">Why a separate <code>ai:</code> section, and not a sentence in “custom requirements”?</b>
+    A sentence can only be turned into code by hand. A structured section lets the platform create the real AI objects automatically, lets the tests fake the AI's answer, and lets the preview show the feature. Free-text “custom requirements” stay for genuinely one-off things, and they can still use an AI helper: they name it in <code>uses_ai</code> and the hand-written task calls it (Reference A, “From a background task”).
+  </div>
+
+  <details class="hood"><summary>Under the hood <small>· full field list and checks</small></summary><div class="in">
+<pre><span class="k">ai</span>:
+  <span class="k">provider</span>: { <span class="k">kind</span>: anthropic, <span class="k">name</span>: app-llm, <span class="k">model</span>: claude-sonnet-4-5, <span class="k">monthly_budget_usd</span>: 50 }
+  <span class="k">agents</span>:
+    - <span class="k">code</span>, <span class="k">name</span>, <span class="k">purpose</span>, <span class="k">instructions</span>       <span class="c"># → AppLLMAgent + its prompts</span>
+      <span class="k">entity</span>, <span class="k">context</span>: { <span class="k">fields</span>, <span class="k">related</span>, <span class="k">files</span> }  <span class="c"># → {{variables}} and LLMFile attachments</span>
+      <span class="k">output</span>: { <span class="k">kind</span>: fields|text|markdown, <span class="k">writes</span> }  <span class="c"># fields → JSON output schema</span>
+      <span class="k">review</span>: suggest|none|show
+      <span class="k">triggers</span>: [...]                                <span class="c"># create|update|delete|transition|tag|schedule|button|form_assist|chat|task</span>
+      <span class="k">tools</span>: [{ <span class="k">use</span>: search_records, <span class="k">entity</span> }, { <span class="k">code</span>, <span class="k">text</span> }]
+      <span class="k">access</span>, <span class="k">run</span>: async|inline, <span class="k">memory</span>, <span class="k">acceptance</span>, <span class="k">preview</span>
+
+<span class="k">custom_requirements</span>:                             <span class="c"># existing section, one new key</span>
+  - <span class="k">id</span>: CR-4, <span class="k">text</span>: <span class="s">"Each night, pull new requests from the safety inbox, triage them with AI, assign the urgent ones"</span>
+    <span class="k">trigger</span>: { <span class="k">event</span>: schedule, <span class="k">cron</span>: <span class="s">"0 2 * * *"</span> }
+    <span class="k">uses_ai</span>: [triage_request]                     <span class="c"># NEW: agents this hand-written code calls</span></pre>
+    <ul class="clean">
+      <li>Files: <code>packs/zango_app/schema.json</code> (<code>$defs/aiAgent</code>), <code>rules.json</code>, <code>SCHEMA.md</code> (new <code>## ai</code> section), <code>example.yaml</code>, and a version bump in <code>template.json</code>. <code>spec_version</code> stays 1, because the section is additive.</li>
+      <li>Checks: the fields and entities named exist; output types fit the target fields; a button has a label and roles; a schedule has a cron; <code>memory</code> is only allowed on chat; an update trigger may not watch a field the agent itself writes (loop guard); every code in <code>custom_requirements[].uses_ai</code> exists, and an agent with <code>{event: task}</code> is listed in at least one <code>uses_ai</code> (otherwise nothing would ever run it).</li>
+      <li><code>spec_mark_ready</code> refuses an agent that has no <code>acceptance</code> or <code>preview.sample</code>. It warns on <code>review: none</code> when the field feeds a workflow step.</li>
+    </ul>
+  </div></details>
+</section>
+
+<!-- ============ STEP 3 ============ -->
+<section class="proc" id="p3">
+  <div class="ph"><div class="big">3</div><h2>You see the AI feature in the live preview, before anything is built</h2>
+    <div class="actors"><span class="actor a-you">You</span></div></div>
+  <p class="oneline">The clickable preview shows the AI parts too. They're <b>simulated</b>, using the sample answer from the blueprint, so you can judge the feature without an AI account and without any cost.</p>
+
+  <div class="cols">
+    <div class="mock">
+      <div class="mbar"><i></i><i></i><i></i><span>preview · Request MI-00042</span></div>
+      <div class="mbody">
+        <div class="mrow"><b>MI-00042 · Dr Rao</b><span class="btnm pri">✦ Redraft</span></div>
+        <div class="mrow"><span>Topic</span><span>Safety <span class="pill p-new">✦ AI</span></span></div>
+        <div class="sugg" style="margin-top:12px">
+          <div class="t">✦ AI DRAFT — WAITING FOR YOU</div>
+          <p class="small" style="margin:6px 0 10px">Dear Dr Rao, thank you for your question about dosing in renal impairment. Per standard response SR-114…</p>
+          <div style="display:flex;gap:8px"><span class="btnm pri">Use draft</span><span class="btnm">Edit</span><span class="btnm">Discard</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="card pad">
+      <div class="lbl">What you can try in the preview</div>
+      <ul class="clean">
+        <li>Click <b>✦ Redraft</b>: it shows “Thinking…” for a moment, then the sample draft.</li>
+        <li>Click <b>Use draft</b> to see it land in the reply field.</li>
+        <li>Create a new request: a toast says “AI is classifying this request”.</li>
+        <li>In the review panel, an <b>AI</b> section lists each helper in one sentence, with a note: <i>“Needs an AI account. You can connect it now or later.”</i></li>
+      </ul>
+      <div class="callout ok" style="margin-top:14px"><b class="t">Same look in the real app</b>The preview and the built app share one renderer, so what you approve here is what users get.</div>
+    </div>
+  </div>
+
+  <details class="hood"><summary>Under the hood</summary><div class="in">
+    <ul class="clean">
+      <li>Shared renderer: edit the <code>zas-render</code> source, then run <code>zas_render --write</code>. It gains the AI button, suggestion card, “Ask AI” tab, “Fill from document” button and the trigger toasts.</li>
+      <li>Console: <code>agent/builder/ReviewPanel.tsx</code> and <code>sections.ts</code> get an AI section with a “Connect AI account” link. It opens the same provider drawer as Step 5.</li>
+    </ul>
+  </div></details>
+</section>
+
+<!-- ============ STEP 4 ============ -->
+<section class="proc" id="p4">
+  <div class="ph"><div class="big">4</div><h2>The app is built: three parties, each with a clear job</h2>
+    <div class="actors"><span class="actor a-platform">Platform</span><span class="actor a-build">Build agent</span></div></div>
+  <p class="oneline">The build agent cannot call Zango's admin API, by design. So the work is split: the <b>platform</b> does the fixed, repeatable setup, the <b>build agent</b> does the writing, and a shared <b>runtime</b> handles the behaviour that is the same in every app.</p>
+
+  <div class="split">
+    <div class="card pad">
+      <h4><span class="actor a-build">🛠️ Build agent</span> writes</h4>
+      <ul class="clean">
+        <li><b>The AI's instructions</b> (the prompts), in the right domain voice: “Use only approved answers. Say ‘unknown’ if unsure.”</li>
+        <li><b>Custom tools</b> the AI may use, e.g. “find the MedDRA term for a symptom”.</li>
+        <li><b>Tests</b>, one for each “how do we know it works” line.</li>
+      </ul>
+      <p class="small muted" style="margin-top:8px">It does <b>not</b> write the trigger code. That belongs to the runtime.</p>
+    </div>
+    <div class="card pad">
+      <h4><span class="actor a-platform">⚙️ Platform</span> sets up</h4>
+      <ul class="clean">
+        <li>Saves the prompts in Zango (with versions).</li>
+        <li>Registers the tools.</li>
+        <li>Creates a <b>placeholder AI account</b> <code>app-llm</code> (service and model from the blueprint, no key yet) if there isn't one already.</li>
+        <li>Creates every <b>AI agent</b> in Zango on that account: model, output format, tools, memory. They're all visible in the console from the first build.</li>
+      </ul>
+    </div>
+    <div class="card pad">
+      <h4><span class="actor a-platform">📦 Runtime</span> handles</h4>
+      <ul class="clean">
+        <li>Running the AI at the right moment (button, new record, status change, schedule).</li>
+        <li>Sending only the allowed fields.</li>
+        <li>Holding a suggestion until someone accepts it.</li>
+        <li>Showing <i>“AI isn't connected yet”</i> instead of breaking. Saving the record always works.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3 style="margin:26px 0 10px;font-size:17px">The order things happen in</h3>
+  <ol class="steps card pad">
+    <li><div>The platform checks the blueprint and makes a to-do list. There is one “write the instructions” item per AI helper.<span class="by a-platform">Platform</span></div></li>
+    <li><div>The platform copies in the shared runtime, which now includes AI.<span class="by a-platform">Platform</span></div></li>
+    <li><div>The build agent writes the app's code, plus the prompts and tools for each AI helper.<span class="by a-build">Build agent</span></div></li>
+    <li><div>The platform runs setup: database, roles, then the new <b>“AI” step</b>. It creates the placeholder account (first build only), then the prompts, tools and agents, all linked to that account.<span class="by a-platform">Platform</span></div></li>
+    <li><div>If the placeholder has no key yet, the build carries on and only pauses at the very end, in Step 5.<span class="by a-platform">Platform</span></div></li>
+  </ol>
+
+  <details class="hood"><summary>Under the hood <small>· files and the new setup step</small></summary><div class="in">
+    <ul class="clean">
+      <li><b>Checker</b> <code>zango-app-studio/scripts/spec_check.py</code>: resolves <code>ai</code> into <code>spec.resolved.json</code>, creates holes of kind <code>ai_prompt</code> (writes <code>backend/&lt;module&gt;/ai/&lt;code&gt;.system.md</code> and <code>.user.md</code>) and <code>ai_tool</code> (writes <code>tools.py</code>). <code>--audit-holes</code> checks that prompts use only declared <code>{{variables}}</code>. A custom requirement with <code>uses_ai</code> gets its hole brief extended with the agent's inputs and output, and the audit fails if the hole never calls each listed agent.</li>
+      <li><b>Runtime</b> <code>assets/backend/zas_core/ai.py</code>: <code>run(agent, obj, trigger, …)</code>, a Celery task <code>zas_ai_run</code>, models <code>ZasAiRun</code> and <code>ZasAiSuggestion</code>, role-checked endpoints, built-in tools <code>zas_read_record</code> and <code>zas_search_records</code> (scoped to the acting user), and a fake mode for tests. For hand-written tasks: <code>run_from_code(agent_code, obj=None, variables=…, triggered_by="celery"|"cron")</code> returns the parsed result, or an <code>unavailable</code> result when the account is still a placeholder (<code>ProviderNotConnected</code>), so the rest of the task carries on instead of crashing.</li>
+      <li><b>Frontend runtime</b> <code>assets/frontend/zas/ai/</code>: <code>AiButton</code>, <code>AiSuggestionCard</code>, <code>AiChatPanel</code>, <code>AiFormAssist</code>, <code>AiStatusPill</code>.</li>
+      <li><b>New setup step</b> <code>zango_platform.py ai</code> (called from <code>studio_build.py</code> after <code>sync</code>):</li>
+    </ul>
+<pre>1. provider "app-llm" missing → create a PLACEHOLDER via the ORM (tenant schema):
+     provider_slug = ai.provider.kind, default_model = ai.provider.model,
+     config_encrypted = encrypt_config({}), is_placeholder = True, is_validated = False,
+     enabled_models = the provider class's supported_models, monthly_budget_usd = spec
+   <span class="c"># via the ORM, not the API: POST /ai/providers/ checks the key live and would refuse it</span>
+2. POST /ai/tools/sync/
+3. for each agent: upsert prompts (new version only if the text changed)
+                   create agent → provider = app-llm, model = provider default, is_enabled = True
+                   update agent → output schema, tools, memory, description ONLY
+                   <span class="c"># provider, model, temperature, max_tokens belong to the user after creation</span>
+4. save .zas/ai_state.json                        <span class="c"># makes re-runs a no-op</span></pre>
+    <ul class="clean">
+      <li>Skill docs: new <code>references/map/ai.md</code>; vendor <code>ai-agents.md</code> from zango-app-developer as <code>references/zango/core/ai.md</code>; update <code>contracts.md</code>, <code>custom-code.md</code> and <code>server-mode.md</code>.</li>
+    </ul>
+  </div></details>
+</section>
+
+<!-- ============ STEP 5 ============ -->
+<section class="proc you" id="p5">
+  <div class="ph"><div class="big">5</div><h2>Connect an AI account: the only step where you act</h2>
+    <div class="actors"><span class="actor a-you">You</span></div></div>
+  <p class="oneline">The build has already created a <b>placeholder AI account</b> called <code>app-llm</code>, and every AI helper is already set up on it. All that's missing is the key. <b>You fill in the placeholder once</b>: paste a key, and optionally switch the service (Anthropic, OpenAI, Azure OpenAI, AWS Bedrock) or the model. Nobody else (no AI, no chat, no log) ever sees the key. It is stored encrypted, inside this one app.</p>
+
+  <div class="card pad" style="margin-bottom:18px">
+    <div class="lbl">The placeholder account, start to finish</div>
+    <ol class="steps">
+      <li><div><b>Build creates it</b>: <code>app-llm</code> · Anthropic · claude-sonnet-4-5 · <span class="pill p-warn">Needs a key</span>. All AI helpers are created and linked to it.<span class="by a-platform">Platform</span></div></li>
+      <li><div><b>The console shows everything right away</b>: App → AI lists the account and every helper (“Waiting for key”). You can already review prompts, tools and settings.<span class="by a-you">You</span></div></li>
+      <li><div><b>You fill it in</b>: paste the key. You can also switch the service (say Anthropic → Azure OpenAI) and pick the model. The key is checked live before it's saved.<span class="by a-you">You</span></div></li>
+      <li><div><b>Every helper follows</b>: they're linked to the same account, so they start working straight away, without a rebuild. If you switched service, helpers still on the old default model move to the new one.<span class="by a-platform">Platform</span></div></li>
+      <li><div><b>Fine-tune any helper</b>: App → AI → Agents. Change one helper's model, creativity or length, or move it to a second account. Later rebuilds never undo these changes.<span class="by a-you">You</span></div></li>
+    </ol>
+  </div>
+
+  <div class="cols">
+    <div class="card pad">
+      <div class="lbl">Three moments; you need only one</div>
+      <ol class="steps">
+        <li><div><b>Early (optional):</b> while reviewing the blueprint, click <i>“Connect AI account”</i>. The AI then gets tested for real in the first build.</div></li>
+        <li><div><b>During the build (most common):</b> the build finishes everything else, then pauses with a card: <i>“Connect an AI account to finish testing the AI features.”</i> You either connect or press <b>Finish without it</b>.</div></li>
+        <li><div><b>Any time later:</b> App → AI → Providers → <code>app-llm</code> → <b>Add key</b>. The app's AI switches on as soon as the key checks out.</div></li>
+      </ol>
+      <div class="callout ok" style="margin-top:12px"><b class="t">A missing key never fails the build</b>Everything else is built and tested. The AI features just say “not connected yet” until you add one.</div>
+    </div>
+    <div class="mock">
+      <div class="mbar"><i></i><i></i><i></i><span>console · Agent · Build</span></div>
+      <div class="mbody">
+        <div class="flab" style="color:var(--warn)">● PAUSED — WAITING FOR YOU</div>
+        <h4 style="margin:6px 0 4px;font-size:15px">Connect an AI account</h4>
+        <p class="small muted" style="margin:0 0 12px">“Classify request” and “Draft response” need an AI account. Everything else is built and tested.</p>
+        <div class="flab">Account</div><div class="field">app-llm · placeholder created by the build</div>
+        <div class="flab">Service</div><div class="field">Anthropic (from the blueprint — you can change it) ▾</div>
+        <div class="flab">API key</div><div class="field">sk-ant-•••••••••••• <span style="float:right">🔒 stored encrypted</span></div>
+        <div class="flab">Model</div><div class="field">claude-sonnet-4-5 (suggested) ▾</div>
+        <div class="flab">Monthly budget (USD)</div><div class="field">50</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><span class="btnm pri">Connect &amp; continue</span><span class="btnm">Finish without it</span></div>
+      </div>
+    </div>
+  </div>
+
+  <h3 style="margin:26px 0 10px;font-size:17px">Where you do (and don't) step in</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Stage</th><th>Do you act?</th><th>What happens</th></tr></thead>
+    <tbody>
+      <tr><td>Interview</td><td><span class="pill p-ok">No</span></td><td>The analyst picks Anthropic by default and only asks if you mention a company AI service.</td></tr>
+      <tr><td>Review &amp; approve</td><td><span class="pill p-warn">Optional</span></td><td>A “Connect AI account” link.</td></tr>
+      <tr><td>Build</td><td><span class="pill p-ok">No</span></td><td>The placeholder account and all AI helpers are created. They're visible in the console and waiting for a key.</td></tr>
+      <tr><td>End of build</td><td><span class="pill p-new">Yes, once</span></td><td>Paste the key, or finish without it.</td></tr>
+      <tr><td>Each new environment (UAT, production)</td><td><span class="pill p-new">Yes, once each</span></td><td>Keys never travel with a release. Each environment connects its own.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3 style="margin:26px 0 10px;font-size:17px">What “Finish without it” does</h3>
+  <div class="cols">
+    <div class="card pad">
+      <div class="lbl">Right away</div>
+      <ul class="clean">
+        <li>The build finishes as <b>done</b>, not failed. Only the real AI check is <b>skipped</b>, and the report says so.</li>
+        <li>Nothing is skipped in setup. The placeholder account and every AI helper were <b>already created</b> in Step 4, before this pause. They <b>stay in Zango</b>, waiting for a key, and nothing needs rebuilding later.</li>
+        <li>The next build <b>won't pause again</b> for this. The choice is remembered per app, unless the blueprint adds new AI helpers.</li>
+      </ul>
+    </div>
+    <div class="card pad">
+      <div class="lbl">For app users, until a key is added</div>
+      <ul class="clean">
+        <li>Records save normally. AI never blocks the work.</li>
+        <li>AI buttons are greyed out: <i>“AI isn't set up for this app yet.”</i></li>
+        <li>Automatic AI runs are skipped and logged. AI fields stay empty, so people fill them in by hand.</li>
+        <li>After a key is added, missed runs are <b>not</b> replayed automatically (that could mean surprise cost or overwritten values). Press ✦ on a record to run it there.</li>
+      </ul>
+    </div>
+  </div>
+
+  <details class="hood"><summary>Under the hood <small>· placeholder provider: what has to change in Zango</small></summary><div class="in">
+    <p>Why the platform has to create the placeholder itself, from today's code:</p>
+    <ul class="clean">
+      <li><code>AgentCreateSerializer.validate</code> (<code>api/platform/ai/v1/serializers.py:768</code>) requires an existing, enabled <code>provider_id</code>, so agents can't be created without a provider.</li>
+      <li><code>AppLLMProviderCreateSerializer.validate</code> (<code>:133</code>) checks the key live, so <code>POST /ai/providers/</code> can't create a keyless placeholder. The platform creates it through the ORM instead.</li>
+      <li><code>AppLLMProviderUpdateSerializer</code> (<code>:227</code>) can't change <code>provider_slug</code>, doesn't re-check a new key, and leaves <code>is_validated</code> as it was. So filling in the placeholder needs a new action.</li>
+    </ul>
+    <p style="margin-top:10px">Changes:</p>
+    <ul class="clean">
+      <li><b>Model</b> <code>apps/ai/models/provider.py</code>: add <code>is_placeholder = BooleanField(default=False)</code>, with a tenant migration in <code>apps/ai</code>.</li>
+      <li><b>New endpoint</b> <code>POST /ai/providers/&lt;id&gt;/connect/</code> with <code>{provider_slug, config, default_model, fetched_models?}</code>. It reuses the create serializer's checks (required config fields and a live key check), then replaces <code>config_encrypted</code>, may change <code>provider_slug</code>, rebuilds <code>enabled_models</code>, and sets <code>is_validated=True</code> and <code>is_placeholder=False</code>. If the service changed, any agent still on the old <code>default_model</code> moves to the new default. Agents the user set to another model are left alone.</li>
+      <li><b>Core guard</b> <code>ai/agent_client.py</code> <code>run()</code>: if the provider is a placeholder or not validated, raise a new <code>ProviderNotConnected(ZangoAIError)</code> before any LLM call, so no failed invocation rows pile up. <code>zas_core.ai</code> turns it into the “unavailable” state. Hand-written <code>get_agent()</code> code gets a clear error too.</li>
+      <li><b>Agent test button</b>: <code>AgentTestViewAPIV1</code> returns “Add a key to <code>app-llm</code> first” for placeholder providers.</li>
+      <li><b>Console</b>: a placeholder card in Providers (“Needs a key · created by App Studio”) with <b>Add key</b>, which opens <code>ProviderDrawer</code> in connect mode. Agents show “Waiting for key”.</li>
+      <li><b>Ownership on rebuild</b>: the AI step sets <code>provider</code>, <code>model</code>, <code>temperature</code> and <code>max_tokens</code> only when it first creates an agent. After that they belong to the user. The build only updates output schema, tools, memory, description and prompts (when their text changed).</li>
+      <li><b>Remembered skip</b>: <code>.zas/ai_state.json</code> records <code>provider_skipped_for: [agent codes]</code>. The pause only comes back for agents not in that list.</li>
+    </ul>
+  </div></details>
+
+  <details class="hood"><summary>Under the hood <small>· the build pause</small></summary><div class="in">
+    <ul class="clean">
+      <li>New pending action kind <code>connect_ai_provider</code> in <code>studio_build.py::environment_actions()</code>. It blocks only the live AI test layer, and uses the same pause and continue flow as <code>install_playwright</code> (<code>AgentRun.pause</code> → <code>WAITING</code> → <code>/continue/</code>).</li>
+      <li><code>still_failing()</code>: provider <code>app-llm</code> has <code>is_placeholder=False</code>, <code>is_enabled</code> and <code>is_validated</code>. Otherwise <code>/continue/</code> returns 409. <code>skip=true</code> finishes without it, and the test is reported as <b>skipped</b>, never passed.</li>
+      <li>The drawer uses <code>GET /ai/providers/available/</code> (form fields per service), <code>POST /ai/providers/fetch-models/</code> and the new <code>POST …/connect/</code>.</li>
+      <li>The key never enters the build run or its transcript. <code>credentials.redact()</code> also masks <code>sk-ant-…</code> and <code>sk-…</code> patterns as a backstop.</li>
+      <li>Later idea, not in this plan: a workspace-wide AI account (one key for every app). It's convenient in dev, but it mixes costs and data between apps, so it would be opt-in.</li>
+    </ul>
+  </div></details>
+</section>
+
+<!-- ============ STEP 6 ============ -->
+<section class="proc" id="p6">
+  <div class="ph"><div class="big">6</div><h2>The AI is tested, cheaply and reliably</h2>
+    <div class="actors"><span class="actor a-platform">Platform</span></div></div>
+  <p class="oneline">AI gives slightly different answers every time, and every call costs money. So almost all tests use a <b>stand-in AI</b> that returns the blueprint's sample answer. Only one small real call per helper checks that the real thing works.</p>
+
+  <div class="cols">
+    <div class="card pad">
+      <div class="lbl">Tests with the stand-in AI (free, always run)</div>
+      <ul class="clean">
+        <li>Only the right roles see the AI button and can accept a suggestion.</li>
+        <li>A suggestion changes nothing until someone accepts it.</li>
+        <li>Each “how we know it works” line from the blueprint passes.</li>
+        <li>With no AI account, the app shows “not connected” and still saves records.</li>
+        <li>The AI can't trigger itself in a loop.</li>
+      </ul>
+    </div>
+    <div class="card pad">
+      <div class="lbl">One real check per helper (needs Step 5)</div>
+      <ul class="clean">
+        <li>One real run per AI helper on a sample record.</li>
+        <li>Checks that the answer has the right shape, and records time and cost.</li>
+        <li>Capped at about $0.50 per build.</li>
+        <li>No account connected → reported as <b>skipped</b>.</li>
+      </ul>
+      <p class="small muted" style="margin-top:10px">The build report gets an <b>“AI helpers”</b> section: each helper, when it runs, whether a person checks it, the real-test result and the cost.</p>
+    </div>
+  </div>
+
+  <details class="hood"><summary>Under the hood</summary><div class="in">
+    <ul class="clean">
+      <li>Fake mode: with <code>ZAS_AI_FAKE=1</code>, <code>zas_core.ai.run</code> returns <code>preview.sample</code> or a fixture override (<code>ctx.ai_fake(agent, payload)</code>).</li>
+      <li>Layers: <code>zas_test.api</code> (permissions, loop guard, unavailable state), <code>zas_test.ui</code> (buttons and cards per role), <code>zas_test.scenarios</code> (acceptance), and a new <code>ai_live</code> layer.</li>
+      <li>Report: <code>zas_test/report.py</code> and <code>references/report.md</code>. Show progress, not failure details, to app creators.</li>
+    </ul>
+  </div></details>
+</section>
+
+<!-- ============ STEP 7 ============ -->
+<section class="proc" id="p7">
+  <div class="ph"><div class="big">7</div><h2>The AI at work inside the finished app</h2>
+    <div class="actors"><span class="actor a-user">App user</span></div></div>
+  <p class="oneline">For the person using the app, AI shows up as a button, a suggestion to accept, a filled-in form or a chat panel. Every AI-written value carries a small <b>✦ AI</b> mark.</p>
+
+  <div class="card pad">
+    <div class="lbl">One request's day, in the example app</div>
+    <ol class="steps">
+      <li><div>Dr Rao's question arrives and a <b>new request is created</b>. In the background, the AI suggests the topic “Safety” and flags “possible side effect”.<span class="by a-user">automatic</span></div></li>
+      <li><div>The MI specialist opens the request and sees the suggestion card. They click <b>Accept</b>, and the values are saved with the ✦ AI mark and their name as the person who accepted.<span class="by a-user">specialist</span></div></li>
+      <li><div>They move it to <b>“Start response”</b>. The AI drafts the reply from approved answers.<span class="by a-user">automatic</span></div></li>
+      <li><div>They edit the draft, or click <b>✦ Redraft</b>.<span class="by a-user">specialist</span></div></li>
+      <li><div>The medical reviewer <b>approves</b>, which is the existing human step. The AI never sends anything itself.<span class="by a-user">reviewer</span></div></li>
+    </ol>
+  </div>
+
+  <div class="callout warn"><b class="t">Safety rules built in</b>
+    The AI only sees the fields the blueprint lists, and only the records the user could already see. By default, anything it writes needs a person to accept it. If the account is missing or over budget, users see “AI unavailable right now” and keep working.
+  </div>
+</section>
+
+<!-- ============ STEP 8 ============ -->
+<section class="proc" id="p8">
+  <div class="ph"><div class="big">8</div><h2>You watch runs and cost in the console</h2>
+    <div class="actors"><span class="actor a-you">You</span></div></div>
+  <p class="oneline">Every AI call is logged: what it was asked, what it answered, which tools it used, how long it took and what it cost. Today you can only see this in the <b>old App Panel</b>. The console needs to catch up.</p>
+
+  <div class="cols">
+    <div class="card pad">
+      <div class="lbl">New console page: App → AI</div>
+      <ul class="clean">
+        <li><b>Agents</b>: each AI helper, on/off, edit, “Test it”, past chat sessions, success rate and cost.</li>
+        <li><b>Runs</b>: every call, with filters, and a detail view showing the prompt, answer, tool calls, cost and attached files.</li>
+        <li><b>Prompts</b>: the instructions, their versions, a side-by-side compare, and “make live”.</li>
+        <li><b>Tools</b>: what the AI may call, plus “Sync tools”.</li>
+        <li><b>Providers</b>: AI accounts, including the build's placeholder (“Needs a key” → <b>Add key</b>). Also key rotation, switching service, models and monthly budget.</li>
+        <li>The Overview gets an <b>“AI this month”</b> tile: spend vs budget, runs and errors.</li>
+      </ul>
+    </div>
+    <div class="card pad">
+      <div class="lbl">“Managed by App Studio”</div>
+      <p class="small">Helpers created from the blueprint are marked as such. You can still tweak a prompt in the console. A rebuild only replaces it if the blueprint's version of that helper changed, and the console warns you before that happens.</p>
+      <div class="lbl" style="margin-top:14px">Where the old App Panel stands today</div>
+      <p class="small">The console's Settings → AI lists accounts and helpers with on/off switches, plus a key check for accounts, and links to the old panel for everything else. The full gap list is in the Reference below.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ REFERENCE ============ -->
+<section class="part" id="ref">
+  <h2>Reference</h2>
+  <p>The detail behind the steps: when AI can run, what the console is missing, the build order, and the decisions waiting on you.</p>
+</section>
+
+<section class="proc" style="padding-top:28px">
+  <div class="ph"><h2>A · When can an AI helper run? (10 triggers)</h2></div>
+  <p class="oneline">Six of these already exist in the blueprint for other automatic actions. Three are new and started by a person.</p>
+  <div class="trig">
+    <div class="card"><div class="ico">➕</div><b>A record is created <span class="pill p-ok">exists</span></b><small>Runs in the background.</small><div class="eg">New request → classify it</div></div>
+    <div class="card"><div class="ico">✏️</div><b>A record is changed <span class="pill p-ok">exists</span></b><small>Only when chosen fields change.</small><div class="eg">Description edited → re-score</div></div>
+    <div class="card"><div class="ico">🗑️</div><b>A record is deleted <span class="pill p-ok">exists</span></b><small>Rarely useful for AI.</small><div class="eg">—</div></div>
+    <div class="card"><div class="ico">🔀</div><b>Status changes <span class="pill p-ok">exists</span></b><small>On a workflow step.</small><div class="eg">“Start response” → draft reply</div></div>
+    <div class="card"><div class="ico">🏷️</div><b>A tag is added <span class="pill p-ok">exists</span></b><small>On a flag like “Escalated”.</small><div class="eg">Escalated → write a brief</div></div>
+    <div class="card"><div class="ico">⏰</div><b>On a schedule <span class="pill p-ok">exists</span></b><small>Nightly or weekly.</small><div class="eg">Monday 8am → weekly digest</div></div>
+    <div class="card"><div class="ico">✦</div><b>A button <span class="pill p-new">new</span></b><small>On a list row or the record page, for chosen roles.</small><div class="eg">“Summarise case”</div></div>
+    <div class="card"><div class="ico">📄</div><b>Fill a form from a document <span class="pill p-new">new</span></b><small>Next to a file upload; fills unsaved fields.</small><div class="eg">Upload prescription → fill form</div></div>
+    <div class="card"><div class="ico">💬</div><b>Chat <span class="pill p-new">new</span></b><small>An “Ask AI” panel that remembers the conversation.</small><div class="eg">“What did this patient report last month?”</div></div>
+    <div class="card"><div class="ico">⚙️</div><b>From a background task <span class="pill p-new">new</span></b><small>One step inside custom logic (a nightly job, an import, an inbox poll). The custom requirement names the helper in <code>uses_ai</code>.</small><div class="eg">Nightly inbox pull → AI triage → assign</div></div>
+  </div>
+  <details class="hood"><summary>Under the hood <small>· how each maps to Zango</small></summary><div class="in">
+    <div class="tbl"><table>
+      <thead><tr><th>Trigger</th><th>Blueprint</th><th>Runs from</th><th><code>triggered_by</code></th><th>Mode</th></tr></thead>
+      <tbody>
+        <tr><td>create / update / delete</td><td><code>{event: create}</code> (update adds <code>fields</code>)</td><td>runtime save handler → Celery</td><td>celery</td><td>background</td></tr>
+        <tr><td>transition</td><td><code>{event: transition, transition}</code></td><td><code>&lt;entity&gt;__&lt;t&gt;__done</code> → Celery</td><td>celery</td><td>background</td></tr>
+        <tr><td>tag</td><td><code>{event: tag, tag}</code></td><td>tag hook → Celery</td><td>celery</td><td>background</td></tr>
+        <tr><td>schedule</td><td><code>{event: schedule, cron}</code></td><td><code>tasks.py</code> + <code># zas:schedule</code></td><td>cron</td><td>background</td></tr>
+        <tr><td>button</td><td><code>{event: button, label, where, roles}</code></td><td>runtime endpoint</td><td>user</td><td>background + live status</td></tr>
+        <tr><td>form_assist</td><td><code>{event: form_assist, from: [file]}</code></td><td>runtime endpoint</td><td>user</td><td>immediate</td></tr>
+        <tr><td>chat</td><td><code>{event: chat, where}</code></td><td>runtime endpoint with <code>session_id</code></td><td>user</td><td>immediate</td></tr>
+        <tr><td>task</td><td><code>{event: task}</code> on the agent + <code>uses_ai: [code]</code> on the custom requirement</td><td>hand-written <code>tasks.py</code> / <code>hooks.py</code> hole → <code>zas_core.ai.run_from_code()</code></td><td>celery (cron when the requirement is a schedule)</td><td>inside the task</td></tr>
+      </tbody>
+    </table></div>
+    <h4 style="margin:16px 0 8px">How the result comes back: shared runtime, not per-app code</h4>
+    <div class="tbl"><table>
+      <thead><tr><th>Where it runs</th><th>Triggers</th><th>How the result comes back</th></tr></thead>
+      <tbody>
+        <tr><td><b>Celery</b> (task <code>zas_ai_run</code>)</td><td>create / update / delete, transition, tag, schedule, button</td><td>A <code>ZasAiRun</code> row moves through <code>queued → running → done | failed | unavailable</code>. The result is written to the record (<code>review: none</code>) or stored as a <code>ZasAiSuggestion</code> (<code>review: suggest</code>). On screen, <code>AiStatusPill</code> / <code>AiButton</code> poll <code>GET …/zas/ai/runs/&lt;id&gt;/</code> every 2s (backing off, stopping at done/failed), then show the suggestion card or refresh the record. The save is never blocked.</td></tr>
+        <tr><td><b>Inside the request</b> (no Celery)</td><td>form_assist, chat</td><td>The user is waiting at the screen, so the endpoint calls the agent directly and returns the answer, with the agent's <code>timeout_seconds</code> as the limit. Still logged as a <code>ZasAiRun</code>. Chat streaming is an open decision (Reference D).</td></tr>
+        <tr><td><b>Inside your own task</b></td><td>task</td><td><code>run_from_code()</code> is synchronous within the Celery worker that is already running the custom task, so the code gets the result back directly. Nothing to poll.</td></tr>
+      </tbody>
+    </table></div>
+    <p class="small">The build agent writes none of this: queueing, status rows, polling, retries and the "unavailable" state live in <code>zas_core/ai.py</code> and <code>src/zas/ai/</code>, which the platform copies into every app. The build agent only writes prompts, custom tools and <code>uses_ai</code> task code. Per-agent <code>run: async|inline</code> can override the default (for example, an inline button for a 2-second classification).</p>
+    <p class="small" style="margin-top:10px">Note that the Zango docs say <code>triggered_by="task"</code>, but the code's values are <code>user · celery · cron · system</code>. Follow the code.</p>
+  </div></details>
+</section>
+
+<section class="proc" style="padding-top:28px">
+  <div class="ph"><h2>B · What the console is missing vs the old App Panel</h2></div>
+  <p class="oneline">The old panel (<code>/platform/apps/:id/ai</code>) has six AI tabs. The console has one read-only table with switches. The backend already supports everything, so this is screen work only.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Area</th><th>Console has</th><th>Needs to add</th></tr></thead>
+    <tbody>
+      <tr><td><b>Providers</b> (AI accounts)</td><td>List, on/off, check key</td><td>Add account (form changes per service), edit and rotate key, pick models, rate limit, monthly budget, delete</td></tr>
+      <tr><td><b>Agents</b> (AI helpers)</td><td>List, on/off</td><td>Create and edit (model, prompts, creativity, length, output format with JSON schema, tools, memory), duplicate, delete, “Test it”, chat sessions, stats</td></tr>
+      <tr><td><b>Prompts</b></td><td><span class="pill p-bad">nothing</span></td><td>List, create, versions, compare, make live, deactivate</td></tr>
+      <tr><td><b>Tools</b></td><td><span class="pill p-bad">nothing</span></td><td>List by group, detail (inputs, safety level), Sync tools</td></tr>
+      <tr><td><b>Runs</b> (invocation logs)</td><td><span class="pill p-bad">nothing</span></td><td>Totals header, filters, list, round-by-round detail, file download, chat session view</td></tr>
+      <tr><td><b>Guardrails</b></td><td>—</td><td><span class="pill p-warn">skip</span>: the old panel only has a “coming soon” page</td></tr>
+    </tbody>
+  </table></div>
+  <details class="hood"><summary>Under the hood</summary><div class="in">
+    <ul class="clean">
+      <li>New route <code>apps/:appId/ai</code> in <code>console/src/router.tsx</code>, with pages under <code>console/src/pages/app/ai/</code>. <code>SettingsPage</code>'s AI tab links there, and the “Open classic AI” banner is removed.</li>
+      <li>Expand <code>console/src/api/ai.ts</code> to cover every route in <code>backend/src/zango/api/platform/ai/v1/urls.py</code>.</li>
+      <li>Build one <code>ProviderDrawer</code> component and reuse it on the AI page, the Step 5 build card and the review panel.</li>
+      <li>Check each tab side by side: <code>localhost:5173/console</code> against <code>localhost:8000/platform</code>.</li>
+    </ul>
+  </div></details>
+</section>
+
+<section class="proc" style="padding-top:28px">
+  <div class="ph"><h2>C · Build order</h2></div>
+  <p class="oneline">Four phases. The console work comes first because it's useful right away, and Step 5 needs its account form.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Phase</th><th>What</th><th>Covers steps</th><th>Done when</th></tr></thead>
+    <tbody>
+      <tr><td><b>P0</b></td><td>Console AI page at full parity with the old panel</td><td>5, 8</td><td>Everything in Reference B works in the console</td></tr>
+      <tr><td><b>P1</b></td><td>Blueprint <code>ai:</code> section, analyst questions, preview surfaces, review-panel AI section</td><td>1, 2, 3</td><td>A brief that says “draft the reply” gives an AI helper you can click in the preview</td></tr>
+      <tr><td><b>P2</b></td><td>Checker, AI runtime (back and front), new platform “AI” setup step (creates the placeholder account and the agents), skill docs</td><td>4, 7</td><td>The example app builds with working AI buttons and suggestion cards; rebuilds are no-ops</td></tr>
+      <tr><td><b>P3</b></td><td>Placeholder support in Zango (<code>is_placeholder</code>, <code>…/connect/</code>, <code>ProviderNotConnected</code>), the “Connect an AI account” pause, AI tests, report section, AI in fitting templates</td><td>5, 6</td><td>Connect → continue → the real AI check runs; skipping reports “skipped”</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="proc" style="padding-top:28px">
+  <div class="ph"><h2>D · Risks, and decisions for you</h2></div>
+  <div class="cols">
+    <div class="card pad">
+      <div class="lbl">Risks we're managing</div>
+      <ul class="clean">
+        <li><b>Patient data going to an AI company.</b> Guardrails don't exist yet. For now, the control is that each helper sends only the fields listed in the blueprint, and the review panel shows those fields.</li>
+        <li><b>Surprise cost.</b> Controlled with a monthly budget per account, a loop guard, a daily run cap per helper, and spend shown on the Overview.</li>
+        <li><b>AI seeing records the user can't.</b> The AI's tools act with the user's own access. A test proves it.</li>
+        <li><b>Flaky AI tests.</b> Handled by the stand-in AI. The single real check warns but never fails the build.</li>
+      </ul>
+    </div>
+    <div class="card pad">
+      <div class="lbl">Please decide</div>
+      <ol class="steps">
+        <li><div>Should the default AI service be <b>Anthropic</b> (recommended), or should the analyst always ask?</div></li>
+        <li><div>Should pharma templates allow <b>“set it automatically”</b> at all, or only “suggest”?</div></li>
+        <li><div>Should AI be its own console page (recommended), or stay under Settings?</div></li>
+        <li><div>Should one shared AI account for all apps go on the roadmap?</div></li>
+        <li><div>Should chat replies type out live (streaming) in v1, or come later?</div></li>
+        <li><div>Should PSP apps (a different builder) get AI now or later?</div></li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">Sources: zango.dev/docs/ai-module · <code>backend/src/zango/ai/</code>, <code>apps/ai/</code>, <code>api/platform/ai/v1/</code> · <code>frontend/src/pages/appAi/</code> · <code>console/src/pages/app/settings/AiSettings.tsx</code> · <code>packs/zango_app/</code> · <code>zango-requirements-analyst</code>, <code>zango-app-studio</code> skills · <code>agent_mode/studio_build.py</code> · zango-app-developer <code>ai-agents.md</code>.</div>
+</footer>
+
+<script>
+(function(){
+  var root=document.documentElement, btn=document.getElementById('themeBtn');
+  try{var t=localStorage.getItem('ai-plan-theme'); if(t) root.setAttribute('data-theme',t);}catch(e){}
+  btn.addEventListener('click',function(){
+    var cur=root.getAttribute('data-theme');
+    var dark=cur? cur==='dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+    var next=dark?'light':'dark'; root.setAttribute('data-theme',next);
+    try{localStorage.setItem('ai-plan-theme',next);}catch(e){}
+  });
+  var links=[].slice.call(document.querySelectorAll('#rail a'));
+  var map={}; links.forEach(function(a){map[a.getAttribute('href').slice(1)]=a;});
+  if('IntersectionObserver' in window){
+    var io=new IntersectionObserver(function(es){
+      es.forEach(function(e){ if(e.isIntersecting){ links.forEach(function(a){a.classList.remove('on');}); var a=map[e.target.id]; if(a){a.classList.add('on'); a.scrollIntoView({block:'nearest',inline:'nearest'});} } });
+    },{rootMargin:'-40% 0px -55% 0px'});
+    Object.keys(map).forEach(function(id){var el=document.getElementById(id); if(el) io.observe(el);});
+  }
+})();
+</script>
+</body>
+</html>

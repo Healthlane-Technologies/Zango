@@ -33,7 +33,7 @@ export const workspaceNav: NavGroup[] = [
 ];
 
 // Scope: screens backed by existing APIs only. Policies and Secrets sit under Govern and
-// Tasks under Operate; Theme, Code and AI are Settings sub-tabs.
+// Tasks and AI under Operate; Theme and Code are Settings sub-tabs.
 export const appNav: NavGroup[] = [
 	{
 		items: [
@@ -53,6 +53,7 @@ export const appNav: NavGroup[] = [
 		items: [
 			{ to: 'logs', label: 'Logs', icon: 'logs' },
 			{ to: 'tasks', label: 'Tasks', icon: 'zap' },
+			{ to: 'ai', label: 'AI', icon: 'bot' },
 		],
 	},
 	{

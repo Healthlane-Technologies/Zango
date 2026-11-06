@@ -33,6 +33,7 @@ const appPages: Array<{ path: string; title: string } & Pick<RouteObject, 'lazy'
 	},
 	{ path: 'logs', title: 'Logs', ...page(() => import('./pages/app/LogsPage'), 'LogsPage') },
 	{ path: 'tasks', title: 'Tasks', ...page(() => import('./pages/app/TasksPage'), 'TasksPage') },
+	{ path: 'ai', title: 'AI', ...page(() => import('./pages/app/AiPage'), 'AiPage') },
 	{
 		path: 'users',
 		title: 'Users & roles',
