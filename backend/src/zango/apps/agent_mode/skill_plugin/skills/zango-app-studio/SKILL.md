@@ -100,7 +100,7 @@ python3 <skill>/scripts/selftest_runtime.py --workspace <ws>      # expression e
 ```
 
 Register `{"name": "zas_core", "path": "backend.zas_core"}` in `settings.json` `modules` (it has
-a model, `ZasSequence`, and no URLs). Never edit files under `zas_core/` in the app, or patch it from app
+models (`ZasSequence`, and `ZasAiRun` / `ZasAiSuggestion` for AI helpers), tasks and AI tools, and no URLs). Never edit files under `zas_core/` in the app, or patch it from app
 code. A runtime bug is fixed in `<skill>/assets/` and copied again, and the report lists it (inside
 the platform: `report_platform_issue`, see `references/server-mode.md`).
 
@@ -127,7 +127,8 @@ After each module: `python3 -m py_compile` on every file. Generic Zango question
 ## Phase 4: Custom code (holes)
 
 Implement every row of `.zas/holes.md` by `references/custom-code.md`: exact name and signature,
-`# zas:hole H-NN` marker, status `done | needs-review | blocked | covered`. Slots go in
+`# zas:hole H-NN` marker, status `done | needs-review | blocked | covered`. AI helpers (`ai_prompt`,
+`ai_tool`, `uses_ai`): prompts, tools and calls only, by `references/map/ai.md`; the runtime does the rest. Slots go in
 `frontend/src/custom/slots/` (written in Phase 6, after the scaffold exists). Then:
 
 ```bash
@@ -143,6 +144,7 @@ python3 $S/zango_env.py manage --workspace <ws> -- ws_makemigration <app>
 python3 $S/prune_first_migration.py <ws>/migrations/0001_initial.py   # first build only
 python3 $S/zango_env.py manage --workspace <ws> -- ws_migrate <app>
 python3 $S/zango_platform.py sync --workspace <ws>        # App Panel API: sync policies + tasks
+python3 $S/zango_platform.py ai --workspace <ws>          # AI helpers: tools, prompts, agents (the build creates app-llm first)
 python3 $S/zango_platform.py schedule --workspace <ws>    # cron from `# zas:schedule` lines in tasks.py
 python3 $S/zango_platform.py users --workspace <ws>       # one test user per role → .zas/test_users.json
 python3 $S/zango_platform.py check --workspace <ws>       # roles ↔ policies read back
@@ -260,6 +262,7 @@ manual steps) + the HTML path. Rules: `references/report.md`.
 | spec keys / expressions | `references/spec/schema.md`, `references/spec/expressions.md` |
 | spec → models / forms / tables / workflow / access / 360 / pages+menus | `references/map/<topic>.md` |
 | prose → hooks and slots | `references/custom-code.md` |
+| AI helpers (`ai:`): prompts, tools, `run_from_code`, fake AI in tests | `references/map/ai.md` |
 | 360 pitfalls / child tables | `references/zango/entity-360.md`, `references/zango/child-tables.md` |
 | look and feel | `references/design-system.md` |
 | open mode (an approved prototype in `.zas/bundle/prototype/`) | `references/open-mode.md` |

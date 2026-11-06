@@ -25,7 +25,7 @@ export interface SpecEntity {
   fields?: SpecField[];
 }
 export interface SpecTab {
-  code: string; label: string; type: "summary" | "related_table" | "timeline" | "fields" | "custom";
+  code: string; label: string; type: "summary" | "related_table" | "timeline" | "fields" | "custom" | "ai"; agent?: string;
   entity?: string; param?: string; columns?: string[] | "inherit"; row_click?: string;
   empty_state?: { title?: string; text?: string; cta?: string }; group_by?: string; footer_totals?: string[];
   add?: { label: string; prefill: Record<string, string> } | null; preset?: string | null; slot?: string; icon?: string;
@@ -64,7 +64,7 @@ export interface ZasAction { name: string; engine_name: string; label: string; p
 export interface ZasTagAction { code: string; label: string; tone?: Tone; state: "enabled" | "disabled"; allowed: boolean; has_form: boolean; confirm?: string | null; blocked_reason: string | null }
 export interface ZasButton { key: string; label: string; icon?: string; type: string; row_action?: string; action_type?: string; confirm?: string;
   entity?: string; prefill?: Record<string, string>; param?: string | null; to?: any; order: number }
-export interface ZasPanel { key: string; type: "fields" | "mini_table" | "custom" | "timeline"; title?: string; columns?: number; fields?: FieldValue[]; editable?: boolean; order: number }
+export interface ZasPanel { key: string; type: "fields" | "mini_table" | "custom" | "timeline" | "ai"; agent?: string; title?: string; columns?: number; fields?: FieldValue[]; editable?: boolean; order: number }
 export interface ZasPayload {
   view: string; access: "ok" | "no_access" | "not_found"; states?: Record<string, any>; back_to?: string; error?: string;
   record: { uuid: string; pk: number; status: string | null; status_label: string | null; status_tone: Tone | null; tags: { code: string; label: string; tone: Tone }[]; display: string };
@@ -78,6 +78,8 @@ export interface ZasPayload {
   mini_tables: Record<string, { entity: string; rows: { uuid: string; cells: Record<string, FieldValue> }[]; total: number; see_all_tab?: string }>;
   actions: { transitions: ZasAction[]; tags: ZasTagAction[]; buttons: ZasButton[]; row_actions: string[] };
   custom: Record<string, any>;
+  /** AI helpers on this record for the viewer's role (zas_core/ai.py record_ai); absent when the entity has none. */
+  ai?: import("./api").RecordAi;
   formats: { locale: string; currency: string };
 }
 export interface DetailResponse {

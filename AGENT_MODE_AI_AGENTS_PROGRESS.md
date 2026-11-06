@@ -9,7 +9,7 @@ Branch: `feat/ai-agents-console-p0` (from `feat/agent-mode-default-preview-desig
 |---|---|---|
 | P0 | Console AI page at parity with the classic App Panel (`/platform/apps/:id/ai`) | done (4006629a); UI polish later |
 | P1 | `ai:` spec section, schema/rules, checker, analyst interview stage 7a, preview, review panel | done |
-| P2 | Build: `zas_core/ai.py` runtime, holes, `zango_platform.py ai` step (placeholder + agents) | not started |
+| P2 | Build: `zas_core/ai.py` runtime, holes, `zango_platform.py ai` step (placeholder + agents) | code + tests done; end-to-end build of the example app not run yet |
 | P3 | Placeholder support in Zango (`is_placeholder`, `…/connect/`, `ProviderNotConnected`), Connect pause, AI tests | not started |
 
 ## P0 checklist
@@ -43,6 +43,21 @@ Route `apps/:appId/ai` (sidebar item "AI"), pages under `console/src/pages/app/a
 - [x] Local DB re-imported: zango-app 1.1.40 published (`import_pack(publish_now=True)` from `Zelthy3_projects/local_dev_project`).
 - P2 must implement `act('ai')` in the runtime host (`RenderedPage.tsx`) and the React record/form surfaces for every placement above.
 
+## P2 checklist
+
+- [x] Checker: `resolve_ai()` writes `spec.resolved.json` `ai` (provider defaults; per agent `zango_name`, module, prompts {name, file, variables}, output {format, json_schema}, tools + `tool_entities`, roles default = add/edit roles + trigger roles, run, memory, sample, `when_ast` / related `via` + `where_ast`); `ai_holes()`: `ai_prompt` per helper, `ai_tool` per custom tool, `uses_ai` text + `uses_ai` list on requirement holes; `ui.json` tabs keep `agent`; test plan rows for both kinds
+- [x] `--audit-holes`: prompt files present (comments stripped), marker on the system prompt, only declared `{{variables}}`, the data variable used; `uses_ai` holes call `run_from_code("<code>"…)`
+- [x] Runtime `zas_core/ai.py`: run/execute/deliver (none → write, suggest → ZasAiSuggestion, show), accept/discard, chat (memory session), form_assist, run_from_code (Result, never raises), on_event (create/update fields/transition/tag/delete snapshot; `when`; loop guard), schedule_tick + cron matcher, payloads, `record_ai`/`clicks`; unavailable = agent missing/off, provider placeholder/unvalidated/off, budget, `ProviderNotConnected` (P3)
+- [x] Models `ZasAiRun`, `ZasAiSuggestion`; `tasks.py` (`zas_ai_run`, `zas_ai_tick` with `# zas:schedule * * * * *`, scheduled only when a helper has a schedule trigger); `tools.py` (`zas_search_records`, `zas_read_record`, scoped to the acting role, only the helper's tool entities)
+- [x] Hooks: form save (create/update + changed fields), transition done, tag done (enabled), `set_system_tag`, delete row action. Endpoints on the crud view: `GET ?action=zas_ai` (record / run / where=form), `POST zas_ai_run|accept|discard|chat|form`; form `zas_prefill`; 360 payload `zas.ai` + `type: ai` tabs/sections/sidebar (role-filtered); table metadata `zas.ai {row,list,form}`
+- [x] Fake AI: `ZAS_AI_FAKE` / `set_fake`, and `.zas/ai_fake.json` under DEBUG (scenario `ctx.ai_fake`, `ctx.ai_run`, `ctx.ai_pending`)
+- [x] Frontend `src/zas/ai.tsx`: AiRunDialog (poll 1.5→8s), AiSuggestionCard, AiChatDialog, AiRecordStrip, AiPanel, AiFormBar, md renderer; wired into Detail360 (first AI button + rest in ⋯ "AI", strip under the header, `type: ai` tab/panels), ZasTable (row menu "AI" group, list header buttons), FormDialog (Fill from …/form buttons → remount with `zas_prefill`), RenderedPage `act('ai')`; styles `.zas-ai-*` in tokens.css. Typecheck clean (scratch project on tagrissopap's node_modules)
+- [x] Platform: `agent_mode/ai_account.py` `ensure_ai_account` (ORM, keyless, enabled + not validated, supported models; `is_placeholder` set when the field exists); `studio_build` steps `platform:ai_account` + `platform:ai` after sync (skipped without helpers); `zango_platform.py ai` (+ in `all`): account check, prompt files, tools sync + check, prompts (new live version only when the file changed), agents (create with provider/model/temperature/max_tokens/timeout once; later only managed fields when their hash changed), `.zas/ai_state.json`; `schedule` scans `zas_core/tasks.py` when a helper has a schedule
+- [x] Skill docs: `references/map/ai.md` (new), SKILL.md (Phase 2/4/5 + index), contracts §10/§10b, custom-code table, testing.md
+- [x] Tests: `test_ai_build.py` (7: resolution, holes, audit, platform step idempotent/changed prompt/missing, placeholder account); selftest_runtime AI checks; 316 related tests green except the 8 pre-existing `test_skill_plugin`
+- [ ] End to end: build the example (Vendor Hub with AI) in Agent Mode, then click the AI buttons with the placeholder (expect "not set up") and with a key; check a rebuild is a no-op in `ai_state.json`
+- Notes: form fill can't put the uploaded file into the package form's file field (the bar says to attach it below). `delete` triggers read a snapshot taken before the delete. No `is_placeholder` yet: the runtime treats `is_validated=False` as not connected.
+
 ## P2 handoff (start here)
 
 Goal (plan Reference C, P2): the example app builds with working AI buttons and suggestion cards; rebuilds are no-ops.
@@ -70,6 +85,8 @@ Facts for running things:
 - Differences from classic on purpose: confirm before making a prompt version live; fetch-models `auth_error` blocks with a clear message instead of silently falling back; tables + drawers instead of expanding rows (console convention).
 
 ## Log
+
+- 2026-11-06: P2 code done (checker, runtime back + front, platform AI step, docs, tests). Not yet run end to end in a real build.
 
 - 2026-11-06: AI placements everywhere (rows, list header, forms, 360 tabs/panels); pack 1.1.40 re-imported locally.
 - 2026-11-06: P1 done. Output shape settled on `output: {kind, to}` / `fields: [{key, type, to}]` (plan doc updated from `writes`). Local DB keeps pack 1.1.38 until `import_pack(publish_now=True)` (see memory note) — reimport before trying the preview in Agent Mode.

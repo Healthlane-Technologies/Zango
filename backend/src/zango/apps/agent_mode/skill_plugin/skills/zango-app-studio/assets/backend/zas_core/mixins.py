@@ -21,6 +21,7 @@ from django import forms
 from django.core.exceptions import PermissionDenied
 
 from . import access
+from . import ai as zai
 from . import app_user
 from . import dupes
 from . import expr as zx
@@ -184,6 +185,8 @@ class ZasTableMixin:
                                   for q in qfs],
                 "filter_options": self._zas_filter_options(req),
             }
+            if zai.agents_for(self.zas_entity):  # AI buttons in row menus, on the list header and in forms
+                meta["zas"]["ai"] = {w: zai.clicks(self.zas_entity, role, w) for w in ("row", "list", "form")}
             if page:
                 meta["zas"]["subtitle_stat"] = self._zas_stat(base, page["subtitle"]["stat"], req)
             if tiles:  # pages[].stats: each crud page's KPI tiles, in order, over the viewer's rows
@@ -427,6 +430,7 @@ class ZasTableMixin:
         if not self.zas_can_perform(key, request, obj) or (a.get("roles") and access.role_name(request) not in a["roles"]):
             return False, {"message": "You can't do this on this record."}
         if a["type"] == "delete":
+            zai.on_event(self.zas_entity, obj, "delete", request)  # snapshots the record first
             obj.delete()
             return True, {"message": "Deleted."}
         if a["type"] == "navigate":
@@ -479,6 +483,19 @@ class ZasFormMixin:
                 self.fields[fk].initial = parent.pk
                 self.initial[fk] = parent.pk
                 self._zas_set_prop(fk, hidden=True)
+
+        # 1b. values an AI helper filled in (form assist): ?zas_prefill={"field": value} on initialize_form.
+        #     Only the form's own fields; the person still reviews and saves them.
+        raw = self._zas_req.GET.get("zas_prefill") if self._zas_req is not None and not self.is_bound else None
+        if raw:
+            try:
+                pre = json.loads(raw)
+            except ValueError:
+                pre = {}
+            for k, v in (pre if isinstance(pre, dict) else {}).items():
+                if k in self.fields and v not in (None, ""):
+                    self.fields[k].initial = v
+                    self.initial[k] = v
 
         # 2. show_when / readonly_when / limit_choices
         for sec in E["form"].get(f"{self.zas_form}_resolved") or E["form"].get("create_resolved") or []:
@@ -655,6 +672,9 @@ class ZasFormMixin:
             if h is not None:
                 h(req, obj)
             app_user.maybe_provision(obj, self.zas_entity, req, on_create=True)
+        if commit:  # AI helpers with a create / update trigger (background; never blocks the save)
+            zai.on_event(self.zas_entity, obj, "create" if creating else "update", req,
+                         changed=None if creating else list(getattr(self, "changed_data", None) or []))
         return obj
 
 
@@ -759,7 +779,13 @@ class ZasWorkflowMixin:
                 fn = f"{self.zas_entity}__tag_{tag['code']}_{'enable' if state == 'enabled' else 'disable'}__condition"
                 return self._zas_cond_from(side["condition_ast"], fn)
             if kind == "done":
-                return lambda request, obj, txn: app_user.maybe_provision(obj, self.zas_entity, request)
+                entity = self.zas_entity
+
+                def tag_done(request, obj, txn, _tag=tag["code"], _on=state == "enabled"):
+                    app_user.maybe_provision(obj, entity, request)
+                    if _on:
+                        zai.on_event(entity, obj, "tag", request, tag=_tag)
+                return tag_done
             raise AttributeError(name)
         # on-create: engine calls <initial status>_done
         wf = zs.entity(self.zas_entity).get("workflow") or {}
@@ -790,6 +816,7 @@ class ZasWorkflowMixin:
                 if h is not None:
                     h(request, obj, form_data)
             app_user.maybe_provision(obj, entity, request)
+            zai.on_event(entity, obj, "transition", request, transition=t["name"])
         return done
 
 
@@ -823,6 +850,8 @@ def set_system_tag(entity_code, obj, tag, enabled, user=None):
     WorkflowTransaction.objects.create(
         obj_uuid=obj.object_uuid, transition_name=tag, transition_type="tag",
         from_state="disabled" if enabled else "enabled", to_state=want, actor=user, data={"system": True})
+    if enabled:
+        zai.on_event(entity_code, obj, "tag", None, tag=tag)
     return True
 
 
@@ -859,9 +888,101 @@ class ZasCrudViewMixin:
             except Exception:
                 logger.exception("zas: record payload for %s", self.zas_entity)
                 return get_api_response(False, {"message": "The record could not be loaded."}, 500)
+        if request.GET.get("action") == "zas_ai":
+            return self._zas_ai(request, "status")
         return super().get(request, *args, **kwargs)
 
+    # ---- AI helpers (zas_core/ai.py): ?action=zas_ai (GET: what a record shows / poll a run),
+    # POST ?action=zas_ai_run | zas_ai_accept | zas_ai_discard | zas_ai_chat | zas_ai_form ----
+    def _zas_ai_obj(self, request, uid):
+        uid = access.clean_uuid(uid)
+        qs = access.scope_queryset(self.zas_entity, self.model.objects.all(), request)
+        return qs.filter(object_uuid=uid).first() if uid else None
+
+    def _zas_ai_rows(self, request, raw):
+        try:
+            uids = [access.clean_uuid(x) for x in (json.loads(raw) if raw and raw.startswith("[") else (raw or "").split(","))]
+        except ValueError:
+            uids = []
+        qs = access.scope_queryset(self.zas_entity, self.model.objects.all(), request)
+        return list(qs.filter(object_uuid__in=[u for u in uids if u])[:200])
+
+    def _zas_ai(self, request, op):
+        from zango.core.api import get_api_response
+
+        def bad(msg, code=400):
+            return get_api_response(False, {"message": msg}, code)
+
+        P = request.GET if op == "status" else request.POST
+        role = access.role_name(request)
+        try:
+            if op == "status":
+                ZasAiRun, _ = zai._models()
+                if request.GET.get("where"):  # the AI buttons a role sees in one place (a form)
+                    return get_api_response(True, {"clicks": zai.clicks(self.zas_entity, role, request.GET["where"])}, 200)
+                if request.GET.get("run"):
+                    r = ZasAiRun.objects.filter(pk=request.GET["run"], entity=self.zas_entity).first()
+                    if r is None or not zai.can_run(zai.agent(r.agent), role):
+                        return bad("No such AI run.", 404)
+                    return get_api_response(True, zai.run_payload(r), 200)
+                obj = self._zas_ai_obj(request, request.GET.get("object_uuid"))
+                if obj is None:
+                    return bad("Record not found.", 404)
+                return get_api_response(True, zai.pending_for(self.zas_entity, obj, request), 200)
+            if op in ("accept", "discard"):
+                _, ZasAiSuggestion = zai._models()
+                s = ZasAiSuggestion.objects.filter(pk=P.get("suggestion"), entity=self.zas_entity).first()
+                if s is None:
+                    return bad("No such suggestion.", 404)
+                if op == "discard":
+                    zai.discard(s, request)
+                    return get_api_response(True, {"message": "Discarded."}, 200)
+                values = json.loads(P["values"]) if P.get("values") else None
+                zai.accept(s, request, values)
+                return get_api_response(True, {"message": "Saved."}, 200)
+            a = zai.agent(P.get("agent") or "")
+            if a.get("entity") != self.zas_entity:
+                return bad("This AI helper does not work here.")
+            if op == "form":
+                trig = next(iter(zai.triggers(a, "form_assist") + zai.triggers(a, "button", "form")), None)
+                if trig is None or not zai.can_run(a, role, trig):
+                    return bad("You can't use this AI helper.", 403)
+                values = json.loads(P["values"]) if P.get("values") else {}
+                return get_api_response(True, zai.form_assist(a["code"], values, list(request.FILES.values()), request), 200)
+            if op == "chat":
+                where = P.get("where") or "record"
+                trig = next(iter(zai.triggers(a, "chat", where)), None)
+                if trig is None or not zai.can_run(a, role, trig):
+                    return bad("You can't use this AI helper.", 403)
+                obj = self._zas_ai_obj(request, P.get("object_uuid")) if where != "list" else None
+                if where != "list" and obj is None:
+                    return bad("Record not found.", 404)
+                rows = self._zas_ai_rows(request, P.get("object_uuids")) if where == "list" else None
+                return get_api_response(True, zai.chat(a["code"], obj, P.get("message") or "", request,
+                                                       session_id=P.get("session_id") or None, rows=rows), 200)
+            # run: a button on the record page, a list row or the list header
+            where = P.get("where") or "record"
+            trig = next(iter(zai.triggers(a, "button", where)), None)
+            if trig is None or not zai.can_run(a, role, trig):
+                return bad("You can't run this AI helper.", 403)
+            if where == "list":
+                rows = self._zas_ai_rows(request, P.get("object_uuids"))
+                r = zai.run(a["code"], trigger="button", request=request, rows=rows)
+            else:
+                obj = self._zas_ai_obj(request, P.get("object_uuid"))
+                if obj is None:
+                    return bad("Record not found.", 404)
+                r = zai.run(a["code"], obj=obj, trigger="button", request=request)
+            return get_api_response(True, zai.run_payload(r), 200)
+        except zai.Denied as e:
+            return bad(str(e), 403)
+        except (KeyError, ValueError) as e:
+            return bad(f"Bad AI request: {e}")
+
     def post(self, request, *args, **kwargs):
+        act = request.GET.get("action") or ""
+        if act.startswith("zas_ai_") and act[7:] in ("run", "accept", "discard", "chat", "form"):
+            return self._zas_ai(request, act[7:])
         if request.GET.get("form_type") == "create_form" and not request.GET.get("form_action"):
             if not self.display_add_button_check(request):
                 raise PermissionDenied("You can't add records here.")

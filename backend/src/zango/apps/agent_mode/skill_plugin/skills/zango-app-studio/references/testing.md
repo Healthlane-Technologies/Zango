@@ -129,6 +129,9 @@ a save, `ctx.call("<module>.tasks.<fn>")` for a scheduled job), assert the outco
 
 - `ctx.call` runs backend code in the tenant through `zango_env.py call` (no Celery needed).
 - `ctx.outbox` reads `<ws>/.zas/outbox.jsonl`, which `notify()` appends to in DEBUG only.
+- AI helpers (`ai_prompt` holes): never call the real AI. Wrap the scenario in `with ctx.ai_fake({...}):`
+  (the spec's `preview.sample`, or your answer per helper), click with `ctx.ai_run(ent, uuid, role, agent)`,
+  read open suggestions with `ctx.ai_pending(ent, uuid, role)` ([map/ai.md](map/ai.md), Testing).
 - Holes without a scenario (other than `covered`/`blocked`) are reported as skips, so gaps are visible.
 - **Prove a scenario can fail** for the riskiest rule (break the hook on purpose, run `--only H-NN`,
   see it fail, restore). A suite that cannot fail proves nothing.

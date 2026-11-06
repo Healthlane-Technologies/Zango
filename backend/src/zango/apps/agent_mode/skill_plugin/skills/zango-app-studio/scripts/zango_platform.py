@@ -14,7 +14,11 @@ Every command is idempotent, reads its result back, and exits non-zero on any mi
     zango_platform.py users      --workspace <ws>   one test user per role → .zas/test_users.json (chmod 600)
     zango_platform.py appbuilder --workspace <ws>   routes + per-role menus (SVG icons), merged, read back
     zango_platform.py check      --workspace <ws>   roles ↔ policies ↔ menus read back against the spec
-    zango_platform.py all        --workspace <ws>   roles, sync, schedule, users, appbuilder, check
+    zango_platform.py ai         --workspace <ws>   AI helpers: sync tools, upload prompts (a new live version only
+                                                    when the file changed), create agents on the app-llm account,
+                                                    then keep only output / tools / memory / prompts in step;
+                                                    state in .zas/ai_state.json (a re-run changes nothing)
+    zango_platform.py all        --workspace <ws>   roles, sync, ai, schedule, users, appbuilder, check
 
 Platform credentials: PLATFORM_USERNAME / PLATFORM_USER_PASSWORD from the nearest
 deploy/.env above the workspace (or env vars of the same name, or --user/--password).
@@ -157,6 +161,9 @@ class Platform:
 
     def put(self, path, data=None, files=None):
         return ok(self.s.put(self.url + path, data=data or {}, files=files, headers=self._hdr(), timeout=60))
+
+    def send_json(self, method, path, body=None):
+        return ok(self.s.request(method, self.url + path, json=body or {}, headers=self._hdr(), timeout=60))
 
     def _app(self):
         name = app_name(self.ws)
@@ -536,8 +543,11 @@ def cron_field(value, lo, hi):
 def cmd_schedule(P, M, log):
     """`# zas:schedule <min> <hour> <day-of-month> <month> <day-of-week>` on a line above a task's def."""
     want = {}
-    for mod in M["modules"]:
-        p = os.path.join(P.ws, "backend", mod["code"], "tasks.py")
+    mods = [m["code"] for m in M["modules"]]
+    if any("schedule" in a.get("events", []) for a in (M.get("ai") or {}).get("agents") or []):
+        mods.append("zas_core")  # zas_ai_tick starts the AI helpers' schedule triggers
+    for mod in mods:
+        p = os.path.join(P.ws, "backend", mod, "tasks.py")
         if not os.path.exists(p):
             continue
         cron = None
@@ -578,6 +588,112 @@ def cmd_schedule(P, M, log):
     log("restart Celery beat/worker to pick up schedules: zango_env.py celery --workspace <ws>")
 
 
+def prompt_text(ws, rel):
+    """A prompt file as Zango stores it: without <!-- … --> comments (the zas:hole marker)."""
+    try:
+        with open(os.path.join(ws, rel), encoding="utf-8") as f:
+            text = f.read()
+    except OSError:
+        return None
+    return re.sub(r"<!--.*?-->", "", text, flags=re.S).strip() or None
+
+
+def _hash(obj):
+    import hashlib
+    return hashlib.sha256(json.dumps(obj, sort_keys=True, default=str).encode()).hexdigest()[:16]
+
+
+def cmd_ai(P, M, log):
+    """Spec ai.agents → Zango AI (references/map/ai.md). The account (app-llm) must exist: the platform
+    creates it as a placeholder before this step; the creator adds the key in the console."""
+    ai = M.get("ai") or {}
+    agents = ai.get("agents") or []
+    if not agents:
+        log("ai: the spec has no AI helpers")
+        return
+    base = f"/api/v1/apps/{P.uuid}/ai"
+    state_path = os.path.join(P.ws, ".zas", "ai_state.json")
+    try:
+        with open(state_path, encoding="utf-8") as f:
+            state = json.load(f)
+    except (OSError, ValueError):
+        state = {}
+    state.setdefault("prompts", {})
+    state.setdefault("agents", {})
+    pname = ai["provider"]["name"]
+    prov = next((x for x in records(P.get(base + "/providers/", page_size=100), "providers") if x.get("name") == pname), None)
+    if not prov:
+        raise PlatformError(f"ai: AI account {pname!r} not found; the build creates it as a placeholder before this step "
+                            "(studio_build ensure_ai_account). Outside a build, add it in App → AI → Providers.")
+    state["provider"] = {"name": pname, "id": prov["id"]}
+
+    missing = [p["file"] for a in agents for p in a["prompts"].values() if prompt_text(P.ws, p["file"]) is None]
+    if missing:
+        raise PlatformError("ai: prompt files missing or empty (work the ai_prompt holes first): " + ", ".join(missing))
+
+    res = P.send_json("POST", base + "/tools/sync/")
+    have_tools = {t.get("name") for t in records(P.get(base + "/tools/", page_size=500), "tools")}
+    need = sorted({t for a in agents for t in a["tools"]} - have_tools)
+    if need:
+        raise PlatformError(f"ai: tools not registered after sync: {need} (custom tools go in backend/<module>/tools.py with "
+                            "@tool(name=…); zas_search_records / zas_read_record come with zas_core)")
+    log(f"ai: tools synced ({json.dumps((res or {}).get('stats') or {})})")
+
+    prompts = {x["name"]: x for x in records(P.get(base + "/prompts/", page_size=500), "prompts")}
+    for a in agents:
+        for kind, p in a["prompts"].items():
+            text, h = prompt_text(P.ws, p["file"]), None
+            h = _hash(text)
+            cur, seen = prompts.get(p["name"]), state["prompts"].get(p["name"]) or {}
+            if cur is None:
+                r = P.send_json("POST", base + "/prompts/", {
+                    "name": p["name"], "type": kind, "content": text,
+                    "description": f"{a['name']}: {kind} instructions (App Studio, {p['file']})",
+                    "change_description": "Written by App Studio"})
+                state["prompts"][p["name"]] = {"id": r.get("prompt_id"), "hash": h}
+                log(f"ai: prompt {p['name']} created")
+            elif seen.get("hash") == h or ((cur.get("active_version") or {}).get("content") or "").strip() == text:
+                state["prompts"][p["name"]] = {"id": cur["id"], "hash": h}  # unchanged (console edits are kept)
+            else:
+                v = P.send_json("POST", f"{base}/prompts/{cur['id']}/versions/",
+                                {"content": text, "change_description": "Updated by App Studio (the spec changed)"})
+                vid = (v.get("version") or {}).get("id")
+                P.send_json("POST", f"{base}/prompts/{cur['id']}/versions/{vid}/promote/")
+                state["prompts"][p["name"]] = {"id": cur["id"], "hash": h}
+                log(f"ai: prompt {p['name']} has a new live version")
+
+    have = {x["name"]: x for x in records(P.get(base + "/agents/", page=1, page_size=500), "agents")}
+    for a in agents:
+        o = a["output"]
+        managed = {"description": f"{a['name']}: {a['purpose']}"[:1000],
+                   "system_prompt_name": a["prompts"]["system"]["name"],
+                   "user_prompt_name": (a["prompts"].get("user") or {}).get("name") or "",
+                   "output_schema": o["format"], "output_json_schema": o.get("json_schema"),
+                   "tools": a["tools"], "short_term_memory": bool(a.get("memory")),
+                   **({"short_term_memory_max_messages": a["memory"]} if a.get("memory") else {})}
+        h = _hash(managed)
+        cur, seen = have.get(a["zango_name"]), state["agents"].get(a["code"]) or {}
+        if cur is None:
+            # provider, model, temperature, max_tokens and timeout are set once; after that they are the user's
+            r = P.send_json("POST", base + "/agents/", {
+                **managed, "name": a["zango_name"], "provider_id": prov["id"],
+                "model": prov.get("default_model") or ai["provider"]["model"],
+                "temperature": 0.2 if o["kind"] == "fields" else 0.5, "max_tokens": 4096,
+                "timeout_seconds": 90 if a["run"] == "inline" else 120})
+            state["agents"][a["code"]] = {"id": r.get("agent_id"), "name": a["zango_name"], "hash": h}
+            log(f"ai: agent {a['zango_name']} created on {pname}")
+        elif seen.get("hash") != h:
+            P.send_json("PUT", f"{base}/agents/{cur['id']}/", managed)
+            state["agents"][a["code"]] = {"id": cur["id"], "name": a["zango_name"], "hash": h}
+            log(f"ai: agent {a['zango_name']} updated (output, tools, memory, prompts)")
+        else:
+            state["agents"][a["code"]] = {"id": cur["id"], "name": a["zango_name"], "hash": h}
+    with open(state_path, "w", encoding="utf-8") as f:
+        json.dump(state, f, indent=1)
+    connected = prov.get("is_validated") and not prov.get("is_placeholder")
+    log(f"ai: {len(agents)} helpers on {pname}" + ("" if connected else " (no key yet: helpers answer \"not connected\" until one is added)"))
+
+
 def cmd_check(P, M, log):
     problems = []
     have = P.roles()
@@ -607,7 +723,7 @@ def cmd_check(P, M, log):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("command", choices=["app", "packages", "roles", "sync", "schedule", "users", "appbuilder", "check", "all"])
+    ap.add_argument("command", choices=["app", "packages", "roles", "sync", "schedule", "users", "appbuilder", "check", "ai", "all"])
     ap.add_argument("--workspace")
     ap.add_argument("--project", help="app: the Zango project dir (has manage.py)")
     ap.add_argument("--name", help="app: app name = the spec's app.code")
@@ -633,7 +749,7 @@ def main(argv=None):
             return 0
         M = load(a.workspace, "spec.resolved.json")
         P = Platform(a.workspace, a.platform, user, pwd)
-        steps = ["roles", "sync", "schedule", "users", "appbuilder", "check"] if a.command == "all" else [a.command]
+        steps = ["roles", "sync", "ai", "schedule", "users", "appbuilder", "check"] if a.command == "all" else [a.command]
         for s in steps:
             globals()[f"cmd_{s}"](P, M, log)
     except (PlatformError, requests.RequestException, OSError, KeyError) as e:

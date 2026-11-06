@@ -131,7 +131,7 @@ d = (zr.display(decimal.Decimal("1234567.5"), "money"), zr.display(-950, "money"
 check("display formats", d == ("₹12,34,567.50", "-₹950.00", "", "09 Oct 2026", "12.3%"), d)
 # every module imports (zango.core.api is stubbed in the temp tree)
 import importlib
-for m in ("access", "app_user", "dupes", "mixins", "detail", "notify"):
+for m in ("access", "app_user", "dupes", "mixins", "detail", "notify", "ai"):
     try:
         importlib.import_module(f"app.backend.zas_core.{m}")
         check(f"import zas_core.{m}", True)
@@ -153,6 +153,16 @@ try:
     check("tag side present without condition → no condition method", False, "attribute exists")
 except AttributeError:
     check("tag side present without condition → no condition method", True)
+# AI helpers: cron matching, what an answer writes, who may run it
+from app.backend.zas_core import ai as zai
+t = datetime.datetime(2026, 11, 2, 8, 0)  # a Monday
+check("ai cron", [zai._cron_match(c, t) for c in ("0 8 * * 1", "*/15 * * * *", "0 8 * * 0", "30 8 * * *", "0 6-9 * * 1-5")]
+      == [True, True, False, False, True])
+ag = {"output": {"kind": "fields", "fields": [{"key": "risk", "to": "risk_rating"}, {"key": "why"}]}, "roles": ["A"],
+      "triggers": [{"event": "button", "where": "row", "roles": ["A"]}]}
+check("ai writes only fields with to", zai.writes(ag, {"risk": "high", "why": "x"}) == {"risk_rating": "high"})
+check("ai text answer to a field", zai.writes({"output": {"kind": "text", "to": "summary"}}, "hi") == {"summary": "hi"})
+check("ai roles", (zai.can_run(ag, "A", ag["triggers"][0]), zai.can_run(ag, "B")) == (True, False))
 print("ALL OK" if all(results) else f"{results.count(False)} FAILED")
 sys.exit(0 if all(results) else 1)
 '''

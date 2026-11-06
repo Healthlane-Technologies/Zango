@@ -289,10 +289,30 @@ A `detail` page with no list page for its hero gets its own custom route
 Kinds: `condition`, `on_done`, `system_transition`, `tag_condition`,
 `system_tag`, `on_create`, `validation`, `rows`, `computed`, `column`,
 `row_action`, `stat`, `custom_panel`, `custom_tab`, `custom_page`,
-`requirement`. Status: `todo` → `done` | `needs-review` | `blocked` | `covered`. Checked by `spec_check.py --audit-holes`.
+`requirement`, `ai_prompt` (a helper's prompt files; marker `<!-- zas:hole H-NN -->` on the
+system prompt's first line), `ai_tool` (a custom AI tool in tools.py). A requirement hole with
+`uses_ai` must call `run_from_code("<code>"…)`. Status: `todo` → `done` | `needs-review` | `blocked` | `covered`. Checked by `spec_check.py --audit-holes`.
 The marker `# zas:hole H-07` (Python) or `// zas:hole H-07` (TS) sits on the
 line above the function. Hole IDs are stable across re-runs (keyed by spec
 path); new items get the next free number.
+
+## 10b. AI helpers (`ai.agents`; [map/ai.md](map/ai.md))
+
+Zango names: agent `<code with - for _>`, prompts `<agent>-system` / `<agent>-user`, account
+`ai.provider.name` (default `app-llm`). Endpoints on the helper's entity crud view (role-checked, row-scoped):
+
+| Call | Does |
+|---|---|
+| `GET ?action=zas_ai&object_uuid=…` | `{clicks, suggestions, runs}` for the record (also in `data.zas.ai`) |
+| `GET ?action=zas_ai&run=<id>` | one run: `{id, status: queued\|running\|done\|failed\|unavailable, result, suggestion, applied}` |
+| `GET ?action=zas_ai&where=form` | the form's AI buttons for this role |
+| `POST ?action=zas_ai_run` `agent, where (record\|row\|list), object_uuid \| object_uuids` | start a button run |
+| `POST ?action=zas_ai_accept` `suggestion[, values]` / `zas_ai_discard` `suggestion` | decide a suggestion |
+| `POST ?action=zas_ai_chat` `agent, message, session_id, where, object_uuid \| object_uuids` | one chat turn |
+| `POST ?action=zas_ai_form` `agent, values, <files>` | `{values}` to fill a form (`GET initialize_form&zas_prefill=<json>` seeds it) |
+
+Table metadata carries `zas.ai = {row, list, form}`: the AI buttons this role sees there. A 360
+tab, summary section or sidebar panel with `type: ai` comes back with its `agent`.
 
 ## 11. `data-zas` attributes (design tests)
 

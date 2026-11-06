@@ -23,6 +23,9 @@ backend imports cleanly, and before testing.
 | `custom_page` | `frontend/src/custom/slots/<Component>.tsx` (+ a backend view if it needs data) | React component |
 | `system_transition`, `system_tag`, `requirement` (`area: scheduled`) | `backend/<module>/tasks.py` | `@shared_task () -> int`, with a `# zas:schedule <cron>` line above it ([workflow](map/workflow.md)) |
 | `requirement` (other areas) | where the text says: hooks.py, a new view, a slot | free. Record what you built in the hole row |
+| `ai_prompt` | `backend/<module>/ai/<code>.system.md` (+ `.user.md`) | the AI helper's instructions with the hole's `{{variables}}` only ([map/ai.md](map/ai.md)) |
+| `ai_tool` | `backend/<module>/tools.py` | `@tool(name="<code>", …) -> dict` ([map/ai.md](map/ai.md)) |
+| a requirement with `uses_ai` | as above | calls `run_from_code("<code>", obj=…, variables={"input": …})`; carries on when the result is `unavailable` |
 
 The `Target` column of holes.md gives the file and function. Copy the name and signature
 exactly, because the runtime looks hooks up by name (`zs.hook(module, fn)`). A typo is

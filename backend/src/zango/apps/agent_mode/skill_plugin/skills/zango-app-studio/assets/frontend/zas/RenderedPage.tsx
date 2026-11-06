@@ -12,6 +12,7 @@ import * as api from "./api";
 import { SPEC, pageUrl, viewUrl } from "./config";
 import { ConfirmDialog, FormDialog, useDialog } from "./dialogs";
 import { RecordDrawer } from "./ZasTable";
+import { openAiClick } from "./ai";
 import { useToast } from "./ui";
 
 // Loaded on first use, so an app whose pages stay on the React components never gets the kit's
@@ -216,6 +217,14 @@ class PageHost {
           .catch((e) => h.toast("Export failed", String(e?.message || e), true));
       }
       case "menu": return this.menu(p.anchor, p.items);
+      case "ai": {  // an AI helper from a row menu or the list header (zas-render.js aiClicks)
+        const t = p.trigger || {}, a = p.agent || {};
+        const click: api.AiClick = { agent: a.code, name: a.name || a.code, event: t.event, kind: a.output?.kind || "text",
+          label: t.label || (t.event === "chat" ? "Ask AI" : a.name || a.code), icon: t.icon || "sparkles" };
+        return openAiClick(click, { endpoint: ep!, where: t.where || "record", uuid: p.row ? String(p.row.id) : undefined,
+          uuids: p.rows ? p.rows.map((r: any) => String(r.id)) : undefined, open: h.dialog, close: h.closeDialog,
+          onDone: () => { this.invalidate(); void this.draw(); } });
+      }
       case "edit":
         return h.dialog(<FormDialog spec={{ kind: "row", endpoint: ep!, title: `Edit ${p.E.name}`, uuid: String(p.row.id), actionKey: "edit" }}
           onClose={h.closeDialog} onDone={done} />);

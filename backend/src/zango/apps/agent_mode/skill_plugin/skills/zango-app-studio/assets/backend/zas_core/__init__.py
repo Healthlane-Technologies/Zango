@@ -14,7 +14,10 @@ hand-written logic lives in each module's hooks.py, never in this package.
     mixins.py    ZasTableMixin, ZasFormMixin, ZasActionFormMixin, ZasWorkflowMixin, ZasCrudViewMixin
     detail.py    ZasDetail: the 360 payload on fetch_item_details
     notify.py    the single notification seam
-    models.py    ZasSequence
+    models.py    ZasSequence, ZasAiRun, ZasAiSuggestion
+    ai.py        AI helpers: triggers, runs, suggestions, chat, form fill, run_from_code
+    tools.py     the built-in AI tools zas_search_records and zas_read_record
+    tasks.py     zas_ai_run (one background run) and zas_ai_tick (schedule triggers)
 """
 
 ZAS_CORE_VERSION = "0.1.0"

@@ -636,3 +636,36 @@ select.zas-fin { appearance:none;padding:0 30px 0 10px;background:#fff url("data
 @media (prefers-reduced-motion: reduce) {
   .zas *, .zas-mo, .zas-dw, .zas-toast { animation: none; transition: none; }
 }
+
+/* ───────── AI helpers (ai.tsx): the preview's .ai-* look ───────── */
+.zas-ai-cards { display: grid; gap: 10px; margin: 0 0 14px; }
+.zas-ai-card { border: 1px solid #D9D6FE; background: linear-gradient(180deg, #F9F8FF, #fff); border-radius: 12px; padding: 12px 14px; }
+.zas-ai-card.slim { padding: 9px 14px; }
+.zas-ai-hd { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #4A1FB8; margin-bottom: 8px; }
+.zas-ai-card.slim .zas-ai-hd { margin-bottom: 0; }
+.zas-ai-hd svg { width: 15px; height: 15px; flex: none; }
+.zas-ai-hd .zas-btn { margin-left: auto; }
+.zas-ai-tag { font-size: 11px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; color: #6941C6; }
+.zas-ai-think { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; font-size: 12px; color: #6941C6; }
+.zas-ai-think svg, .zas-btn svg.spin { width: 14px; height: 14px; animation: zas-ai-spin 1s linear infinite; }
+@keyframes zas-ai-spin { to { transform: rotate(360deg); } }
+.zas-ai-txt { font-size: 13px; line-height: 1.55; color: #344054; }
+.zas-ai-txt p { margin: 0 0 6px; } .zas-ai-txt p.h { font-weight: 600; } .zas-ai-txt ul, .zas-ai-txt ol { margin: 0 0 6px; padding-left: 18px; }
+.zas-ai-txt code { font-family: ui-monospace, monospace; font-size: 12px; background: #F2F4F7; padding: 0 4px; border-radius: 4px; }
+.zas-ai-kvs { display: grid; }
+.zas-ai-kv { display: flex; gap: 12px; padding: 4px 0; font-size: 13px; border-bottom: 1px dashed #EAECF0; }
+.zas-ai-kv:last-child { border-bottom: 0; }
+.zas-ai-kv > span { width: 200px; flex: none; color: #667085; }
+.zas-ai-kv > div { white-space: pre-wrap; min-width: 0; }
+.zas-ai-was { color: #98A2B3; margin-right: 8px; }
+.zas-ai-ft { display: flex; gap: 8px; margin-top: 10px; }
+.zas-ai-panel { display: grid; gap: 10px; }
+.zas-ai-host { padding: 14px 16px; }
+.zas-ai-empty { font-size: 12.5px; color: #667085; }
+.zas-ai-formbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 12px; margin-bottom: 12px; border: 1px dashed #D9D6FE; border-radius: 10px; background: #F9F8FF; }
+.zas-ai-formbar .zas-note { flex-basis: 100%; }
+.zas-ai-chat { display: flex; flex-direction: column; gap: 10px; min-height: 220px; max-height: 52vh; overflow: auto; }
+.zas-ai-me { align-self: flex-end; max-width: 80%; background: #EEF4FF; color: #1D2939; border-radius: 12px 12px 2px 12px; padding: 8px 12px; font-size: 13px; }
+.zas-ai-bot { align-self: flex-start; max-width: 88%; background: #F9F8FF; border: 1px solid #EBE9FE; border-radius: 12px 12px 12px 2px; padding: 8px 12px; }
+.zas-ai-ask { display: flex; gap: 8px; width: 100%; }
+.zas-ai-ask input { flex: 1; min-width: 0; border: 1px solid var(--z-bd); border-radius: 8px; padding: 8px 10px; font: inherit; font-size: 13px; }

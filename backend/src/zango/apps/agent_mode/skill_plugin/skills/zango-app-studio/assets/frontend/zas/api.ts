@@ -100,3 +100,32 @@ function stripHtml(row: any) {
   }
   return out;
 }
+
+// ───────── AI helpers (zas_core/ai.py; endpoints on the entity's crud view) ─────────
+export type AiClick = { agent: string; name: string; event: "button" | "chat" | "form_assist"; kind: string; label: string; icon: string; from?: string[] };
+export type AiRun = { id: number; agent: string; name: string; status: "queued" | "running" | "done" | "failed" | "unavailable"; trigger: string;
+  kind: string; result: any; error: string; applied: boolean; suggestion: AiSuggestion | null; record_uuid: string | null };
+export type AiSuggestion = { id: number; agent: string; name: string; status: string; created_at: string | null;
+  fields: { key: string; label: string; type: string; value: any; display: any; current: any }[] };
+export type RecordAi = { clicks: AiClick[]; suggestions: AiSuggestion[]; runs: AiRun[] };
+
+/** body() or throw the server's message (403 / 404 / 400 come as {success: false, response: {message}}). */
+const ok = (j: any) => { if (j?.success === false) throw new Error(body(j)?.message || "That didn't work."); return body(j); };
+
+export const aiStatus = async (endpoint: string, uuid: string): Promise<RecordAi> => ok(await get(endpoint, { action: "zas_ai", object_uuid: uuid }));
+export const aiPoll = async (endpoint: string, runId: number): Promise<AiRun> => ok(await get(endpoint, { action: "zas_ai", run: runId }));
+export const aiClicks = async (endpoint: string, where: string): Promise<AiClick[]> => ok(await get(endpoint, { action: "zas_ai", where })).clicks || [];
+export const aiRun = async (endpoint: string, agent: string, where: string, target: { uuid?: string; uuids?: string[] }): Promise<AiRun> =>
+  ok(await post(endpoint, { action: "zas_ai_run" }, { agent, where, object_uuid: target.uuid, object_uuids: target.uuids ? JSON.stringify(target.uuids) : undefined }));
+export const aiAccept = async (endpoint: string, suggestion: number, values?: Record<string, any>) =>
+  ok(await post(endpoint, { action: "zas_ai_accept" }, { suggestion, values: values ? JSON.stringify(values) : undefined }));
+export const aiDiscard = async (endpoint: string, suggestion: number) => ok(await post(endpoint, { action: "zas_ai_discard" }, { suggestion }));
+export const aiChat = async (endpoint: string, agent: string, message: string, o: { uuid?: string; uuids?: string[]; where?: string; session?: string | null }):
+  Promise<{ answer: string | null; session_id: string | null; run: AiRun }> =>
+  ok(await post(endpoint, { action: "zas_ai_chat" }, { agent, message, where: o.where || "record", object_uuid: o.uuid,
+    object_uuids: o.uuids ? JSON.stringify(o.uuids) : undefined, session_id: o.session || undefined }));
+export async function aiForm(endpoint: string, agent: string, values: Record<string, any>, files: File[]): Promise<{ values: Record<string, any>; run: AiRun }> {
+  const b: Record<string, any> = { agent, values: JSON.stringify(values) };
+  files.forEach((f, i) => { b[`file_${i}`] = f; });
+  return ok(await post(endpoint, { action: "zas_ai_form" }, b));
+}

@@ -104,6 +104,44 @@ class ScenarioCtx(Ctx):
         code, j = self.get(role, self.ep(ent), view="detail", action="fetch_item_details", object_uuid=uuid)
         return (self.body(j) or {}).get("zas") or {}
 
+    # ── AI helpers ──
+    def ai_fake(self, answers=None):
+        """`with ctx.ai_fake({"vendor_screening": {"risk_rating": "high"}}):` every AI helper answers with
+        its spec sample (or the answer given here) instead of calling the AI. Needs DEBUG on the server."""
+        import contextlib
+
+        path = os.path.join(self.ws, ".zas", "ai_fake.json")
+
+        @contextlib.contextmanager
+        def fake():
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump({"*": True, **(answers or {})}, f)
+            try:
+                yield
+            finally:
+                try:
+                    os.remove(path)
+                except OSError:
+                    pass
+        return fake()
+
+    def ai_run(self, ent, uuid, role, agent, where="record"):
+        """Click an AI button as `role` and wait for the run. Returns the run payload (status, result, suggestion)."""
+        code, j = self.post(role, self.ep(ent), {"action": "zas_ai_run"}, data={"agent": agent, "where": where, "object_uuid": uuid})
+        run = self.body(j) or {}
+        for _ in range(30):
+            if run.get("status") not in ("queued", "running"):
+                return {**run, "http": code}
+            time.sleep(1)
+            code, j = self.get(role, self.ep(ent), action="zas_ai", run=run["id"])
+            run = self.body(j) or {}
+        raise AssertionError(f"AI run {run.get('id')} still {run.get('status')} after 30s (is Celery running?)")
+
+    def ai_pending(self, ent, uuid, role):
+        """Open suggestions and running AI runs on a record, as `role`."""
+        code, j = self.get(role, self.ep(ent), action="zas_ai", object_uuid=uuid)
+        return self.body(j) or {}
+
     # ── messages ──
     def mark(self):
         return time.time()

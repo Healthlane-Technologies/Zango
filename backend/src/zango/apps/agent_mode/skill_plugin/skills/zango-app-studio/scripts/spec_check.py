@@ -1270,6 +1270,191 @@ class Spec:
             if code in used and "task" not in events:
                 L.warn(w + ".triggers", f"{', '.join(used[code])} calls this helper from code: add {{event: task}}")
 
+    AI_DEFAULT_MODEL = {"anthropic": "claude-sonnet-4-5", "openai": "gpt-4o", "azure_openai": "gpt-4o",
+                        "bedrock": "anthropic.claude-sonnet-4-5"}
+    AI_JSON_TYPE = {"text": "string", "long_text": "string", "integer": "integer", "decimal": "number",
+                    "boolean": "boolean", "date": "string", "choice": "string"}
+    AI_BUILTIN_TOOLS = {"search_records": "zas_search_records", "read_record": "zas_read_record"}
+
+    def resolve_ai(self):
+        """ai → M["ai"] in the shape the runtime (zas_core/ai.py) and the platform's AI step read:
+        Zango names for the agent and its prompts, the prompt files the build writes, the
+        {{variables}} each prompt may use, the JSON schema of a fields answer and the tool names."""
+        M = self.M
+        ai, ents, sets = M.get("ai") or {}, M["entities"], M["choice_sets"]
+        prov = ai.get("provider") if isinstance(ai.get("provider"), dict) else {}
+        kind = prov.get("kind") or "anthropic"
+        out = {"provider": {"kind": kind, "name": prov.get("name") or "app-llm",
+                            "model": prov.get("model") or self.AI_DEFAULT_MODEL.get(kind, ""),
+                            "monthly_budget_usd": prov.get("monthly_budget_usd")},
+               "agents": []}
+        callers = defaultdict(list)
+        for w, cr in self._custom_reqs():
+            for c in arr((cr or {}).get("uses_ai") if isinstance(cr, dict) else None):
+                callers[c].append(w)
+        first_mod = M["modules"][0]["code"] if M["modules"] else "app"
+        for a in arr(ai.get("agents")):
+            if not isinstance(a, dict) or not a.get("code") or (a.get("entity") and a["entity"] not in ents):
+                continue
+            code, E = a["code"], ents.get(a.get("entity"))
+            zname = code.replace("_", "-")
+            mod = E["module"] if E else first_mod
+            trigs = [dict(t) for t in arr(a.get("triggers")) if isinstance(t, dict)]
+            for t in trigs:
+                if t.get("event") in ("button", "chat"):
+                    t.setdefault("where", "record")
+                if t.get("when") and E:
+                    try:
+                        t["when_ast"] = X.parse_condition(t["when"])
+                    except Exception:  # lint_ai reported it
+                        pass
+            events = {t.get("event") for t in trigs}
+            ctx = a.get("context") or {}
+            o = a.get("output") or {}
+            okind = o.get("kind") or "text"
+            fields = []
+            for of in arr(o.get("fields")) if okind == "fields" else []:
+                if not isinstance(of, dict) or not of.get("key"):
+                    continue
+                f = dict(of)
+                tf = E["fmap"].get(of["to"]) if E and of.get("to") else None
+                ch = norm_choices(of["choices"], sets) if of.get("choices") else (tf or {}).get("choices") or []
+                if f.get("type") in ("choice", "multi_choice"):
+                    f["choices"] = [{"id": c["id"], "label": c["label"]} for c in ch]
+                f["label"] = (tf or {}).get("label") or titleize(of["key"])
+                fields.append(f)
+            chat = "chat" in events
+            listy = any(t.get("where") == "list" for t in trigs)
+            recordy = E is not None and any(not (t.get("event") == "button" and t.get("where") == "list") for t in trigs)
+            uvars = ([] if chat else (["record"] if recordy else []) + (["records"] if listy else [])
+                     + (["related"] if ctx.get("related") else []) + (["input"] if "task" in events else []))
+            svars = ["today", "role"] + ((["record"] + (["related"] if ctx.get("related") else [])) if chat and E else [])
+            base = f"backend/{mod}/ai/{code}"
+            prompts = {"system": {"name": f"{zname}-system", "file": base + ".system.md", "variables": svars}}
+            if not chat:
+                prompts["user"] = {"name": f"{zname}-user", "file": base + ".user.md", "variables": uvars}
+            tools, custom, tool_ents = [], [], []
+            for tl in arr(a.get("tools")):
+                if not isinstance(tl, dict):
+                    continue
+                if tl.get("use") in self.AI_BUILTIN_TOOLS:
+                    name = self.AI_BUILTIN_TOOLS[tl["use"]]
+                    if name not in tools:
+                        tools.append(name)
+                    if tl.get("entity") in ents and tl["entity"] not in tool_ents:
+                        tool_ents.append(tl["entity"])
+                elif tl.get("code"):
+                    tools.append(tl["code"])
+                    custom.append({"code": tl["code"], "text": tl.get("text") or "", "safety": tl.get("safety") or "read_only"})
+            schema = None
+            if okind == "fields":
+                props = {}
+                for f in fields:
+                    if f.get("type") == "multi_choice":
+                        p = {"type": "array", "items": {"type": "string", **({"enum": [c["id"] for c in f["choices"]]} if f.get("choices") else {})}}
+                    else:
+                        p = {"type": [self.AI_JSON_TYPE.get(f.get("type"), "string"), "null"]}
+                        if f.get("type") == "choice" and f.get("choices"):
+                            p["enum"] = [c["id"] for c in f["choices"]] + [None]
+                        if f.get("type") == "date":
+                            p["format"] = "date"
+                    if f.get("description"):
+                        p["description"] = f["description"]
+                    props[f["key"]] = p
+                schema = {"type": "object", "properties": props, "required": list(props), "additionalProperties": False}
+            # who may run it and see its results: access.roles, else every role that can add or edit the
+            # entity plus anyone a trigger names
+            roles = arr((a.get("access") or {}).get("roles"))
+            if not roles:
+                roles = ([r for r, x in E["access_resolved"].items() if not x.get("none") and {"add", "edit"} & set(x["actions"])]
+                         if E and E.get("access_resolved") else list(M["roles"]))
+                roles += [r for t in trigs for r in arr(t.get("roles")) if r not in roles]
+            out["agents"].append({
+                "code": code, "name": a.get("name") or titleize(code), "zango_name": zname,
+                "purpose": a.get("purpose") or "", "instructions": a.get("instructions") or "",
+                "entity": a.get("entity"), "module": mod,
+                "context": {"fields": arr(ctx.get("fields")), "files": arr(ctx.get("files")),
+                            "related": [self._ai_related(E, r) for r in arr(ctx.get("related")) if isinstance(r, dict) and r.get("entity") in ents]},
+                "output": {"kind": okind, "to": o.get("to"), "fields": fields,
+                           "format": {"fields": "JSON", "markdown": "Markdown"}.get(okind, "Text"), "json_schema": schema},
+                "review": a.get("review") or "suggest", "triggers": trigs, "events": sorted(e for e in events if e),
+                "roles": roles, "run": a.get("run") or ("inline" if events & {"form_assist", "chat"} else "async"),
+                "memory": (a.get("memory") or {}).get("window") if chat else None,
+                "tools": tools, "tool_entities": tool_ents, "custom_tools": custom, "prompts": prompts,
+                "acceptance": arr(a.get("acceptance")), "sample": (a.get("preview") or {}).get("sample"),
+                "called_by": callers.get(code, []),
+            })
+        M["ai"] = out
+
+    def _ai_related(self, E, r):
+        T = self.M["entities"][r["entity"]]
+        via = r.get("via") or next((f["key"] for f in T["fields"] if f["type"] == "link" and E and f.get("to") == E["code"]), None)
+        out = {"entity": T["code"], "label": T["plural"], "via": via, "limit": r.get("limit") or 20,
+               "fields": arr(r.get("fields")) or [T["display"]]}
+        if r.get("where"):
+            try:
+                out["where_ast"] = X.parse_condition(r["where"])
+            except Exception:
+                pass
+        return out
+
+    def _custom_reqs(self):
+        M = self.M
+        yield from ((f"app.custom_requirements[{i}]", cr) for i, cr in enumerate(M["app_custom_requirements"]))
+        for E in M["entities"].values():
+            yield from ((f"entities.{E['code']}.custom_requirements[{i}]", cr) for i, cr in enumerate(E["custom_requirements"]))
+        for V in M["detail_views"].values():
+            yield from ((f"detail_views.{V['code']}.custom_requirements[{i}]", cr) for i, cr in enumerate(arr(V.get("custom_requirements"))))
+
+    def ai_holes(self):
+        """One ai_prompt hole per helper (its instructions, in the app's words), one ai_tool hole per
+        custom tool, and the helper's inputs and answer added to every hole that calls it (uses_ai)."""
+        agents = {a["code"]: a for a in (self.M.get("ai") or {}).get("agents", [])}
+        done_tools = set()
+        for a in agents.values():
+            vars_ = "; ".join(f"{k}: " + (", ".join("{{" + v + "}}" for v in p["variables"]) or "none")
+                              for k, p in a["prompts"].items())
+            what = a["output"]["kind"] if a["output"]["kind"] != "fields" else \
+                "JSON with " + ", ".join(f"{f['key']} ({f.get('type')})" for f in a["output"]["fields"])
+            text = (f"Write the instructions for AI helper {a['code']} ({a['name']}): {a['purpose']} "
+                    + (f"Rules: {a['instructions']} " if a["instructions"] else "")
+                    + f"Answer: {what}. Variables you may use: {vars_}. Runs on: {', '.join(a['events'])}."
+                    + (" Acceptance (test each with the fake AI): " + " ".join(f"({i}) {x}" for i, x in enumerate(a["acceptance"], 1))
+                       if a["acceptance"] else ""))
+            files = [p["file"] for p in a["prompts"].values()]
+            self.holes.append({"kind": "ai_prompt", "where": f"ai.agents.{a['code']}", "text": " ".join(text.split()),
+                               "entity": a["entity"], "module": a["module"], "function": a["code"],
+                               "signature": "<!-- zas:hole H-NN --> then the prompt; {{variables}} as listed",
+                               "target": " + ".join(files), "files": files, "data_hook": None, "slot": None,
+                               "prompts": [{"file": p["file"], "variables": p["variables"]} for p in a["prompts"].values()],
+                               "scheduled": False})
+            for t in a["custom_tools"]:
+                if t["code"] in done_tools:
+                    continue
+                done_tools.add(t["code"])
+                self.holes.append({"kind": "ai_tool", "where": f"ai.agents.{a['code']}.tools.{t['code']}",
+                                   "text": f"AI tool {t['code']} for {a['code']} ({t['safety']}): {t['text']}",
+                                   "entity": a["entity"], "module": a["module"], "function": t["code"],
+                                   "signature": f"@tool(name=\"{t['code']}\", safety=ToolSafety.{t['safety'].upper()}) -> dict",
+                                   "target": f"backend/{a['module']}/tools.py::{t['code']}", "data_hook": None,
+                                   "slot": None, "scheduled": False})
+        by_where = {h["where"]: h for h in self.holes}
+        for w, cr in self._custom_reqs():
+            codes = [c for c in arr((cr or {}).get("uses_ai") if isinstance(cr, dict) else None) if c in agents]
+            h = by_where.get(w)
+            if not codes or not h:
+                continue
+            h["uses_ai"] = codes
+            for c in codes:
+                a = agents[c]
+                ans = ("{" + ", ".join(f"{f['key']}: {f.get('type')}" for f in a["output"]["fields"]) + "}"
+                       if a["output"]["kind"] == "fields" else a["output"]["kind"])
+                h["text"] += (f" Calls AI helper {c}: `res = run_from_code(\"{c}\""
+                              + (", obj=<" + a["entity"] + ">" if a["entity"] else "")
+                              + ", variables={\"input\": ...})` (from zas_core.ai); it reads "
+                              + (", ".join(a["context"]["fields"]) or "what you pass in input")
+                              + f" and returns res.result = {ans}. When res.status is \"unavailable\" (no AI account yet) carry on without it.")
+
     def lint(self):
         M, L = self.M, self.L
         ents, roles, pages, dvs = M["entities"], M["roles"], M["pages"], M["detail_views"]
@@ -2573,6 +2758,8 @@ class Spec:
             "rows": "as the role, list rows; assert only matching records appear",
             "row_action": "run the action; assert its result",
             "tag_condition": "toggle the tag before/after making the text true",
+            "ai_prompt": "with the fake AI (`ctx.ai_fake`), fire each trigger as a role in `roles` and one outside; assert the suggestion / written fields",
+            "ai_tool": "call the tool as a role; assert its answer and that it returns only rows that role can see",
         }
         for h in self.holes:
             out.append(f"| {h['id']} | {h['kind']} | {h['text'][:140].replace('|', '/')} | {how.get(h['kind'], 'trigger it; assert what the text says')} |")
@@ -2658,7 +2845,7 @@ class Spec:
             for t in V["tabs"]:
                 T = {k: t.get(k) for k in ("code", "label", "type", "entity", "param", "columns", "row_click",
                                            "empty_state", "group_by", "footer_totals", "default_sort", "icon",
-                                           "quick_filters", "page_size")
+                                           "quick_filters", "page_size", "agent")
                      if t.get(k) is not None}
                 T["label"] = t.get("label") or titleize(t["code"])
                 if t.get("type") == "related_table":
@@ -2978,6 +3165,8 @@ def main(argv=None):
         S.prototype_screens()
         S.page_holes()
         S.derive()
+        S.resolve_ai()
+        S.ai_holes()
         S.intent()
     out = a.out or (os.path.join(a.workspace, ".zas") if a.workspace else None)
     issues = S.L.items
@@ -3051,12 +3240,44 @@ def audit_holes(ws, holes):
             [rf"function {re.escape(fn)}\b", rf"const {re.escape(fn)}\b", rf"export \{{[^}}]*\b{re.escape(fn)}\b"]
         return any(re.search(p, text, re.M) for p in pats)
 
+    def backend_sources():
+        root = os.path.join(ws, "backend")
+        for mod in sorted(os.listdir(root)) if os.path.isdir(root) else []:
+            for name in ("hooks.py", "tasks.py"):
+                if os.path.isfile(os.path.join(root, mod, name)):
+                    yield f"backend/{mod}/{name}"
+
     for h in holes:
         st = h.get("status", "todo")
         if st == "todo":
             problems.append(f"{h['id']} todo        {h['target']}")
             continue
         if st in ("blocked", "covered"):  # covered = the runtime already does it (e.g. the timeline); no code
+            continue
+        for c in h.get("uses_ai") or []:
+            files = [h["target"].split("::", 1)[0]] if "::" in (h.get("target") or "") else list(backend_sources())
+            call = re.compile(r"run_from_code\(\s*[\"']" + re.escape(c) + r"[\"']")
+            if not any(call.search(src(f) or "") for f in files):
+                problems.append(f"{h['id']} no AI call  run_from_code(\"{c}\", …) not found in {', '.join(files) or 'backend/'}")
+        if h["kind"] == "ai_prompt":
+            for p in h.get("prompts") or []:
+                text = src(p["file"])
+                body = re.sub(r"<!--.*?-->", "", text or "", flags=re.S).strip()
+                if not body:
+                    problems.append(f"{h['id']} missing     {p['file']}  (status says {st})")
+                    continue
+                used = set(re.findall(r"\{\{\s*(\w+)\s*\}\}", body))
+                extra = sorted(used - set(p["variables"]))
+                if extra:
+                    problems.append(f"{h['id']} variables   {p['file']} uses {', '.join(extra)}; it may use "
+                                    + (", ".join(p["variables"]) or "none"))
+                data = [v for v in p["variables"] if v in ("record", "records", "related", "input")]
+                if data and not used & set(data):
+                    problems.append(f"{h['id']} no data     {p['file']} never uses {' / '.join('{{' + v + '}}' for v in data)}: "
+                                    "the AI would not see the record")
+            first = (h.get("prompts") or [{}])[0].get("file")
+            if first and src(first) and f"zas:hole {h['id']}" not in src(first):
+                problems.append(f"{h['id']} no marker   {first}  (start it with <!-- zas:hole {h['id']} -->)")
             continue
         for tgt in (h.get("target"), h.get("data_hook")):
             if not defined(tgt):

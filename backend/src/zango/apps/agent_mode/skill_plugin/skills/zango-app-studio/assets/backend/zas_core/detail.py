@@ -32,6 +32,7 @@ from django.db.models import Sum
 from zango.core.api import get_api_response
 
 from . import access
+from . import ai as zai
 from . import expr as zx
 from . import records as zr
 from . import spec as zs
@@ -137,7 +138,21 @@ class ZasDetail:
         out["tabs"], out["panels"], out["mini_tables"] = self._zas_tabs(V, H, obj)
         out["actions"] = self._zas_actions(V, H, obj, status)
         out["custom"] = self._zas_custom(V, H, obj)
+        try:
+            ai = zai.record_ai(H["code"], obj, req)
+        except Exception:  # AI never breaks the page
+            logger.exception("zas: AI part of the 360 payload for %s", self.zas_view)
+            ai = None
+        if ai is not None:
+            out["ai"] = ai
         return out
+
+    def _ai_ok(self, code):
+        """A type: ai tab or panel shows only to roles that may run its helper."""
+        try:
+            return zai.can_run(zai.agent(code), self._zas_role)
+        except KeyError:
+            return False
 
     def _ok(self, block, obj):
         if block.get("roles") and self._zas_role not in block["roles"]:
@@ -298,6 +313,10 @@ class ZasDetail:
             if not self._ok(t, obj):
                 continue
             entry = {"code": t["code"], "count": None, "count_tone": None, "order": ti}
+            if t.get("type") == "ai":
+                if not self._ai_ok(t.get("agent")):
+                    continue
+                entry["agent"] = t["agent"]
             if t.get("type") == "related_table":
                 child = t["entity"]
                 if zs.entity(child).get("access") and not access.can(child, "view", self._zas_role):
@@ -335,6 +354,8 @@ class ZasDetail:
                         plist.append({"key": key, "type": "custom", "title": sec.get("title"), "order": j})
                     elif st == "timeline":
                         plist.append({"key": key, "type": "timeline", "title": sec.get("title") or "Activity", "order": j})
+                    elif st == "ai" and self._ai_ok(sec.get("agent")):
+                        plist.append({"key": key, "type": "ai", "title": sec.get("title"), "agent": sec["agent"], "order": j})
                 panels[t["code"]] = plist
             tabs.append(entry)
         side = []
@@ -348,6 +369,9 @@ class ZasDetail:
             elif st == "mini_table":
                 minis[key] = self._mini_table(H, obj, sec)
                 side.append({"key": key, "type": "mini_table", "title": sec.get("title"), "order": i})
+            elif st == "ai":
+                if self._ai_ok(sec.get("agent")):
+                    side.append({"key": key, "type": "ai", "title": sec.get("title"), "agent": sec["agent"], "order": i})
             else:
                 side.append({"key": key, "type": st, "title": sec.get("title"), "order": i})
         panels["sidebar"] = side

@@ -6,6 +6,7 @@ import { ArrowRightCircle, CircleX, Plus, Pencil, Tag as TagIcon, Zap } from "lu
 import * as api from "./api";
 import { useToast } from "./ui";
 import { Button, Modal } from "./kit";
+import { AiFormBar } from "./ai";
 
 export type FormSpec =
   | { kind: "create"; endpoint: string; title: string; params?: Record<string, string> }
@@ -43,12 +44,17 @@ export function FormDialog({ spec, onClose, onDone }: { spec: FormSpec; onClose:
   const toast = useToast();
   const p = paramsFor(spec);
   const endpoint = spec.endpoint.split("?")[0];
+  // AI form fill: the server seeds the form with the values (zas_prefill); the person checks and saves
+  const [prefill, setPrefill] = useState<{ n: number; values: Record<string, any> } | null>(null);
+  const aiForm = spec.kind === "create" || (spec.kind === "row" && spec.actionKey === "edit");
   return (
     <Modal title={spec.title} icon={iconFor(spec)} iconTone={spec.kind === "transition" && spec.danger ? "red" : undefined} wide onClose={onClose}>
+      {aiForm && <AiFormBar endpoint={endpoint} onFill={(values) => setPrefill((x) => ({ n: (x?.n || 0) + 1, values: { ...(x?.values || {}), ...values } }))} />}
       <div className="zas-form-host">
         <FormRenderer
+          key={prefill?.n || 0}
           api_endpoint={endpoint}
-          getParams={p.get}
+          getParams={prefill ? { ...p.get, zas_prefill: JSON.stringify(prefill.values) } : p.get}
           postParams={p.post}
           skipAutoRefresh
           onResponse={(res: any) => {

@@ -283,6 +283,8 @@ class BringUpTests(StudioTestBase):
                 "studio:prune_first_migration",
                 "studio:ws_migrate",
                 "studio:platform:sync",
+                "studio:platform:ai_account",  # skipped: no AI helpers in this spec
+                "studio:platform:ai",
                 "studio:platform:schedule",
                 "studio:platform:users",
                 "studio:platform:check",

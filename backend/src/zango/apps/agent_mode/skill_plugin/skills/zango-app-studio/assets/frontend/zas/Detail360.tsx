@@ -4,10 +4,11 @@
 // in data.zas (contracts §8); this component only lays it out.
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, ArrowRightCircle, Check, CircleX, Pencil, Tag as TagIcon, X, Zap } from "lucide-react";
+import { ArrowLeft, ArrowRight, ArrowRightCircle, Check, CircleX, Pencil, Sparkles, Tag as TagIcon, X, Zap } from "lucide-react";
 import * as api from "./api";
 import { SPEC, detailUrl, pageUrl, tone, viewUrl } from "./config";
 import { ConfirmDialog, FormDialog, useDialog } from "./dialogs";
+import { AiPanel, AiRecordStrip, openAiClick } from "./ai";
 import * as SLOTS from "../custom/slots";
 import { CODE_RE, CopyButton, Icon, Menu, RecordLabelCtx, Skeleton, StateBox, ToastHost, Value, cx, useStuck } from "./ui";
 import { Badge, Banner, Button, EmptyState, FieldGrid, Panel, StatTile, Tabs, Timeline, ZasTable } from "./kit";
@@ -136,6 +137,11 @@ function Header({ data, tabs }: { data: DetailResponse; tabs?: React.ReactNode }
     if (!ra || hero.field_links?.[k]) return;
     more.push({ key: k, label: ra.name || k, icon: k === "edit" ? <Pencil /> : <Zap />, danger: k === "delete", group: "Actions", onClick: () => rowAction(k, ra.name || k) });
   });
+  // AI helpers: the first as a button, the rest in the menu under "AI" (as the preview places them)
+  const ai = z.ai?.clicks || [];
+  const aiOpen = (c: (typeof ai)[number]) => openAiClick(c, { endpoint: d.endpoint, uuid: d.uuid, where: "record", open: dlg.open, close: dlg.close, onDone: d.refresh });
+  if (ai[0]) buttons.unshift(<Button key={"ai:" + ai[0].agent} zasKey={"ai:" + ai[0].agent} icon={<Sparkles />} onClick={() => aiOpen(ai[0])}>{ai[0].label}</Button>);
+  ai.slice(1).forEach((c, i) => more.push({ key: "ai:" + c.agent + ":" + c.label, label: c.label, group: i === 0 ? "AI" : undefined, icon: <Sparkles />, onClick: () => aiOpen(c) }));
   z.actions.tags.forEach((tg, i) => more.push({
     key: "tag:" + tg.code, group: i === 0 ? "Tags" : undefined, icon: <TagIcon />, disabled: !tg.allowed, title: tg.blocked_reason || undefined,
     label: (tg.state === "enabled" ? "Remove " : "Mark ") + tg.label, onClick: () => toggleTag(tg),
@@ -235,6 +241,10 @@ function Panels({ list }: { list: ZasPayload["panels"][string] }) {
           return <Panel key={p.key} title={p.title} zasKey={p.key} order={p.order} tile="file-text"><Slot name={slotName} dataKey={p.key} /></Panel>;
         }
         if (p.type === "timeline") return <Panel key={p.key} title={p.title} zasKey={p.key} order={p.order} tile="history"><TimelineBlock limit={6} /></Panel>;
+        if (p.type === "ai" && p.agent) {
+          return <Panel key={p.key} zasKey={p.key} order={p.order} className="zas-ai-host">
+            <AiPanel agent={p.agent} title={p.title} endpoint={d.endpoint} uuid={d.uuid} onChanged={d.refresh} /></Panel>;
+        }
         return null;
       })}
     </>
@@ -274,6 +284,9 @@ function TabBody({ tab, canAdd }: { tab: SpecTab; canAdd: boolean }) {
   if (tab.type === "related_table") return <RelatedTab tab={tab} canAdd={canAdd} />;
   if (tab.type === "timeline") return <Panel title={tab.label} zasKey={tab.code} tile="history"><TimelineBlock tab={tab.code} /></Panel>;
   if (tab.type === "custom") return <Panel title={tab.label} zasKey={tab.code} tile="file-text"><Slot name={tab.slot} dataKey={tab.code} /></Panel>;
+  if (tab.type === "ai" && tab.agent) {
+    return <Panel zasKey={tab.code} className="zas-ai-host"><AiPanel agent={tab.agent} title={tab.label} endpoint={d.endpoint} uuid={d.uuid} onChanged={d.refresh} /></Panel>;
+  }
   const list = d.zas.panels[tab.code] || [];
   if (!list.length) return <EmptyState title="Nothing to show here yet" zasKey={tab.code} />;
   return <Panels list={list} />;
@@ -348,6 +361,7 @@ function Page({ viewCode, uuid, initial }: { viewCode: string; uuid: string; ini
         {fromRecord ? <div className="zas-dback" data-zas="back" data-zas-chrome><a onClick={() => navigate(-1)}><ArrowLeft className="zi" />Back to {fromRecord}</a></div>
           : back && <div className="zas-dback" data-zas="back" data-zas-chrome><a onClick={() => navigate(back)}><ArrowLeft className="zi" />Back to {SPEC.pages[view.back_to as string]?.title}</a></div>}
         <Header data={data} tabs={tabBar} />
+        {z.ai && <AiRecordStrip endpoint={hero.endpoint} uuid={uuid} initial={z.ai} onChanged={load} />}
         {z.stats.length > 0 && (
           <div className="zas-stats">
             {z.stats.map((s) => <StatTile key={s.key} zasKey={s.key} order={s.order} label={s.label} value={s.value} format={s.format}

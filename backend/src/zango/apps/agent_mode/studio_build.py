@@ -1563,6 +1563,8 @@ class StudioBuild:
                 ),
             ),
             ("platform:sync", lambda: platform("sync")),
+            ("platform:ai_account", lambda: self._ai_account(emit)),
+            ("platform:ai", lambda: self._ai_step(platform, emit)),
             ("platform:schedule", lambda: platform("schedule")),
             ("platform:users", lambda: platform("users")),
             ("platform:check", lambda: platform("check")),
@@ -1598,6 +1600,45 @@ class StudioBuild:
             if result is not None and not result.ok:
                 failed_at = name
         return failed_at is None
+
+    def _spec_ai(self) -> dict:
+        try:
+            with open(self.zas_dir / "spec.resolved.json", encoding="utf-8") as f:
+                return json.load(f).get("ai") or {}
+        except (OSError, ValueError):
+            return {}
+
+    def _ai_account(self, emit=None):
+        """The spec's AI account (app-llm), created without a key when the app has none.
+        Through the ORM: the provider API checks keys live and would refuse it."""
+        ai = self._spec_ai()
+        if not ai.get("agents"):
+            return self.skip("platform:ai_account", "the spec has no AI helpers", emit)
+        from .ai_account import ensure_ai_account
+
+        started = time.monotonic()
+        result = StepResult(
+            step=STEP_PREFIX + "platform:ai_account",
+            command=["ensure_ai_account", self.app_name],
+        )
+        try:
+            out = ensure_ai_account(self.app_name, ai)
+            result.stdout_tail = f"AI account {out['name']}: {out['status']}" + (
+                ""
+                if out["connected"]
+                else " (no key yet: App → AI → Providers → Add key)"
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.exception("agent_mode: AI account for %s", self.app_name)
+            result.returncode = 1
+            result.stderr_tail = f"Could not create the AI account: {exc}"
+        result.duration_ms = int((time.monotonic() - started) * 1000)
+        return self._record(result, emit)
+
+    def _ai_step(self, platform, emit=None):
+        if not self._spec_ai().get("agents"):
+            return self.skip("platform:ai", "the spec has no AI helpers", emit)
+        return platform("ai")
 
     def _prune(self, emit=None):
         initial = Path(self.workspace) / "migrations" / "0001_initial.py"

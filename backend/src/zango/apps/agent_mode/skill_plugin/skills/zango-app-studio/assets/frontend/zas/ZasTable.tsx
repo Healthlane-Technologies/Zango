@@ -8,10 +8,11 @@
 // RightActions are not rendered). Its endpoints are reused unchanged.
 import React, { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowDown, ArrowRight, ArrowUp, Calendar, ChevronLeft, ChevronRight, ChevronsUpDown, Download, EllipsisVertical, Filter, Inbox, Paperclip, Plus, Search, X } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUp, Calendar, ChevronLeft, ChevronRight, ChevronsUpDown, Download, EllipsisVertical, Filter, Inbox, Paperclip, Plus, Search, Sparkles, X } from "lucide-react";
 import * as api from "./api";
 import { SPEC, date, detailUrl, money, number, pageUrl, parentTabUrl, percent, tone, viewUrl } from "./config";
 import { ConfirmDialog, FormDialog, useDialog } from "./dialogs";
+import { aiMenuItems, openAiClick } from "./ai";
 import { Icon, Menu, Nil, Skeleton, Value, cx, useToast, CODE_RE, RecordLabelCtx } from "./ui";
 import { Badge, Banner, Button, Chip, Drawer, EmptyState, Timeline } from "./kit";
 import type { MenuItemDef } from "./ui";
@@ -23,7 +24,8 @@ type Meta = {
   has_add_perm?: boolean; has_download_perm?: boolean;
   zas?: { quick_filters: { key: string; label: string; default: boolean; count?: number | null }[];
     filter_options?: Record<string, string[]>; subtitle_stat?: number | null;
-    stats?: Record<string, (number | null)[]> };  // pages[].stats figures, per crud page, in order
+    stats?: Record<string, (number | null)[]>;  // pages[].stats figures, per crud page, in order
+    ai?: { row: api.AiClick[]; list: api.AiClick[]; form: api.AiClick[] } };  // AI buttons this role sees
 };
 type Row = Record<string, any> & { object_uuid: string; zas?: { links: Record<string, string>; status?: string; tags?: string[]; hl?: Record<string, string>; sub?: Record<string, string>; icon?: Record<string, string>;
   badge?: Record<string, { label: string; tone: string }> } };
@@ -260,10 +262,15 @@ export function ZasTable(p: ZasTableProps) {
     setDrawer(r.object_uuid);
   };
 
-  const rowMenu = (r: Row): MenuItemDef[] => (r.row_actions || []).map((a: any) => ({
-    key: a.key, label: a.name, danger: a.key === "delete",
-    onClick: () => runRowAction(a, r),
-  }));
+  const aiOpen = (c: api.AiClick, where: string, target: { uuid?: string; uuids?: string[] }) =>
+    openAiClick(c, { endpoint: E.endpoint, where, ...target, open: dlg.open, close: dlg.close, onDone: changed });
+  const rowMenu = (r: Row): MenuItemDef[] => [
+    ...(r.row_actions || []).map((a: any) => ({
+      key: a.key, label: a.name, danger: a.key === "delete",
+      onClick: () => runRowAction(a, r),
+    })),
+    ...aiMenuItems(meta?.zas?.ai?.row, (c) => aiOpen(c, "row", { uuid: r.object_uuid })),
+  ];
   const runRowAction = (a: any, r: Row) => {
     const nav = E.navigate?.[a.key];
     if (nav) { const u = SPEC.detail_views[nav] ? viewUrl(nav, r.object_uuid) : pageUrl(nav); if (u) navigate(u); return; }
@@ -297,7 +304,7 @@ export function ZasTable(p: ZasTableProps) {
   const nFilters = Object.values(filters).filter(Boolean).length;
   const filtered = !!(dq || activeQf || nFilters);
   const setFilter = (k: string, v: string) => { setFilters((f) => ({ ...f, [k]: v })); setPageNo(1); };
-  const hasActs = (rows || []).some((r) => (r.row_actions || []).length);
+  const hasActs = (rows || []).some((r) => (r.row_actions || []).length) || !!meta?.zas?.ai?.row?.length;
 
   // group rows (within the page, like the preview)
   const body = useMemo(() => {
@@ -364,6 +371,10 @@ export function ZasTable(p: ZasTableProps) {
           )}
           <span className="zas-sp" />
           {p.toolbar}
+          {(meta?.zas?.ai?.list || []).map((c) => (
+            <Button key={"ai:" + c.agent + c.label} icon={<Sparkles />} zasKey={"ai:" + c.agent}
+              onClick={() => aiOpen(c, "list", { uuids: (rows || []).map((r) => r.object_uuid) })}>{c.label}</Button>
+          ))}
           {meta?.has_download_perm && !p.footer?.length && <Button icon={<Download />} onClick={exportRows} zasKey="export">Export</Button>}
           {filterCols.length > 0 && (
             <button type="button" className={cx("zas-ibb", fopen && "on")} aria-label="Filters" aria-pressed={fopen} data-zas="filters" data-zas-chrome
@@ -403,7 +414,7 @@ export function ZasTable(p: ZasTableProps) {
                             {cols.map((c) => <td key={c.key} className={r.zas?.hl?.[c.key] ? `hl-${r.zas.hl[c.key] === "amber" ? "amber" : "red"}` : undefined}>
                               <Cell E={E} col={c} row={r} onOpen={navigate} /></td>)}
                             {hasActs && <td className="act" onClick={(e) => e.stopPropagation()}>
-                              {(r.row_actions || []).length > 0 && <Menu items={rowMenu(r)} trigger={(open) => (
+                              {rowMenu(r).length > 0 && <Menu items={rowMenu(r)} trigger={(open) => (
                                 <TriggerButton open={open} />)} />}
                             </td>}
                             {chev && <td className="chev">{clickable && <ChevronRight />}</td>}
