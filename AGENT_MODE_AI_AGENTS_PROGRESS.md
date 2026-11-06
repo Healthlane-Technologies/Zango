@@ -43,6 +43,26 @@ Route `apps/:appId/ai` (sidebar item "AI"), pages under `console/src/pages/app/a
 - [x] Local DB re-imported: zango-app 1.1.40 published (`import_pack(publish_now=True)` from `Zelthy3_projects/local_dev_project`).
 - P2 must implement `act('ai')` in the runtime host (`RenderedPage.tsx`) and the React record/form surfaces for every placement above.
 
+## P2 handoff (start here)
+
+Goal (plan Reference C, P2): the example app builds with working AI buttons and suggestion cards; rebuilds are no-ops.
+Plan detail: `AGENT_MODE_AI_AGENTS_PLAN.html` Step 4 (build), Step 7 (runtime), Reference A (triggers → runtime table, result delivery).
+
+1. **Checker output** (`zango-app-studio/scripts/spec_check.py`): `lint_ai` exists; still to do: resolve `ai` into `spec.resolved.json` and create holes `ai_prompt` (writes `backend/<module>/ai/<code>.system.md` / `.user.md`) and `ai_tool` (custom tools in `tools.py`); custom requirements with `uses_ai` get the agent's inputs/outputs in their hole brief; `--audit-holes` checks prompts use only declared `{{variables}}` and that `uses_ai` holes call each agent.
+2. **Backend runtime** `assets/backend/zas_core/ai.py`: `run(agent, obj, trigger)`, Celery task `zas_ai_run`, models `ZasAiRun` (queued/running/done/failed/unavailable) and `ZasAiSuggestion`, role-checked endpoints (run, status poll, accept/discard, chat with session_id, form assist), built-in tools `zas_read_record` / `zas_search_records` scoped to the acting user, `run_from_code()` for `uses_ai` tasks, fake mode `ZAS_AI_FAKE=1` returning `preview.sample`, event hooks for create/update/transition/tag/delete/schedule. Treat `ProviderNotConnected` / provider None as "unavailable".
+3. **Frontend runtime** `assets/frontend/zas/`: implement `act('ai', …)` in `RenderedPage.tsx` (row menus + list header already call it via zas-render.js), plus React surfaces for record header button, suggestion card, `type: ai` tab/panel, form button / form assist, chat panel, status polling (~2s backoff).
+4. **Platform step** `zango_platform.py ai` (called from `studio_build.py` after sync): placeholder provider `app-llm` via ORM (no key; `is_placeholder` comes in P3 — until then create it disabled/unvalidated and note it), `POST /ai/tools/sync/`, upsert prompts (new version only when text changed), create agents (provider/model/temperature/max_tokens only on create), `.zas/ai_state.json`.
+5. **Skill docs**: zango-app-studio SKILL.md + references for the build agent (prompts, tools, tests with the fake).
+
+Facts for running things:
+- Django tests: `cd backend/test_project && /Users/harshshah/Documents/Zelthy_DEV/Zelthy-V2/zango_venv/bin/python manage.py test --noinput <labels>` (zango_env / zelthy3_venv don't work).
+- Related suites: `zango.tests.apps.app_templates.test_ai_spec test_generic_pack test_spec_tools test_builder test_preview_probe` and `zango.tests.apps.agent_mode.test_zas_render test_kit test_preview_parity test_preview_fidelity test_approval_bundle test_studio_build test_prototype_coverage` (246 green). Pre-existing: 8 failures in `test_skill_plugin`, `studio_report` log noise in `test_studio_build`.
+- Renderer: edit `packs/zango_app/builder/zas-render.js`, then `cd backend/src && PYTHONPATH=. <venv python> -m zango.apps.agent_mode.zas_render --write` (`--check` to verify).
+- Re-import the pack after a version bump: from `/Users/harshshah/Documents/Zelthy_DEV/Zelthy3_projects/local_dev_project`, `manage.py shell -c` with `import_pack(PACKS_DIR/'zango_app', publish_now=True)`.
+- Preview check: copy `app-studio.html` to scratchpad, serve with `python3 -m http.server`, load the example YAML into `src.value` + `parse()` via the Chrome JS tool.
+- Local app with AI data: `EnrollmentAgent` (834cb82a-a5d0-4af9-a0c7-3b5c29d06434). Console at localhost:5173/console needs a login.
+- Commit bundles (`backend/src/zango/assets/console`) with console changes; pre-commit runs ruff-format and detect-secrets (use `# pragma: allowlist secret` on fake keys).
+
 ## Notes / decisions
 
 - Guardrails tab is skipped (classic panel only shows "coming soon"); agent payload doesn't send `guardrails`.
