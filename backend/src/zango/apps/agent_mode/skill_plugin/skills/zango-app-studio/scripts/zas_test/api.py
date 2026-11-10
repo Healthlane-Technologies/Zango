@@ -22,16 +22,27 @@ generator cannot invent (a verified document, a matching PAN), write <ws>/.zas/t
     def values(ctx, entity, role[, params]):           -> dict   extra/override create values (params: the create URL params, e.g. a 360 parent)
     def before_transition(ctx, entity, name, uuid, role)          prepare data (create + verify a document …)
     def transition_values(ctx, entity, name, role)       -> dict   override transition form values
-    def record_for(ctx, entity, role)                    -> uuid   the hero a role should open (bound logins)
+    def record_for(ctx, entity, role)                    -> uuid   the hero a role should open (bound logins);
+                                                                   also the record of an entity nobody adds by hand
+    def record_in(ctx, entity, status, role)             -> uuid   a record in a status only system moves reach
+                                                                   (an AI read, a job); None = walk it as usual
 
 `ctx` offers create(entity, role=None, values=None) -> uuid, run(entity, uuid, transition, role=None)
--> (ok, msg), session(role), record(entity, uuid, role=None) -> row dict.
+-> (ok, msg), session(role), record(entity, uuid, role=None) -> row dict, field(entity, uuid, key) (a link: its pk),
+link(entity, uuid, key) -> the linked object_uuid,
+record_payload(entity, uuid), `with ctx.ai_fake({"<helper>": answer}):` (the AI answers with that), and
+ai_tool(agent, tool, args, role=None, record=None) -> the tool's dict (role None: as the system), and
+ai_settle(entity, uuid) (wait for the record's background AI run; inside `with ctx.ai_fake(...)`).
+A check whose test or fixture crashes is a failure ("test error …"), never a skip.
+
+    smoke        read-only, on the data as it stands: every role lists every entity (also ?zas_raw=1) and
+                 opens 360s on rows it sees. Run after the demo data loads; results are layer "demo".
 Results: <ws>/.zas/test_results.json (layer "api"). Exit 1 when any check fails.
 """
 
 import argparse
 import datetime
-import importlib.util
+import inspect
 import io
 import json
 import os
@@ -171,8 +182,9 @@ class Skip(Exception):
     pass
 
 
-# A check the test could not run (its own crash): reported with the skips, never as an app failure.
-TEST_ERROR = "test could not run (test error, not an app result)"
+# A check the test could not run (its own crash, often a fixture): a failure, so the fix round repairs the
+# test or its fixture. As a skip it hid every check behind it (a whole entity's transitions and 360).
+TEST_ERROR = "test error (fix the test or .zas/test_fixtures.py, not the app)"
 
 
 class Ctx:
@@ -191,10 +203,11 @@ class Ctx:
         p = os.path.join(self.ws, ".zas", "test_fixtures.py")
         if not os.path.exists(p):
             return None
-        spec = importlib.util.spec_from_file_location("zas_test_fixtures", p)
-        m = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(m)
-        return m
+        here = os.path.dirname(p)
+        if here not in sys.path:
+            sys.path.insert(0, here)
+        import test_fixtures
+        return test_fixtures
 
     def login_all(self):
         roles = [r for r in self.M["roles"] if r not in ("AnonymousUsers", "SystemUsers")]
@@ -221,8 +234,8 @@ class Ctx:
             self.add(id, title, role, path, "skip", e)
         except AssertionError as e:  # the app refused what the spec allows (e.g. a create failed)
             self.add(id, title, role, path, "fail", f"{e} {traceback.format_exc(limit=2)[-300:]}")
-        except Exception as e:  # the test itself broke: not a result about the app
-            self.add(id, title, role, path, "skip",
+        except Exception as e:  # the test itself broke: not a result about the app, but never hidden
+            self.add(id, title, role, path, "fail",
                      f"{TEST_ERROR}: {e!r} {traceback.format_exc(limit=2)[-300:]}")
 
     # ----- spec helpers -----
@@ -305,7 +318,7 @@ class Ctx:
         vals = {}
         if self.fixtures and hasattr(self.fixtures, "values"):
             fv = self.fixtures.values
-            takes_params = len(__import__("inspect").signature(fv).parameters) >= 4
+            takes_params = len(inspect.signature(fv).parameters) >= 4
             vals.update((fv(self, ent, role, params) if takes_params else fv(self, ent, role)) or {})
         vals.update(values or {})  # values the test passes explicitly win over fixture defaults
         data, files = {}, {}
@@ -362,6 +375,97 @@ class Ctx:
         if code != 200:
             return None, code
         return j.get("data", self.body(j).get("data") if isinstance(self.body(j), dict) else None) or [], code
+
+    def note(self, ent, uid):
+        """Keep a record a fixture made (the app made it: an AI intake's case) for the UI and design
+        layers, which open 360s on .zas/test_records.json."""
+        uid = str(uid)
+        if uid not in self.made.setdefault(ent, []):
+            self.made[ent].append(uid)
+        return uid
+
+    def record_payload(self, ent, uuid, role="__any__"):
+        """The record drawer payload (contracts §8b): fields, status, tags, transitions, row actions, events."""
+        roles = self.roles() if role == "__any__" else [role]
+        last = None
+        for r in roles:
+            if r not in self.sessions or not self.can(ent, r, "view"):
+                continue
+            code, j = self.get(r, self.ep(ent), action="zas_record", object_uuid=uuid)
+            b = self.body(j) or {}
+            if b.get("access") == "ok":
+                return b
+            last = b.get("access")
+        raise AssertionError(f"{ent} {uuid} not readable ({last})")
+
+    def field(self, ent, uuid, key, role="__any__"):
+        f = next((x for x in self.record_payload(ent, uuid, role)["fields"] if x["key"] == key), None)
+        return None if f is None else f.get("value")
+
+    def link(self, ent, uuid, key, role="__any__"):
+        """The object_uuid a link field points at (field() gives its pk), or None."""
+        f = next((x for x in self.record_payload(ent, uuid, role)["fields"] if x["key"] == key), None)
+        return (f or {}).get("uuid")
+
+    def ai_fake(self, answers=None):
+        """`with ctx.ai_fake({"vendor_screening": {"risk_rating": "high"}}):` every AI helper answers with
+        its spec sample (or the answer given here) instead of calling the AI. Needs DEBUG on the server."""
+        import contextlib
+
+        path = os.path.join(self.ws, ".zas", "ai_fake.json")
+
+        @contextlib.contextmanager
+        def fake():
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump({"*": True, **(answers or {})}, f)
+            try:
+                yield
+            finally:
+                try:
+                    os.remove(path)
+                except OSError:
+                    pass
+        return fake()
+
+    def ai_settle(self, ent, uuid, role=None, timeout=60):
+        """Wait until no AI run is queued or running on the record (every run is a background task,
+        so a save returns before the AI answers). Keep it inside `with ctx.ai_fake(...)`: the worker
+        reads the fake when it runs. Raises AssertionError on timeout (is Celery running?)."""
+        import time as _t
+        who = [role] if role else [r for r in self.roles() if r in self.sessions and self.can(ent, r, "view")]
+        end = _t.time() + timeout
+        while True:
+            busy = False
+            for r in who:
+                code, j = self.get(r, self.ep(ent), action="zas_ai", object_uuid=uuid)
+                if code == 200:
+                    busy = bool((self.body(j) or {}).get("runs"))
+                    break
+            if not busy:
+                return
+            if _t.time() > end:
+                raise AssertionError(f"the AI run on {ent} {uuid} is still queued or running after {timeout}s "
+                                     "(is the Celery worker running?)")
+            _t.sleep(1)
+
+    def ai_tool(self, agent, tool, args=None, role=None, record=None):
+        """Call one of a helper's tools the way its run would (the fake AI never calls tools).
+        role: run as that person (their access and rows); None: as the system, like a task or schedule
+        run. record: the uuid of the helper's record (`acting()["record"]`). Needs DEBUG on the server.
+        Returns the tool's answer (a dict); raises AssertionError when the call itself fails."""
+        a = next((x for x in self.M["ai"]["agents"] if x["code"] == agent), None)
+        assert a, f"no AI helper {agent!r} in the spec"
+        who = role or next((r for r in self.roles() if r in self.sessions), None)
+        data = {"agent": agent, "tool": tool, "input": json.dumps(args or {})}
+        if role is None:
+            data["as"] = "system"
+        if record:
+            data["object_uuid"] = record
+        code, j = self.post(who, self.ep(a["entity"]), {"action": "zas_ai_tool"}, data=data)
+        b = self.body(j) or {}
+        assert code == 200, f"ai_tool {agent}.{tool} as {role or 'system'}: HTTP {code} {str(b.get('message') or j)[:200]}"
+        assert b.get("status") == "success", f"ai_tool {agent}.{tool}: {b.get('status')}: {b.get('error')}"
+        return b.get("output")
 
     def record(self, ent, uuid, role=None):
         for r in [role] if role else self.roles():
@@ -440,10 +544,16 @@ class Ctx:
         return None
 
     def record_in(self, ent, status, values=None, role=None):
-        """A fresh record walked to `status`; Skip with the blocking step when it cannot get there."""
+        """A fresh record walked to `status`; Skip with the blocking step when it cannot get there.
+        A record_in fixture wins: it reaches statuses only system moves lead to (an AI read, a job)."""
+        if self.fixtures and hasattr(self.fixtures, "record_in"):
+            uid = self.fixtures.record_in(self, ent, status, role)
+            if uid:
+                return self.note(ent, uid)
         path = self.path_to(ent, status) if self.E[ent].get("workflow") else []
         if path is None:
-            raise Skip(f"{status} is not reachable from {self.E[ent]['workflow']['initial']} by manual transitions")
+            raise Skip(f"{status} is not reachable from {self.E[ent]['workflow']['initial']} by manual transitions: "
+                       "add a record_in fixture (.zas/test_fixtures.py) that makes one the way the app does")
         uid = self.create(ent, role=role, values=values)
         for name in path:
             good, msg = self.run(ent, uid, name)
@@ -465,7 +575,7 @@ def record_for(C, ent, role, status=None):
     if C.fixtures and hasattr(C.fixtures, "record_for"):
         uid = C.fixtures.record_for(C, ent, role)
         if uid and (status is None or C.status_of(ent, uid) == status):
-            return uid
+            return C.note(ent, uid)
     rows = (C.acc(ent, role) or {}).get("rows")
     if not rows:
         return C.record_in(ent, status) if status else C.create(ent)
@@ -628,7 +738,8 @@ def g_transitions(C):
                 others = [r for r in C.roles() if t["roles"] and r not in t["roles"] and C.can(ent, r, "view")]
                 if others:
                     def t_refused(ent=ent, t=t, fr=fr, role=others[0]):
-                        uid = C.record_in(ent, fr)
+                        # one the refused role can see (a record_for fixture makes it when nobody adds by hand)
+                        uid = record_for(C, ent, role, fr)
                         good, msg = C.run(ent, uid, t["name"], role)
                         return not good, "the transition ran for a role not in its roles"
                     C.check(f"transition.refused.{ent}.{t['name']}.{fr}", f"{t['label']} refused", others[0], path + ".roles", t_refused)
@@ -815,8 +926,8 @@ def g_detail(C):
         holder = {}
 
         def hero_uuid(hero=hero, holder=holder):
-            if "uid" not in holder:
-                holder["uid"] = C.create(hero)
+            if "uid" not in holder:  # nobody adds this hero by hand (the app makes it): the record_for fixture's
+                holder["uid"] = C.create(hero) if C.creators(hero) else record_for(C, hero, (viewers or C.roles())[0])
             return holder["uid"]
 
         for role in C.roles():
@@ -849,10 +960,14 @@ def g_detail(C):
                     if maker and C.fixtures and hasattr(C.fixtures, "record_for"):
                         uid = C.fixtures.record_for(C, hero, maker)  # a scoped creator adds under a hero it can see
                     uid = uid or hero_uuid()
-                    other = C.create(hero)
                     one_hop = (C.E[child].get("parents") or {}).get(t["param"], {}).get("fk")
-                    if not one_hop or not C.creators(child):
-                        raise Skip("two-hop tab or nobody can add the child: listing checked only")
+                    if not t.get("add") or not one_hop or not C.creators(child):
+                        # nothing to add through the tab (add is off, two hops, or the app makes the child): the tab
+                        # must still list under its parent without an error
+                        got, code = C.rows(role, child, **{t["param"]: uid})
+                        return got is not None, f"the tab's list under its parent answered HTTP {code}"
+                    # a second parent: by hand when someone may add one, else made the way the app makes it
+                    other = C.create(hero) if C.creators(hero) else C.record_in(hero, (C.E[hero].get("workflow") or {}).get("initial"))
                     kid = C.create(child, params={t["param"]: uid})
                     got, code = C.rows(role, child, **{t["param"]: uid})
                     ids = {str(r.get("object_uuid")) for r in got or []}
@@ -863,12 +978,51 @@ def g_detail(C):
                     if kid in ids2:
                         return False, "child is listed under another parent: the parent filter is not applied"
                     return True, ""
-                C.check(f"detail.tab.{vcode}.{t['code']}", f"tab {t['label']}: add + list by parent", r0, f"{path}.tabs.{t['code']}", t_tab)
+                C.check(f"detail.tab.{vcode}.{t['code']}", f"tab {t['label']}: lists by parent (adds through it when it can)", r0, f"{path}.tabs.{t['code']}", t_tab)
             if t.get("type") == "timeline" and viewers:
                 def t_tl(t=t, role=viewers[0]):
                     code, j = C.get(role, C.ep(hero), view="detail", action="zas_timeline", object_uuid=hero_uuid(), tab=t["code"])
                     return code == 200 and j.get("success") is not False, f"HTTP {code}"
                 C.check(f"detail.timeline.{vcode}.{t['code']}", f"timeline {t['label']} answers", viewers[0], f"{path}.tabs.{t['code']}", t_tl)
+
+
+def g_smoke(C):
+    """Read-only, on the data as it stands (the demo data the creator opens): every role lists every
+    entity it may view (plain and as the dashboard reads it, ?zas_raw=1) and opens a 360 on a row it
+    sees. Creates nothing. The other groups prove behaviour on their own records; this one catches
+    what the demo loader broke (a 500 on a status column, a record with no owner)."""
+    for ent, E in C.E.items():
+        path = f"entities.{ent}.access"
+        for role in C.roles():
+            if not C.can(ent, role, "view"):
+                continue
+            for raw in (False, True):
+                def t_list(ent=ent, role=role, raw=raw):
+                    rows, code = C.rows(role, ent, **({"zas_raw": 1} if raw else {}))
+                    return rows is not None, f"listing {E['plural']} as {role}{' for the dashboard (?zas_raw=1)' if raw else ''} → HTTP {code}"
+                C.check(f"smoke.list{'.raw' if raw else ''}.{ent}.{slug(role)}",
+                        f"{role} lists {E['plural']}{' (dashboard data)' if raw else ''} on the demo data", role, path, t_list)
+    for vcode, V in (C.M.get("detail_views") or {}).items():
+        hero = V["hero"]
+        for role in C.roles():
+            if (V.get("roles") and role not in V["roles"]) or not C.can(hero, role, "detail"):
+                continue
+
+            def t_360(vcode=vcode, hero=hero, role=role):
+                rows, code = C.rows(role, hero)
+                if rows is None:
+                    return False, f"listing {hero} as {role} → HTTP {code}"
+                if not rows:
+                    raise Skip(f"{role} sees no {hero} in the demo data")
+                bad = []
+                for row in rows[:5]:
+                    code, j = C.get(role, C.ep(hero), view="detail", action="fetch_item_details", object_uuid=row["object_uuid"])
+                    zas = (C.body(j) or {}).get("zas") or {}
+                    if code != 200 or zas.get("access") != "ok" or zas.get("error"):
+                        bad.append(f"{row['object_uuid']}: HTTP {code} access={zas.get('access')} error={zas.get('error')}")
+                return not bad, "; ".join(bad)
+            C.check(f"smoke.detail.{vcode}.{slug(role)}", f"{role} opens {vcode} on the demo data", role,
+                    f"detail_views.{vcode}.roles", t_360)
 
 
 def save_records(ws, made):
@@ -889,13 +1043,14 @@ def slug(s):
 
 
 RUNNERS = {"access": g_access, "create": g_create, "transitions": g_transitions, "tags": g_tags,
-           "row_actions": g_row_actions, "scoping": g_scoping, "detail": g_detail}
+           "row_actions": g_row_actions, "scoping": g_scoping, "detail": g_detail, "smoke": g_smoke}
 
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--workspace", required=True)
-    ap.add_argument("--only", help="comma-separated groups: " + ",".join(GROUPS))
+    ap.add_argument("--only", help="comma-separated groups: " + ",".join(GROUPS) + " (or smoke: read-only, "
+                    "on the demo data; its results are the 'demo' layer)")
     ap.add_argument("--role", action="append", help="limit to checks run as this role (repeatable)")
     ap.add_argument("--dry-run", action="store_true", help="list the planned checks without calling the app")
     a = ap.parse_args(argv)
@@ -915,9 +1070,11 @@ def main(argv=None):
             print(f"{r['id']:<60} {r['role'] or '':<24} {r['title']}")
         print(f"\n{len(C.results)} checks planned")
         return 0
-    save_results(a.workspace, "api", C.results, {"groups": groups})
-    save_records(a.workspace, C.made)
-    print_summary("api", C.results)
+    layer = "demo" if groups == ["smoke"] else "api"  # smoke must not replace the api layer's results
+    save_results(a.workspace, layer, [{**r, "layer": layer} for r in C.results], {"groups": groups})
+    if layer == "api":
+        save_records(a.workspace, C.made)
+    print_summary(layer, C.results)
     return 1 if any(r["status"] == "fail" for r in C.results) else 0
 
 

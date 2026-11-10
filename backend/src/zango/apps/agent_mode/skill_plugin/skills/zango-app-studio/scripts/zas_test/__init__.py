@@ -55,8 +55,9 @@ def save_results(ws, layer, results, meta=None):
         results = [r for r in results if in_scope(r.get("spec_path"), prefixes)]
     data["results"] = [r for r in data.get("results", []) if r.get("layer") != layer
                        or (prefixes and r.get("spec_path") and not in_scope(r["spec_path"], prefixes))] + results
+    # the layer's whole standing after the merge: a scoped re-run must not report 0/0/0 for the layer
     data.setdefault("runs", {})[layer] = {"at": time.strftime("%Y-%m-%d %H:%M:%S"), **(meta or {}),
-                                          "counts": counts(results)}
+                                          "counts": counts([r for r in data["results"] if r.get("layer") == layer])}
     os.makedirs(os.path.dirname(results_path(ws)), exist_ok=True)
     with open(results_path(ws), "w", encoding="utf-8") as f:
         json.dump(data, f, indent=1, ensure_ascii=False, default=str)

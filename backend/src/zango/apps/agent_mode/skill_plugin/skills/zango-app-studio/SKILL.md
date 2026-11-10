@@ -79,7 +79,7 @@ checker's fix. Do not guess intent.
    different app: stop and say so), and `zango_platform.py packages --workspace <ws>` adds any missing
    package (crud 1.0.17+, workflow 1.0.1+).
 4. **Re-run?** If `<ws>/.zas/spec.resolved.json` exists, this is an **update**: keep `hooks.py`, `tasks.py`,
-   `slots/`, `.zas/holes.md` and `.zas/test_users.json`, and regenerate everything else.
+   `slots/`, `.zas/holes.md` and `.zas/test_users.json`, and regenerate everything else (including `backend/zas_registry.py`).
 
 ## Phase 1: Parse and lint
 
@@ -118,6 +118,11 @@ For each module, from `spec.resolved.json`, write in this order:
 | `policies.json` | `references/map/access.md` | `…/policies.json` |
 | `hooks.py`, `tasks.py` | header from `assets/templates/hooks.py.tmpl`; **stubs only** in this phase (`raise NotImplementedError`), so imports work | |
 | `__init__.py` | empty | |
+
+Then (re)write `backend/zas_registry.py` whole: plain relative imports of every entity's model, every
+workflow class and every module's `hooks`, in the dicts `MODELS`, `WORKFLOWS`, `HOOKS`
+(`references/examples/zas_registry.py`). zas_core finds classes and hooks only through it; never load a
+module by name (`importlib`, `__import__`) anywhere in the app.
 
 Register each module in `settings.json` `modules` + `app_routes` (`re_path: "^<module url>/"`).
 Imports from packages use three dots (`from ...packages.crud.base import BaseCrudView`).
@@ -178,6 +183,10 @@ catch backend bugs before the frontend exists.
 4. `src/custom/pages/index.ts` and `src/App.tsx` from `assets/templates/frontend/` (keep the
    scaffold's `appInitializerEndpoint`; add the shell props when the bundle has a `/shell` screen,
    custom-code.md §The app shell). One export per page (`references/map/pages-menus.md`).
+   Write the login copy in `makeLogin({headline, lede})`: the headline is the app's outcome in 3–7
+   strong words with no full stop ("Every prescription, a case in minutes"), never the spec description
+   pasted in; the lede is one sentence on who it serves and what changes for them. No AI, file-type or
+   step-by-step wording in either.
    **Open mode** (`.zas/bundle/prototype/` exists): **port, don't redraw** (`references/open-mode.md`).
    The platform wrote the prototype's stylesheet (`src/custom/prototype.css`, scoped under `.zp`) and
    its source (`.zas/bundle/prototype/source/`). Instead of the shell props, write `src/custom/Shell.tsx`
@@ -197,6 +206,9 @@ catch backend bugs before the frontend exists.
    then `python3 <skill>/scripts/zango_env.py static --workspace <ws>`.
 7. `python3 <skill>/scripts/zango_platform.py appbuilder --workspace <ws>`: routes + per-role menus
    with SVG icons, merged and read back. It fails loudly. Never report an app with unsaved routes.
+   **My Downloads** (`{page: my_downloads}` in a role's menu, the roles that can export) is built here, not by
+   you: a native crud route to `/crud/downloads/my-downloads` and the `CrudDownloadsViewAccess` policy
+   (`zango_platform.py sync`). Write no page or slot for it ([pages-menus](references/map/pages-menus.md) §5).
 8. `python -m zas_test.design --workspace <ws> --only lint` must pass.
 
 List pages and 360 related tabs render `ZasTable` (the preview's toolbar, table, pager), and rows

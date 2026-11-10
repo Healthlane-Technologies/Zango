@@ -194,6 +194,8 @@ prototype:
 - `rebuild: true` (with `why`) rebuilds a standard page from its screen:
   when it shows what the YAML can't say (a stage tracker, a custom list
   row). The page keeps its data, actions and permissions.
+- The platform's own My Downloads page maps as `maps: /system/@my_downloads`
+  (see Roles and menus): never `/pages/@my_downloads`, never a custom page.
 - `menu` on an `only: prototype` screen keeps it in the menu, greyed out,
   under `group` (`roles` limits it to those roles).
 - `not_built: [{text, why}]` lists what the build leaves out of a screen.
@@ -229,6 +231,18 @@ choice_sets:
 
 Icons are lucide icon names. A role only sees pages that are in its menu (or
 reached from one, such as a 360 page) and that its entity access allows.
+
+**My Downloads.** A role that can export (`export` in an entity's `access`)
+needs somewhere to pick up its files. The platform has that page already (the
+crud package's list of the signed-in user's own exports: Report Title,
+Initiated At, Status, File). It is a reserved menu page, **not a page of the
+spec**: give each exporting role `{ page: my_downloads, label: My Downloads,
+icon: download }` as the last item of its menu, and do **not** add it to
+`pages` (no `type: custom`, no slot). A role that cannot export gets no item. The build adds the item to an
+exporting role's menu even if the spec leaves it out (`no_downloads: true` on
+the role opts out), so the preview should show it too.
+Draw it in that persona's prototype menu and map its one screen
+`maps: /system/@my_downloads` (nothing is built or compared for it).
 
 A menu item of a crud page can show a number: `count: true` (the rows of the
 page's entity the role can see) or `count: { where: <expression> }` (those
@@ -756,6 +770,12 @@ The build creates each helper as a Zango AI agent (prompts, tools, output
 format) and wires it to its triggers; the preview simulates it with
 `preview.sample`, so nothing calls an AI while the spec is drafted.
 
+Every helper runs in the background: a save, a click or a chat message
+returns at once, the screen shows it working (a status such as "AI reading",
+a spinner on the record) and shows the answer when it is ready. Write
+requirements that way ("the record shows AI reading, then opens the case"),
+never as a person waiting on the save for the AI.
+
 Write a helper when the brief asks the app to read, sort, summarise, draft or
 answer. Plain rules ("flag invoices over 1 lakh") stay expressions or
 custom requirements: AI is for judgement on text and documents.
@@ -846,6 +866,28 @@ detail_views:
 **Tools.** `{use: search_records | read_record, entity}` lets it look up
 records (scoped to the person it runs for); `{code, text, safety}` asks the
 build for a custom tool (`safety`: read_only, write, external).
+
+A custom tool is app code the helper can call while it works, so it can do
+anything the app can: look records up in a particular way (similar names,
+open items of a customer), create or update records, move a record through
+its workflow, or call an outside service. Give a helper tools when it has to
+fetch or act *before* it can answer — "find the existing patient (names may be
+spelled differently), else create one, then open the case" — rather than only
+returning fields for code to use. In `text`, say what the tool does, what it
+takes and what it returns; the build writes it with the same rules as the
+app's screens (access, workflow, owner).
+
+```yaml
+      tools:
+        - { code: find_patient, safety: read_only,
+            text: "Patients whose name is close to the one given (spelling, initials, punctuation); with date of birth and phone when shown. Returns id, code, name and how close." }
+        - { code: open_case, safety: write,
+            text: "Open a case for this prescription and the chosen patient (or a new patient from the prescription's details); returns the case code." }
+```
+
+When the helper only reads or classifies and plain code can act on its answer
+reliably (a fixed rule), keep the action in a custom requirement with
+`uses_ai` instead.
 
 **Access.** `access.roles` may run it and see its results; buttons and chat
 default to these roles.

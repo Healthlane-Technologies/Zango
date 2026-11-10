@@ -1128,7 +1128,6 @@ ai:
       review: suggest
       triggers:
         - { event: form_assist, from: [file], label: Fill from PDF, roles: [Vendor User] }
-      run: inline
       acceptance:
         - Uploading a clear invoice PDF fills invoice number, date and amount, and the vendor can change them before saving.
         - A value missing from the PDF stays empty.

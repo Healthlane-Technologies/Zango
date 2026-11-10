@@ -130,13 +130,11 @@ d = (zr.display(decimal.Decimal("1234567.5"), "money"), zr.display(-950, "money"
      zr.display(datetime.date(2026, 10, 9), "date"), zr.display(12.345, "percent"))
 check("display formats", d == ("₹12,34,567.50", "-₹950.00", "", "09 Oct 2026", "12.3%"), d)
 # every module imports (zango.core.api is stubbed in the temp tree)
-import importlib
-for m in ("access", "app_user", "dupes", "mixins", "detail", "notify", "ai"):
-    try:
-        importlib.import_module(f"app.backend.zas_core.{m}")
-        check(f"import zas_core.{m}", True)
-    except Exception as e:
-        check(f"import zas_core.{m}", False, repr(e))
+try:
+    from app.backend.zas_core import access, ai, app_user, detail, dupes, mixins, notify  # noqa: F401
+    check("import zas_core modules", True)
+except Exception as e:
+    check("import zas_core modules", False, repr(e))
 # workflow mixin: a tag side the spec leaves out (or a system tag) must be refused
 from app.backend.zas_core import mixins
 ent = {"module": "m", "workflow": {"statuses": [{"code": "draft"}], "transitions": [], "tags": [

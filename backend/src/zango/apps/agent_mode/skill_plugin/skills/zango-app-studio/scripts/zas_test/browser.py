@@ -89,6 +89,23 @@ class RolePage:
         self.ctx.close()
 
 
+def visible_uids(M, entity, session, uids, limit=12):
+    """Records the session's role can see, to compare a screen on: first the ones the tests created, then
+    the rest of the table (sample data in other states), at most `limit`. A screen that depends on a record's
+    state (a Rejected candidate has no stage buttons) is then compared on a record in the approved state,
+    not on whichever one sorts first."""
+    mine = list(reversed(uids))
+    try:
+        ep = M["entities"][entity]["names"]["endpoint"]
+        j = session.get(ep, params={"view": "table", "action": "get_table_data", "start": 0, "length": 200}).json()
+        rows = j.get("data") or ((j.get("response") or {}).get("data") if isinstance(j.get("response"), dict) else None) or []
+        seen = [str(x.get("object_uuid")) for x in rows if x.get("object_uuid")]
+        out = [u for u in mine if u in seen] + [u for u in seen if u not in mine]
+    except Exception:
+        out = mine
+    return out[:limit]
+
+
 def visible_uid(M, entity, session, uids):
     """The newest record in `uids` the session's role can see (row scoping), else the first it can see."""
     uid = uids[-1] if uids else None
@@ -102,6 +119,12 @@ def visible_uid(M, entity, session, uids):
     except Exception:
         pass
     return uid
+
+
+# A 360 has opened: the kit's header, a state box, or a rebuilt screen's root (Detail360 wraps the
+# ported prototype screen in [data-zas=page][data-zas-rebuild]; it has no kit header).
+DETAIL_READY = '[data-zas="header"], [data-zas="empty"], [data-zas="page"][data-zas-rebuild]'
+DETAIL_ROOT = '[data-zas="header"], [data-zas="page"][data-zas-rebuild]'
 
 
 def rebuilt(M, kind, code):

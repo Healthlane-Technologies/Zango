@@ -142,6 +142,11 @@ class ZasTableMixin:
         req = getattr(self, "request", None)
         if req is None and getattr(self, "crud_view_instance", None) is not None:
             req = getattr(self.crud_view_instance, "request", None)
+        # An export runs in a Celery worker: no session, so no current role. The crud export task hands
+        # the table the role it was started with; without this every role-scoped query is empty.
+        role = getattr(self, "user_role", None)
+        if req is not None and role is not None and not getattr(req, "_zas_role_name", None):
+            req._zas_role_name = role.name
         return req
 
     def get_table_data_queryset(self):
@@ -221,9 +226,9 @@ class ZasTableMixin:
                 obj = d["obj"]
                 links = {}
                 for f in fks:
-                    rel = getattr(obj, f.name, None)
-                    if rel is not None and getattr(rel, "object_uuid", None):
-                        links[f.name] = str(rel.object_uuid)
+                    linked = getattr(obj, f.name, None)  # not `rel`: that is the related-rows dict below
+                    if linked is not None and getattr(linked, "object_uuid", None):
+                        links[f.name] = str(linked.object_uuid)
                 z = {"links": links}
                 if has_wf:
                     z["status"] = zx.current_status(obj)
@@ -494,6 +499,12 @@ class ZasFormMixin:
                 pre = {}
             for k, v in (pre if isinstance(pre, dict) else {}).items():
                 if k in self.fields and v not in (None, ""):
+                    if "PhoneNumber" in type(self.fields[k]).__name__:
+                        # the crud phone widget reads .national_number: give it a PhoneNumber, or nothing
+                        from phonenumber_field.phonenumber import to_python as to_phone
+                        v = to_phone(str(v))
+                        if v is None or not v.is_valid():
+                            continue
                     self.fields[k].initial = v
                     self.initial[k] = v
 
@@ -663,10 +674,9 @@ class ZasFormMixin:
         return cleaned
 
     def save(self, commit=True):
-        creating = not self._zas_is_edit
+        creating, req = not self._zas_is_edit, self._zas_req
         obj = super().save(commit=commit)
         if commit and creating:
-            req = self._zas_req
             fn = f"{self.zas_entity}__on_create"
             h = _hook(self.zas_entity, fn) if (self._E["form"].get("create") or {}).get("on_create") else None
             if h is not None:
@@ -893,7 +903,8 @@ class ZasCrudViewMixin:
         return super().get(request, *args, **kwargs)
 
     # ---- AI helpers (zas_core/ai.py): ?action=zas_ai (GET: what a record shows / poll a run),
-    # POST ?action=zas_ai_run | zas_ai_accept | zas_ai_discard | zas_ai_chat | zas_ai_form ----
+    # POST ?action=zas_ai_run | zas_ai_accept | zas_ai_discard | zas_ai_chat | zas_ai_form
+    # (+ zas_ai_tool, test-only under DEBUG) ----
     def _zas_ai_obj(self, request, uid):
         uid = access.clean_uuid(uid)
         qs = access.scope_queryset(self.zas_entity, self.model.objects.all(), request)
@@ -943,6 +954,22 @@ class ZasCrudViewMixin:
             a = zai.agent(P.get("agent") or "")
             if a.get("entity") != self.zas_entity:
                 return bad("This AI helper does not work here.")
+            if op == "tool":  # test-only (zas_test ctx.ai_tool): DEBUG servers, like the fake AI
+                from django.conf import settings
+                if not settings.DEBUG:
+                    return bad("Not found.", 404)
+                system = P.get("as") == "system"  # as a task / schedule run: no person, every row
+                if not system and not zai.can_run(a, role):
+                    return bad("You can't use this AI helper.", 403)
+                obj = None
+                if P.get("object_uuid"):
+                    uid = access.clean_uuid(P["object_uuid"])
+                    obj = (self.model.objects.filter(object_uuid=uid).first() if system and uid
+                           else self._zas_ai_obj(request, P["object_uuid"]))
+                    if obj is None:
+                        return bad("Record not found.", 404)
+                return get_api_response(True, zai.call_tool(a["code"], P.get("tool") or "", json.loads(P.get("input") or "{}"),
+                                                            request=None if system else request, obj=obj), 200)
             if op == "form":
                 trig = next(iter(zai.triggers(a, "form_assist") + zai.triggers(a, "button", "form")), None)
                 if trig is None or not zai.can_run(a, role, trig):
@@ -981,7 +1008,7 @@ class ZasCrudViewMixin:
 
     def post(self, request, *args, **kwargs):
         act = request.GET.get("action") or ""
-        if act.startswith("zas_ai_") and act[7:] in ("run", "accept", "discard", "chat", "form"):
+        if act.startswith("zas_ai_") and act[7:] in ("run", "accept", "discard", "chat", "form", "tool"):
             return self._zas_ai(request, act[7:])
         if request.GET.get("form_type") == "create_form" and not request.GET.get("form_action"):
             if not self.display_add_button_check(request):

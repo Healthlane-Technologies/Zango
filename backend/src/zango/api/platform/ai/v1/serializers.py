@@ -765,7 +765,9 @@ class AppLLMAgentCreateSerializer(serializers.Serializer):
     output_schema = serializers.ChoiceField(
         choices=["JSON", "Text", "Markdown"], required=False, default="Text"
     )
-    output_json_schema = serializers.JSONField(required=False, default=None)
+    output_json_schema = serializers.JSONField(
+        required=False, allow_null=True, default=None
+    )
     tools = serializers.ListField(
         child=serializers.CharField(), required=False, default=list
     )

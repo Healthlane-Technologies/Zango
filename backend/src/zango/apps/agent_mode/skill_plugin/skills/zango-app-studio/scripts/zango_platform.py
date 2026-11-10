@@ -225,9 +225,40 @@ def cmd_roles(P, M, log):
     return have
 
 
+def _policy(P, name):
+    pols = records(P.get(f"/api/v1/apps/{P.uuid}/policies/", search=name, page_size=1000), "policies")
+    return next((p for p in pols if p.get("name") == name), None)
+
+
+def _role_ids(pol):
+    return {int(x["id"]) if isinstance(x, dict) else int(x) for x in (pol.get("roles") or [])
+            if (isinstance(x, dict) and str(x.get("id", "")).isdigit()) or str(x).isdigit()}
+
+
+def attach_my_downloads(P, M, log):
+    """The crud package's downloads policy (packages/crud/downloads/policies.json) goes to every role whose
+    menu has My Downloads, i.e. the roles that can export. The PUT replaces the policy's roles: send them all."""
+    dl = M.get("my_downloads")
+    if not dl or not dl.get("roles"):
+        return
+    pol = _policy(P, dl["policy"])
+    if not pol:
+        raise PlatformError(f"policy {dl['policy']} not found: is the crud package installed and synced?")
+    have = P.roles()
+    want = {int(have[r]["id"]) for r in dl["roles"] if r in have}
+    cur = _role_ids(pol)
+    if want <= cur:
+        log(f"{dl['policy']} already covers {', '.join(dl['roles'])}")
+        return
+    files = [("id", (None, str(pol["id"])))] + [("roles", (None, str(i))) for i in sorted(cur | want)]
+    P.put(f"/api/v1/apps/{P.uuid}/policies/{pol['id']}/", files=files)
+    log(f"{dl['policy']}: roles set to {sorted(cur | want)} ({', '.join(dl['roles'])})")
+
+
 def cmd_sync(P, M, log):
     P.post(f"/api/v1/apps/{P.uuid}/policies/", params={"action": "sync_policies"}, files={"_": ("", "")})
     log("policies synced")
+    attach_my_downloads(P, M, log)
     try:
         P.post(f"/api/v1/apps/{P.uuid}/tasks/")
         log("tasks synced")
@@ -329,6 +360,11 @@ def page_routes(M):
             path = p["route"]
         out.append((code, {"name": p.get("title") or code, "path": path, "page_type": "custom",
                            "component": p["export"], "icon_name": p.get("icon")}))
+    dl = M.get("my_downloads")
+    if dl and dl.get("roles"):
+        # the crud package's own page of finished exports: AppBuilder's native crud renderer, no React export
+        out.append(("my_downloads", {"name": "My Downloads", "path": dl["route"], "page_type": "crud",
+                                     "extra_params": {"api_endpoint": dl["endpoint"]}, "icon_name": "download"}))
     out.append(("__zas", {"name": "Style guide", "path": "/app/__zas", "page_type": "custom",
                           "component": "ZasStyleGuide", "icon_name": "layers"}))
     return out
@@ -363,10 +399,10 @@ def cmd_appbuilder(P, M, log):
     for code, rt in wanted:
         icon = _svg(icons, rt.pop("icon_name") or menu_icon_for(M, code) or FALLBACK_ICON)
         r = by_path.get(rt["path"], {})
-        by_path[rt["path"]] = {**r, **rt, "icon": icon, "extra_params": r.get("extra_params") or {}}
+        by_path[rt["path"]] = {**r, **rt, "icon": icon, "extra_params": {**(r.get("extra_params") or {}), **(rt.get("extra_params") or {})}}
     call("/routes/api/", "save_routes", "POST", {"routes": list(by_path.values())})
     saved = {r["path"]: r for r in (call("/routes/api/", "get_routes") or {}).get("routes", [])}
-    bad = [rt["path"] for _, rt in wanted if rt["path"] not in saved or saved[rt["path"]].get("component") != rt["component"]]
+    bad = [rt["path"] for _, rt in wanted if rt["path"] not in saved or saved[rt["path"]].get("component") != rt.get("component")]
     if bad:
         raise PlatformError(f"routes not saved as sent: {bad}")
     log(f"routes saved: {len(wanted)} spec routes ({len(saved)} total)")
@@ -387,7 +423,7 @@ def cmd_appbuilder(P, M, log):
             if not rt:
                 log(f"  {name}: menu page {p!r} has no route (detail page?) - skipped")
                 return None
-            return {"route_id": rt["route_id"], "name": i.get("label") or M["pages"][p].get("title") or p,
+            return {"route_id": rt["route_id"], "name": i.get("label") or (M["pages"].get(p) or {}).get("title") or ("My Downloads" if p == "my_downloads" else p),
                     "uri": rt["path"], "icon": _svg(icons, i.get("icon") or menu_icon_for(M, p) or inherited_icon or FALLBACK_ICON),
                     "children": []}
         for it in r.get("menu", []):
@@ -716,6 +752,14 @@ def cmd_check(P, M, log):
         names = {x.get("name") if isinstance(x, dict) else x for x in pr}
         if pr and names != roles and not roles <= names:
             problems.append(f"policy {name}: roles {sorted(names)} != spec {sorted(roles)}")
+    dl = M.get("my_downloads")
+    if dl and dl.get("roles"):
+        pol = got.get(dl["policy"]) or {}
+        names = {x.get("name") if isinstance(x, dict) else x for x in (pol.get("roles") or [])}
+        if not pol:
+            problems.append(f"policy not synced: {dl['policy']} (My Downloads)")
+        elif not set(dl["roles"]) <= names:
+            problems.append(f"policy {dl['policy']}: roles {sorted(names)} lack {sorted(set(dl['roles']) - names)} (My Downloads)")
     if problems:
         raise PlatformError("check failed:\n  " + "\n  ".join(problems))
     log(f"check OK: {len(M['roles'])} roles, {len(want)} policies")

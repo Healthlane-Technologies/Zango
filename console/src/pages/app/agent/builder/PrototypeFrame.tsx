@@ -48,7 +48,8 @@ type FromProto =
 			roleLabel?: string;
 			record?: string | number | null;
 	  }
-	| { source: 'zas-proto'; type: 'error'; part?: string; message?: string };
+	| { source: 'zas-proto'; type: 'error'; part?: string; message?: string }
+	| { source: 'zas-proto'; type: 'brand'; value: string };
 
 /** What the chat sends with a reply: the screen and persona the user was on. */
 export function protoFocus(at: Extract<FromProto, { type: 'location' }>): PreviewFocus {
@@ -71,6 +72,9 @@ export function PrototypeFrame({
 	goto,
 	className,
 	soon,
+	onBrand,
+	baseline,
+	go,
 }: {
 	appId: string;
 	reqId: string;
@@ -82,16 +86,33 @@ export function PrototypeFrame({
 	className?: string;
 	/** The requirement's prototype_soon: the greyed menu items changed, so the page reloads. */
 	soon?: string;
+	/** The colour picker beside "Viewing as" picked a brand colour (save it to app.theme.primary). */
+	onBrand?: (hex: string) => void;
+	/** Show the app's current version (before this change) instead of the change's own prototype. */
+	baseline?: boolean;
+	/** Open this screen now (a "changed" chip was clicked); `n` makes the same screen fire again. */
+	go?: { screen: string; n: number } | null;
 }) {
-	const page = usePrototypeHtml(appId, reqId, revision, soon);
+	const page = usePrototypeHtml(appId, reqId, revision, soon, baseline);
 	const frame = useRef<HTMLIFrameElement>(null);
 	// Where the user is, so the page reopens there after the agent's next write.
 	const place = useRef<ProtoPlace | null>(goto ?? null);
 	const onFocusRef = useRef(onFocus);
 	onFocusRef.current = onFocus;
+	const onBrandRef = useRef(onBrand);
+	onBrandRef.current = onBrand;
 	const [failure, setFailure] = useState<{ part?: string; message?: string } | null>(null);
 	const stage = useRef<HTMLDivElement>(null);
 	const fit = useFit(stage, !!page.data);
+
+	useEffect(() => {
+		if (!go?.screen) return;
+		place.current = { screen: go.screen };
+		frame.current?.contentWindow?.postMessage(
+			{ source: 'zango-console', type: 'goto', screen: go.screen },
+			'*',
+		);
+	}, [go]);
 
 	useEffect(() => {
 		const onMessage = (event: MessageEvent) => {
@@ -110,6 +131,8 @@ export function PrototypeFrame({
 				onFocusRef.current?.(protoFocus(msg));
 			} else if (msg.type === 'error') {
 				setFailure({ part: msg.part, message: msg.message });
+			} else if (msg.type === 'brand' && /^#[0-9a-f]{6}$/i.test(msg.value)) {
+				onBrandRef.current?.(msg.value);
 			}
 		};
 		window.addEventListener('message', onMessage);
@@ -154,10 +177,11 @@ export function PrototypeFrame({
 					/>
 				</div>
 			) : !revision ? (
-					<div className="p-6 text-t3">
-						No prototype yet. Ask the agent to draw the screens from your screenshots or notes, or to import your HTML file.
-					</div>
-				) : page.isLoading ? (
+				<div className="p-6 text-t3">
+					No prototype yet. Ask the agent to draw the screens from your screenshots or notes, or to
+					import your HTML file.
+				</div>
+			) : page.isLoading ? (
 				<div className="grid gap-3 p-4">
 					<Skeleton width="40%" height={18} />
 					<Skeleton height={320} />

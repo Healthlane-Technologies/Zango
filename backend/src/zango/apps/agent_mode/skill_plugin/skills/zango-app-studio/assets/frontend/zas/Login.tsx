@@ -3,6 +3,8 @@
 // own PasswordLoginForm / RoleSelection / PasswordResetRequired (never hand-rolled;
 // references/zango/entity-360.md and references/zango/frontend/auth-login.md).
 // Wire it in App.tsx: authConfig={{ customComponents: { LoginPage: ZasLogin } }}
+// The headline is the build agent's to write (a short outcome line, App.tsx `zasLogin`);
+// without one, the description is split: its first short sentence leads, the rest supports.
 import { useState } from "react";
 // @ts-ignore - auth exports are missing from the shipped type declarations
 import { PasswordLoginForm, RoleSelection, PasswordResetRequired, authService, getNextParam, getValidRedirectUrl } from "@zango-core/appbuilder";
@@ -64,8 +66,25 @@ const goAfterAuth = (result: any) => {
 };
 const initials = (s: string) => s.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 const FEAT_ICONS = [Layers, Workflow, ShieldCheck];
+const HEADLINE_MAX = 64;
+const clip = (s: string, n: number) => (s.length <= n ? s : s.slice(0, n).replace(/\s+\S*$/, "") + "…");
 
-export default function ZasLogin() {
+/** A short headline and a supporting line from the spec, when the build gave none. */
+function heroCopy(name: string, description: string, feats: any[]) {
+  const text = (description || "").replace(/\s+/g, " ").trim();
+  const [first, ...rest] = text.split(/(?<=[.!?])\s+/);
+  const lead = (first || "").replace(/[.]$/, "");
+  const roleLine = `One place for ${feats.map((m) => m.name.toLowerCase()).join(", ") || "your team's work"}, with each person seeing exactly what their role needs.`;
+  if (lead && lead.length <= HEADLINE_MAX) return { headline: lead, lede: clip(rest.join(" "), 200) || roleLine };
+  return { headline: name, lede: clip(text, 200) || roleLine };
+}
+
+export type ZasLoginCopy = { headline?: string; lede?: string };
+
+/** `makeLogin({headline, lede})` in App.tsx: the login with copy written for this app. */
+export const makeLogin = (copy: ZasLoginCopy) => (props: any) => <ZasLogin {...props} {...copy} />;
+
+export default function ZasLogin({ headline, lede }: ZasLoginCopy = {}) {
   applyTheme();
   const [step, setStep] = useState<"login" | "reset" | "role">("login");
   const [roles, setRoles] = useState<any[]>([]);
@@ -107,6 +126,8 @@ export default function ZasLogin() {
   const handleRole = async (role: any) => goAfterAuth(await authService.selectRole(role.id));
 
   const feats = (app.modules || []).slice(0, 3);
+  const auto = heroCopy(app.name, app.description, feats);
+  const hero = { headline: headline || auto.headline, lede: lede || auto.lede };
   return (
     <div className="zas-login" data-zas="login">
       <style>{CSS}</style>
@@ -115,8 +136,8 @@ export default function ZasLogin() {
           <div className="mark"><i>{initials(app.name)}</i>{app.name}</div>
           <div>
             <div className="eyebrow">{app.name}</div>
-            <h1>{app.description || `Welcome to ${app.name}`}</h1>
-            <p className="lede">One place for {feats.map((m) => m.name.toLowerCase()).join(", ") || "your team's work"}, with each person seeing exactly what their role needs.</p>
+            <h1>{hero.headline}</h1>
+            <p className="lede">{hero.lede}</p>
           </div>
           {app.roles?.length > 0 && <div className="band" aria-label="Built for">{app.roles.map((r) => <span key={r.name}>{r.name}</span>)}</div>}
           <div className="feats">

@@ -28,8 +28,8 @@ backend imports cleanly, and before testing.
 | a requirement with `uses_ai` | as above | calls `run_from_code("<code>", obj=…, variables={"input": …})`; carries on when the result is `unavailable` |
 
 The `Target` column of holes.md gives the file and function. Copy the name and signature
-exactly, because the runtime looks hooks up by name (`zs.hook(module, fn)`). A typo is
-not an import error. It shows up as "not implemented yet" in the log and the UI.
+exactly, because the runtime looks hooks up by name (`zs.hook(module, fn)`) on the module's
+`hooks` in `backend/zas_registry.py` `HOOKS`. A typo is not an import error. It shows up as "not implemented yet" in the log and the UI.
 
 ## The rules
 
@@ -64,7 +64,8 @@ not an import error. It shows up as "not implemented yet" in the log and the UI.
    with what is missing. Never invent an endpoint or credentials. Secrets: `references/zango/core/secrets.md`. <!-- pragma: allowlist secret -->
 9. **Imports.** Inside a module, use `from .models import …`. For another module, import inside the
    function (`from ..procurement.models import PurchaseOrder`) to avoid import cycles. hooks.py
-   never imports `views`, `tables` or `forms`.
+   never imports `views`, `tables` or `forms`. Never load a module by name (`importlib`,
+   `__import__`): every import is a plain `import` / `from … import` line.
 10. **Performance.** `column` hooks run per row and `computed` hooks run on every save: one aggregate
     query each, no loops over related rows. If a value is expensive, store it in a field and update it
     from the child's save/transition hook, then say so in the hole row.
@@ -82,6 +83,12 @@ not an import error. It shows up as "not implemented yet" in the log and the UI.
   styles, no new CSS files. `design.py lint` fails the build on them ([design-system](design-system.md)).
   **Exception: a screen the user approved in the preview** (its hole says "Approved look") is built
   to look like its screenshot. Its slot may use inline styles and any colour its `sketch.js` uses.
+- **Activity and status are never hand-drawn.** A record's history is `<Timeline events={...}/>` fed by
+  `api.fetchTimeline(endpoint, uuid, tab)` (the audit log and the workflow transactions, merged): each move
+  shows its from → to status as `Badge`s in the statuses' own colours, and each edit lists its field changes
+  as old → new chips. A status anywhere (a cell, a header, a filter chip) is `<Badge label tone>` with the
+  tone from `SPEC.entities.<e>.statuses`, never plain text or one colour for all. A hand-written `<ul>`
+  of "Moved to X" lines hides what changed.
 - **Writes** go through `api.runTransition / runTag / runRowAction` or `FormDialog`, then
   `props.refresh()` so header and stats update.
 - **Custom pages** (`type: custom`) are full slots rendered by `makeCustomPage`. A page that needs

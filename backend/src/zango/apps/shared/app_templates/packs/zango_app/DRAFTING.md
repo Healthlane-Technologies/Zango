@@ -165,7 +165,11 @@ more the build writes by hand:
    `acceptance`, or a transition's `on_done`.
 
 "Let the app draft / read / sort / summarise this" is an AI helper under
-`ai.agents` (SCHEMA.md, `ai`), not a custom requirement.
+`ai.agents` (SCHEMA.md, `ai`), not a custom requirement. When the helper must
+look something up or act as it works (match to an existing record that may be
+spelled differently, create or move records), give it `tools` (SCHEMA.md,
+`ai` → Tools) and decide with the user what it does when unsure (ask a person,
+send to review).
 
 Only when nothing declarative fits, use a custom screen with a precise `text`
 for the build and a `preview` function that sketches it from the demo data, so

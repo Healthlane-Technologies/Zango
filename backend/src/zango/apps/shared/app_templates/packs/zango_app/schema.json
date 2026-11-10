@@ -222,7 +222,7 @@
               },
               "maps": {
                 "type": "string",
-                "pattern": "^/(pages|detail_views)/@[A-Za-z0-9_]+$"
+                "pattern": "^/(pages|detail_views)/@[A-Za-z0-9_]+$|^/system/@my_downloads$"
               },
               "only": {
                 "type": "string",
@@ -1575,6 +1575,9 @@
         },
         "landing": {
           "type": "string"
+        },
+        "no_downloads": {
+          "type": "boolean"
         },
         "menu": {
           "type": "array",
@@ -3155,7 +3158,7 @@
             "async",
             "inline"
           ],
-          "description": "async (default for record events): in the background; inline: the person waits for it."
+          "description": "Always async: every run is a background task the screen polls (inline is refused by the checks: an agent never runs while a request waits)."
         },
         "memory": {
           "type": "object",

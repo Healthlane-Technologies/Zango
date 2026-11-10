@@ -88,8 +88,10 @@ LAYERS = (
     ("design", "zas_test.design", True, True),
     ("scenarios", "zas_test.scenarios", False, True),
 )
+# "gallery" (the shipped goldens) checks the runtime's own default look, not this app: it runs in the
+# skill's self-test (zas_test.design --only gallery), never in a user's build, where the approved
+# design is the contract (tokens, parity, style).
 DESIGN_BROWSER_GROUPS = (
-    "gallery",
     "tokens",
     "tree",
     "layout",
@@ -1730,13 +1732,34 @@ class StudioBuild:
             if demo:  # the screens were compared on test records: the loader's failure is the build's to fix
                 layers[name].failures.append(demo)
                 layers[name].status = "fail"
-        if any(
+        rerun_demo = only is not None and "demo" in only
+        if rerun_demo or any(
             layers.get(n) and layers[n].status != "skip" for n in ("api", "scenarios")
         ):
-            self.load_demo_data(
-                emit
-            )  # the tests left their records: the creator opens the demo data
+            # the tests left their records: the creator opens the demo data. Then prove the app still
+            # works on it: nothing tested the demo data before, and a loader that broke the status rows
+            # shipped an app whose Cases list answered 500.
+            failed = self.load_demo_data(emit)
+            if failed or (Path(self.workspace) / "backend" / "demo_data.py").is_file():
+                layers["demo"] = self._demo_layer(
+                    failed, emit, reachable and users_ok and bring_up_ok
+                )
         return layers
+
+    def _demo_layer(self, failed, emit, app_ok) -> LayerResult:
+        """The demo data loads clean and every role can list and open it (zas_test.api --only smoke)."""
+        if failed:
+            return LayerResult(
+                name="demo",
+                status="fail",
+                counts={"pass": 0, "fail": 1, "skip": 0},
+                failures=[failed],
+            )
+        if not app_ok:
+            return LayerResult(
+                name="demo", status="skip", reason="the app is not reachable"
+            )
+        return self._run_layer("demo", "zas_test.api", ["smoke"], emit)
 
     def load_demo_data(self, emit=None) -> dict | None:
         """Open mode: ``backend/demo_data.py`` replaces the app's records with the prototype's sample data

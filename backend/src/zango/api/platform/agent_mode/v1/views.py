@@ -335,10 +335,18 @@ class AgentRunDetailView(ZangoGenericPlatformAPIView, TenantMixin):
                     f"/api/v1/apps/{app_uuid}/agent-mode/runs/{run.object_uuid}/report.html"
                 )
             if run.requires_restart:
-                data["restart_hint"] = (
-                    "Model, task or settings files changed. Restart the app "
-                    "server and any Celery workers to load the new code."
-                )
+                from django.conf import settings as dj
+
+                if getattr(dj, "AGENT_MODE_RESTART_SIGNAL_FILE", ""):
+                    data["restart_hint"] = (
+                        "Model, task or settings files changed. The app worker "
+                        "was signalled to restart and load the new code."
+                    )
+                else:
+                    data["restart_hint"] = (
+                        "Model, task or settings files changed. Restart the app "
+                        "server and any Celery workers to load the new code."
+                    )
             # Where to actually open the app. Paired with the test users, this
             # is the whole hand-off: credentials are useless without a link.
             try:
@@ -872,7 +880,7 @@ def _seed_preview_mode(requirement, asked) -> None:
     previous = (
         AgentRequirement.objects.filter(status=RequirementStatus.APPROVED)
         .order_by("-approved_at", "-created_at")
-        .only("preview_mode", "prototype_parts", "prototype_hash")
+        .only("preview_mode", "prototype_parts", "prototype_hash", "prototype_revision")
         .first()
     )
     from zango.apps.agent_mode.template_mode import is_direct
@@ -882,11 +890,15 @@ def _seed_preview_mode(requirement, asked) -> None:
     if previous and previous.prototype_parts:
         requirement.prototype_parts = dict(previous.prototype_parts)
         requirement.prototype_hash = previous.prototype_hash
+        # The console shows "No prototype yet" for revision 0: a change starts on the approved
+        # prototype, so it starts on that prototype's revision (never 0 while there are parts).
+        requirement.prototype_revision = previous.prototype_revision or 1
     elif is_direct(template) and not requirement.prototype_parts:
         from zango.apps.agent_mode.prototype_kit import open_spec
 
         requirement.prototype_parts = dict(template.prototype_parts)
         requirement.prototype_hash = template.prototype_hash
+        requirement.prototype_revision = requirement.prototype_revision or 1
         if requirement.spec_markdown:
             requirement.spec_markdown = open_spec(
                 requirement.spec_markdown, requirement.prototype_parts
@@ -1282,6 +1294,27 @@ class AgentRequirementSpecView(ZangoGenericPlatformAPIView, TenantMixin):
 
 
 @method_decorator(set_app_schema_path, name="dispatch")
+class AgentRequirementThemeView(ZangoGenericPlatformAPIView, TenantMixin):
+    """POST requirements/{uuid}/theme/ — {primary}: the preview's colour picker sets the brand
+    colour (app.theme.primary) without an agent turn."""
+
+    def post(self, request, app_uuid, requirement_uuid, *args, **kwargs):
+        from zango.apps.agent_mode.template_spec import set_brand
+
+        try:
+            _bind_tenant(self, app_uuid)
+            try:
+                requirement = AgentRequirement.objects.get(object_uuid=requirement_uuid)
+            except AgentRequirement.DoesNotExist:
+                return get_api_response(False, {"message": "not found"}, 404)
+            code, payload = set_brand(requirement, request.data.get("primary"))
+            return get_api_response(code == 200, payload, code)
+        except Exception as exc:  # noqa: BLE001
+            log.exception("agent_mode: brand colour save failed")
+            return get_api_response(False, {"message": str(exc)}, 500)
+
+
+@method_decorator(set_app_schema_path, name="dispatch")
 class AgentRequirementSpecValidateView(ZangoGenericPlatformAPIView, TenantMixin):
     """POST requirements/{uuid}/spec/validate/ — check YAML without saving it.
 
@@ -1409,6 +1442,7 @@ class AgentRequirementPrototypeView(ZangoGenericPlatformAPIView, TenantMixin):
             assemble,
             soon_digest,
             soon_menu,
+            theme_brand,
         )
 
         try:
@@ -1418,7 +1452,25 @@ class AgentRequirementPrototypeView(ZangoGenericPlatformAPIView, TenantMixin):
                 return get_api_response(False, {"message": "not found"}, 404)
             parts, digest = req.prototype_parts, req.prototype_hash
             spec_text = req.spec_markdown
-            version = request.GET.get("v")
+            if request.GET.get("baseline"):
+                # the current app, before this change (the change edits a copy; this is never written)
+                from zango.apps.agent_mode.prototype_changes import (
+                    current_app_requirement,
+                )
+
+                base = current_app_requirement(req)
+                if base is None:
+                    return get_api_response(
+                        False,
+                        {"message": "There is no current app to compare with."},
+                        404,
+                    )
+                parts, digest, spec_text = (
+                    base.prototype_parts,
+                    base.prototype_hash,
+                    base.spec_markdown,
+                )
+            version = None if request.GET.get("baseline") else request.GET.get("v")
             if version:
                 row = AgentRequirementVersion.objects.filter(
                     requirement=req, version=int(version)
@@ -1433,11 +1485,13 @@ class AgentRequirementPrototypeView(ZangoGenericPlatformAPIView, TenantMixin):
                 )
             # The not-built menu items come from the YAML: they change the page too.
             soon = soon_menu(spec_text)
-            etag = f'"{digest}{soon_digest(soon)}"'
+            # The brand colour is the YAML's app.theme.primary: it changes the page too.
+            brand = theme_brand(spec_text)
+            etag = f'"{digest}{soon_digest(soon)}{brand or ""}"'
             if request.headers.get("If-None-Match") == etag:
                 return HttpResponse(status=304)
             response = HttpResponse(
-                assemble(parts, soon), content_type="text/html; charset=utf-8"
+                assemble(parts, soon, brand), content_type="text/html; charset=utf-8"
             )
             response["Content-Security-Policy"] = (
                 CSP + "; sandbox allow-scripts allow-popups allow-forms"
@@ -1477,6 +1531,56 @@ class AgentRequirementFlagsConfirmView(ZangoGenericPlatformAPIView, TenantMixin)
             return get_api_response(code == 200, payload, code)
         except Exception as exc:  # noqa: BLE001
             log.exception("agent_mode: flag confirm failed")
+            return get_api_response(False, {"message": str(exc)}, 500)
+
+
+@method_decorator(set_app_schema_path, name="dispatch")
+class AgentRequirementDiscardView(ZangoGenericPlatformAPIView, TenantMixin):
+    """POST requirements/{uuid}/discard/ — drop a change that was never approved.
+
+    The app keeps its current version: a change edits a copy of it, so nothing is lost.
+    """
+
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
+
+    def post(self, request, app_uuid, requirement_uuid, *args, **kwargs):
+        from zango.apps.agent_mode.models import RequirementStatus
+        from zango.apps.agent_mode.prototype_changes import current_app_requirement
+
+        try:
+            _bind_tenant(self, app_uuid)
+            requirement = AgentRequirement.objects.filter(
+                object_uuid=requirement_uuid
+            ).first()
+            if requirement is None:
+                return get_api_response(False, {"message": "not found"}, 404)
+            if requirement.status == RequirementStatus.APPROVED:
+                return get_api_response(
+                    False,
+                    {"message": "This change was approved, so it can't be discarded."},
+                    400,
+                )
+            if requirement.is_thinking:
+                return get_api_response(
+                    False,
+                    {
+                        "message": "The agent is still working on it. Try again in a moment."
+                    },
+                    409,
+                )
+            if current_app_requirement(requirement) is None:
+                return get_api_response(
+                    False,
+                    {
+                        "message": "This is the app's first version: there is nothing to go back to."
+                    },
+                    400,
+                )
+            requirement.status = RequirementStatus.ABANDONED
+            requirement.save(update_fields=["status"])
+            return get_api_response(True, {"status": requirement.status}, 200)
+        except Exception as exc:  # noqa: BLE001
+            log.exception("agent_mode: discard failed")
             return get_api_response(False, {"message": str(exc)}, 500)
 
 

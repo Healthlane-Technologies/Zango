@@ -11,7 +11,7 @@ the probe worker) and returns its labels by kind:
 - ``title``: the h1 (on a record screen it is the record's name, not copy).
 - ``heading``: h2-h4 text outside the menu.
 - ``column``: table header cells.
-- ``tab``: ``role="tab"`` elements, or elements whose class list has ``tab``.
+- ``tab``: ``role="tab"`` elements, or elements with a ``tab`` class (``tab``, ``d-tab``, ``z-tab``).
 - ``button``: buttons and ``role="button"`` elements outside the menu.
 - ``label``: ``<dt>`` and ``<label>`` text (field labels in summaries and forms).
 - ``counted``: buttons and tabs drawn with a count ("Open 7" → "Open"): filter chips that show one.
@@ -75,7 +75,7 @@ class _Reader(HTMLParser):
     def _kind(self, tag, a):
         cls = (a.get("class") or "").split()
         role = a.get("role") or ""
-        if role == "tab" or "tab" in cls:
+        if role == "tab" or any(re.fullmatch(r"(?:\w+[-_])?tab", c) for c in cls):  # tab, d-tab, z-tab
             return "tab"
         if self.nav:
             if tag in CLICKABLE or role in ("link", "menuitem") or "nav-item" in cls:
@@ -298,7 +298,7 @@ def content_gaps(approved_dom: str, built_dom: str, built_text: str, skip=(), re
     A label counts as shown when its words appear anywhere in the built page's text (the kit draws a
     heading or a chip with other tags than the prototype). ``skip``: normalised labels to leave out
     (the screen's not_built, the persona's shell chrome). ``record``: the h1 and the line under it
-    are the record's data. ``ignore_words``: the demo personas' names and titles ("Good morning,
+    are the record's data, and so are the headings above its tab bar (its name and parent). ``ignore_words``: the demo personas' names and titles ("Good morning,
     Elena" is matched as "good morning"). ``drawn_cells``: normalised column labels the spec already
     draws with a second line or icon (an empty line there is test data, not a gap).
     ``subtitle_words``: the subtitle words every persona's version shares (the rest is per persona).
@@ -310,12 +310,21 @@ def content_gaps(approved_dom: str, built_dom: str, built_text: str, skip=(), re
     skip = {norm(x) for x in skip}
     ignore = {w for x in ignore_words for w in norm(x).split()}
     probs, seen = [], set()
+    identity = set()
+    if record:
+        # a record screen's own name and parent ("Asha Verma", "Senior Backend Engineer") sit above the tab
+        # bar: they are the demo record's data, not copy. Section headings below the tabs stay required.
+        tab = re.search(r'role="tab"|class="[^"]*\b(?:\w+[-_])?tab\b', approved_dom or "")
+        head = (approved_dom or "")[:tab.start()] if tab else ""
+        identity = {norm(x) for x in want.get("heading", []) if x in head}
     for kind in CONTENT:
         if kind == "title" and record:
             continue
         for label in want.get(kind, []):
             n = norm(label)
             if not n or n in skip:
+                continue
+            if kind == "heading" and n in identity:
                 continue
             if ignore:  # "Good morning, Elena" → "good morning"; a persona chip leaves nothing
                 n = " ".join(w for w in n.split() if w not in ignore)

@@ -60,6 +60,11 @@ Vendor:
 - **Answer shape.** A `fields` answer is JSON. The runtime asks Zango for the hole's JSON schema, so
   name the keys in the prompt only to explain them; don't repeat the schema. For `text` and
   `markdown`, say how long the answer should be and in what form.
+- **Tools.** When the helper has `tools`, the system prompt says when to call each one, in what
+  order, and what to do with the answer: "First call find_patient with the name, date of birth and
+  phone as written. Reuse a candidate only when the date of birth or phone also agrees; when you are
+  not sure, call no write tool and say why in missing_info. Otherwise call open_case." Zango gives the
+  AI each tool's description; the prompt gives the business rule for using them.
 - **Chat helpers have only a system prompt.** The person's question is the user message. Put
   `{{record}}` and `{{related}}` in the system prompt.
 - **Domain voice.** Write what an expert in this business would tell a new colleague: what counts as
@@ -92,10 +97,193 @@ def gst_lookup(gstin: str = ToolParam(description="The 15-character GSTIN")) -> 
   `access.scope_queryset("<entity>", qs, zai.acting()["request"])`. The built-in `zas_search_records`
   and `zas_read_record` already do this (`zas_core/tools.py`), so never rewrite them.
 
+### A tool is plain app code
+
+The body is ordinary Django code in the app: it can query, create or update records, move a record
+through its workflow, set a tag, or call an outside service. The AI only chooses when to call it and
+with which arguments; what happens is your code. Write it the way the app's own screens would do it,
+so a record a tool makes is the same as one a person makes: right status, right owner, on the timeline.
+
+**Who it runs as.** `zai.acting()` is `{agent, request, role, record}` while a helper runs (None
+otherwise: answer `{"error": ...}`).
+
+| Run started by | `request.user` | `role` | Rules to apply |
+|---|---|---|---|
+| a person (button, chat, form fill) | that person | their role | that role's access, rows and transition roles |
+| a trigger after a person's save or move (`create`, `transition`, ...) | that person | their role | the same |
+| code (`task`, `uses_ai`) or `schedule` | None | `""` | none: it acts as the system, like the hook that called it |
+
+`record` is the model instance the helper is working on (the prescription it reads, the vendor it
+screens); None for list buttons and form fill. Use it instead of asking the AI for an id.
+
+**Starter for a tool file:**
+
+```python
+from zango.ai.tools.decorator import ToolParam, ToolSafety, tool
+
+from ..zas_core import access, demo
+from ..zas_core import ai as zai
+from ..zas_core import expr as zx
+from ..zas_core import spec as zs
+from ..zas_core.mixins import fake_request, run_system_transition
+from .models import Patient, PatientCase   # this module's models (custom-code.md, Imports)
+# another module's model: import it inside the function (`from ..masters.models import City`) or
+# skip the import with zs.model("<entity code>") — any entity, by its spec code
+
+
+def _ctx():
+    """(act, user, role) of the running helper, or raise ToolError for the AI to read."""
+    act = zai.acting()
+    if not act:
+        raise ToolError("This tool only works inside one of the app's AI helpers.")
+    return act, getattr(act["request"], "user", None), act["role"]
+
+
+class ToolError(Exception):
+    pass
+```
+
+Catch `ToolError` (and any other failure) in each tool and return `{"error": "<what went wrong, in
+plain words>"}`: the AI reads it and can say so or try again. A tool never raises.
+
+**Read records** (as the person, or every row for a system run):
+
+```python
+# zas:hole H-51
+@tool(name="find_patient", description="Find existing patients by name; also give date of birth and phone when "
+      "the prescription shows them. Returns candidates with an id and how well each matches.",
+      section="intake", safety=ToolSafety.READ_ONLY)
+def find_patient(name: str = ToolParam(description="Patient name as written"),
+                 dob: str = ToolParam(description="Date of birth YYYY-MM-DD, or empty", default=""),
+                 phone: str = ToolParam(description="Phone as written, or empty", default="")) -> dict:
+    try:
+        act, user, role = _ctx()
+        qs = Patient.objects.all()
+        if role:
+            qs = access.scope_queryset("patient", qs, act["request"])
+        from ..zas_core import dupes
+        out = []
+        for p in qs.order_by("-id")[:500]:
+            score = dupes.dice(name, p.full_name)
+            if score >= 0.75:
+                out.append({"id": str(p.object_uuid), "code": p.patient_code, "name": p.full_name,
+                            "dob": str(p.date_of_birth or ""), "phone": str(p.phone or ""), "name_match": round(score, 2)})
+        return {"candidates": sorted(out, key=lambda x: -x["name_match"])[:5]}
+    except Exception as e:  # noqa: BLE001
+        return {"error": str(e)[:300]}
+```
+
+**Create a record.** Check the role may add it, save, give it its first workflow status, then set
+the owner (zango's `pre_save` writes `created_by` from the request, and there is none here, so it
+comes out empty unless you set it after the last save):
+
+```python
+def _create(entity, values, user, role, owner=None):
+    """owner: who the record belongs to; defaults to the person running the helper."""
+    if role and not access.can(entity, "add", role=role):
+        raise ToolError(f"{role} may not add a {zs.entity(entity)['name']}.")
+    obj = zs.model(entity)(**values)
+    obj.save()                                   # sequences (CS-00012) and computed fields happen here
+    WF = zs.workflow_class(entity)
+    if WF is not None:                           # the first status; the crud view does this for a person
+        WF(request=fake_request(user), object_instance=obj).execute_transition(WF.Meta.on_create_status)
+    demo.stamp(obj, created_by=owner or user)    # the owner; after the last save()
+    return obj
+```
+
+For a system run (`user` None) pass the owner the screens expect, usually the owner of the record
+the helper works on: `_create("patient_case", {...}, None, "", owner=act["record"].created_by)`
+(a case opened from a prescription belongs to whoever uploaded it).
+
+**Change fields.** Check the role may edit and can see the record, then save:
+
+```python
+def _update(entity, obj, values, role, request):
+    if role and not (access.can(entity, "edit", role=role) and access.in_scope(entity, obj, request)):
+        raise ToolError("Not allowed to change this record.")
+    for k, v in values.items():
+        setattr(obj, k, v)
+    obj.save()
+```
+
+**Move it through the workflow.** For a person, only a transition their role has and whose
+condition holds, exactly as the button would; for a system run, `run_system_transition` (it also
+runs `system: true` transitions). Both put the move on the timeline with the actor:
+
+```python
+def _move(entity, obj, name, user, role):
+    if not role:
+        ok, msg = run_system_transition(entity, obj, name, user=user)
+    else:
+        t = next((x for x in zs.entity(entity)["workflow"]["transitions"] if x["name"] == name), None)
+        status = zx.current_status(obj)
+        if t is None or t.get("system") or status not in t["from"] or (t.get("roles") and role not in t["roles"]):
+            raise ToolError(f"{role} cannot {name} a record that is {status}.")
+        engine = next(e["name"] for e in t["engine"] if e["from"] == status)
+        wf = zs.workflow_class(entity)(request=fake_request(user), object_instance=obj)
+        if not wf.is_transition_allowed(engine, current_status=status):
+            raise ToolError(t.get("condition_msg") or "Not available right now.")
+        ok, msg = wf.execute_transition(engine, allow_system=False)
+    if not ok:
+        raise ToolError(msg)
+```
+
+A transition with a `form` needs its fields: set them on the record before the move (or pass them as
+the form data your `on_done` hook reads).
+
+**Call an outside service** (`safety: external`): a timeout (10 s), no secrets in the answer, and
+`{"error": ...}` when the service is down.
+
+**Also:**
+- **Call twice, act once.** The AI may repeat a call. Before creating, look for what an earlier call
+  made (`PatientCase.objects.filter(prescription=act["record"]).first()`) and return it instead.
+- **Say what happened.** Return the id and the code/name the screens show (`{"id": ..., "code":
+  "CS-00012", "created": true}`), so the AI can report it and pass the id to the next tool.
+- **No side effects a person's save would have.** A tool's save does not run the entity's
+  triggers, custom-requirement hooks or notifications (they run from the crud view). Call the one you
+  need explicitly, or leave it to the code that called the helper.
+- **Keep the AI's notes.** When the record has an AI log field, append what the tool did there too.
+- **Write in one place.** When a hook and a tool do the same work (open a case), put it in one
+  function in the module and call it from both.
+
 ## Calling a helper from code (`uses_ai`)
 
-A custom requirement that lists `uses_ai: [<code>]` gets the helper's inputs and answer in its hole
-text. Call it inside that hole's function. The call is synchronous and never raises:
+**An agent never runs inside a web request.** Every call happens in a Celery task and the screen
+polls the run. The runtime enforces it: `run_from_code` returns a failed Result during a request, and
+`--audit-holes` checks that a hole fired by a save uses `run_later`. The hole text says which one.
+
+**From a hook that runs during a save** (`create`, `update`, `transition`, `tag` triggers): queue the
+helper with `run_later` and finish the work in a `then` function. The save returns at once; the task
+calls the agent, then `then(obj, res)` with the Result (whatever its status):
+
+```python
+from ..zas_core.ai import run_later, run_from_code
+
+
+# zas:hole H-05
+def prescription__req__1(request, obj):
+    """Runs on upload: show "AI reading" and let the background task do the rest."""
+    run_system_transition("prescription", obj, "start_reading")
+    run_later("prescription_reader", obj=obj, then="prescription__req__1__after_ai",
+              variables={"input": "..."}, user=request.user)
+
+
+def prescription__req__1__after_ai(obj, res):
+    """In the task, after the reader: open the case, or send the prescription to review."""
+    if res.status == "unavailable":            # no AI account yet: leave it for a person
+        return
+    if res.ok:
+        ...res.result["drug"]...
+```
+
+- `then` is a function name in the same module's `hooks.py`. It runs in the worker, so it may take its
+  time and may call `run_from_code` for a second helper.
+- `user` is who the run is for: tools see them, and records it makes can belong to them.
+- The record shows its progress: a status like "AI reading" and the record page's running-AI strip
+  (it polls `?action=zas_ai`) until the run is done; then the page reloads.
+
+**Inside a task** (a `schedule` requirement, a sweep in `tasks.py`, a `then` function): the work is
+already in the background, so call the helper directly. The call is synchronous and never raises:
 
 ```python
 from ..zas_core.ai import run_from_code
@@ -115,7 +303,8 @@ def app__req__1():
     return n
 ```
 
-`--audit-holes` fails if the hole's file never calls `run_from_code("<code>"…)`.
+`--audit-holes` fails if the hole's file never calls the function its text names (`run_later(...)` for
+a hole fired by a save, `run_from_code(...)` for a scheduled one).
 
 ## When it runs (runtime; nothing to write)
 
@@ -123,10 +312,14 @@ def app__req__1():
 |---|---|---|---|
 | `create`, `update` (`fields`), `transition`, `tag`, `delete` | the form save / workflow `done` / tag `done` / delete row action | Celery task `zas_ai_run` | `review: none` writes it; `suggest` makes a suggestion card; `show` keeps it on the run |
 | `schedule` (`cron`) | `zas_ai_tick` (every minute, scheduled only when a helper has a schedule) | Celery | the same |
-| `button` (`where: record`/`row`/`list`) | `POST ?action=zas_ai_run` | `run` (async by default): the screen polls `?action=zas_ai&run=<id>` | the same; a list button answers in a dialog |
-| `button` with `where: form`, `form_assist` | `POST ?action=zas_ai_form` | inline | the form is reloaded with the values (`zas_prefill`); nothing is saved |
-| `chat` | `POST ?action=zas_ai_chat` with `session_id` | inline | the chat panel |
-| `task` | `run_from_code()` in your hole | inside your task | the return value |
+| `button` (`where: record`/`row`/`list`) | `POST ?action=zas_ai_run` | Celery; the screen polls `?action=zas_ai&run=<id>` | the same; a list button answers in a dialog |
+| `button` with `where: form`, `form_assist` | `POST ?action=zas_ai_form` (the files wait in storage for the task) | Celery; the form polls | the form is reloaded with the run's `values` (`zas_prefill`); nothing is saved |
+| `chat` | `POST ?action=zas_ai_chat` with `session_id` | Celery; the chat polls | the chat panel; the run's `session_id` goes with the next message |
+| `task` | `run_later()` in a hook, or `run_from_code()` in a task | Celery (`run_later`), or inside your task | `then(obj, res)`, or the return value |
+
+Nothing runs inside the request: a request only creates the run (`ZasAiRun`, `queued`) and returns it.
+If the worker cannot be reached the run ends `failed` ("Try again in a minute"); it is never run in
+the request instead. So Celery must be running for any AI to answer.
 
 - **Loop guard.** AI writes fire no triggers.
 - **Who can run it and see the answer.** The helper's `roles`. A trigger's `roles` narrows that for
@@ -136,6 +329,8 @@ def app__req__1():
   and saving still works.
 
 ## Testing (fake AI)
+
+On a local Claude subscription account the AI does call the agent's tools, and they run for real (through the platform's tool runner, as with an API key), so keep scenario data disposable.
 
 The scenarios must never call the real AI. Use the spec's `preview.sample`, or your own answer:
 
@@ -154,6 +349,31 @@ def screening(ctx):
   under DEBUG only, and removes it afterwards.
 - **What to cover.** Test each acceptance line and the roles: a role outside `roles` gets 403 on
   `zas_ai_run`, and a suggestion changes nothing until it is accepted.
+
+**Tools (`ai_tool` holes).** The fake AI answers at once and never calls a tool, so call each tool
+yourself with `ctx.ai_tool(agent, tool, args, role=None, record=None)`. It runs the tool through
+Zango's tool executor, exactly as a run of that helper would: the input is checked against the tool's
+schema, and `acting()` is set.
+- `role="Intake Associate"` runs it as that person (their access and rows); `role=None` runs it as
+  the system, like a `task` or `schedule` run.
+- `record=<uuid>` of the helper's entity becomes `acting()["record"]`.
+- It returns the tool's dict. A tool that is not on the helper, a refused role, or input that does not
+  fit the schema raises `AssertionError`.
+
+```python
+@scenario("H-51", "find_patient finds a spelling variant, and only the associate's own patients")
+def find_patient(ctx):
+    rx = ctx.record_in("prescription", "case_created")
+    name = ctx.field("prescription", rx, "patient_name")
+    got = ctx.ai_tool("prescription_reader", "find_patient", {"name": name.replace(" ", "  ") + "."}, record=rx)
+    ctx.expect(got["candidates"] and got["candidates"][0]["name_match"] >= 0.9, f"no close match: {got}")
+    mine = ctx.ai_tool("prescription_reader", "find_patient", {"name": name}, role="Intake Associate")
+    ctx.expect("error" not in mine, mine)
+```
+
+For a write tool, assert what it changed through the API as a person would see it: the record exists
+for its owner (`ctx.record`), its status (`ctx.status_of`), and that calling it twice made one record.
+Needs DEBUG on the server, like the fake AI; the action (`?action=zas_ai_tool`) answers 404 otherwise.
 
 ## Platform step (for reference)
 

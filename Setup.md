@@ -196,6 +196,29 @@ Perform the below steps from the root directory of the project
 celery -A <project_name> worker -l INFO
 ```
 
+#### Agent Mode in local dev: restart the app worker after a build
+
+A Celery worker loads an app's tasks only when it starts, so tasks a build adds (AI agents,
+`tasks.py`) are unknown to a worker that was already running. Agent Mode can restart the worker
+for you: when a build changes `models.py`, `tasks.py` or `settings.json`, it touches a signal file
+at the end, and a worker run under `watchmedo` restarts on that.
+
+1. Install watchdog: `pip install watchdog`
+2. In `.env`, set `AGENT_MODE_RESTART_SIGNAL_FILE=.agent_mode/celery-restart` (relative to the
+   project directory; leave it unset in deployed environments).
+3. Run two workers: one for builds, which is never restarted, and one for the app's tasks:
+
+```
+# builds (Agent Mode)
+celery -A <project_name> worker -Q agent_mode -l INFO
+
+# app tasks: restarts whenever a build touches the signal file
+watchmedo auto-restart --directory=.agent_mode --patterns="celery-restart" \
+  --signal SIGTERM --kill-after 120 -- celery -A <project_name> worker -Q celery -l INFO
+```
+
+Keep the two apart: a single worker serving both queues would be restarted by the build it is running.
+
 ### Starting Celery beat
 
 ```

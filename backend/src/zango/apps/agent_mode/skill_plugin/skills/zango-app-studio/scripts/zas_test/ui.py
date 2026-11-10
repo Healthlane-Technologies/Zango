@@ -74,12 +74,21 @@ class UI:
         a = (E.get("access_resolved") or {}).get(role)
         return bool(a) and not a.get("none") and action in a["actions"]
 
+    def page(self, code):
+        """pages[code], or the platform's own page a menu can name (my_downloads: not in pages[])."""
+        if code in self.M["pages"]:
+            return self.M["pages"][code]
+        dl = self.M.get("my_downloads") or {}
+        if code == "my_downloads" and dl.get("route"):
+            return {"route": dl["route"], "system": True, "title": "My Downloads"}
+        return None
+
     def menu_pages(self, role):
         out = []
         for it in self.M["roles"][role].get("menu", []):
             for i in (it.get("items") or [it]):
                 if i.get("page"):
-                    out.append((i["page"], i.get("label") or self.M["pages"][i["page"]].get("title") or i["page"]))
+                    out.append((i["page"], i.get("label") or (self.page(i["page"]) or {}).get("title") or i["page"]))
         return out
 
 
@@ -111,11 +120,22 @@ def g_pages(U, b):
         try:
             pages = U.menu_pages(role)
             for code, label in pages:
-                P = U.M["pages"][code]
+                P = U.page(code)
                 path = f"pages.{code}"
+                if P is None:
+                    U.add(f"ui.page.{code}.{slug(role)}", f"{label} renders", role, f"roles.{role}.menu", "fail",
+                          f"the menu names page {code!r}, which is not in pages[]")
+                    continue
 
                 def t_page(code=code, P=P):
-                    rp.open(P["route"])
+                    rp.open(P["route"], **({"wait": "body"} if P.get("system") else {}))
+                    if P.get("system"):  # the platform draws it: it must open, without errors
+                        rp.shot(U.ws, slug(role), code)
+                        body = rp.page.inner_text("body")
+                        probs = list(rp.errors)
+                        if re.search(r"\b(404|Page not found|Server Error)\b", body):
+                            probs.append(f"{P['route']} did not open: {body.strip()[:120]!r}")
+                        return not probs, "; ".join(probs)
                     root = rp.page.locator(f'[data-zas="page"][data-zas-key="{code}"]')
                     if root.count() == 0:
                         return False, f"no [data-zas=page][data-zas-key={code}] (export {P['export']} missing from pages/index.ts or the build?)"
@@ -150,7 +170,7 @@ def g_pages(U, b):
                 U.check(f"ui.page.{code}.{slug(role)}", f"{label} renders", role, path, t_page)
 
             def t_menu():
-                rp.open(U.M["pages"][pages[0][0]]["route"]) if pages else None
+                rp.open(U.page(pages[0][0])["route"]) if pages and U.page(pages[0][0]) else None
                 groups = [it["group"] for it in U.M["roles"][role].get("menu", []) if it.get("group")]
                 for g in groups:  # menu groups start collapsed: open them before reading the items
                     try:
@@ -185,14 +205,15 @@ def g_detail(U, b):
                 path = browser.detail_path(U.M, hero, uid)
                 rp = browser.RolePage(b, U.target, s)
                 try:
-                    rp.open(path, wait='[data-zas="header"], [data-zas="empty"]')
+                    rp.open(path, wait=browser.DETAIL_READY)
                     rp.page.wait_for_timeout(300)
                     rp.shot(U.ws, slug(role), vcode)
                     if not viewer:
                         st = rp.page.locator('[data-zas="empty"][data-zas-key="no_access"], [data-zas="empty"][data-zas-key="not_found"]').count()
                         return st > 0, "a non-viewer was shown the page"
-                    if rp.page.locator('[data-zas="header"]').count() == 0:
+                    if rp.page.locator(browser.DETAIL_ROOT).count() == 0:
                         return False, "no header (not_found? row scoping?)"
+                    rebuilt = browser.rebuilt(U.M, "view", vcode)
                     probs = list(rp.errors)
                     blank = rp.page.eval_on_selector_all('[data-zas="banner"]', "els => els.filter(e => !e.innerText.trim()).length")
                     if blank:
@@ -202,7 +223,8 @@ def g_detail(U, b):
                                  and (t.get("type") != "related_table" or U.can(t["entity"], role, "view"))]
                     got_tabs = rp.page.eval_on_selector_all('[data-zas="tab"]', "els => els.map(e => e.dataset.zasKey)")
                     extra = [x for x in got_tabs if x not in want_tabs]
-                    if extra or [x for x in want_tabs if x in got_tabs] != got_tabs:
+                    # a rebuilt 360 has the prototype's tabs (the look round compares them); each still opens clean
+                    if not rebuilt and (extra or [x for x in want_tabs if x in got_tabs] != got_tabs):
                         probs.append(f"tabs {got_tabs} vs spec {want_tabs}")
                     for code in got_tabs:
                         rp.errors.clear()

@@ -229,7 +229,9 @@ it is what the specification must pin down:
   stages with rules about who may move it, that is the `workflow` package, not
   a status field. Always establish this.
 - **Roles** drive `policies.json`. "Who does what" is not optional detail; it
-  determines whether the app is usable at all.
+  determines whether the app is usable at all. Note which roles can **export**
+  (download a list as a file): each of them also gets a "My Downloads" page, in
+  their menu, where finished exports wait. Roles that cannot export don't.
 - **Page shape** decides default CRUD vs. `CrudHandler` vs. a custom React
   component. Custom React *is* buildable server-side and is the default for the
   things a team works on daily, so the job is to find out **which entities

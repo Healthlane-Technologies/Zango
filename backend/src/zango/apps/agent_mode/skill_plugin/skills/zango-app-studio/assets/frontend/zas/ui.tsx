@@ -6,7 +6,7 @@ import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { useTableContext } from "@zango-core/crud/table";
 import {
-  ArrowRightLeft, CircleAlert, CircleCheck, CirclePlus, Copy, Ellipsis, History, Inbox, Info, Lock,
+  ArrowRight, ArrowRightLeft, CircleAlert, CircleCheck, CirclePlus, Copy, Ellipsis, History, Inbox, Info, Lock,
   OctagonAlert, Pencil, SearchX, Tag, TriangleAlert, X, Circle,
 } from "lucide-react";
 import { ICONS } from "./icons.gen";
@@ -178,23 +178,32 @@ export function Timeline({ events, emptyText = "No activity yet" }: { events: an
   return (
     <div className="zas-tl">
       {events.map((e, i) => {
-        let ic = <CirclePlus />, tn: string = "blue", bodyEl: React.ReactNode;
-        const on = e.self ? "" : ` on ${String(e.entity_name || "").toLowerCase()} `;
+        let ic = <CirclePlus />, tn: string = "green", bodyEl: React.ReactNode;
+        const on = e.self ? null : <> on {String(e.entity_name || "").toLowerCase()} <b>{e.record}</b></>;
         if (e.kind === "transition") {
+          // the move itself: its name, then the status it left and the one it reached, in the statuses' own colours
           ic = <ArrowRightLeft />; tn = e.to?.tone || "indigo";
-          bodyEl = <><b>{e.text}</b>{!e.self && <>{on}<b>{e.record}</b></>} · <Badge label={e.from?.label} tone={e.from?.tone} dot={false} /> → <Badge label={e.to?.label} tone={e.to?.tone} dot={false} /></>;
+          bodyEl = <>
+            <div><b>{e.text}</b>{on}</div>
+            <div className="zas-tlft" data-zas="status-change">
+              <Badge label={e.from?.label} tone={e.from?.tone} zasKey="from" /><ArrowRight size={14} /><Badge label={e.to?.label} tone={e.to?.tone} zasKey="to" />
+            </div></>;
         } else if (e.kind === "tag") {
           ic = <Tag />; tn = e.tag?.tone || "gray";
-          bodyEl = <>{e.on ? "Tagged " : "Removed tag "}<Chip label={e.tag?.label} tone={e.tag?.tone} />{!e.self && <> on <b>{e.record}</b></>}</>;
+          bodyEl = <>{e.on ? "Tagged " : "Removed tag "}<Chip label={e.tag?.label} tone={e.tag?.tone} />{on}</>;
         } else if (e.kind === "updated") {
           ic = <Pencil />; tn = "gray";
-          const ch = Object.entries(e.changes || {}).map(([k, v]: any) => `${k}: ${v?.[0] ?? "—"} → ${v?.[1] ?? "—"}`).join("; ");
-          bodyEl = <>Updated {!e.self && <><b>{e.record}</b> · </>}<span>{ch}</span></>;
+          const rows = Object.entries(e.changes || {});
+          bodyEl = <>
+            <div><b>Details updated</b>{on}</div>
+            {rows.length > 0 && <div className="zas-tlch">{rows.map(([k, v]: any) => (
+              <span className="zas-tlc" key={k}><i>{k}</i><s>{v?.[0] ?? "—"}</s><ArrowRight size={12} /><b>{v?.[1] ?? "—"}</b></span>
+            ))}</div>}</>;
         } else {
           bodyEl = e.self ? <b>{e.entity_name} created</b> : <>{e.entity_name} <b>{e.record}</b> created</>;
         }
         return (
-          <div className="zas-tli" key={i}>
+          <div className="zas-tli" key={i} data-zas="timeline-event" data-zas-key={e.kind}>
             <div className={cx("zas-tld", `zt-${tone(tn)}`)}>{ic}</div>
             <div className="zas-tlb">{bodyEl}<div className="zas-tlm">{[e.actor, relative(e.t)].filter(Boolean).join(" · ")}</div>
               {e.note && <div className="zas-tln">{e.note}</div>}</div>

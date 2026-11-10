@@ -23,6 +23,7 @@ API refused them too" points at the backend. A screenshot of every failure lands
 """
 
 import datetime
+import inspect
 import json
 import os
 import re
@@ -279,7 +280,7 @@ class Flows:
         vals = {}
         if C.fixtures and hasattr(C.fixtures, "values"):
             fv = C.fixtures.values
-            takes = len(__import__("inspect").signature(fv).parameters) >= 4
+            takes = len(inspect.signature(fv).parameters) >= 4
             vals.update((fv(C, ent, role, params) if takes else fv(C, ent, role)) or {})
         tag = A.rnd()
         data, files = {}, {}
@@ -385,11 +386,11 @@ class Flows:
         """The record's own 360 header; or, for an entity listed only on a parent 360's tab (an
         agreement on the request), the row drawer opened from that tab, as a user reaches it."""
         rp, page = self.rp(role), self.rp(role).page
-        wait = '[data-zas="header"], [data-zas="empty"]'
+        wait = browser.DETAIL_READY
         views = self.M.get("detail_views") or {}
         if any(V["hero"] == ent for V in views.values()):
             rp.open(browser.detail_path(self.M, ent, uuid), wait=wait)
-            header = page.locator('[data-zas="header"]')
+            header = page.locator(browser.DETAIL_ROOT)
             if header.count() == 0:
                 raise StepFailed(f"the 360 did not open for {role}")
             return header
@@ -431,7 +432,7 @@ class Flows:
         before = self.timeline_count(ent, uuid, role)
         header = self.open_record(ent, uuid, role)
         btn = header.locator(f'[data-zas="action"][data-zas-key="{t["name"]}"]')
-        if btn.count() == 0 and header.first.get_attribute("data-zas") == "header":
+        if btn.count() == 0 and header.first.get_attribute("data-zas") in ("header", "page"):
             # a rebuilt 360 may place a move outside the header (a Withdraw link in the rail)
             btn = page.locator(f'[data-zas="action"][data-zas-key="{t["name"]}"]')
         if btn.count() == 0:
@@ -478,7 +479,7 @@ class Flows:
         if st != t["to"]:
             probs.append(f"backend status is {st}, expected {t['to']}")
         page.wait_for_timeout(500)
-        in_drawer = header.first.get_attribute("data-zas") != "header"
+        in_drawer = header.first.get_attribute("data-zas") not in ("header", "page")
         badge = (header.locator('[data-zas="badge"]') if in_drawer
                  else page.locator('[data-zas="header"] [data-zas="badge"][data-zas-key="status"]'))
         want = self.status_label(ent, t["to"])
@@ -494,7 +495,7 @@ class Flows:
     # ----- one child add from a 360 tab -----
     def ui_tab_add(self, hero, uuid, tab, role):
         child, param = tab["entity"], tab["param"]
-        self.rp(role).open(browser.detail_path(self.M, hero, uuid), wait='[data-zas="header"], [data-zas="empty"]')
+        self.rp(role).open(browser.detail_path(self.M, hero, uuid), wait=browser.DETAIL_READY)
 
         def open_form(page):
             page.locator(f'[data-zas="tab"][data-zas-key="{tab["code"]}"]').first.click()

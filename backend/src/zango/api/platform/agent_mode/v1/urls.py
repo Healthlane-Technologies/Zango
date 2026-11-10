@@ -4,6 +4,7 @@ from .views import (
     AgentModeAvailabilityView,
     AgentRequirementApproveView,
     AgentRequirementDetailView,
+    AgentRequirementDiscardView,
     AgentRequirementDocumentFileView,
     AgentRequirementDocumentsView,
     AgentRequirementFlagsConfirmView,
@@ -13,6 +14,7 @@ from .views import (
     AgentRequirementSpecFinalizeView,
     AgentRequirementSpecValidateView,
     AgentRequirementSpecView,
+    AgentRequirementThemeView,
     AgentRunAbortView,
     AgentRunContinueView,
     AgentRunDetailView,
@@ -41,6 +43,10 @@ urlpatterns = [
         AgentRequirementSpecValidateView.as_view(),
     ),
     path(
+        "requirements/<uuid:requirement_uuid>/theme/",
+        AgentRequirementThemeView.as_view(),
+    ),
+    path(
         "requirements/<uuid:requirement_uuid>/flags/confirm/",
         AgentRequirementFlagsConfirmView.as_view(),
     ),
@@ -63,6 +69,10 @@ urlpatterns = [
     path(
         "requirements/<uuid:requirement_uuid>/approve/",
         AgentRequirementApproveView.as_view(),
+    ),
+    path(
+        "requirements/<uuid:requirement_uuid>/discard/",
+        AgentRequirementDiscardView.as_view(),
     ),
     # Phase 2 — development runs
     path("runs/", AgentRunListCreateView.as_view()),

@@ -106,8 +106,18 @@ Rules for "name":
   clearest word available
 
 "label" is the same name written for people, at most 60 characters.
-"description" is one plain sentence a non-technical user would recognise.
+
+Rules for "description":
+- what the app does for the people who use it, at most 12 words
+- one line, no trailing full stop, no "This app..." or "An application that..."
+- the outcome, not the mechanics: no file types, steps, roles or AI wording
+- e.g. "Turn prescriptions into patient cases, reviewed in minutes",
+  "Approve loans faster with a clear trail of every decision"
 """
+
+# The description sits in the console header and on the app card; past this it
+# reads as a paragraph.
+MAX_DESCRIPTION_LEN = 100
 
 
 @dataclass(frozen=True)
@@ -118,6 +128,17 @@ class AppIdentity:
     # "model" | "fallback" — surfaced in the API so a silent downgrade to the
     # slug path is visible rather than mysterious.
     source: str
+
+
+def short_description(raw: str) -> str:
+    """Keep a description to one short line: its first sentence, cut on a word."""
+    text = " ".join((raw or "").split())
+    if not text:
+        return ""
+    first = re.split(r"(?<=[.!?;])\s", text, maxsplit=1)[0]
+    if len(first) > MAX_DESCRIPTION_LEN:
+        first = first[:MAX_DESCRIPTION_LEN].rsplit(" ", 1)[0].rstrip(",;:-") + "…"
+    return first.rstrip(".")
 
 
 def sanitize_name(raw: str) -> str:
@@ -279,7 +300,7 @@ def suggest_identity(prompt: str, creds=None, *, timeout: float = 60.0) -> AppId
     fallback = AppIdentity(
         name=fallback_name,
         label=label_from_name(fallback_name),
-        description=prompt[:500],
+        description=short_description(prompt),
         source="fallback",
     )
 
@@ -311,5 +332,7 @@ def suggest_identity(prompt: str, creds=None, *, timeout: float = 60.0) -> AppId
         return fallback
 
     label = str(data.get("label") or "").strip()[:120] or label_from_name(name)
-    description = str(data.get("description") or "").strip()[:2000] or prompt[:500]
+    description = short_description(
+        str(data.get("description") or "")
+    ) or short_description(prompt)
     return AppIdentity(name=name, label=label, description=description, source="model")

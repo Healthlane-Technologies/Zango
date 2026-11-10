@@ -104,7 +104,9 @@ function stripHtml(row: any) {
 // ───────── AI helpers (zas_core/ai.py; endpoints on the entity's crud view) ─────────
 export type AiClick = { agent: string; name: string; event: "button" | "chat" | "form_assist"; kind: string; label: string; icon: string; from?: string[] };
 export type AiRun = { id: number; agent: string; name: string; status: "queued" | "running" | "done" | "failed" | "unavailable"; trigger: string;
-  kind: string; result: any; error: string; applied: boolean; suggestion: AiSuggestion | null; record_uuid: string | null };
+  kind: string; result: any; error: string; applied: boolean; suggestion: AiSuggestion | null; record_uuid: string | null;
+  /** chat: the conversation to send with the next message */ session_id?: string | null;
+  /** form fill: {form field: value} once done */ values?: Record<string, any> };
 export type AiSuggestion = { id: number; agent: string; name: string; status: string; created_at: string | null;
   fields: { key: string; label: string; type: string; value: any; display: any; current: any }[] };
 export type RecordAi = { clicks: AiClick[]; suggestions: AiSuggestion[]; runs: AiRun[] };
@@ -120,11 +122,13 @@ export const aiRun = async (endpoint: string, agent: string, where: string, targ
 export const aiAccept = async (endpoint: string, suggestion: number, values?: Record<string, any>) =>
   ok(await post(endpoint, { action: "zas_ai_accept" }, { suggestion, values: values ? JSON.stringify(values) : undefined }));
 export const aiDiscard = async (endpoint: string, suggestion: number) => ok(await post(endpoint, { action: "zas_ai_discard" }, { suggestion }));
+/** Queues one chat turn: poll the run (ai.tsx settle); its result is the answer. */
 export const aiChat = async (endpoint: string, agent: string, message: string, o: { uuid?: string; uuids?: string[]; where?: string; session?: string | null }):
-  Promise<{ answer: string | null; session_id: string | null; run: AiRun }> =>
+  Promise<AiRun> =>
   ok(await post(endpoint, { action: "zas_ai_chat" }, { agent, message, where: o.where || "record", object_uuid: o.uuid,
     object_uuids: o.uuids ? JSON.stringify(o.uuids) : undefined, session_id: o.session || undefined }));
-export async function aiForm(endpoint: string, agent: string, values: Record<string, any>, files: File[]): Promise<{ values: Record<string, any>; run: AiRun }> {
+/** Queues a form fill: poll the run (ai.tsx settle); its values are the form's. */
+export async function aiForm(endpoint: string, agent: string, values: Record<string, any>, files: File[]): Promise<AiRun> {
   const b: Record<string, any> = { agent, values: JSON.stringify(values) };
   files.forEach((f, i) => { b[`file_${i}`] = f; });
   return ok(await post(endpoint, { action: "zas_ai_form" }, b));

@@ -22,7 +22,9 @@ export { makeListPage, ListPageView } from "./ListPage";
 export { RecordDrawer } from "./ZasTable";
 export { getDetailComponent, makeDetailPage } from "./Detail360";
 export { makeCustomPage } from "./CustomPage";
-export { default as ZasLogin } from "./Login";
+// AI on a rebuilt screen: running runs and suggestions for the record (polls; onChanged reloads the page)
+export { AiRecordStrip, AiPanel, settle as aiSettle } from "./ai";
+export { default as ZasLogin, makeLogin } from "./Login";
 export { default as ZasGallery } from "./Gallery";
 export type { ShellOptions, SoonItem, PlatformItem, LayoutProps } from "./Shell";
 // a shell ported from the prototype draws the platform menu and user card with these

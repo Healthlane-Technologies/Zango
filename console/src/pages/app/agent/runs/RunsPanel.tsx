@@ -31,6 +31,8 @@ export interface RunsPanelProps {
 	onRunChange?: () => void;
 	/** App name for the share/deploy text. Defaults to the requirement's title. */
 	appName?: string;
+	/** A commit is going through and its build is about to start: show that, not an empty list. */
+	starting?: boolean;
 }
 
 export function RunsPanel({
@@ -39,6 +41,7 @@ export function RunsPanel({
 	canBuild,
 	onRunChange,
 	appName,
+	starting,
 }: RunsPanelProps) {
 	const { data: requirement, isLoading, error, refetch } = useRequirement(appId, requirementId);
 	const { data: summaries } = useRunSummaries(appId);
@@ -87,8 +90,8 @@ export function RunsPanel({
 			size="sm"
 			variant="primary"
 			icon="rocket"
-			disabled={!canBuild || inFlight}
-			loading={start.isPending}
+			disabled={!canBuild || inFlight || starting}
+			loading={start.isPending || starting}
 			title={
 				!canBuild
 					? "This requirement can't be built right now"
@@ -116,6 +119,15 @@ export function RunsPanel({
 		return (
 			<Card>
 				<ErrorState error={error} onRetry={() => refetch()} />
+			</Card>
+		);
+
+	if (!current && starting)
+		return (
+			<Card>
+				<EmptyState title="Starting the build…">
+					<span className="spin" /> Your committed preview is being built. This takes a moment to begin.
+				</EmptyState>
 			</Card>
 		);
 

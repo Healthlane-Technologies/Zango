@@ -160,10 +160,27 @@
     if (window.lucide && lucide.createIcons) { try { lucide.createIcons(); } catch (e) {} }
     locate();
   }
+  // The brand colour is the YAML's app.theme.primary: the server sets --brand from it. The picker
+  // repaints the page at once and tells the console, which saves it to the YAML.
+  function brandHex() {
+    var v = '';
+    try { v = getComputedStyle(document.documentElement).getPropertyValue('--brand').trim(); } catch (e) {}
+    if (/^#[0-9a-f]{6}$/i.test(v)) return v.toLowerCase();
+    if (/^#[0-9a-f]{3}$/i.test(v)) return ('#' + v[1] + v[1] + v[2] + v[2] + v[3] + v[3]).toLowerCase();
+    try {
+      var cx = document.createElement('canvas').getContext('2d');
+      cx.fillStyle = '#000'; cx.fillStyle = v || '#4f46e5';
+      if (/^#[0-9a-f]{6}$/i.test(cx.fillStyle)) return cx.fillStyle;
+    } catch (e) {}
+    return '#4f46e5';
+  }
+  function setBrand(v) { if (/^#[0-9a-f]{6}$/i.test(v || '')) document.documentElement.style.setProperty('--brand', v); }
   function personaBar() {
-    if (M.persona_bar === false || roleCodes.length < 2) return '';
-    return '<div class="z-persona" title="Switch persona (prototype only)"><span>Viewing as</span><select data-act="zas-role" aria-label="Persona">' +
-      roleCodes.map(function (r) { return '<option value="' + h(r) + '"' + (r === state.role ? ' selected' : '') + '>' + h(M.roles[r]) + '</option>'; }).join('') + '</select></div>';
+    if (M.persona_bar === false) return '';
+    var roles = roleCodes.length < 2 ? '' : '<span>Viewing as</span><select data-act="zas-role" aria-label="Persona">' +
+      roleCodes.map(function (r) { return '<option value="' + h(r) + '"' + (r === state.role ? ' selected' : '') + '>' + h(M.roles[r]) + '</option>'; }).join('') + '</select>';
+    var brand = M.brand_picker === false ? '' : '<input type="color" data-act="zas-brand" value="' + brandHex() + '" title="Brand colour" aria-label="Brand colour">';
+    return roles || brand ? '<div class="z-persona" title="Prototype only">' + roles + brand + '</div>' : '';
   }
 
   /* ---------- overlays ---------- */
@@ -186,6 +203,7 @@
     var act = el.getAttribute('data-act'), fn = handlers[act];
     if (act === 'zas-close') { overlay('z-drawer', false); overlay('z-modal', false); return; }
     if (act === 'zas-role') { if (ev.type === 'change') go(home(el.value), { role: el.value, replace: true }); return; }
+    if (act === 'zas-brand') { if (ev.type === 'change') { setBrand(el.value); post('brand', { value: el.value.toLowerCase() }); } return; }
     if (act === 'go') { ev.preventDefault(); go(el.getAttribute('data-go'), { record: el.getAttribute('data-record') }); return; }
     if (act === 'back') { back(); return; }
     if (!fn) return;
@@ -201,6 +219,10 @@
     var el = ev.target;
     if (el.matches && el.matches('select[data-act],input[data-act],textarea[data-act]')) dispatch(el, ev, { value: el.type === 'checkbox' ? el.checked : el.value, files: el.files });
   });
+  document.addEventListener('input', function (ev) {
+    var el = ev.target;
+    if (el.matches && el.matches('input[data-act="zas-brand"]')) setBrand(el.value);
+  });
   document.addEventListener('submit', function (ev) {
     var form = ev.target; if (!form.matches('form[data-act]')) return;
     ev.preventDefault();
@@ -212,6 +234,7 @@
     var d = ev.data || {};
     if (d.source !== 'zango-console') return;
     if (d.type === 'goto') go(d.screen, { role: d.role, record: d.record, replace: true });
+    if (d.type === 'brand') { setBrand(d.value); render(); }
   });
 
   /* ---------- menu items not built: greyed, as the built app shows them ---------- */

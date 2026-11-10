@@ -103,6 +103,7 @@ export default makeShell({
 import Shell from "./custom/Shell";
 // …
 <ZApp … customComponents={{ Layout: Shell }} authConfig={{ customComponents: { LoginPage: ZasLogin } }} />
+// ZasLogin = makeLogin({ headline, lede }), as in the template App.tsx
 ```
 
 Read the shell off each role's home screenshot (index.md lists them), then choose:
@@ -283,6 +284,10 @@ And:
 - every workflow move, tag and row action the screen offers, wherever it sits (header, rail, a link in
   a panel), carries `data-zas="action"` and `data-zas-key="<transition or action name>"`: a kit `Button`
   with `zasKey`, or those two attributes on your own element. The flow check finds the move by that key;
+- an entity with AI helpers: the rebuilt 360 shows what the AI is doing, since every run is a
+  background task: `<AiRecordStrip endpoint={endpoint} uuid={uuid} initial={zas.ai} onChanged={refresh} />`
+  (from `../../zas`) where the prototype shows AI activity, or under the header. It shows a run still
+  working, polls it, and reloads the page (`refresh`) when it is done.
 - the prototype's runtime is not used (its router, store, timers, toasts): values come from the props and
   the API, so permissions and workflow stay the platform's. Its *code* is what you port.
 - a requirement wins over the prototype: where the screen shows what a requirement forbids (a
@@ -303,11 +308,21 @@ def load(users):
 
 - Copy the prototype's own seed values (names, statuses, dates, notes) and map them to the app's
   models; dates relative to the prototype's "now" are shifted to the real now.
-- Replace, not add: delete the records the tests made (children first), then create. Set workflow
-  status through the workflow package's state rows, as the app's records keep it.
+- Replace, not add: delete the records the tests made (children first, with their `WorkflowState` /
+  `WorkflowTransaction` rows), then create.
+- Use `zas_core.demo` (`from .zas_core import demo`); it runs outside a request, where a plain save loses
+  what you set:
+  - `demo.set_status(obj, status, actor=None, name=None, data=None)` once per step of the record's history
+    (`pending_approval`, then `approved`). It keeps **one** current-state row per record; creating
+    `WorkflowState` rows yourself leaves two, and every list showing that record's status answers 500.
+  - `demo.stamp(obj, created_by=user, days_ago=n)` **after the record's last save()**. `obj.created_by = …`
+    before save() is overwritten (zango's pre_save writes the request user, none here), and a persona's
+    records with no owner are invisible to any role scoped to "their own".
 - The platform runs it (`manage.py agent_mode_demo_data <app>`, one transaction) before the screens are
   compared with the prototype, and after the tests, so the creator opens the demo data. A loader that
-  raises is a design failure for the fix round (`design.demo_data`).
+  raises, or leaves a record with two workflow states, is a failure for the fix round
+  (`design.demo_data`). Then the `demo` layer opens every list and 360 as each role on that data
+  (testing.md §Demo data layer).
 - The test users already carry the personas' names (`zango_platform.py users`).
 
 **Libraries** (`libraries.json`): use the npm package of the same library (Chart.js → `chart.js`, ECharts →

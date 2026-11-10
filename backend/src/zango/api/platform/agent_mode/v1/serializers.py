@@ -317,6 +317,7 @@ class AgentRequirementDetailSerializer(serializers.ModelSerializer):
     template = serializers.SerializerMethodField()
     # The preview greys the YAML's not-built menu items; the frame reloads when they change.
     prototype_soon = serializers.SerializerMethodField()
+    change = serializers.SerializerMethodField()
     # Template mode: the welcome's suggestions, as chips, until the creator writes.
     welcome_suggestions = serializers.SerializerMethodField()
 
@@ -330,6 +331,7 @@ class AgentRequirementDetailSerializer(serializers.ModelSerializer):
             "template_slug",
             "template",
             "prototype_soon",
+            "change",
             "welcome_suggestions",
             "mode",
             "initial_prompt",
@@ -365,6 +367,12 @@ class AgentRequirementDetailSerializer(serializers.ModelSerializer):
         if obj.messages.filter(role=MessageRole.USER).exists():
             return []
         return suggestions(obj.template)
+
+    def get_change(self, obj):
+        """What this change does to the current app's preview (screens changed, added, removed), or None."""
+        from zango.apps.agent_mode.prototype_changes import describe
+
+        return describe(obj)
 
     def get_prototype_soon(self, obj):
         from zango.apps.agent_mode.prototype import soon_digest, soon_menu

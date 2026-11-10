@@ -44,7 +44,9 @@ from . import auth, browser, in_scope, kit, load_json, print_summary, save_resul
 
 LOOK_FAIL = float(os.environ.get("ZAS_LOOK_FAIL", "0.40"))  # a faithful port sits at 10-15%, a different layout at 40%+
 
-GROUPS = ["lint", "gallery", "tokens", "tree", "layout", "parity", "kit", "style"]
+# "gallery" checks the runtime's default look against the shipped goldens: run it by name (--only gallery),
+# as the skill's self-test does. It is not part of an app's build checks.
+GROUPS = ["lint", "tokens", "tree", "layout", "parity", "kit", "style"]
 HERE = os.path.dirname(os.path.abspath(__file__))
 if os.path.dirname(HERE) not in sys.path:
     sys.path.insert(0, os.path.dirname(HERE))  # scripts/: proto_landmarks
@@ -485,6 +487,18 @@ def diff(a, b_):
 
 # ───────────────────────── gallery, tokens ─────────────────────────
 
+def runtime_fingerprint():
+    """A hash of the runtime files the goldens depict (tokens, kit styles, the gallery page): when it
+    changes, the goldens are stale until re-shot (--make-goldens)."""
+    import hashlib
+    zas = os.path.join(os.path.dirname(os.path.dirname(HERE)), "assets", "frontend", "zas")
+    h = hashlib.sha1()
+    for name in ("tokens.css", "kit.css", "Gallery.tsx"):
+        with open(os.path.join(zas, name), "rb") as f:
+            h.update(f.read())
+    return h.hexdigest()[:16]
+
+
 def g_gallery(Dx, b):
     goldens = {s: os.path.join(GOLDENS, f"{s}.png") for s in SECTIONS if os.path.exists(os.path.join(GOLDENS, f"{s}.png"))}
     if not goldens:
@@ -494,8 +508,13 @@ def g_gallery(Dx, b):
         meta = json.load(open(os.path.join(GOLDENS, "meta.json")))
     except (OSError, ValueError):
         meta = {}
+    if meta.get("runtime") and meta["runtime"] != runtime_fingerprint():
+        Dx.add("design.gallery", "gallery matches goldens", "assets/goldens", "fail",
+               "the goldens are stale: tokens.css, kit.css or Gallery.tsx changed since they were shot. "
+               "Re-shoot with `zas_test.design --make-goldens --workspace <built app>` and commit them")
+        return
     here = {"platform": sys.platform, "chromium": b.version}
-    if meta and meta != here:
+    if {k: meta.get(k) for k in here} != here:
         Dx.add("design.gallery", "gallery matches goldens", "assets/goldens", "skip",
                f"goldens were shot on {meta}, this run is {here}: font rendering differs across platforms. "
                f"Re-shoot with `zas_test.design --make-goldens` on this platform to compare")
@@ -518,6 +537,12 @@ def g_gallery(Dx, b):
         rp.close()
 
 
+def pinned_default(var):
+    """A token's shipped default, read from tokens.css: what the pinned gallery shows whatever app.design says."""
+    import spec_check
+    return spec_check._token_defaults()[var]
+
+
 def g_tokens(Dx, b):
     role, s = first_session(Dx)
     brand = Dx.M["app"]["theme"]["primary"]
@@ -537,7 +562,8 @@ def g_tokens(Dx, b):
                  lambda: (css["brandVar"].lower() == brand.lower(), f"--brand on :root is {css['brandVar']!r}, spec {brand}"))
         Dx.check("design.tokens.font", "Inter type", "design-system", lambda: ("Inter" in (css["font"] or ""), css["font"]))
         Dx.check("design.tokens.card", "card radius 12px, hairline border", "design-system",
-                 lambda: (css["panelRadius"] == "12px" and css["panelBorder"] == rgb("#eaecf0"), f"{css['panelRadius']} {css['panelBorder']}"))
+                 lambda: (css["panelRadius"] == "12px" and css["panelBorder"] == rgb(pinned_default("--zl-bdf")),
+                  f"{css['panelRadius']} {css['panelBorder']} (default border-faint {pinned_default('--zl-bdf')})"))
         bad = {t: v for t, v in css["badges"].items() if v != rgb(TONE_BG.get(t, "#000000"))}
         Dx.check("design.tokens.tones", "nine tones match tokens.css", "design-system",
                  lambda: (len(css["badges"]) == 9 and not bad, f"{len(css['badges'])} tones rendered; wrong: {bad}"))
@@ -566,8 +592,9 @@ def g_themed(Dx, rp, design):
                "no [data-gallery=themed] section on /app/__zas (runtime older than the skill?)")
         return
     tokens, fonts = design.get("tokens") or {}, design.get("fonts") or {}
-    want = {"page": tokens.get("page"), "card": tokens.get("card"), "border": tokens.get("border"),
-            "pri": tokens.get("brand"), "text": tokens.get("text"), "ok": tokens.get("ok-bg")}
+    # the panel's hairline is border-faint, the page title is text-strong (tokens.css, --zl-*)
+    want = {"page": tokens.get("page"), "card": tokens.get("card"), "border": tokens.get("border-faint"),
+            "pri": tokens.get("brand"), "text": tokens.get("text-strong"), "ok": tokens.get("ok-bg")}
     wrong = {k: f"{got[k]} != {v}" for k, v in want.items() if v and HEX.match(str(v)) and got.get(k) != rgb(v)}
     if tokens.get("radius") and str(tokens["radius"]).endswith("px") and got["radius"] != tokens["radius"]:
         wrong["radius"] = f"{got['radius']} != {tokens['radius']}"
@@ -781,7 +808,7 @@ def parity_target(Dx, hole):
     return None, (m.group(1) if m else None), f'[data-zas="panel"][data-zas-key="{key}"]', V.get("hero")
 
 
-def look_score(built, approved, width=1280, height=900, edge_cut=40, slack=7):
+def look_score(built, approved, width=1280, height=900, edge_cut=40, slack=7, max_shift=16):
     """How differently two screens are laid out, 0 (same) to 1, or None without PIL: the first screen
     (`width` x `height`, a short page padded with white) at half size, as edge maps, so a box, a rule
     or a line of text in a different place counts and a colour or a demo value barely does. The score
@@ -809,15 +836,36 @@ def look_score(built, approved, width=1280, height=900, edge_cut=40, slack=7):
     def ink(im):
         return ImageStat.Stat(im).sum[0] / 255
 
-    a, c = shot(approved), shot(built)
-    if not ink(a) and not ink(c):
+    a, c0 = shot(approved), shot(built)
+    if not ink(a) and not ink(c0):
         return 0.0
-    near_a, near_c = a.filter(ImageFilter.MaxFilter(slack)), c.filter(ImageFilter.MaxFilter(slack))
-    precision = ink(ImageChops.multiply(c, near_a)) / max(1.0, ink(c))
-    recall = ink(ImageChops.multiply(a, near_c)) / max(1.0, ink(a))
-    if precision + recall == 0:
-        return 1.0
-    return round(1 - 2 * precision * recall / (precision + recall), 3)
+    near_a = a.filter(ImageFilter.MaxFilter(slack))
+    split = width // 2 * 256 // width  # the sidebar (256px, half size 128): it never moves with the page
+
+    def counts(c, box):
+        near_c = c.filter(ImageFilter.MaxFilter(slack))
+        ca, cc, na, nc = (im.crop(box) for im in (a, c, near_a, near_c))
+        return (ink(ImageChops.multiply(cc, na)), ink(cc), ink(ImageChops.multiply(ca, nc)), ink(ca))
+
+    def f1(*parts):
+        tp_c, n_c, tp_a, n_a = (sum(x) for x in zip(*parts))
+        precision, recall = tp_c / max(1.0, n_c), tp_a / max(1.0, n_a)
+        return 1.0 if precision + recall == 0 else 1 - 2 * precision * recall / (precision + recall)
+
+    # A header a few px taller moves every block under it out of the match window: the same layout then
+    # scores like a different one. The main area is therefore tried at a few vertical offsets (the sidebar
+    # is compared where it is) and the best offset counts.
+    w, h = a.size
+    side = counts(c0, (0, 0, split, h))
+    best = None
+    for dy in range(-max_shift, max_shift + 1, 2):
+        shifted = c0
+        if dy:
+            shifted = Image.new("L", c0.size, 0)
+            shifted.paste(c0, (0, dy))
+        sc = f1(side, counts(shifted, (split, 0, w, h)))
+        best = sc if best is None else min(best, sc)
+    return round(best, 3)
 
 
 CHROME_SHARE = 1 / 3  # a label on this share of a persona's screens (and on 3 or more) is the shell's
@@ -955,6 +1003,45 @@ def open_parity(Dx, b):
                 path, why = screen_route(Dx, r, sess, records)
                 if why:
                     return None, why
+                dom_file = approved.replace("/shot.", "/dom.").replace(".png", ".html")
+
+                def gaps(rp):
+                    """What the approved screen shows that this built page doesn't (empty without a captured DOM)."""
+                    if not os.path.isfile(dom_file):
+                        return []
+                    # what the approved screen shows must be on the built one: a rebuild that
+                    # wraps the stock table, a chip without its count, a dropped subtitle
+                    skip = set(chrome.get(persona, set())) | {
+                        x.get("text") if isinstance(x, dict) else x for x in r.get("not_built") or []}
+                    E = Dx.M["entities"].get((Dx.M["pages"].get(r.get("page")) or {}).get("entity")) or {}
+                    cols = (E.get("table") or {}).get("columns") or []
+                    drawn = [c["label"] for c in cols if c.get("secondary") or c.get("icon")]
+                    if cols and (cols[0].get("secondary") or cols[0].get("icon")):
+                        drawn.append("#0")
+                    return PL.content_gaps(open(dom_file, encoding="utf-8").read(), rp.page.content(),
+                                           rp.page.inner_text("body"), skip=skip,
+                                           record=r.get("kind") == "view", ignore_words=persona_words,
+                                           drawn_cells=drawn, subtitle_words=sub_words.get(r["id"]))
+
+                if r.get("kind") == "view" and os.path.isfile(dom_file):
+                    # The approved screen shows a record in some state (Interview, Open): compare on the
+                    # visible record that shows the most of it, not on whichever record sorts first.
+                    hero = (Dx.M["detail_views"].get(r["code"]) or {}).get("hero")
+                    best = None
+                    for uid in browser.visible_uids(Dx.M, hero, sess, records.get(hero) or []):
+                        cand = browser.detail_path(Dx.M, hero, uid)
+                        rp0 = browser.RolePage(b, target, sess, viewport={"width": 1280, "height": 900})
+                        try:
+                            open_built(rp0, cand)
+                            n = len(gaps(rp0))
+                        finally:
+                            rp0.close()
+                        if best is None or n < best[0]:
+                            best = (n, cand)
+                        if n == 0:
+                            break
+                    if best:
+                        path = best[1]
                 rp = browser.RolePage(b, target, sess, viewport={"width": 1280, "height": 900})
                 try:
                     open_built(rp, path)
@@ -968,19 +1055,7 @@ def open_parity(Dx, b):
                                      f"{(state.inner_text() or '')[:120]}")
                     dom_file = approved.replace("/shot.", "/dom.").replace(".png", ".html")
                     if os.path.isfile(dom_file):
-                        # what the approved screen shows must be on the built one: a rebuild that
-                        # wraps the stock table, a chip without its count, a dropped subtitle
-                        skip = set(chrome.get(persona, set())) | {
-                            x.get("text") if isinstance(x, dict) else x for x in r.get("not_built") or []}
-                        E = Dx.M["entities"].get((Dx.M["pages"].get(r.get("page")) or {}).get("entity")) or {}
-                        cols = (E.get("table") or {}).get("columns") or []
-                        drawn = [c["label"] for c in cols if c.get("secondary") or c.get("icon")]
-                        if cols and (cols[0].get("secondary") or cols[0].get("icon")):
-                            drawn.append("#0")
-                        probs += PL.content_gaps(open(dom_file, encoding="utf-8").read(), rp.page.content(),
-                                                 rp.page.inner_text("body"), skip=skip,
-                                                 record=r.get("kind") == "view", ignore_words=persona_words,
-                                                 drawn_cells=drawn, subtitle_words=sub_words.get(r["id"]))
+                        probs += gaps(rp)
                     shot_dir = os.path.join(Dx.ws, ".zas", "screens", "parity")
                     os.makedirs(shot_dir, exist_ok=True)
                     built = os.path.join(shot_dir, f"proto.{r['id']}.{slug}.png")
@@ -1244,7 +1319,7 @@ def main(argv=None):
             paths = shoot_sections(rp, a.out)
             rp.close()
             with open(os.path.join(a.out, "meta.json"), "w") as f:
-                json.dump({"platform": sys.platform, "chromium": b.version}, f)
+                json.dump({"platform": sys.platform, "chromium": b.version, "runtime": runtime_fingerprint()}, f)
         print("\n".join(f"golden {k}: {v}" for k, v in paths.items()))
         return 0
     if not a.workspace:

@@ -10,7 +10,11 @@ import tarfile
 import tempfile
 import unittest
 
-from zango.apps.agent_mode.postrun import plan_steps, requires_restart
+from zango.apps.agent_mode.postrun import (
+    plan_steps,
+    requires_restart,
+    signal_worker_restart,
+)
 from zango.apps.agent_mode.snapshot import (
     FileChanges,
     create_snapshot,
@@ -157,6 +161,32 @@ class PostRunPlanTests(unittest.TestCase):
         self.assertTrue(requires_restart(FileChanges(modified=["a/tasks.py"])))
         self.assertTrue(requires_restart(FileChanges(modified=["settings.json"])))
         self.assertFalse(requires_restart(FileChanges(modified=["a/views.py"])))
+
+
+class RestartSignalTests(unittest.TestCase):
+    def setUp(self):
+        self.base = tempfile.mkdtemp(prefix="base-")
+
+    def tearDown(self):
+        shutil.rmtree(self.base, ignore_errors=True)
+
+    def test_off_touches_nothing(self):
+        self.assertIsNone(signal_worker_restart("", self.base))
+        self.assertEqual(os.listdir(self.base), [])
+
+    def test_relative_path_is_created_under_base_dir(self):
+        touched = signal_worker_restart(".agent_mode/celery-restart", self.base)
+        self.assertEqual(
+            touched, os.path.join(self.base, ".agent_mode", "celery-restart")
+        )
+        self.assertTrue(os.path.isfile(touched))
+
+    def test_existing_file_gets_a_new_mtime(self):
+        path = os.path.join(self.base, "restart")
+        write(self.base, "restart", "")
+        os.utime(path, (0, 0))
+        signal_worker_restart(path, "/elsewhere")
+        self.assertGreater(os.path.getmtime(path), 0)
 
 
 if __name__ == "__main__":

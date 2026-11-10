@@ -1,7 +1,8 @@
 // AI helpers in the running app (spec ai.agents; zas_core/ai.py does the work). The same surfaces the
 // Studio preview shows: a ✦ button on the record header, list rows and the list header, a suggestion
 // card to Use or Discard, an "Ask AI" chat, a `type: ai` tab or panel, and "Fill from …" in forms.
-// A background run is polled every 2s (backing off) until it is done; nothing here blocks a save.
+// Every run is a background task (an agent never runs inside a request): buttons, chat turns and form
+// fills all start a run and poll it every 2s (backing off) until it is done; nothing here blocks a save.
 import React, { useEffect, useRef, useState } from "react";
 import { Loader, MessageCircle, Send, Sparkles } from "lucide-react";
 import * as api from "./api";
@@ -125,9 +126,9 @@ export function AiChatDialog({ click, endpoint, uuid, uuids, where, onClose }: {
     setText(""); setBusy(true);
     setMsgs((m) => [...m, { who: "me", text: q }]);
     try {
-      const r = await api.aiChat(endpoint, click.agent, q, { uuid, uuids, where, session: session.current });
+      const r = await settle(endpoint, await api.aiChat(endpoint, click.agent, q, { uuid, uuids, where, session: session.current }));
       session.current = r.session_id || session.current;
-      setMsgs((m) => [...m, { who: "ai", text: r.answer || "", run: r.run }]);
+      setMsgs((m) => [...m, { who: "ai", text: r.status === "done" ? String(r.result || "") : "", run: r }]);
     } catch (e: any) {
       setMsgs((m) => [...m, { who: "ai", text: "", run: { status: "failed", error: String(e?.message || e) } as AiRun }]);
     } finally { setBusy(false); }
@@ -214,7 +215,56 @@ export function AiPanel({ agent, endpoint, uuid, title, onChanged }: { agent: st
 
 /** In a create / edit form: "Fill from …" (form assist, from a document) and AI buttons that fill fields.
  * onFill gets {field: value}; FormDialog reloads the form with them for the person to check and save. */
-export function AiFormBar({ endpoint, onFill }: { endpoint: string; onFill: (values: Record<string, any>) => void }) {
+/** What the person has typed so far, as {field: value}. The crud FormRenderer keeps its state to itself,
+ * so read it from the DOM: each field has a `zango-form_<key>__label`, inputs are `#zango-form_<key>` and
+ * a select shows its chosen label(s) in the same block. Selects send labels, which is what the AI reads. */
+export function readFormValues(host: HTMLElement | null): Record<string, any> {
+  const out: Record<string, any> = {};
+  host?.querySelectorAll<HTMLElement>('[id^="zango-form_"][id$="__label"]').forEach((label) => {
+    const key = label.id.slice("zango-form_".length, -"__label".length);
+    const el = host.querySelector<HTMLInputElement>(`#${CSS.escape("zango-form_" + key)}`);
+    if (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) {
+      if (el.type === "checkbox") out[key] = el.checked;
+      else if (el.type !== "file" && el.value.trim()) out[key] = el.value;
+      return;
+    }
+    let box: HTMLElement | null = label.parentElement;  // the field's block: the one holding its error line too
+    while (box && box !== host && !box.querySelector(`#${CSS.escape("zango-form_" + key + "__error")}`)) box = box.parentElement;
+    const picked = Array.from(box && box !== host ? box.querySelectorAll<HTMLElement>('[class*="singleValue"],[class*="single-value"],[class*="multiValue"] > div:first-child,[class*="multi-value__label"]') : [])
+      .map((x) => x.innerText.trim()).filter(Boolean);
+    if (picked.length) out[key] = picked.length === 1 ? picked[0] : picked;
+  });
+  return out;
+}
+
+/** Put files into the form's file inputs (`#zango-form_<key>`), as if the person had picked them.
+ * The form may still be loading, so wait for each input to appear. Returns a cleanup. */
+export function attachFiles(host: HTMLElement | null, files: Record<string, File>): () => void {
+  const left = new Map(Object.entries(files));
+  if (!host || !left.size) return () => undefined;
+  const put = () => {
+    left.forEach((file, key) => {
+      const el = host.querySelector<HTMLInputElement>(`input[type="file"]#${CSS.escape("zango-form_" + key)}`);
+      if (!el) return;
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      el.files = dt.files;
+      el.dispatchEvent(new Event("change", { bubbles: true }));
+      left.delete(key);
+    });
+    if (!left.size) obs.disconnect();
+  };
+  const obs = new MutationObserver(put);
+  obs.observe(host, { childList: true, subtree: true });
+  put();
+  return () => obs.disconnect();
+}
+
+export function AiFormBar({ endpoint, onFill, values }: {
+  endpoint: string; values?: () => Record<string, any>;
+  /** attach: the document the AI read, for the form's file field it came from (trigger `from`) */
+  onFill: (values: Record<string, any>, attach?: Record<string, File>) => void;
+}) {
   const [clicks, setClicks] = useState<AiClick[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [note, setNote] = useState<{ bad?: boolean; text: string } | null>(null);
@@ -229,12 +279,16 @@ export function AiFormBar({ endpoint, onFill }: { endpoint: string; onFill: (val
   const run = async (c: AiClick, files: File[]) => {
     setBusy(c.agent); setNote(null);
     try {
-      const r = await api.aiForm(endpoint, c.agent, {}, files);
-      if (r.run.status !== "done") setNote({ bad: r.run.status === "failed", text: r.run.error || "The AI couldn't fill the form." });
-      else if (!Object.keys(r.values).length) setNote({ text: "The AI found nothing to fill in." });
+      setNote({ text: "Reading… you can keep typing." });
+      const r = await settle(endpoint, await api.aiForm(endpoint, c.agent, values?.() || {}, files));
+      const vals = r.values || {};
+      if (r.status !== "done") setNote({ bad: r.status === "failed", text: r.error || "The AI couldn't fill the form." });
+      else if (!Object.keys(vals).length) setNote({ text: "The AI found nothing to fill in." });
       else {
-        onFill(r.values);
-        setNote({ text: `Filled ${Object.keys(r.values).length} field(s) with AI. Check them before saving` + (files.length ? "; attach the document below too." : ".") });
+        const field = files.length ? c.from?.[0] : undefined;
+        onFill(vals, field ? { [field]: files[0] } : undefined);
+        setNote({ text: `Filled ${Object.keys(vals).length} field(s) with AI. Check them before saving` +
+          (files.length && !field ? "; attach the document below too." : ".") });
       }
     } catch (e: any) { setNote({ bad: true, text: String(e?.message || e) }); } finally { setBusy(null); }
   };

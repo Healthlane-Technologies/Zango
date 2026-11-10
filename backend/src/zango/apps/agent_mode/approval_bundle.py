@@ -726,7 +726,9 @@ def write_prototype_bundle(
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     manifest, _ = manifest_of(parts)
-    (out / "prototype.html").write_text(assemble(parts, soon), encoding="utf-8")
+    # app.design.tokens.brand follows app.theme.primary (spec_tools.apply_design, set_brand).
+    brand = str(((design or {}).get("tokens") or {}).get("brand") or "") or None
+    (out / "prototype.html").write_text(assemble(parts, soon, brand), encoding="utf-8")
     (out / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     (out / "design.json").write_text(
         json.dumps(design or {}, indent=2), encoding="utf-8"
@@ -775,7 +777,7 @@ def write_prototype_bundle(
         # The page the creator started from: design_diff (zas_test/style.py) renders it next to the
         # approved one, so only what the creator changed blocks the build.
         (out / "baseline.html").write_text(
-            assemble(baseline[1], soon), encoding="utf-8"
+            assemble(baseline[1], soon, brand), encoding="utf-8"
         )
     if changes is not None:
         capture["changes"] = changes

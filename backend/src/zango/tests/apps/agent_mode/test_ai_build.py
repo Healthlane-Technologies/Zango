@@ -53,7 +53,7 @@ class CheckerTests(unittest.TestCase):
                                                "monthly_budget_usd": 50})
         reader = agent(M, "invoice_reader")
         self.assertEqual(reader["zango_name"], "invoice-reader")
-        self.assertEqual(reader["run"], "inline")
+        self.assertEqual(reader["run"], "async")  # every run is a background task, form fill too
         self.assertEqual(reader["roles"], ["Vendor User"])  # who can add invoices
         self.assertEqual(reader["output"]["format"], "JSON")
         self.assertEqual(reader["output"]["json_schema"]["required"], ["invoice_no", "invoice_date", "amount"])
@@ -119,6 +119,35 @@ class CheckerTests(unittest.TestCase):
             self.assertIn("uses vendor; it may use records", out)
             write("backend/procurement/ai/spend_summary.user.md", "Summarise the purchase orders.")
             self.assertIn("never uses {{records}}", self.audit(ws, S.holes))
+
+    def test_an_inline_helper_is_refused(self):
+        raw = copy.deepcopy(EXAMPLE)
+        next(x for x in raw["ai"]["agents"] if x["code"] == "invoice_reader")["run"] = "inline"
+        errs = checked(raw).L.errors()
+        self.assertTrue(any("ai.agents" in str(e) and "background" in str(e) for e in errs), errs)
+
+    def test_a_requirement_fired_by_a_save_queues_the_helper_with_run_later(self):
+        raw = copy.deepcopy(EXAMPLE)
+        next(x for x in raw["ai"]["agents"] if x["code"] == "invoice_reader")["triggers"].append({"event": "task"})
+        inv = next(e for m in raw["modules"] for e in m["entities"] if e["code"] == "invoice")
+        inv.setdefault("custom_requirements", []).append(
+            {"area": "backend", "title": "Read on upload", "text": "Read the invoice when it is added",
+             "trigger": {"event": "create"}, "uses_ai": ["invoice_reader"], "acceptance": ["x"]})
+        S = checked(raw)
+        self.assertEqual(S.L.errors(), [])
+        h = next(h for h in S.holes if h.get("uses_ai") and h["where"].startswith("entities.invoice"))
+        self.assertEqual(h["ai_call"], "run_later")
+        self.assertIn('run_later("invoice_reader"', h["text"])
+        self.assertIn(f'then="{h["function"]}__after_ai"', h["text"])
+        for x in S.holes:
+            x["status"] = "done" if x is h else "blocked"
+        with tempfile.TemporaryDirectory() as ws:
+            f = Path(ws) / h["target"].split("::", 1)[0]
+            f.parent.mkdir(parents=True, exist_ok=True)
+            f.write_text(f"def {h['function']}(request, obj):\n    run_from_code('invoice_reader', obj=obj)\n")
+            self.assertIn('run_later("invoice_reader", …) not found', self.audit(ws, S.holes))
+            f.write_text(f"def {h['function']}(request, obj):\n    run_later('invoice_reader', obj=obj, then='x')\n")
+            self.assertNotIn("not found", self.audit(ws, S.holes))
 
     def audit(self, ws, holes):
         import contextlib
@@ -417,9 +446,9 @@ class SubscriptionTests(AiAccountTests):
 
         seen = {}
 
-        def fake_run(self, prompt, model, system, timeout):
+        def fake_run(self, prompt, model, system, timeout, tools=None, attachments=None):
             seen.update(prompt=prompt, model=model, system=system)
-            return '```json\n{"risk": "high"}\n```', {"input_tokens": 12, "output_tokens": 5}
+            return '```json\n{"risk": "high"}\n```', {"input_tokens": 12, "output_tokens": 5}, []
 
         with override_settings(**self.SUB), mock.patch.object(ClaudeSubscriptionProvider, "_run", fake_run):
             prov = ClaudeSubscriptionProvider({})
@@ -430,6 +459,155 @@ class SubscriptionTests(AiAccountTests):
         self.assertEqual(prov.compute_cost(r.usage, "claude-sonnet-5-5"), 0.0)
         self.assertIn('{"type": "object"}', seen["system"])
         self.assertEqual(seen["prompt"], "Vendor: Acme")
+
+    # -- tools: the CLI is shown them but Zango runs them (see the provider docstring) --
+
+    def _tools(self):
+        from zango.ai.providers.base import LLMToolDef
+
+        schema = {"type": "object", "properties": {"q": {"type": "string"}}, "required": ["q"]}
+        return [LLMToolDef("zas_search_records", "Search records.", schema), LLMToolDef("other", "Other.", schema)]
+
+    def _fake_query(self, blocks, seen, raises=True):
+        """A stand-in for the SDK's `query`: one AssistantMessage per block, then the turn limit."""
+        from claude_agent_sdk import AssistantMessage, ResultError, ResultMessage, TextBlock, ToolUseBlock
+
+        async def query(prompt, options):
+            seen["options"] = options
+            seen["prompt"] = prompt
+            for b in blocks:
+                content = [TextBlock(b)] if isinstance(b, str) else [ToolUseBlock(*b)]
+                yield AssistantMessage(content=content, model="m")
+            yield ResultMessage(subtype="error_max_turns" if raises else "success", duration_ms=1, duration_api_ms=1,
+                                is_error=raises, num_turns=2, session_id="s", usage={"input_tokens": 7, "output_tokens": 3})
+            if raises:
+                raise ResultError("Reached maximum number of turns (1)", data={"subtype": "error_max_turns"})
+
+        return query
+
+    def _complete(self, blocks, tools, seen, **kw):
+        from unittest import mock
+
+        from django.test import override_settings
+
+        from zango.ai.providers.base import LLMMessage
+        from zango.ai.providers.claude_subscription import ClaudeSubscriptionProvider
+
+        with override_settings(**self.SUB), mock.patch("claude_agent_sdk.query", self._fake_query(blocks, seen, **kw)):
+            return ClaudeSubscriptionProvider({}).complete(
+                [LLMMessage(role="user", content="Find Acme")], "claude-sonnet-5-5", tools=tools, system="Help.")
+
+    def test_a_tool_turn_comes_back_as_tool_use_with_every_call(self):
+        seen = {}
+        r = self._complete(
+            ["Looking.", ("tu_1", "mcp__zango__zas_search_records", {"q": "Acme"}), ("tu_2", "mcp__zango__other", {"q": "x"})],
+            self._tools(), seen)
+        self.assertEqual(r.stop_reason, "tool_use")
+        self.assertEqual([(c.id, c.name, c.input) for c in r.tool_calls],
+                         [("tu_1", "zas_search_records", {"q": "Acme"}), ("tu_2", "other", {"q": "x"})])
+        self.assertEqual(r.content, "Looking.")
+        self.assertEqual((r.usage.input_tokens, r.usage.output_tokens), (7, 3))
+
+    def test_the_cli_is_offered_only_the_agents_tools_and_runs_none(self):
+        seen = {}
+        self._complete([("tu_1", "mcp__zango__other", {"q": "x"})], self._tools(), seen)
+        o = seen["options"]
+        self.assertEqual(o.tools, [])  # no files, shell or web
+        self.assertEqual(o.max_turns, 1)
+        self.assertIsNone(o.can_use_tool)
+        self.assertEqual(sorted(o.allowed_tools), ["mcp__zango__other", "mcp__zango__zas_search_records"])
+        self.assertEqual(list(o.mcp_servers), ["zango"])
+
+    def test_an_agent_without_tools_is_one_plain_turn(self):
+        seen = {}
+        r = self._complete(["Hello."], None, seen, raises=False)
+        self.assertEqual((r.stop_reason, r.content, r.tool_calls), ("end_turn", "Hello.", []))
+        self.assertFalse(seen["options"].mcp_servers)
+        self.assertFalse(seen["options"].allowed_tools)
+
+    def test_a_cli_failure_without_tool_calls_is_still_an_error(self):
+        from zango.ai.exceptions import LLMAPIError
+
+        with self.assertRaises(LLMAPIError):
+            self._complete([], self._tools(), {})
+
+    def test_the_next_prompt_shows_the_earlier_call_and_its_result(self):
+        from zango.ai.providers.base import LLMMessage
+        from zango.ai.providers.claude_subscription import _prompt
+
+        prompt = _prompt([
+            LLMMessage(role="user", content="Find Acme"),
+            LLMMessage(role="assistant", content=[
+                {"type": "text", "text": "Looking."},
+                {"type": "tool_use", "id": "tu_1", "name": "zas_search_records", "input": {"q": "Acme"}}]),
+            LLMMessage(role="user", content=[
+                {"type": "tool_result", "tool_use_id": "tu_1", "content": '{"count": 1}', "is_error": False}]),
+        ])
+        self.assertIn('called tool zas_search_records with {"q": "Acme"}', prompt)
+        self.assertIn('result of tool zas_search_records]\n{"count": 1}', prompt)
+
+    def test_a_pdf_goes_to_the_cli_as_a_block_beside_the_prompt(self):
+        from unittest import mock
+
+        from zango.ai.providers.base import LLMFile, LLMMessage
+        from zango.ai.providers.claude_subscription import ClaudeSubscriptionProvider
+
+        doc = LLMFile.from_bytes(b"%PDF-1.4 resume", media_type="application/pdf").to_anthropic_block()
+        seen = {}
+
+        def fake_run(self, prompt, model, system, timeout, tools=None, attachments=None):
+            seen.update(prompt=prompt, attachments=attachments)
+            return "Dev Malhotra", {}, []
+
+        msg = LLMMessage(role="user", content=[doc, {"type": "text", "text": "Who is this?"}])
+        with mock.patch.object(ClaudeSubscriptionProvider, "_run", fake_run):
+            ClaudeSubscriptionProvider({}).complete([msg], "claude-sonnet-5-5")
+        self.assertEqual(seen["attachments"], [doc])
+        self.assertEqual(seen["prompt"], "Who is this?")  # no base64 in the text
+
+    def test_a_file_it_cannot_send_is_named_in_the_prompt(self):
+        from zango.ai.providers.base import LLMMessage
+        from zango.ai.providers.claude_subscription import _attachments, _prompt
+
+        msg = LLMMessage(role="user", content=[
+            {"type": "document", "source": {"type": "file", "file_id": "f_1"}}, {"type": "text", "text": "Read it"}])
+        self.assertEqual(_attachments([msg]), [])
+        self.assertIn("[attached document not sent in local testing]", _prompt([msg]))
+
+    def test_agent_client_runs_the_tool_through_the_executor_then_answers(self):
+        from unittest import mock
+
+        from zango.ai.agent_client import AgentClient
+        from zango.ai.providers.claude_subscription import ClaudeSubscriptionProvider
+        from zango.tests.apps.ai.test_agent_client import _EXEC, _PC, _TOOL_CALL_MODEL, _TOOL_MODEL
+        from zango.tests.apps.ai.test_agent_client import _make_agent, _make_tool_result
+
+        prompts = []
+
+        def fake_run(self, prompt, model, system, timeout, tools=None, attachments=None):
+            prompts.append((prompt, [t.name for t in tools or []]))
+            if len(prompts) == 1:
+                return "", {}, [("tu_1", "zas_search_records", {"q": "Acme"})]
+            return "Found it.", {}, []
+
+        provider = ClaudeSubscriptionProvider({})
+
+        def complete(**kw):
+            return provider.complete(kw["messages"], kw["model"], tools=kw.get("tools"), system=kw.get("system"))
+
+        agent = _make_agent(tools=["zas_search_records"], provider_slug="claude_subscription")
+        with mock.patch.object(ClaudeSubscriptionProvider, "_run", fake_run), mock.patch(_PC) as pc_cls, \
+                mock.patch(_EXEC) as exec_cls, mock.patch(_TOOL_MODEL), mock.patch(_TOOL_CALL_MODEL):
+            pc_cls.return_value.complete.side_effect = complete
+            pc_cls.return_value._get_client.return_value = mock.MagicMock()
+            exec_cls.return_value.execute.return_value = _make_tool_result(output={"count": 1})
+            out = AgentClient(agent).run(input="Find Acme")
+        self.assertEqual(out.content, "Found it.")
+        exec_cls.return_value.execute.assert_called_once_with("zas_search_records", {"q": "Acme"})
+        self.assertEqual(len(prompts), 2)
+        self.assertIn("result of tool zas_search_records", prompts[1][0])
+        self.assertIn('{"count": 1}', prompts[1][0])
+
 
 
 class PlatformAiAccountApiTests(AiAccountTests):

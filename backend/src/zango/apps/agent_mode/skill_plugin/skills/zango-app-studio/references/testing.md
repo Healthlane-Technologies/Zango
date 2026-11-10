@@ -55,7 +55,17 @@ def before_transition(ctx, entity, name, uuid, role):
 ```
 
 `ctx.create(entity, role=None, values=None, params=None) -> uuid`, `ctx.run(entity, uuid, transition, role=None) -> (ok, msg)`,
-`ctx.record(entity, uuid, role=None) -> row`, `ctx.session(role)`. Fixtures are test data, never product logic.
+`ctx.record(entity, uuid, role=None) -> row`, `ctx.field(entity, uuid, key)` (a link field gives its pk; `ctx.link(entity, uuid, key)`
+gives the linked object_uuid), `ctx.session(role)`, and
+`with ctx.ai_fake({"<helper>": answer}):` when the record is made by an AI helper. Fixtures are test data, never product logic.
+
+Records the app makes itself (an AI read opens a case; nobody has Add) come from fixtures, made the way
+the app makes them: `record_for(ctx, entity, role)` returns one the role sees, and
+`record_in(ctx, entity, status, role)` one in a status only system moves reach (`needs_review` after an
+unclear AI read). Without them every transition, refusal and 360 check on that entity skips.
+
+A crash inside a test or fixture (`AttributeError`, `IndexError`) is a **failure** marked
+"test error (fix the test or .zas/test_fixtures.py, not the app)". Fix the fixture; never leave it.
 
 ## Layer 2: UI (`python3 -m zas_test.ui --workspace <ws>`)
 
@@ -119,6 +129,15 @@ Two rules from live builds: give the app_user login **one** dedicated record (a 
 "close-out disables the login" would otherwise lock the test user out mid-run), and never bind it by
 editing the database: walk the record through the spec's `create_on` like a user would.
 
+## Demo data layer (`python3 -m zas_test.api --workspace <ws> --only smoke`, layer `demo`)
+
+Open mode replaces the test records with the prototype's sample data (`backend/demo_data.py`, open-mode.md
+§Demo data) at the end of the tests, so the creator opens the demo data. The platform then checks that
+data, read-only: the load leaves one workflow state per record (else the load is rolled back and fails
+as `design.demo_data`), `.zas/test_records.json` is pointed at the demo records, and every role lists
+every entity it may view (also `?zas_raw=1`, the dashboard's read) and opens 360s on rows it sees. A
+failure here is blocking: it is exactly what the creator would hit on first open.
+
 ## Layer 4: scenarios (`python3 -m zas_test.scenarios --workspace <ws>`)
 
 One behaviour test per plain-language item, written by Claude from **Scenarios to write** in
@@ -132,6 +151,14 @@ a save, `ctx.call("<module>.tasks.<fn>")` for a scheduled job), assert the outco
 - AI helpers (`ai_prompt` holes): never call the real AI. Wrap the scenario in `with ctx.ai_fake({...}):`
   (the spec's `preview.sample`, or your answer per helper), click with `ctx.ai_run(ent, uuid, role, agent)`,
   read open suggestions with `ctx.ai_pending(ent, uuid, role)` ([map/ai.md](map/ai.md), Testing).
+- Every AI run is a background task: a save or click returns before the AI answers. After a save that
+  starts one, call `ctx.ai_settle(ent, uuid)` **inside** the `with ctx.ai_fake(...)` block (the worker
+  reads the fake when it runs) and assert the record's in-between state first ("AI reading"). Needs
+  the Celery worker.
+- AI tools (`ai_tool` holes): the fake AI never calls tools, so call each one with
+  `ctx.ai_tool(agent, tool, args, role=None, record=None)`: as a role (their rows) or as the system
+  (`role=None`, like a task run), with the helper's record. It returns the tool's dict; a write
+  tool's effect is then checked through the API (`ctx.record`, `ctx.status_of`).
 - Holes without a scenario (other than `covered`/`blocked`) are reported as skips, so gaps are visible.
 - **Prove a scenario can fail** for the riskiest rule (break the hook on purpose, run `--only H-NN`,
   see it fail, restore). A suite that cannot fail proves nothing.

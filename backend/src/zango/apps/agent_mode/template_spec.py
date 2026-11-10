@@ -287,6 +287,37 @@ def patch_manual(requirement, ops, base_revision):
     return save_manual(requirement, yamlio.dump_rt(doc), base_revision)
 
 
+def set_brand(requirement, primary):
+    """The preview's colour picker: ``app.theme.primary``, and the brand tokens in ``app.design``
+    that derive from ``--brand`` (so the build themes with the same colour)."""
+    from zango.apps.shared.app_templates.services.spec import document, yamlio
+
+    from .prototype import _HEX_RE, design_tokens
+
+    primary = str(primary or "").strip().lower()
+    if not _HEX_RE.match(primary):
+        return 400, {"message": "The brand colour must look like #4f46e5."}
+    blocked = _edit_blocked(requirement, requirement.draft_revision)
+    if blocked:
+        return blocked
+    try:
+        doc = yamlio.load_rt(requirement.spec_markdown or "") or {}
+        doc, _ = document.set_at(doc, "/app/theme/primary", primary)
+        tokens = ((doc.get("app") or {}).get("design") or {}).get("tokens")
+        parts = requirement.prototype_parts or {}
+        if hasattr(tokens, "get") and parts:
+            # The tokens that move with --brand: brand itself and whatever tokens.css derives from it.
+            a = design_tokens(parts, "#000001").get("tokens", {})
+            b = design_tokens(parts, "#000002").get("tokens", {})
+            fresh = design_tokens(parts, primary).get("tokens", {})
+            for name, value in fresh.items():
+                if name in tokens and a.get(name) != b.get(name):
+                    tokens[name] = value
+    except (document.PathError, yamlio.SpecYAMLError) as exc:
+        return 400, {"message": f"Could not set the brand colour: {exc}"}
+    return save_manual(requirement, yamlio.dump_rt(doc), requirement.draft_revision)
+
+
 def finalize(requirement, base_revision):
     """The user says the spec is complete: strict checks, then it stops being a draft."""
     from zango.apps.shared.app_templates.services.spec.validate import (

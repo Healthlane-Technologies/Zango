@@ -191,3 +191,23 @@ def requires_restart(changes) -> bool:
     """Changes the running processes cannot pick up without a restart."""
     paths = changes.all_paths() if changes else []
     return any(p.endswith(("models.py", "tasks.py", "settings.json")) for p in paths)
+
+
+def signal_worker_restart(signal_file: str, base_dir: str) -> str | None:
+    """Touch the dev restart file; the touched path, or None when it is off.
+
+    A worker only loads an app's tasks when it starts. In local dev the app
+    worker runs under ``watchmedo auto-restart`` watching this file, so a touch
+    restarts it on the new code. The build itself runs on a separate worker
+    (the agent_mode queue) that is not watched, so this never cuts it short.
+    """
+    if not signal_file:
+        return None
+    path = signal_file
+    if not os.path.isabs(path):
+        path = os.path.join(base_dir, path)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "a"):
+        pass
+    os.utime(path, None)
+    return path

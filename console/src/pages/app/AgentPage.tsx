@@ -44,6 +44,7 @@ import { PREVIEW_CHANNEL } from './agent/previewChannel';
 import type { SpecDraftController } from './agent/builder/useSpecDraft';
 import { RunsPanel } from './agent/runs/RunsPanel';
 import { Thread } from './agent/Thread';
+import { RoundSwitcher } from './agent/RoundSwitcher';
 import { STAGES, roundLabel, stageOf, type Round } from './agent/rounds';
 import { specHighlights } from './agent/specHighlights';
 import './agent/agent.css';
@@ -106,7 +107,10 @@ export function AgentPage() {
 	// Every round lives in one thread, oldest first, like any conversation.
 	const summaries = useMemo(
 		() =>
-			[...(list.data ?? [])].sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at)),
+			// a discarded change is gone from the thread: the app's current version is the active round again
+			[...(list.data ?? [])]
+				.filter((r) => r.status !== 'abandoned')
+				.sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at)),
 		[list.data],
 	);
 	const details = useQueries({ queries: summaries.map((s) => requirementQuery(appId, s.uuid)) });
@@ -442,6 +446,7 @@ export function AgentPage() {
 					<Button
 						variant="primary"
 						icon="rocket"
+						loading={commit.isPending || startBuild.isPending}
 						onClick={() => setView({ round: null, tab: 'builds' })}
 					>
 						{stage === 'approved'
@@ -678,18 +683,11 @@ export function AgentPage() {
 						/>
 						{rounds.length > 1 && viewed && (
 							<div className="rounds">
-								<select
-									className="select h-7 w-auto max-w-[320px] py-0 text-[12px]"
-									aria-label="Round"
-									value={viewed.summary.uuid}
-									onChange={(e) => setView({ round: e.target.value })}
-								>
-									{[...rounds].reverse().map((r) => (
-										<option key={r.summary.uuid} value={r.summary.uuid}>
-											{roundLabel(r.index)} — {r.summary.title.slice(0, 48)}
-										</option>
-									))}
-								</select>
+								<RoundSwitcher
+									rounds={rounds}
+									viewed={viewed}
+									onPick={(uuid) => setView({ round: uuid })}
+								/>
 							</div>
 						)}
 					</div>
@@ -714,6 +712,7 @@ export function AgentPage() {
 									appId={appId}
 									requirementId={viewed.summary.uuid}
 									canBuild={viewingActive && viewed.detail.can_build && !blocked}
+									starting={viewingActive && (commit.isPending || startBuild.isPending)}
 									onRunChange={onRunChange}
 								/>
 							) : (

@@ -1,7 +1,13 @@
 /* The kit page's stylesheet (packs/zango_app/builder/app-studio.html), for the markup
    zas-render.js draws. Generated: python -m zango.apps.agent_mode.zas_render --write */
+@keyframes dwin{from{transform:translateX(30px);opacity:.4}}
+@keyframes fadein{from{opacity:0}}
+@keyframes moin{from{opacity:0;transform:translate(-50%,-47%)}}
+@keyframes aispin{to{transform:rotate(360deg)}}
+@keyframes moin2{from{opacity:0;transform:translateY(8px)}}
+@scope (.zr-page, .zr-pop-root) {
 
-:root{
+:scope{
   --page:#F8F9FB;--card:#FFF;--sunken:#F2F4F8;--tinted:#EEF1FE;
   --strong:#0B0D14;--text:#14171F;--sub:#4A4F5C;--muted:#767A88;--faint:#A4A8B5;--ghost:#C9CCD4;
   --bdf:#EEEFF2;--bd:#E2E4E9;--bds:#C7CAD3;
@@ -12,9 +18,7 @@
   --g50:#F1F5EE;--g100:#DEE9D6;--g700:#3A512D;
   --ez:cubic-bezier(.22,1,.36,1);--mono:'JetBrains Mono','SF Mono',ui-monospace,monospace;
 }
-*{box-sizing:border-box}
-html,body{height:100%}
-body{margin:0;font-family:'Inter',-apple-system,sans-serif;background:var(--page);color:var(--text);-webkit-font-smoothing:antialiased;font-feature-settings:'cv11','ss01';font-size:14px}
+*{box-sizing:border-box}.zr-page{margin:0;font-family:'Inter',-apple-system,sans-serif;background:var(--page);color:var(--text);-webkit-font-smoothing:antialiased;font-feature-settings:'cv11','ss01';font-size:14px}
 button{font:inherit;color:inherit;background:none;border:none;padding:0;cursor:pointer}
 input,select,textarea{font:inherit;color:inherit}
 svg.lucide{width:1em;height:1em;flex:none}
@@ -69,7 +73,7 @@ svg.lucide{width:1em;height:1em;flex:none}
 .pvstage.framed .zapp{border-radius:12px;box-shadow:0 0 0 1px rgba(15,18,32,.08),0 18px 40px -18px rgba(15,18,32,.35);flex-shrink:0}
 
 /* ── the generated app ── */
-:root{--brand:#4F46E5;--b50:color-mix(in srgb,var(--brand) 7%,#fff);--b100:color-mix(in srgb,var(--brand) 14%,#fff);--b600:color-mix(in srgb,var(--brand) 88%,#000)}
+:scope{--brand:#4F46E5;--b50:color-mix(in srgb,var(--brand) 7%,#fff);--b100:color-mix(in srgb,var(--brand) 14%,#fff);--b600:color-mix(in srgb,var(--brand) 88%,#000)}
 .zapp,.mo{--b50:color-mix(in srgb,var(--brand) 7%,#fff);--b100:color-mix(in srgb,var(--brand) 14%,#fff);--b600:color-mix(in srgb,var(--brand) 88%,#000)}
 .zapp{font-size:13.5px;color:#101828}
 .z-shell{display:flex;height:100%}
@@ -263,7 +267,7 @@ table.z-t{width:100%;border-collapse:separate;border-spacing:0;font-size:13.5px}
 /* drawer */
 .z-dw-bg{position:absolute;inset:0;background:rgba(16,24,40,.25);z-index:40}
 .z-dw{position:absolute;top:0;right:0;bottom:0;width:440px;max-width:92%;background:#fff;z-index:41;box-shadow:-16px 0 40px -12px rgba(16,24,40,.25);display:flex;flex-direction:column;animation:dwin .22s var(--ez)}
-@keyframes dwin{from{transform:translateX(30px);opacity:.4}}
+
 .z-dw-h{padding:18px 20px;border-bottom:1px solid #EAECF0;display:flex;gap:10px;align-items:flex-start}
 .z-dw-h h2{margin:0;font-size:17px;font-weight:650;color:#101828}
 .z-dw-h p{margin:3px 0 0;font-size:12.5px;color:#667085}
@@ -272,10 +276,10 @@ table.z-t{width:100%;border-collapse:separate;border-spacing:0;font-size:13.5px}
 
 /* modal */
 .mo-bg{position:fixed;inset:0;background:rgba(16,24,40,.42);z-index:80;animation:fadein .15s}
-@keyframes fadein{from{opacity:0}}
+
 .mo{position:fixed;z-index:81;left:50%;top:50%;transform:translate(-50%,-50%);width:520px;max-width:calc(100vw - 32px);max-height:calc(100vh - 48px);background:#fff;border-radius:14px;box-shadow:0 24px 48px -12px rgba(16,24,40,.3);display:flex;flex-direction:column;font-size:13.5px;color:#101828;animation:moin .2s var(--ez)}
 .mo.wide{width:680px}
-@keyframes moin{from{opacity:0;transform:translate(-50%,-47%)}}
+
 .mo-h{padding:18px 22px 14px;display:flex;gap:12px;align-items:flex-start}
 .mo-h .mi{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;font-size:19px;flex:none}
 .mo-h h2{margin:0;font-size:17px;font-weight:650;letter-spacing:-.01em}
@@ -331,7 +335,7 @@ textarea.z-in{height:auto;padding:9px 11px;resize:vertical;line-height:1.45}
 .ai-sim{margin-left:auto;font-size:11px;color:#98A2B3}
 .ai-think{display:inline-flex;align-items:center;gap:6px;margin-left:auto;font-size:12px;color:#6941C6}
 .ai-think .lucide{animation:aispin 1s linear infinite}
-@keyframes aispin{to{transform:rotate(360deg)}}
+
 .ai-txt{font-size:13px;line-height:1.55;color:#344054}
 .ai-kv{display:flex;gap:12px;padding:4px 0;font-size:13px;border-bottom:1px dashed #EAECF0}
 .ai-kv:last-child{border-bottom:0}
@@ -351,7 +355,7 @@ textarea.z-in{height:auto;padding:9px 11px;resize:vertical;line-height:1.45}
 /* toast */
 #toasts{position:fixed;right:18px;bottom:18px;z-index:120;display:flex;flex-direction:column;gap:8px;align-items:flex-end}
 .toast{background:#101828;color:#fff;border-radius:11px;padding:11px 14px;font-size:13px;max-width:400px;box-shadow:0 12px 32px -8px rgba(16,24,40,.45);animation:moin2 .25s var(--ez)}
-@keyframes moin2{from{opacity:0;transform:translateY(8px)}}
+
 .toast b{font-weight:600;display:flex;align-items:center;gap:7px}
 .toast p{margin:3px 0 0;color:#D0D5DD;font-size:12.5px}
 .toast .od{margin-top:7px;padding-top:7px;border-top:1px solid rgba(255,255,255,.12);font-size:12px;color:#BDB4FE;line-height:1.45}
@@ -632,3 +636,5 @@ select.z-fin{appearance:none;padding:0 30px 0 10px;background:#fff url("data:ima
 html[data-zas-radius="sharp"] :is(.z-card,.d-panel,.d-stat){border-radius:4px}html[data-zas-radius="sharp"] .d-head{border-radius:6px}html[data-zas-radius="sharp"] :is(.z-btn,.z-ib,.z-search,.z-sel){border-radius:4px}
 html[data-zas-radius="soft"] :is(.z-card,.d-panel,.d-stat){border-radius:16px}html[data-zas-radius="soft"] .d-head{border-radius:20px}html[data-zas-radius="soft"] :is(.z-btn,.z-ib,.z-search,.z-sel){border-radius:10px}
 html[data-zas-density="compact"] :is(.z-btn,.z-search,.z-sel){height:32px}html[data-zas-density="compact"] .z-t :is(td,th){padding-top:7px;padding-bottom:7px}html[data-zas-density="compact"] .z-content{padding:18px 22px 36px}
+
+}

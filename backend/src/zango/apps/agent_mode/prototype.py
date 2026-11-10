@@ -375,10 +375,14 @@ def soon_digest(soon: list[dict]) -> str:
     return hashlib.sha256(raw).hexdigest()[:12]
 
 
-def assemble(parts: dict, soon: list[dict] | None = None) -> str:
+def assemble(
+    parts: dict, soon: list[dict] | None = None, brand: str | None = None
+) -> str:
     """The prototype as one HTML page: CSP, fonts, styles, manifest, runtime, parts.
 
     ``soon``: the menu items not built (soon_menu); the runtime greys them.
+    ``brand``: the YAML's app.theme.primary (theme_brand); it sets ``--brand`` after every part's
+    CSS, so the spec's brand colour wins over the fallback in tokens.css.
     """
     manifest, _ = manifest_of(parts)
     css, js = _ordered(parts, manifest)
@@ -400,6 +404,8 @@ def assemble(parts: dict, soon: list[dict] | None = None) -> str:
     for path in css:
         body = (parts[path] or "").replace("</style", "<\\/style")
         out.append(f'<style data-part="{_esc_attr(path)}">\n{body}\n</style>')
+    if brand and _HEX_RE.match(brand):
+        out.append(f'<style data-zas="theme">:root{{--brand:{brand}}}</style>')
     out.append("</head><body>")
     if parts.get(BODY_PART):
         out.append(parts[BODY_PART].replace("</body", "<\\/body"))
@@ -424,6 +430,22 @@ def assemble(parts: dict, soon: list[dict] | None = None) -> str:
     out.append("<script>ZAS.boot()</script>")
     out.append("</body></html>")
     return "\n".join(out)
+
+
+_HEX_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
+
+
+def theme_brand(spec_text: str | None) -> str | None:
+    """The YAML's ``app.theme.primary`` when it is a #rrggbb colour, else None."""
+    import yaml
+
+    try:
+        doc = yaml.safe_load(spec_text or "") or {}
+        value = ((doc.get("app") or {}).get("theme") or {}).get("primary")
+    except (yaml.YAMLError, AttributeError):
+        return None
+    value = str(value or "").strip()
+    return value if _HEX_RE.match(value) else None
 
 
 # ---------------------------------------------------------------------------
@@ -837,12 +859,13 @@ def _family(value: str) -> str:
     return "" if first in generic or first.startswith("var(") else first
 
 
-def design_tokens(parts: dict) -> dict:
+def design_tokens(parts: dict, brand: str | None = None) -> dict:
     """``app.design`` pre-filled from the prototype's ``:root`` tokens.
 
     Generated prototypes keep their tokens in ``tokens.css``; an imported page's
     are wherever it declared them, so every stylesheet part is read. ``var()``
-    chains are resolved so each token is a concrete value.
+    chains are resolved so each token is a concrete value. ``brand`` (the YAML's
+    app.theme.primary) replaces ``--brand`` first, so the shades derived from it follow.
     """
     manifest, _ = manifest_of(parts)
     # (The kit page keeps the look it resolves to in tokens.css too; its own stylesheet holds defaults.)
@@ -855,6 +878,8 @@ def design_tokens(parts: dict) -> dict:
         env.update(_root_vars(parts.get(path) or ""))
     if not env:
         return {}
+    if brand and _HEX_RE.match(brand):
+        env["brand"] = brand
     values = {name: _resolve(value, env) for name, value in env.items()}
 
     fonts: dict = {}

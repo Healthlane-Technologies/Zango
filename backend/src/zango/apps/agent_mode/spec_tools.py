@@ -791,6 +791,15 @@ class SpecWorkbench:
                     + (" …" if len(drift) > 8 else "")
                     + "). Call proto_design again."
                 )
+        no_record = self._entities_without_record_page(doc)
+        if no_record:
+            raise ToolRefused(
+                "Not ready — these entities have a list page but no record page. Give each a "
+                "`detail_views` entry (header with the code and status, a stepper when it has a "
+                "lifecycle, a facts card, tabs) and a record screen in the prototype, however "
+                "simple the app is; skip it only when the user said the entity has no page of "
+                "its own:\n" + "\n".join(f"- {code}" for code in no_record)
+            )
         custom = [
             p
             for p in doc.get("pages") or []
@@ -815,6 +824,35 @@ class SpecWorkbench:
             + "\n".join(f"- {p['code']}: {p['reason']}" for p in custom)
             + note
         )
+
+    @staticmethod
+    def _entities_without_record_page(doc: dict) -> list[str]:
+        """Hero and transactional entities listed on a crud page with no detail view of their own."""
+        listed = {
+            p.get("entity")
+            for p in doc.get("pages") or []
+            if isinstance(p, dict) and p.get("type") == "crud"
+        }
+        heroes = {
+            dv.get("hero")
+            for dv in doc.get("detail_views") or []
+            if isinstance(dv, dict)
+        }
+        out = []
+        for module in doc.get("modules") or [doc]:
+            for e in (
+                module.get("entities") if isinstance(module, dict) else None
+            ) or []:
+                if not isinstance(e, dict):
+                    continue
+                code = e.get("code")
+                if (
+                    code in listed
+                    and code not in heroes
+                    and e.get("kind") in ("hero", "transactional")
+                ):
+                    out.append(code)
+        return out
 
     def _check_prototype_coverage(self, doc: dict, design) -> str:
         """The YAML says everything the prototype shows (prototype_coverage.py), or says why not.
@@ -1045,7 +1083,10 @@ class SpecWorkbench:
                 "This requirement's template version has no app.design, so the look can't be "
                 "recorded in the spec; the build reads it from the prototype instead. Don't retry."
             )
-        design = design_tokens(self.proto.parts)
+        # The brand colour is the YAML's app.theme.primary; tokens.css's --brand is only its fallback.
+        theme = ((self.doc or {}).get("app") or {}).get("theme") or {}
+        primary = str(theme.get("primary") or "") if hasattr(theme, "get") else ""
+        design = design_tokens(self.proto.parts, primary or None)
         if not design:
             raise ToolRefused(
                 "The prototype declares no :root tokens yet (tokens.css, or the imported "
@@ -1058,9 +1099,14 @@ class SpecWorkbench:
             + "\napp.design = "
             + json.dumps(design)[:1500]
             + (
-                f"\nKeep app.theme.primary equal to the brand colour {brand}."
-                if brand and str(brand).startswith("#") and len(str(brand)) == 7
-                else ""
+                f"\nThe brand colour is app.theme.primary ({primary}); the preview sets --brand from it."
+                if primary
+                else (
+                    f"\nSet app.theme.primary to the brand colour {brand}: the preview and the "
+                    "build take the brand from it."
+                    if brand and str(brand).startswith("#") and len(str(brand)) == 7
+                    else ""
+                )
             )
         )
 

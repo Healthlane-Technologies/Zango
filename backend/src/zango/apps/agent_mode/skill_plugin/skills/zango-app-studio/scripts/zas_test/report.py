@@ -20,14 +20,15 @@ from collections import OrderedDict
 from . import auth, load_json, load_results
 from . import log as blog
 
-LAYERS = ["api", "ui", "design", "scenarios"]
+LAYERS = ["api", "ui", "design", "scenarios", "demo"]
 LAYER_INFO = {
     "api": ("API", "Access, forms, workflow, tags, row actions, row scoping and the 360 payload, generated from the spec"),
     "ui": ("UI", "Every page, menu and 360 tab rendered in a real browser for every role"),
     "design": ("Design", "Design lint, tokens, the design tree per role and layout sanity"),
     "scenarios": ("Scenarios", "Each plain-language rule exercised end to end (written from the spec text)"),
+    "demo": ("Demo data", "The data the app opens with: every role lists every entity and opens its 360s"),
 }
-BLOCKING_LAYERS = {"api", "ui", "design", "scenarios"}
+BLOCKING_LAYERS = {"api", "ui", "design", "scenarios", "demo"}
 REQUIRED_LAYERS = {"api", "ui", "design"}
 # reported, not blocking: platform-dependent / cosmetic, and preview parity (the agent gets fix rounds for it first)
 NON_BLOCKING = ("design.layout", "design.gallery", "design.parity", "design.kit")

@@ -2,6 +2,19 @@ import { parsePointer } from './pointer';
 import { branchFor, childSchema, isSingleKeyMap, titleOf, ui, type Schema } from './schema';
 import { fill } from './template';
 
+/** Index of the list item a pointer segment names: a number, or an `@code` selector. */
+function itemIndex(list: unknown[], part: string): number {
+	if (!part.startsWith('@')) return Number(part);
+	const code = part.slice(1);
+	return list.findIndex(
+		(it) =>
+			!!it &&
+			typeof it === 'object' &&
+			((it as Record<string, unknown>).code === code ||
+				(isSingleKeyMap(it) && Object.keys(it)[0] === code)),
+	);
+}
+
 /** "Programs › Enhertu PAP › Orders › Free vials" for a pointer, from schema titles and item titles. */
 export function humanPath(root: Schema, doc: unknown, pointer: string): string {
 	const out: string[] = [];
@@ -15,7 +28,8 @@ export function humanPath(root: Schema, doc: unknown, pointer: string): string {
 		const next = childSchema(root, parent, part, value);
 		let nextValue: unknown;
 		if (Array.isArray(value)) {
-			nextValue = value[Number(part)];
+			const at = itemIndex(value, part);
+			nextValue = value[at];
 			const item = branchFor(root, next, nextValue);
 			const hint = { ...ui(parent), ...ui(item) };
 			const label = isSingleKeyMap(nextValue)
@@ -23,7 +37,15 @@ export function humanPath(root: Schema, doc: unknown, pointer: string): string {
 				: nextValue && typeof nextValue === 'object'
 					? fill(hint.itemTitle, nextValue)
 					: String(nextValue ?? '');
-			out.push(label || `#${Number(part) + 1}`);
+			const own =
+				nextValue && typeof nextValue === 'object'
+					? [
+							('name' in nextValue && nextValue.name) || '',
+							('title' in nextValue && nextValue.title) || '',
+							('code' in nextValue && nextValue.code) || '',
+						].find((v) => typeof v === 'string' && v)
+					: '';
+			out.push(label || (own as string) || (at >= 0 ? `#${at + 1}` : part.replace(/^@/, '')));
 			labelledByKey = isSingleKeyMap(nextValue);
 		} else {
 			nextValue =

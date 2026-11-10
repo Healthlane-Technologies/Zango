@@ -16,6 +16,7 @@ raises leaves the data as it was.
 
 import importlib
 import json
+import os
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db import connection, transaction
@@ -62,8 +63,53 @@ class Command(BaseCommand):
                         users.setdefault(role, user)
         with transaction.atomic():
             counts = module.load(users)
+            problems = self._check(name)
+            if problems:  # rolls the load back: the fix round gets design.demo_data with these lines
+                raise CommandError(
+                    "backend/demo_data.py left broken records:\n"
+                    + "\n".join(problems[:10])
+                )
+        if options.get("users"):
+            self._point_tests_at_demo(name, options["users"])
         self.stdout.write(
             json.dumps(
                 {"loaded": counts if isinstance(counts, dict) else {}}, default=str
             )
         )
+
+    @staticmethod
+    def _runtime(name, mod):
+        try:
+            return importlib.import_module(f"workspaces.{name}.backend.zas_core.{mod}")
+        except ModuleNotFoundError:
+            return None  # an app built before this runtime module existed
+
+    def _check(self, name):
+        """What the loader broke that the app's lists and 360s would trip on."""
+        demo = self._runtime(name, "demo")
+        return demo.check() if demo else []
+
+    def _point_tests_at_demo(self, name, users_path):
+        """The load deleted the records the API tests made, so .zas/test_records.json now names records
+        that are gone: the design and UI layers would open nothing. Point it at the demo records."""
+        spec = self._runtime(name, "spec")
+        if spec is None:
+            return
+        records = {}
+        for code in spec.entities():
+            try:
+                model = spec.model(code)
+            except Exception:  # noqa: BLE001
+                continue
+            ids = model.objects.order_by("-id").values_list("object_uuid", flat=True)[
+                :20
+            ]
+            if ids:
+                records[code] = [
+                    str(u) for u in reversed(ids)
+                ]  # newest last, as the API tests write it
+        path = os.path.join(
+            os.path.dirname(os.path.abspath(users_path)), "test_records.json"
+        )
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(records, f, indent=1)

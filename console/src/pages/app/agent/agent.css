@@ -809,3 +809,107 @@
 	color: var(--accent-t);
 	font-weight: 550;
 }
+
+/* Round switcher: the initial build and each change, newest first. */
+.rs-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	height: 28px;
+	padding: 0 10px;
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	background: var(--panel);
+	font-size: 12.5px;
+	font-weight: 600;
+	color: var(--t1);
+	white-space: nowrap;
+	cursor: pointer;
+}
+.rs-btn:hover {
+	background: var(--bg);
+}
+.rs-dot,
+.rs-state i {
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: var(--t4);
+	display: inline-block;
+}
+.rs-dot.amber, .rs-state.amber i { background: #d97706; }
+.rs-dot.green, .rs-state.green i { background: #16a34a; }
+.rs-dot.accent, .rs-state.accent i { background: #4f46e5; }
+.rs-dot.red, .rs-state.red i { background: #dc2626; }
+.rs-item {
+	display: grid;
+	gap: 2px;
+	width: 300px;
+	max-width: 100%;
+	padding: 2px 0;
+	white-space: normal;
+}
+.rs-item.on {
+	box-shadow: inset 2px 0 0 #4f46e5;
+	padding-left: 8px;
+}
+.rs-top {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 12.5px;
+}
+.rs-state {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	font-size: 11.5px;
+	color: var(--t3);
+}
+.rs-latest {
+	margin-left: auto;
+	font-size: 10.5px;
+	font-weight: 600;
+	color: #4f46e5;
+}
+.rs-title {
+	font-size: 12.5px;
+	line-height: 1.35;
+	color: var(--t2);
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+.rs-when {
+	font-size: 11px;
+	color: var(--t4);
+}
+.rs-caret {
+	width: 6px;
+	height: 6px;
+	margin: -3px 1px 0 0;
+	border-right: 1.6px solid var(--t3);
+	border-bottom: 1.6px solid var(--t3);
+	transform: rotate(45deg);
+}
+
+/* The menu's rows are fixed-height one-liners; a round needs room for its name, state and date. */
+.menu [role='menuitem']:has(.rs-item) {
+	height: auto;
+	align-items: stretch;
+	padding: 7px 8px;
+}
+
+.rs-label {
+	max-width: 200px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	font-weight: 500;
+	color: var(--t3);
+}
+.rs-label::before {
+	content: '·';
+	margin-right: 7px;
+	color: var(--t4);
+}

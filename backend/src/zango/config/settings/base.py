@@ -477,6 +477,11 @@ def setup_settings(settings, BASE_DIR):
         AGENT_MODE_STUDIO_LOOK_ROUNDS=(int, 2),
         AGENT_MODE_SNAPSHOT_RETENTION=(int, 5),
         AGENT_MODE_SNAPSHOT_MAX_BYTES=(int, 536870912),
+        # Local dev only: a file a finished build touches when it changed
+        # models, tasks or settings, so a worker run under
+        # `watchmedo auto-restart` reloads the app's new tasks. Relative paths
+        # are taken from BASE_DIR. Empty (the default) never touches anything.
+        AGENT_MODE_RESTART_SIGNAL_FILE=(str, ""),
     )
     environ.Env.read_env(os.path.join(BASE_DIR.parent, ".env"))
 
@@ -519,6 +524,7 @@ def setup_settings(settings, BASE_DIR):
     settings.AGENT_MODE_STUDIO_LOOK_ROUNDS = env("AGENT_MODE_STUDIO_LOOK_ROUNDS")
     settings.AGENT_MODE_SNAPSHOT_RETENTION = env("AGENT_MODE_SNAPSHOT_RETENTION")
     settings.AGENT_MODE_SNAPSHOT_MAX_BYTES = env("AGENT_MODE_SNAPSHOT_MAX_BYTES")
+    settings.AGENT_MODE_RESTART_SIGNAL_FILE = env("AGENT_MODE_RESTART_SIGNAL_FILE")
 
     settings.SECRET_KEY = env("SECRET_KEY")
     settings.DEBUG = env("DEBUG")

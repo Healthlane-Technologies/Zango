@@ -36,7 +36,7 @@ or the write is refused. Paths are lower-case: `screens/request.view.js`.
 {
   "title": "Lab Sample Tracker",
   "currency": "USD",
-  "fonts": ["https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"],
+  "fonts": ["https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"],
   "libraries": ["https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"],
   "roles": {"tech": "Lab technician", "lead": "Lab lead", "qa": "Quality"},
   "personas": {"tech": {"name": "Priya Raman"}, "lead": {"name": "Tomás Ortega"}, "qa": {"name": "Hanna Berg"}},
@@ -90,8 +90,8 @@ ZAS.on('approve', (data, el, event, ctx) => { ... })        // data-act="approve
   `fetch('/_blob/<id>')` works.
 - **Navigation**: `ZAS.go('sample', {record: 'S-12'})`, `ZAS.back()`; in markup
   `data-act="go" data-go="samples"` (plus `data-record`). Persona switch: `ZAS.go(home, {role})`;
-  a "Viewing as" switcher is drawn for you (turn it off with `"persona_bar": false` when the shell
-  draws its own).
+  a "Viewing as" switcher and the brand colour picker (how the user sets `app.theme.primary`) are
+  drawn for you, bottom left. Leave them on; `"persona_bar": false` hides both.
 - **Actions**: any element with `data-act` calls its `ZAS.on` handler with its `data-*` values;
   inputs and selects with `data-act` fire on change (`data.value`), and `<form data-act>` on
   submit (`data.form`). Overlays: `ZAS.drawer(html)`, `ZAS.modal(html)`, `false` closes;
@@ -104,10 +104,24 @@ ZAS.on('approve', (data, el, event, ctx) => { ... })        // data-act="approve
 
 ## The first draft
 
-1. **Direction.** From the subject, decide the look before writing: a palette of 5-7 tokens with
-   a deliberate hue for the brand and tinted neutrals, a type pairing (display + text, plus mono
-   for IDs and figures), radius, density, one signature treatment (a status rail, a stage stepper,
-   a ledger-style table). Write it into `tokens.css`. Never a gray page with one blue accent.
+1. **Direction: start from the default look.** `references/example/` IS the platform's default
+   design, part for part: a soft-grey rail (logo tile with the app's initials, app name and module,
+   who is signed in, the persona's menu with counts), a white page-header band, lists in ONE card
+   (search, segmented status filters with counts, sortable headers, two-line cells with mono codes,
+   status badges with a dot, avatars, a chevron, a pager), record pages (back link, icon tile, code +
+   status badge, name, meta line, actions, a stepper with dates, tabs with counts, cards with icon
+   headers, a summary rail) and a home with stat tiles. Read every file in it. Write its
+   `tokens.css` and `app.css` as yours unchanged, its `shell.js` with your app's counts, and build
+   each list screen like `screens/samples.js`, each record screen like `screens/sample.js` and each
+   home like `screens/bench.js`, with this business's fields. Keep its classes, the grey rail and the
+   type pairing (Inter + JetBrains Mono). Do not invent a palette, a dark sidebar or a new type
+   pairing: a different look only when the user asks for it, or hands you a reference or brand guide
+   (then take its palette, type and density, and say so).
+   **The brand colour is never hard-coded.** It is the YAML's `app.theme.primary` (`#4F46E5` unless
+   the user or their brand names one); the preview sets `--brand` from it, and the colour picker
+   beside "Viewing as" changes it. In CSS use `var(--brand)` and the shades tokens.css derives from it
+   (`--b50`, `--b100`, `--b200`, `--b700`, `--tinted`); never write a brand hex in a part. Status
+   colours are the `t-*` tones, not the brand.
 2. **Write the frame yourself**, in this order: `manifest.json` → `tokens.css` → `app.css` →
    `data.js` → `shell.js` → the home screen of the main persona. The user should see their app
    within a few minutes.
@@ -120,14 +134,23 @@ ZAS.on('approve', (data, el, event, ctx) => { ... })        // data-act="approve
    Records: store `samples` (id, label, matrix, batch, received, due, stage, assignee, flags).
    Show: stage chips with counts (Received, In prep, On instrument, Review, Released, Rejected),
    a table (ID mono, label, matrix, batch, due with overdue in red, stage pill, assignee avatar),
-   rows open `sample`. Lead sees a "Reassign" action per row.
-   Actions: data-act="stage-filter" (chip), "open" (row) → ZAS.go('sample', {record: id}).
+   the whole row opens `sample`. Lead sees a "Reassign" action per row.
+   Actions: data-act="list-filter" (segment), "list-sort", "list-search", "open" (the <tr>) →
+   ZAS.go('sample', {record: id}).
    States: empty filter result; overdue; the tech sees only their own by default.
-   Use: classes .page-head, .chips, .card, .tbl from app.css; tokens --brand, --ok, --warn, --bad.
+   Build it like references/example/screens/samples.js: .z-top band, one .z-card with .z-tb
+   (.z-search, .z-seg), table.z-t with .c-code/.c-sub cells, .z-badge t-* pills, .c-person, td.chev,
+   .z-pgr. Colours only from tokens (var(--brand) and its shades, t-* tones); no hex.
    ```
 4. **Review** what the writers report. Fix shared parts yourself (they must not edit them),
    check the manifest has every screen, then look at the result once.
-5. **Write the YAML in the same turn** (spec tools): roles = personas, entities = the store's
+5. **Every entity that has a list page also gets a record page** in the prototype (a `record`
+   screen, as in the example's `sample`, opened by clicking anywhere on the row: `data-act` on the
+   `<tr>`, never only on the code) and a `detail_views` entry in the YAML
+   (header with the code and status, a stepper when it has a lifecycle, a facts card, tabs for its
+   history and child records), even when the user says "keep it simple": simple means few fields
+   and tabs, not no record page. Skip it only for an entity the user said has no page of its own.
+   **Write the YAML in the same turn** (spec tools): roles = personas, entities = the store's
    collections and their fields, pages = screens (record screens map to the entity's detail view),
    workflow = the stages and the actions that move them, custom requirements = automation the
    prototype only fakes (AI review, reminders, integrations).
@@ -170,6 +193,7 @@ For every screen, say in the YAML, with the prototype's own words:
 |---|---|
 | each persona's menu: items, labels, groups and order | that role's `roles[].menu`, exactly. When the requirements give a role less than the prototype shows it, change the prototype's menu for that persona; never give the role items it shouldn't have |
 | a menu item for a screen not built | that screen's `prototype.screens` entry: `menu: {group, label, icon}` (shown greyed out) |
+| **My Downloads**, the last menu item of every persona whose role can export (and of no other) | `{page: my_downloads, label: My Downloads, icon: download}` in that role's `roles[].menu`; draw one simple screen for it (Report title, Initiated at, Status, File) and map it `maps: /system/@my_downloads` in `prototype.screens`. The crud package serves it: nothing to build |
 | a page heading | `pages[].title` |
 | list columns, status tabs or filter chips | `table.columns`, `table.quick_filters` (never `default: true`: a list opens with no chip selected, in the prototype too) |
 | a list cell with a muted second line, an icon or initials before its value | that column's `secondary: [<fields>]` (`secondary_style: mono` for a monospace line) and `icon: <lucide name>`, `icon: {by: <field>, map: {<value>: <name>}, default}` or `icon: initials` |
@@ -253,4 +277,5 @@ When the user uploaded their app as an `.html` file, it is the prototype. Do not
 
 The page keeps its own look. Imported parts may be up to 1 MB each.
 
-See `references/example/` for a complete small prototype in this format (a fictional lab).
+See `references/example/` for a complete small prototype in this format and in the default look
+(a fictional lab: `bench` home, `samples` list, `sample` record).

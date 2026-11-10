@@ -1,12 +1,12 @@
 // Every write goes through the crud package's own FormRenderer (server-driven forms,
 // sync for show_when, validation errors) or a plain confirm POST. Never a hand-built form.
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { FormRenderer } from "@zango-core/crud/form";
 import { ArrowRightCircle, CircleX, Plus, Pencil, Tag as TagIcon, Zap } from "lucide-react";
 import * as api from "./api";
 import { useToast } from "./ui";
 import { Button, Modal } from "./kit";
-import { AiFormBar } from "./ai";
+import { AiFormBar, attachFiles, readFormValues } from "./ai";
 
 export type FormSpec =
   | { kind: "create"; endpoint: string; title: string; params?: Record<string, string> }
@@ -45,12 +45,15 @@ export function FormDialog({ spec, onClose, onDone }: { spec: FormSpec; onClose:
   const p = paramsFor(spec);
   const endpoint = spec.endpoint.split("?")[0];
   // AI form fill: the server seeds the form with the values (zas_prefill); the person checks and saves
-  const [prefill, setPrefill] = useState<{ n: number; values: Record<string, any> } | null>(null);
+  const [prefill, setPrefill] = useState<{ n: number; values: Record<string, any>; attach?: Record<string, File> } | null>(null);
   const aiForm = spec.kind === "create" || (spec.kind === "row" && spec.actionKey === "edit");
+  const host = useRef<HTMLDivElement>(null);  // the AI reads what has been typed so far
+  // the document the AI read goes into its file field once the reloaded form has drawn it
+  useEffect(() => (prefill?.attach ? attachFiles(host.current, prefill.attach) : undefined), [prefill]);
   return (
     <Modal title={spec.title} icon={iconFor(spec)} iconTone={spec.kind === "transition" && spec.danger ? "red" : undefined} wide onClose={onClose}>
-      {aiForm && <AiFormBar endpoint={endpoint} onFill={(values) => setPrefill((x) => ({ n: (x?.n || 0) + 1, values: { ...(x?.values || {}), ...values } }))} />}
-      <div className="zas-form-host">
+      {aiForm && <AiFormBar endpoint={endpoint} values={() => readFormValues(host.current)} onFill={(values, attach) => setPrefill((x) => ({ n: (x?.n || 0) + 1, values: { ...(x?.values || {}), ...values }, attach }))} />}
+      <div className="zas-form-host" ref={host}>
         <FormRenderer
           key={prefill?.n || 0}
           api_endpoint={endpoint}

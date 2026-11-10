@@ -15,6 +15,24 @@ import type { TemplateReference } from './templates';
 // /api/v1/apps/<uuid>/agent-mode/ (backend/src/zango/api/platform/agent_mode/v1).
 // Runs (phase 2) are owned by pages/app/agent/runs and reuse `agentKeys` from here.
 
+/** A screen of the prototype, as the change summary names it. */
+export interface ChangeScreen {
+	id: string;
+	title: string;
+}
+
+/** What a change request does to the app's current preview. */
+export interface RequirementChange {
+	/** The app's current approved version: what "Current app" shows. Never written by a change. */
+	baseline: { uuid: string; revision: number; title: string };
+	changed: ChangeScreen[];
+	added: ChangeScreen[];
+	removed: ChangeScreen[];
+	/** Shared parts that changed (the look, the data, the menu). */
+	shared: string[];
+	has_changes: boolean;
+}
+
 export type RequirementStatus = 'gathering' | 'ready' | 'approved' | 'abandoned';
 export type RunStatus =
 	| 'queued'
@@ -141,6 +159,8 @@ export interface Requirement {
 	preview_mode?: 'open' | 'kit';
 	/** Bumped on every prototype write; the frame reloads when it changes. */
 	prototype_revision?: number;
+	/** A change request only: what it does to the app's current preview (null for a first version). */
+	change?: RequirementChange | null;
 	/** Digest of the YAML's not-built menu items, which the preview greys; reloads the frame too. */
 	prototype_soon?: string;
 	prototype_hash?: string;
@@ -416,7 +436,8 @@ export function useSendMessage(appId: string, reqId: string) {
 			message: string | { content: string; focus?: PreviewFocus | null; documents?: File[] },
 		) => {
 			const url = `${base(appId)}/requirements/${reqId}/messages/`;
-			if (typeof message === 'string') return api<{ status: RequirementStatus }>(url, 'POST', { content: message });
+			if (typeof message === 'string')
+				return api<{ status: RequirementStatus }>(url, 'POST', { content: message });
 			if (!message.documents?.length)
 				return api<{ status: RequirementStatus }>(url, 'POST', {
 					content: message.content,
@@ -459,6 +480,16 @@ export function useApproveRequirement(appId: string, reqId: string) {
 	});
 }
 
+/** Drop a change that was never approved. The app keeps its current version. */
+export function useDiscardRequirement(appId: string, reqId: string) {
+	return useApiMutation({
+		fn: () =>
+			api<{ status: RequirementStatus }>(`${base(appId)}/requirements/${reqId}/discard/`, 'POST', {}),
+		invalidate: [agentKeys.requirement(appId, reqId), agentKeys.requirements(appId)],
+		success: 'Change discarded. Your app is unchanged.',
+	});
+}
+
 /**
  * Preview-first "Commit for build": the server finalizes a draft spec and approves it in one
  * step, refusing as approve does (400 spec errors, 409 open decisions / agent working / stale
@@ -488,7 +519,13 @@ export function useCommitRequirement(appId: string, reqId: string) {
 export function useRequirementSpec(
 	appId: string,
 	reqId: string | undefined,
-	revision: { draft?: number; version?: number; status?: string; turns?: number; thinking?: boolean },
+	revision: {
+		draft?: number;
+		version?: number;
+		status?: string;
+		turns?: number;
+		thinking?: boolean;
+	},
 ) {
 	return useQuery({
 		// Open decisions and flags change without a draft revision: the turn's end refetches them.
@@ -554,8 +591,8 @@ export function specErrorBody(err: unknown): { current?: RequirementSpec; issues
  * platform adapter already injected. Immutable per template version.
  */
 /** The open prototype, assembled into one page; `version` pins an approved version. */
-export const prototypeUrl = (appId: string, reqId: string, version?: number) =>
-	`${base(appId)}/requirements/${reqId}/prototype/${version ? `?v=${version}` : ''}`;
+export const prototypeUrl = (appId: string, reqId: string, version?: number, baseline?: boolean) =>
+	`${base(appId)}/requirements/${reqId}/prototype/${baseline ? '?baseline=1' : version ? `?v=${version}` : ''}`;
 
 /** The prototype page at a revision: refetched when the agent writes a part. */
 export function usePrototypeHtml(
@@ -563,16 +600,20 @@ export function usePrototypeHtml(
 	reqId: string,
 	revision: number | undefined,
 	soon?: string,
+	baseline?: boolean,
 ) {
 	return useQuery({
-		queryKey: ['agent-prototype', appId, reqId, revision ?? 0, soon ?? ''],
+		queryKey: ['agent-prototype', appId, reqId, revision ?? 0, soon ?? '', !!baseline],
 		queryFn: async () => {
-			const res = await fetch(prototypeUrl(appId, reqId), { credentials: 'same-origin' });
+			const res = await fetch(prototypeUrl(appId, reqId, undefined, baseline), {
+				credentials: 'same-origin',
+			});
 			if (res.status === 404) return null;
 			if (!res.ok) throw new Error(`The prototype could not be loaded (${res.status}).`);
 			return res.text();
 		},
-		enabled: !!revision,
+		// the current app (baseline) exists whatever this change's own revision is
+		enabled: !!revision || !!baseline,
 		staleTime: Infinity,
 		placeholderData: keepPreviousData,
 		retry: 1,
@@ -617,6 +658,19 @@ export function useConfirmFlags(appId: string, reqId: string) {
 				paths,
 			}),
 		invalidate: [agentKeys.spec(appId, reqId), agentKeys.requirement(appId, reqId)],
+	});
+}
+
+/** The preview's colour picker: saves the brand colour (app.theme.primary) to the YAML. */
+export function useSetBrand(appId: string, reqId: string) {
+	const qc = useQueryClient();
+	return useApiMutation({
+		fn: (primary: string) =>
+			api<RequirementSpec>(`${base(appId)}/requirements/${reqId}/theme/`, 'POST', { primary }),
+		invalidate: [agentKeys.requirement(appId, reqId)],
+		// The open page already shows the colour; the cached copy reloads only when next opened.
+		onSuccess: () =>
+			qc.invalidateQueries({ queryKey: ['agent-prototype', appId, reqId], refetchType: 'none' }),
 	});
 }
 

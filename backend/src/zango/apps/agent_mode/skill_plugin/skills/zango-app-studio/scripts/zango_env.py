@@ -148,13 +148,13 @@ def call_script(app, target, args):
     """Python for `manage.py shell -c`: load the app's tenant + workspace, call backend.<target>(*args)."""
     mod, fn = target.rsplit(".", 1)
     return (
-        "import json, importlib\n"
+        "import json\n"
         "from django.db import connection\n"
         "from zango.apps.shared.tenancy.models import TenantModel\n"
         "from zango.apps.dynamic_models.workspace.base import Workspace\n"
         f"t = TenantModel.objects.get(name={app!r}); connection.set_tenant(t)\n"
         "Workspace(t, as_systemuser=True).ready()\n"
-        f"f = getattr(importlib.import_module('workspaces.{app}.backend.{mod}'), {fn!r})\n"
+        f"from workspaces.{app}.backend.{mod} import {fn} as f\n"
         f"r = f(*{list(args)!r})\n"
         "print('ZAS_RESULT=' + json.dumps(r, default=str))\n"
     )

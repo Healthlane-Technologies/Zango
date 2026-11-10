@@ -21,7 +21,6 @@ import argparse
 import copy
 import datetime
 import hashlib
-import importlib.util
 import json
 import os
 import re
@@ -35,10 +34,8 @@ except ImportError:  # pragma: no cover
     sys.exit(2)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-_expr_spec = importlib.util.spec_from_file_location(
-    "zas_expr", os.path.join(HERE, "..", "assets", "backend", "zas_core", "expr.py"))
-X = importlib.util.module_from_spec(_expr_spec)
-_expr_spec.loader.exec_module(X)
+sys.path.insert(0, os.path.join(HERE, "..", "assets", "backend"))
+from zas_core import expr as X  # noqa: E402  (pure Python at import time)
 
 SKILL_VERSION = "0.1.0"
 
@@ -49,6 +46,36 @@ FIELD_TYPES = {
 }
 KINDS = {"hero", "transactional", "child", "master"}
 ACTIONS = {"view", "add", "edit", "delete", "export", "detail"}
+# "My Downloads": the crud package's own page of a user's finished exports (packages/crud/downloads,
+# mounted at /crud/downloads/my-downloads). A reserved menu page, not a spec page: it has no entity, no React
+# export and no 360. Every role that can export (an entity's access.actions has `export`) gets the item.
+MY_DOWNLOADS = "my_downloads"
+MY_DOWNLOADS_ROUTE = "/app/my-downloads"
+MY_DOWNLOADS_ENDPOINT = "/crud/downloads/my-downloads"
+MY_DOWNLOADS_POLICY = "CrudDownloadsViewAccess"
+SYSTEM_ROLES = ("AnonymousUsers", "SystemUsers")
+MY_DOWNLOADS_ITEM = {"page": MY_DOWNLOADS, "label": "My Downloads", "icon": "download"}
+
+
+def export_roles(ents, roles):
+    """Names of the roles that can export from at least one entity (view + export in its access)."""
+    out = []
+    for r in roles:
+        for E in ents.values():
+            acc = E.get("access") or {}
+            a = acc.get(r) if acc else {"actions": ACTIONS, "none": False}
+            if a and not a.get("none") and {"view", "export"} <= set(a.get("actions") or ()):
+                out.append(r)
+                break
+    return out
+
+
+def _system_title(page):
+    return MY_DOWNLOADS_ITEM["label"] if page == MY_DOWNLOADS else None
+
+
+def menu_pages(role):
+    return [i.get("page") for it in role.get("menu") or [] for i in (it.get("items") or [it])]
 ROW_ACTION_TYPES = {"edit", "form", "confirm", "navigate", "download", "delete"}
 PAGE_TYPES = {"crud", "detail", "custom"}
 # app.ui: the look, as choices tokens.css maps to values (references/design-system.md)
@@ -197,17 +224,17 @@ def dashboard_text(P):
 # config.ts applyTheme() injects the CSS (html:root beats the app.ui radius/density rules) and the
 # Google Fonts link for families the runtime does not embed.
 DESIGN_MAP = {
-    "page": ["--z-ground"],
+    "page": ["--z-ground", "--zl-page"],
     "card": ["--z-card", "--color-base-white"],
-    "sunk": ["--z-sunken", "--color-gray-100"],
-    "text-strong": ["--color-gray-900"],
-    "text": ["--z-text", "--color-gray-900", "--color-gray-800"],
-    "text-2": ["--z-text2", "--z-sub", "--color-gray-700", "--color-gray-600"],
-    "text-3": ["--z-muted", "--color-gray-500"],
-    "text-faint": ["--z-faint", "--color-gray-400"],
-    "border-faint": ["--z-bdf"],
-    "border": ["--z-bd", "--color-gray-200"],
-    "border-strong": ["--z-bds", "--z-ghost", "--color-gray-300"],
+    "sunk": ["--z-sunken", "--zl-sunk", "--color-gray-100"],
+    "text-strong": ["--zl-ink", "--color-gray-900"],
+    "text": ["--z-text", "--zl-text", "--color-gray-900", "--color-gray-800"],
+    "text-2": ["--z-text2", "--z-sub", "--zl-text2", "--color-gray-700", "--color-gray-600"],
+    "text-3": ["--z-muted", "--zl-text3", "--color-gray-500"],
+    "text-faint": ["--z-faint", "--zl-faint", "--color-gray-400"],
+    "border-faint": ["--z-bdf", "--zl-bdf"],
+    "border": ["--z-bd", "--zl-bd", "--color-gray-200"],
+    "border-strong": ["--z-bds", "--z-ghost", "--zl-bds", "--color-gray-300"],
     "brand-strong": ["--b600", "--color-brand-600"],
     "brand-soft": ["--b50", "--color-brand-50", "--color-primary-light"],
     "radius-sm": ["--z-r-ctl"],
@@ -1218,6 +1245,9 @@ class Spec:
                 if hit:
                     L.warn(w + ".review", f"review: none writes {', '.join(hit)}, which a workflow condition reads: "
                            "an unchecked AI answer can move the record", "Use review: suggest so a person confirms it.")
+            if a.get("run") == "inline":
+                L.error(w + ".run", "an AI helper never runs while the person waits on the request: every run is a "
+                        "background task the screen polls", "Remove `run: inline` (buttons, chat and form fill poll their run).")
             wf = (E or {}).get("workflow") or {}
             for i, t in enumerate(trigs):
                 tw, ev = f"{w}.triggers[{i}]", t.get("event")
@@ -1378,7 +1408,7 @@ class Spec:
                 "output": {"kind": okind, "to": o.get("to"), "fields": fields,
                            "format": {"fields": "JSON", "markdown": "Markdown"}.get(okind, "Text"), "json_schema": schema},
                 "review": a.get("review") or "suggest", "triggers": trigs, "events": sorted(e for e in events if e),
-                "roles": roles, "run": a.get("run") or ("inline" if events & {"form_assist", "chat"} else "async"),
+                "roles": roles, "run": "async",  # every run is a background task; the screen polls it
                 "memory": (a.get("memory") or {}).get("window") if chat else None,
                 "tools": tools, "tool_entities": tool_ents, "custom_tools": custom, "prompts": prompts,
                 "acceptance": arr(a.get("acceptance")), "sample": (a.get("preview") or {}).get("sample"),
@@ -1445,15 +1475,28 @@ class Spec:
             if not codes or not h:
                 continue
             h["uses_ai"] = codes
+            trig = (cr or {}).get("trigger") if isinstance(cr, dict) else None
+            # a scheduled requirement already runs in a task; any other trigger runs during a person's save
+            sched = h.get("scheduled") or (isinstance(trig, dict) and trig.get("event") == "schedule")
+            h["ai_call"] = "run_from_code" if sched else "run_later"
             for c in codes:
                 a = agents[c]
                 ans = ("{" + ", ".join(f"{f['key']}: {f.get('type')}" for f in a["output"]["fields"]) + "}"
                        if a["output"]["kind"] == "fields" else a["output"]["kind"])
-                h["text"] += (f" Calls AI helper {c}: `res = run_from_code(\"{c}\""
-                              + (", obj=<" + a["entity"] + ">" if a["entity"] else "")
-                              + ", variables={\"input\": ...})` (from zas_core.ai); it reads "
-                              + (", ".join(a["context"]["fields"]) or "what you pass in input")
-                              + f" and returns res.result = {ans}. When res.status is \"unavailable\" (no AI account yet) carry on without it.")
+                reads = (", ".join(a["context"]["fields"]) or "what you pass in input")
+                obj = (", obj=<" + a["entity"] + ">") if a["entity"] else ""
+                if h["ai_call"] == "run_later":
+                    then = f"{h.get('function') or 'hook'}__after_ai"
+                    h["text"] += (f" Calls AI helper {c} in the background (an agent never runs during the save): "
+                                  f"`run_later(\"{c}\"{obj}, then=\"{then}\", variables={{\"input\": ...}})` (from "
+                                  f"zas_core.ai) returns at once; write `def {then}(obj, res)` in the same hooks.py: the task "
+                                  f"calls it after the run with res.result = {ans} (it reads {reads}) and does the rest. "
+                                  "When res.status is \"unavailable\" (no AI account yet) or \"failed\", leave the record "
+                                  "so a person can carry on.")
+                else:
+                    h["text"] += (f" Calls AI helper {c}: `res = run_from_code(\"{c}\"{obj}, variables={{\"input\": ...}})` "
+                                  f"(from zas_core.ai; this task is already in the background); it reads {reads} and returns "
+                                  f"res.result = {ans}. When res.status is \"unavailable\" (no AI account yet) carry on without it.")
 
     def lint(self):
         M, L = self.M, self.L
@@ -1466,15 +1509,25 @@ class Spec:
 
         if not roles:
             L.error("roles", "no roles defined")
+        exporters = export_roles(ents, roles)
         for r in roles.values():
             w = f"roles.{r['name']}"
+            if (r["name"] in exporters and MY_DOWNLOADS not in menu_pages(r) and r["name"] not in SYSTEM_ROLES
+                    and not r.get("no_downloads")):
+                L.warn(w + ".menu", f"{r['name']} can export, so the build adds a My Downloads menu item at the end of its menu",
+                       "write `{page: my_downloads, label: My Downloads, icon: download}` as the last item of roles[].menu "
+                       "and draw the same item in the prototype's menu for that persona (or set `no_downloads: true` on the role)")
             if r.get("landing") and r["landing"] not in pages:
                 L.error(w + ".landing", f"page {r['landing']!r} not in pages")
             elif r.get("landing") and r["landing"] not in {i.get("page") for it in r["menu"] for i in arr(it.get("items") or [it])}:
                 L.warn(w + ".landing", f"landing page {r['landing']!r} is not in the role's menu: it will be added first")
             for it in r["menu"]:
                 for i in arr(it.get("items") or [it]):
-                    if i.get("page") and i["page"] not in pages:
+                    if i.get("page") == MY_DOWNLOADS:
+                        if r["name"] not in exporters:
+                            L.warn(w + ".menu", f"{r['name']} has a My Downloads item but no export permission on any entity",
+                                   "give the role `export` in an entity's access, or drop the item")
+                    elif i.get("page") and i["page"] not in pages:
                         L.error(w + ".menu", f"page {i['page']!r} not in pages")
                     elif i.get("page") and pages[i["page"]].get("type") == "detail":
                         L.error(w + ".menu", f"page {i['page']!r} is a detail page: it needs a record, so it cannot be a menu item",
@@ -1490,6 +1543,10 @@ class Spec:
         for p in pages.values():
             w = f"pages.{p['code']}"
             t = p.get("type")
+            if p["code"] == MY_DOWNLOADS:
+                L.error(w, "my_downloads is the platform's own page (the crud package's My Downloads): it is not declared in pages[]",
+                        "delete this page. Keep `{page: my_downloads, label: My Downloads, icon: download}` in the menu of each role "
+                        "that can export, and map the prototype screen `maps: /system/@my_downloads` (no custom screen, no slot)")
             if t not in PAGE_TYPES:
                 L.error(w, f"unknown page type {t!r}")
             if t == "crud" and p.get("entity") not in ents:
@@ -2417,10 +2474,19 @@ class Spec:
                 rows.append({"id": sid, "cls": "prototype-only", "reason": why or "not built",
                              "menu": sc.get("menu") if isinstance(sc.get("menu"), dict) else None})
                 continue
+            if str(sc.get("maps") or "") == f"/system/@{MY_DOWNLOADS}":
+                # the crud package serves it (packages/crud/downloads): nothing to build or compare, but it is not "dropped"
+                rows.append({"id": sid, "cls": "prototype-only", "native": True,
+                             "reason": "built by the crud package: the My Downloads page", "menu": None})
+                continue
+            if str(sc.get("maps") or "") == f"/pages/@{MY_DOWNLOADS}":
+                L.error(w + ".maps", f"screen {sid!r} maps to /pages/@{MY_DOWNLOADS}, but My Downloads is not a page of the spec",
+                        f"use `maps: /system/@{MY_DOWNLOADS}`: the crud package serves it, so nothing is built or compared")
+                continue
             m = re.fullmatch(r"/(pages|detail_views)/@([A-Za-z0-9_]+)", str(sc.get("maps") or ""))
             if not m:
                 L.error(w + ".maps", f"screen {sid!r} maps to {sc.get('maps')!r}",
-                        "use /pages/@<code> or /detail_views/@<code>, or only: prototype with a why")
+                        "use /pages/@<code> or /detail_views/@<code> (/system/@my_downloads for My Downloads), or only: prototype with a why")
                 continue
             kind, code = m.groups()
             row = {"id": sid, "maps": sc["maps"],
@@ -2538,6 +2604,15 @@ class Spec:
             if E["workflow"]:
                 for s in E["workflow"]["statuses"]:
                     s["wf_color"] = WF_COLOR.get(s["color"], "gray")
+        # My Downloads: the roles whose menu has the item get the crud downloads policy (zango_platform sync)
+        # A role that can export gets the item at the end of its menu unless the spec has it or says `no_downloads: true`.
+        for r in M["roles"].values():
+            if (r["name"] in export_roles(ents, M["roles"]) and r["name"] not in SYSTEM_ROLES
+                    and not r.get("no_downloads") and MY_DOWNLOADS not in menu_pages(r)):
+                r["menu"].append({**MY_DOWNLOADS_ITEM, "auto": True})
+        dl_roles = [r["name"] for r in M["roles"].values() if MY_DOWNLOADS in menu_pages(r)]
+        M["my_downloads"] = ({"route": MY_DOWNLOADS_ROUTE, "endpoint": MY_DOWNLOADS_ENDPOINT,
+                              "policy": MY_DOWNLOADS_POLICY, "roles": dl_roles} if dl_roles else None)
             # module-level entity order (links inside the module first)
         for m in M["modules"]:
             order, seen = [], set()
@@ -2759,7 +2834,7 @@ class Spec:
             "row_action": "run the action; assert its result",
             "tag_condition": "toggle the tag before/after making the text true",
             "ai_prompt": "with the fake AI (`ctx.ai_fake`), fire each trigger as a role in `roles` and one outside; assert the suggestion / written fields",
-            "ai_tool": "call the tool as a role; assert its answer and that it returns only rows that role can see",
+            "ai_tool": "ctx.ai_tool(agent, tool, args, role=..., record=...) as a role and as the system (role=None); assert its answer, that a role gets only its rows, and for a write tool the record it made or moved (status, owner; called twice, one record)",
         }
         for h in self.holes:
             out.append(f"| {h['id']} | {h['kind']} | {h['text'][:140].replace('|', '/')} | {how.get(h['kind'], 'trigger it; assert what the text says')} |")
@@ -2883,12 +2958,12 @@ class Spec:
             for it in r["menu"]:
                 if it.get("group"):
                     items.append({"group": it["group"], "icon": it.get("icon"),
-                                  "items": [{"page": i["page"], "label": i.get("label") or pages.get(i["page"], {}).get("title"),
+                                  "items": [{"page": i["page"], "label": i.get("label") or pages.get(i["page"], {}).get("title") or _system_title(i["page"]),
                                              "icon": i.get("icon"), **({"count": True} if i.get("count") else {})}
                                             for i in arr(it.get("items"))]})
                 else:
                     # count: the item shows how many rows the role can see (zas.menu_count of the page's metadata)
-                    items.append({"page": it.get("page"), "label": it.get("label") or pages.get(it.get("page"), {}).get("title"),
+                    items.append({"page": it.get("page"), "label": it.get("label") or pages.get(it.get("page"), {}).get("title") or _system_title(it.get("page")),
                                   "icon": it.get("icon"), **({"count": True} if it.get("count") else {})})
             out["menus"][r["name"]] = {"landing": r.get("landing"), "items": items}
         return out
@@ -3101,6 +3176,7 @@ def proto_classes_md(rows, missing):
          "| Screen | Maps | Class | Reason | Builds as |", "|---|---|---|---|---|"]
     for r in rows:
         builds = (f"slot `{r['slot']}`" if r.get("slot") else
+                  "the crud package's `/crud/downloads/my-downloads`" if r.get("native") else
                   "-" if r["cls"] == "prototype-only" else
                   f"page `{r.get('page')}`" if r.get("kind") == "page" else f"360 `{r.get('code')}`")
         L.append(f"| `{r['id']}` | {r.get('maps') or '-'} | {r['cls']} | {str(r.get('reason', '')).replace('|', '/')} | {builds} |")
@@ -3212,7 +3288,7 @@ def main(argv=None):
         print(f"{len(errs)} errors, {len(issues) - len(errs) - n_int} warnings, {n_int} intent findings."
               + (f" Outputs in {out}" if out else ""))
     if a.audit_holes and a.workspace and S.M and not errs:
-        return audit_holes(a.workspace, S.holes)
+        return max(audit_holes(a.workspace, S.holes), audit_registry(a.workspace, S.M))
     return 1 if errs else 0
 
 
@@ -3256,9 +3332,11 @@ def audit_holes(ws, holes):
             continue
         for c in h.get("uses_ai") or []:
             files = [h["target"].split("::", 1)[0]] if "::" in (h.get("target") or "") else list(backend_sources())
-            call = re.compile(r"run_from_code\(\s*[\"']" + re.escape(c) + r"[\"']")
+            fn = h.get("ai_call") or "run_from_code"
+            call = re.compile(re.escape(fn) + r"\(\s*[\"']" + re.escape(c) + r"[\"']")
             if not any(call.search(src(f) or "") for f in files):
-                problems.append(f"{h['id']} no AI call  run_from_code(\"{c}\", …) not found in {', '.join(files) or 'backend/'}")
+                why = " (it runs during a save: an agent runs only in a background task)" if fn == "run_later" else ""
+                problems.append(f"{h['id']} no AI call  {fn}(\"{c}\", …) not found in {', '.join(files) or 'backend/'}{why}")
         if h["kind"] == "ai_prompt":
             for p in h.get("prompts") or []:
                 text = src(p["file"])
@@ -3290,6 +3368,36 @@ def audit_holes(ws, holes):
     for h in holes:
         counts[h.get("status", "todo")] = counts.get(h.get("status", "todo"), 0) + 1
     print("holes: " + ", ".join(f"{v} {k}" for k, v in sorted(counts.items())))
+    for p in problems:
+        print("  " + p)
+    return 1 if problems else 0
+
+
+def audit_registry(ws, M):
+    """backend/zas_registry.py lists every entity's model, every workflow and every module's hooks:
+    zas_core reads classes from it, never by import path."""
+    import ast
+
+    path = os.path.join(ws, "backend", "zas_registry.py")
+    try:
+        tree = ast.parse(open(path, encoding="utf-8").read())
+    except OSError:
+        print("registry: backend/zas_registry.py is missing")
+        return 1
+    keys = {}
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and isinstance(node.value, ast.Dict):
+            for t in node.targets:
+                if isinstance(t, ast.Name):
+                    keys[t.id] = {k.value for k in node.value.keys if isinstance(k, ast.Constant)}
+    want = {
+        "MODELS": set(M["entities"]),
+        "WORKFLOWS": {c for c, E in M["entities"].items() if E.get("workflow")},
+        "HOOKS": {m["code"] for m in M["modules"] if os.path.isfile(os.path.join(ws, "backend", m["code"], "hooks.py"))},
+    }
+    problems = [f"{name} is missing {', '.join(sorted(need - keys.get(name, set())))}"
+                for name, need in want.items() if need - keys.get(name, set())]
+    print("registry: " + ("ok" if not problems else "backend/zas_registry.py"))
     for p in problems:
         print("  " + p)
     return 1 if problems else 0

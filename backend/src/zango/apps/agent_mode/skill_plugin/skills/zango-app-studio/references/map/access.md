@@ -111,3 +111,12 @@ to match. The run report lists the emails, never the passwords.
 - `policies.json` validates as JSON. Every permission `name` imports
   (`python -c "import backend.<module>.views"` inside the container).
 - After `sync`, each role in `roles[]` has the expected policies (`zango_platform.py check`).
+
+## My Downloads (roles that can export)
+
+A role with `export` on any entity can start an export, and the finished file lands on the crud
+package's own page, `/crud/downloads/my-downloads`. So that role's menu ends with
+`{page: my_downloads, label: My Downloads, icon: download}`, and the role needs the package policy
+`CrudDownloadsViewAccess` (`packages/crud/downloads/policies.json`). `spec_check` warns for a role that
+can export and has no item; `zango_platform.py sync` attaches the policy to every role whose menu has
+the item; `check` reads it back. Roles that cannot export get neither ([pages-menus](pages-menus.md) §5).

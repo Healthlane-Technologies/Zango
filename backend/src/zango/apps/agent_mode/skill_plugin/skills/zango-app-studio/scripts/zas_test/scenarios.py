@@ -30,7 +30,6 @@ listed as a skip ("no scenario"), so coverage gaps show in the report.
 """
 
 import argparse
-import importlib.util
 import json
 import os
 import subprocess
@@ -67,27 +66,9 @@ class ScenarioCtx(Ctx):
             raise AssertionError(f"{target} failed: {(r.stderr or r.stdout)[-600:]}")
         return json.loads(line[len("ZAS_RESULT="):])
 
-    # ── reading records ──
+    # ── reading records (record_payload / field / ai_fake live on api.Ctx, so fixtures have them too) ──
     def pk(self, ent, uuid):
         return str(self.record_payload(ent, uuid)["record"]["pk"])
-
-    def record_payload(self, ent, uuid, role="__any__"):
-        """The record drawer payload (contracts §8b): fields, status, tags, transitions, row actions, events."""
-        roles = self.roles() if role == "__any__" else [role]
-        last = None
-        for r in roles:
-            if r not in self.sessions or not self.can(ent, r, "view"):
-                continue
-            code, j = self.get(r, self.ep(ent), action="zas_record", object_uuid=uuid)
-            b = self.body(j) or {}
-            if b.get("access") == "ok":
-                return b
-            last = b.get("access")
-        raise AssertionError(f"{ent} {uuid} not readable ({last})")
-
-    def field(self, ent, uuid, key, role="__any__"):
-        f = next((x for x in self.record_payload(ent, uuid, role)["fields"] if x["key"] == key), None)
-        return None if f is None else f.get("value")
 
     def status(self, ent, uuid):
         return self.record_payload(ent, uuid)["record"]["status"]
@@ -105,26 +86,6 @@ class ScenarioCtx(Ctx):
         return (self.body(j) or {}).get("zas") or {}
 
     # ── AI helpers ──
-    def ai_fake(self, answers=None):
-        """`with ctx.ai_fake({"vendor_screening": {"risk_rating": "high"}}):` every AI helper answers with
-        its spec sample (or the answer given here) instead of calling the AI. Needs DEBUG on the server."""
-        import contextlib
-
-        path = os.path.join(self.ws, ".zas", "ai_fake.json")
-
-        @contextlib.contextmanager
-        def fake():
-            with open(path, "w", encoding="utf-8") as f:
-                json.dump({"*": True, **(answers or {})}, f)
-            try:
-                yield
-            finally:
-                try:
-                    os.remove(path)
-                except OSError:
-                    pass
-        return fake()
-
     def ai_run(self, ent, uuid, role, agent, where="record"):
         """Click an AI button as `role` and wait for the run. Returns the run payload (status, result, suggestion)."""
         code, j = self.post(role, self.ep(ent), {"action": "zas_ai_run"}, data={"agent": agent, "where": where, "object_uuid": uuid})
@@ -174,8 +135,8 @@ class ScenarioCtx(Ctx):
 def _registry():
     """The registry test_scenarios.py fills. Under `python -m zas_test.scenarios` this file is
     __main__, and `from zas_test.scenarios import scenario` imports a second copy: use that one."""
-    import importlib
-    return importlib.import_module("zas_test.scenarios")._REGISTRY
+    from zas_test.scenarios import _REGISTRY
+    return _REGISTRY
 
 
 def load(ws):
@@ -187,9 +148,7 @@ def load(ws):
     here = os.path.dirname(p)
     if here not in sys.path:
         sys.path.insert(0, here)
-    spec = importlib.util.spec_from_file_location("zas_test_scenarios", p)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
+    import test_scenarios  # noqa: F401  (its @scenario decorators fill the registry)
     return True
 
 

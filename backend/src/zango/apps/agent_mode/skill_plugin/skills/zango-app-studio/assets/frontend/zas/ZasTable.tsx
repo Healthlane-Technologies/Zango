@@ -191,6 +191,11 @@ export function ZasTable(p: ZasTableProps) {
     return meta ? base.filter((c) => metaIdx.has(c.key)) : base;
   }, [E, p.columns, meta, metaIdx]);
   const quick = meta?.zas?.quick_filters || [];
+  const isAll = (x: { label: string }) => x.label.trim().toLowerCase() === "all";
+  // a chip named after a status (or whose key is one) takes that status's colour: a dot before its label
+  const statusOf = (x: { key: string; label: string }) => Object.entries(E.statuses || {}).find(
+    ([code, st]: [string, any]) => code === x.key || String(st.label).trim().toLowerCase() === x.label.trim().toLowerCase())?.[1] as { label: string; tone: string } | undefined;
+  const dot = (st?: { tone?: string | null }) => st ? <i className={cx("zas-qf-dot", `zt-${tone(st.tone)}`)} aria-hidden="true" /> : null;
   // pages[].subtitle: its text, then " · " and the stat ("$366,000 requested") once the metadata has it
   const sub = p.page ? SPEC.pages[p.page.code]?.subtitle : undefined;
   const figure = sub?.stat && meta?.zas?.subtitle_stat != null
@@ -349,13 +354,15 @@ export function ZasTable(p: ZasTableProps) {
           </label>
           {quick.length > 0 && (
             <div className="zas-chips" role="group" aria-label="Quick filters">
-              <button type="button" className={cx("zas-qf", !activeQf && "on")} aria-pressed={!activeQf} data-zas-chrome
-                onClick={() => { setQf(null); setPageNo(1); }}>All</button>
+              {!quick.some(isAll) && <button type="button" className={cx("zas-qf", !activeQf && "on")} aria-pressed={!activeQf} data-zas-chrome
+                onClick={() => { setQf(null); setPageNo(1); }}>All</button>}
               {quick.map((x, i) => (
-                <button key={x.key} type="button" className={cx("zas-qf", activeQf === x.key && "on")} aria-pressed={activeQf === x.key}
+                // a spec filter labelled "All" is the All chip (with its count): never a second one beside it
+                <button key={x.key} type="button" className={cx("zas-qf", (isAll(x) ? !activeQf || activeQf === x.key : activeQf === x.key) && "on")}
+                  aria-pressed={isAll(x) ? !activeQf || activeQf === x.key : activeQf === x.key}
                   data-zas="quick-filter" data-zas-key={x.key} data-zas-order={i}
-                  onClick={() => { setQf(activeQf === x.key ? null : x.key); setPageNo(1); }}>
-                  {x.label}{x.count != null && <span className="zas-qf-n">{number(x.count)}</span>}</button>
+                  onClick={() => { setQf(isAll(x) || activeQf === x.key ? null : x.key); setPageNo(1); }}>
+                  {dot(statusOf(x))}{x.label}{x.count != null && <span className="zas-qf-n">{number(x.count)}</span>}</button>
               ))}
             </div>
           )}
@@ -365,7 +372,7 @@ export function ZasTable(p: ZasTableProps) {
                 onClick={() => setFilter(statusCol.key, "")}>All</button>
               {Object.entries(E.statuses).map(([code, st]) => (
                 <button key={code} type="button" className={cx("zas-qf", filters[statusCol.key] === code && "on")} aria-pressed={filters[statusCol.key] === code}
-                  data-zas-chrome onClick={() => setFilter(statusCol.key, code)}>{st.label}</button>
+                  data-zas-chrome onClick={() => setFilter(statusCol.key, code)}>{dot(st)}{st.label}</button>
               ))}
             </div>
           )}

@@ -71,3 +71,24 @@ From `roles[].menu`:
   An export missing from the bundle gives a blank page with no error.
 - The token in the config URL lasts 2 hours. On a 302 to `/login/`, re-run the script (it
   fetches a fresh token). Never report the app as done with routes or menus unsaved.
+
+## 5. My Downloads (a reserved menu page)
+
+`{page: my_downloads, label: My Downloads, icon: download}` in `roles[].menu` is the one menu page that is
+not in `pages[]`. The crud package serves it (`packages/crud/downloads`, mounted at `^downloads/`; its view
+is `DownloadCrudView`, a table of the signed-in user's export jobs). **You write nothing for it**: no page,
+no React export, no slot. **The build adds the item itself** at the end of the menu of every role that can export (view +
+export on an entity), unless the role sets `no_downloads: true`; writing it in the menu is optional (it only
+chooses the position or label). The platform does the rest:
+
+- Endpoints of a package are mounted under the package's own prefix: the app's settings mount crud at `^crud/`, so the
+  downloads view is `/crud/downloads/my-downloads` (`/downloads/my-downloads` alone is a 404). Never write the endpoint
+  by hand: it is the one constant in `spec_check.py` (`MY_DOWNLOADS_ENDPOINT`).
+- route: `{name: "My Downloads", path: "/app/my-downloads", page_type: "crud", extra_params: {api_endpoint: "/crud/downloads/my-downloads"}}`
+  (AppBuilder's native crud renderer, the only page that is not `custom`);
+- menu: the item, with the `download` icon, in every role that lists it;
+- policy: `CrudDownloadsViewAccess` attached to those roles (`zango_platform.py sync`), read back by `check`.
+
+Give the item to roles that can export (`export` in an entity's access) and to no others. In the prototype it is
+mapped as `maps: /system/@my_downloads` (built by the crud package: no parity check, no "not built" note).
+Never rebuild it as a custom page: the exports and their status come from the crud package.

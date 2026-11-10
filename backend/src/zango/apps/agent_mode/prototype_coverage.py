@@ -20,6 +20,7 @@ import copy
 import importlib.util
 import json
 import re
+import sys
 import tempfile
 
 from functools import lru_cache
@@ -84,6 +85,7 @@ def landmarks_module():
     spec = importlib.util.spec_from_file_location("zas_proto_landmarks", path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
+    sys.modules[spec.name] = mod  # so runserver's autoreload sees edits to it
     return mod
 
 
@@ -590,6 +592,7 @@ def spec_check_module():
     spec = importlib.util.spec_from_file_location("zas_spec_check", path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
+    sys.modules[spec.name] = mod  # so runserver's autoreload sees edits to it
     return mod
 
 
@@ -719,6 +722,9 @@ def coverage(doc: dict, bundle_dir) -> dict:
     for sid, per in seen.items():
         entry = entries.get(sid) or {}
         if entry.get("only") == "prototype" or not entry.get("maps"):
+            continue
+        if str(entry["maps"]).startswith("/system/@"):
+            # a page the platform serves (My Downloads): nothing of it is in the spec, built or compared
             continue
         shared_with = [
             o

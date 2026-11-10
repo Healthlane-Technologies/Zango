@@ -15,8 +15,8 @@ import { RecordDrawer } from "./ZasTable";
 import { openAiClick } from "./ai";
 import { useToast } from "./ui";
 
-// Loaded on first use, so an app whose pages stay on the React components never gets the kit's
-// stylesheet (its element rules would reach those pages too).
+// Loaded on first use. The app build folds it into the one stylesheet anyway (cssCodeSplit: false),
+// so kit.css is scoped to .zr-page / .zr-pop-root (zas_render.kit_css) to keep it off other pages.
 let R: any = null;
 let loading: Promise<void> | null = null;
 const load = () => loading || (loading = Promise.all([

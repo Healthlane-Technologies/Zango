@@ -1,12 +1,49 @@
-/* Direction: a calm instrument-room look. Deep teal brand, warm amber for "needs you",
-   cool tinted neutrals, Manrope for text, Plex Mono for sample IDs and figures. */
+/* Direction: the DEFAULT LOOK (the platform's default preview). Soft-grey rail with a lifted active item
+   and counts, a white page-header band, lists in one card (search, segmented status filters, sortable
+   headers, two-line cells, avatars, pager), record pages with an icon tile, a dotted stepper, tabs with
+   counts and a summary rail. Inter for text, JetBrains Mono for IDs and figures.
+
+   The brand colour is NOT set here. It is the YAML's app.theme.primary: the preview sets --brand from it
+   (and the colour picker beside "Viewing as" changes it). The value below is only the fallback. Every
+   brand shade derives from var(--brand) with color-mix, so never write a brand hex anywhere else. */
 :root{
-  --brand:#0F6E6A; --brand-strong:#0A4F4C; --brand-soft:#E3F1EF; --accent:#C7820E; --accent-soft:#FBF0DC;
-  --page:#F4F6F6; --card:#FFFFFF; --sunk:#EBEFEF; --line:#DDE3E2; --line-strong:#C3CCCB;
-  --ink:#122423; --ink-2:#435654; --ink-3:#71817F;
-  --ok:#2E6B3E; --ok-bg:#E6F2E8; --warn:#8C5A06; --warn-bg:#FBF0DC; --bad:#A3232F; --bad-bg:#FBEBEC; --info:#2F4FA8; --info-bg:#E9EEFB;
-  --font:'Manrope',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,monospace;
-  --r:10px; --r-sm:6px; --shadow:0 1px 2px rgba(18,36,35,.06),0 4px 14px -6px rgba(18,36,35,.12);
-  --z-line:var(--line); --z-ok:var(--ok); --z-ok-bg:var(--ok-bg); --z-warn:var(--warn); --z-warn-bg:var(--warn-bg);
-  --z-bad:var(--bad); --z-bad-bg:var(--bad-bg); --z-info:var(--info); --z-info-bg:var(--info-bg); --z-surface:var(--card);
+  --brand:#4F46E5;
+  --b50:color-mix(in srgb,var(--brand) 8%,#fff);
+  --b100:color-mix(in srgb,var(--brand) 16%,#fff);
+  --b200:color-mix(in srgb,var(--brand) 30%,#fff);
+  --b700:color-mix(in srgb,var(--brand) 75%,#000);
+  --tinted:color-mix(in srgb,var(--brand) 6%,#fff);
+  --page:#F9FAFB; --card:#FFFFFF; --sunken:#F3F4F6;
+  --strong:#111827; --text:#1F2937; --muted:#4B5563; --soft:#6B7280; --faint:#9CA3AF;
+  --bd:#E5E7EB; --bds:#D1D5DB; --bdf:#F3F4F6;
+  --t-gray-bg:#F3F4F6;--t-gray-fg:#374151;--t-gray-dot:#6B7280;
+  --t-blue-bg:#EFF6FF;--t-blue-fg:#1D4ED8;--t-blue-dot:#3B82F6;
+  --t-green-bg:#ECFDF5;--t-green-fg:#047857;--t-green-dot:#059669;
+  --t-amber-bg:#FFFBEB;--t-amber-fg:#B45309;--t-amber-dot:#D97706;
+  --t-red-bg:#FEF2F2;--t-red-fg:#B91C1C;--t-red-dot:#DC2626;
+  --t-purple-bg:#F5F3FF;--t-purple-fg:#6D28D9;--t-purple-dot:#7C3AED;
+  --t-teal-bg:#F0FDFA;--t-teal-fg:#115E59;--t-teal-dot:#0D9488;
+  --t-pink-bg:#FDF2F8;--t-pink-fg:#9D174D;--t-pink-dot:#DB2777;
+  --sh-xs:0 1px 2px rgba(15,18,32,.04);
+  --sh-sm:0 1px 2px rgba(15,18,32,.05),0 1px 1px rgba(15,18,32,.04);
+  --sh-brand:0 4px 14px -2px color-mix(in srgb,var(--brand) 22%,transparent),0 2px 6px -2px color-mix(in srgb,var(--brand) 16%,transparent);
+  --sh-lg:0 12px 32px -8px rgba(15,18,32,.12),0 4px 12px -4px rgba(15,18,32,.07);
+  --r-md:10px; --r-lg:14px; --r-xl:18px;
+  --ez:cubic-bezier(.22,1,.36,1);
+  --font:'Inter',-apple-system,'Segoe UI',system-ui,sans-serif;
+  --mono:'JetBrains Mono','SF Mono',ui-monospace,monospace;
+
+  /* canonical names (app.design / the build reads these) */
+  --brand-strong:var(--b700); --brand-soft:var(--b50);
+  --sunk:var(--sunken); --text-strong:var(--strong); --text-2:var(--muted); --text-3:var(--soft); --text-faint:var(--faint);
+  --border:var(--bd); --border-strong:var(--bds); --border-faint:var(--bdf);
+  --ok:var(--t-green-fg); --ok-bg:var(--t-green-bg); --warn:var(--t-amber-fg); --warn-bg:var(--t-amber-bg);
+  --bad:var(--t-red-fg); --bad-bg:var(--t-red-bg); --info:var(--b700); --info-bg:var(--b50);
+  --radius-sm:7px; --radius:var(--r-lg); --radius-lg:var(--r-xl);
+  --shadow-sm:var(--sh-xs); --shadow:0 1px 2px rgba(11,13,20,.024); --shadow-lg:var(--sh-lg);
+
+  /* the runtime's own z- helpers (toast, drawer, pill) */
+  --z-line:var(--bdf); --z-surface:var(--card); --z-hover:var(--sunken);
+  --z-ok:var(--ok); --z-ok-bg:var(--ok-bg); --z-warn:var(--warn); --z-warn-bg:var(--warn-bg);
+  --z-bad:var(--bad); --z-bad-bg:var(--bad-bg); --z-info:var(--info); --z-info-bg:var(--info-bg);
 }

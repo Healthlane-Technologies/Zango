@@ -109,7 +109,12 @@ def launch_app(scaffold) -> None:
 
     from .config import load_config
     from .credentials import resolve_credentials
-    from .naming import slug_from_prompt, suggest_identity, unique_name
+    from .naming import (
+        short_description,
+        slug_from_prompt,
+        suggest_identity,
+        unique_name,
+    )
 
     if scaffold.status != ScaffoldStatus.NAMING or scaffold.app_uuid:
         return
@@ -122,7 +127,7 @@ def launch_app(scaffold) -> None:
     creds = resolve_credentials()
     if scaffold.app_label:
         # The creator named it (an app from a template): no model call.
-        from .naming import AppIdentity, sanitize_name
+        from .naming import AppIdentity, sanitize_name, short_description
 
         version = scaffold.template_version
         identity = AppIdentity(
@@ -132,9 +137,9 @@ def launch_app(scaffold) -> None:
             or slug_from_prompt(scaffold.app_label)
             or "new_app",
             label=scaffold.app_label,
-            description=(version.template.one_liner if version is not None else "")[
-                :500
-            ],
+            description=short_description(
+                version.template.one_liner if version is not None else ""
+            ),
             source="creator",
         )
     else:
@@ -186,7 +191,8 @@ def launch_app(scaffold) -> None:
                 app, init_task_id = TenantModel.create(
                     name=name,
                     schema_name=name,
-                    description=identity.description or scaffold.prompt[:500],
+                    description=identity.description
+                    or short_description(scaffold.prompt),
                     app_template_name=None,
                     run_migrations=bool(run_migrations),
                     app_template_dir=workspace_dir,

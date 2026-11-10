@@ -123,7 +123,9 @@ def evaluate(doc, rules) -> list:
                         add(rule, wheres[1], value)
         elif kind == "ref":
             for node, caps, where in glob(doc, rule["source"]):
-                known = set()
+                known = set(
+                    rule.get("also_known") or ()
+                )  # platform-provided names (My Downloads)
                 for target, _, _ in glob(doc, rule["target"], caps):
                     if rule["target"].endswith("*"):
                         value = _ident(target, key)

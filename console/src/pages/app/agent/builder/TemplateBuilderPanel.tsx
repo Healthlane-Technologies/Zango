@@ -1,5 +1,11 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { documentUrl, type PreviewFocus, type SpecIssue } from '@/api/agentMode';
+import {
+	documentUrl,
+	useDiscardRequirement,
+	useSetBrand,
+	type PreviewFocus,
+	type SpecIssue,
+} from '@/api/agentMode';
 import {
 	Badge,
 	Button,
@@ -11,6 +17,7 @@ import {
 	Skeleton,
 	Tabs,
 	TemplateBadge,
+	toast,
 	type MenuItem,
 	type Tone,
 } from '@/ui';
@@ -110,6 +117,11 @@ export function TemplateBuilderPanel({
 	// Without a preview page, a template's own builder replaces Details (older servers).
 	const embedUrl = previewMode ? null : builder.builder_url || null;
 	const [sheet, setSheet] = useState<Sheet | null>(null);
+	// A change request: this change's own preview, or the app's current version for comparison.
+	const [compare, setCompare] = useState<'change' | 'current'>('change');
+	const [goScreen, setGoScreen] = useState<{ screen: string; n: number } | null>(null);
+	const [confirmDiscard, setConfirmDiscard] = useState(false);
+	const discard = useDiscardRequirement(appId, requirement.uuid);
 	const [inBuilder, setInBuilder] = useState(false);
 	// What the page says it can do; older adapters don't say, and only builders had an editor.
 	const [caps, setCaps] = useState<string[] | undefined>();
@@ -130,6 +142,19 @@ export function TemplateBuilderPanel({
 	const aiCount = useMemo(() => aiAgents(doc).length, [doc]);
 	const thinking = requirement.is_thinking;
 	const locked = !editable || thinking || spec.status === 'approved' || draft.reviewing;
+	// The preview's colour picker saves the brand colour (app.theme.primary) straight to the YAML.
+	const setBrand = useSetBrand(appId, requirement.uuid);
+	const onBrand = useCallback(
+		(hex: string) => {
+			if (locked) return;
+			if (draft.dirty) {
+				toast.error('Save or discard your YAML edits first, then pick the colour again.');
+				return;
+			}
+			setBrand.mutate(hex);
+		},
+		[locked, draft.dirty, setBrand],
+	);
 	// Unsaved edits have no "changed by agent"; a conflict under review shows the agent's.
 	const changedProp =
 		draft.reviewing && draft.incoming
@@ -411,12 +436,12 @@ export function TemplateBuilderPanel({
 	const [tone, label]: [Tone, string] = fromTemplate
 		? ['accent', `From template v${requirement.template?.version ?? ''}`]
 		: spec.is_draft
-		? ['amber', 'Draft']
-		: spec.status === 'approved'
-			? ['green', 'Approved']
-			: spec.status === 'ready'
-				? ['accent', 'Ready for review']
-				: ['amber', 'Draft'];
+			? ['amber', 'Draft']
+			: spec.status === 'approved'
+				? ['green', 'Approved']
+				: spec.status === 'ready'
+					? ['accent', 'Ready for review']
+					: ['amber', 'Draft'];
 
 	const draftingStrip = drafting && (
 		<div className="bld-drafting" role="status">
@@ -501,7 +526,9 @@ export function TemplateBuilderPanel({
 		// The first version of the app is still being written: the preview has nothing to show.
 		const awaiting = isOpen ? false : stage === 'awaiting';
 		// Open mode: covered only while the first version of the prototype is being written.
-		const generating = isOpen ? thinking && !requirement.prototype_revision : stage !== 'ready';
+		const generating = isOpen
+			? thinking && !requirement.prototype_revision && !requirement.change
+			: stage !== 'ready';
 		const writtenSections = [
 			...new Set(
 				(spec.changed_paths ?? []).map((p) => sectionFor(p)?.id).filter((id): id is string => !!id),
@@ -528,6 +555,17 @@ export function TemplateBuilderPanel({
 				icon: 'clip',
 				onSelect: () => setSheet('documents'),
 			},
+			...(requirement.change && requirement.status !== 'approved'
+				? [
+						null,
+						{
+							label: 'Discard this change',
+							icon: 'x' as const,
+							onSelect: () => setConfirmDiscard(true),
+							disabled: locked || thinking,
+						},
+					]
+				: []),
 			...(canEditInBuilder
 				? [
 						null,
@@ -570,6 +608,27 @@ export function TemplateBuilderPanel({
 								<span className="mono text-[11.5px] text-t4" title="Spec revision">
 									rev {spec.draft_revision}
 								</span>
+								{requirement.change && (
+									<span className="pv-seg" role="group" aria-label="Compare with the current app">
+										<button
+											type="button"
+											className={cx(compare === 'change' && 'on')}
+											aria-pressed={compare === 'change'}
+											onClick={() => setCompare('change')}
+										>
+											This change
+										</button>
+										<button
+											type="button"
+											className={cx(compare === 'current' && 'on')}
+											aria-pressed={compare === 'current'}
+											onClick={() => setCompare('current')}
+											title="Your app as it is now, before this change"
+										>
+											Current app
+										</button>
+									</span>
+								)}
 							</>
 						)}
 						<span className="ml-auto flex items-center gap-1.5">
@@ -690,6 +749,82 @@ export function TemplateBuilderPanel({
 							changedSections={writtenSections}
 						/>
 						{thinking && !generating && <UpdatingPreview />}
+						{requirement.change && !generating && (
+							<div className="pv-change" role="status">
+								{compare === 'current' ? (
+									<>
+										<Icon name="eye" size={13} />
+										<span className="min-w-0 flex-1">
+											<b>Your current app</b>, before this change. Nothing in your app changes until
+											you approve and commit.
+										</span>
+										<Button size="xs" onClick={() => setCompare('change')}>
+											Back to this change
+										</Button>
+									</>
+								) : requirement.change.has_changes ? (
+									<>
+										<span className="pv-change-l">Changed</span>
+										{[
+											...requirement.change.changed.map((x) => ({ ...x, kind: 'changed' })),
+											...requirement.change.added.map((x) => ({ ...x, kind: 'new' })),
+											...requirement.change.removed.map((x) => ({ ...x, kind: 'removed' })),
+										].map((x) => (
+											<button
+												key={`${x.kind}-${x.id}`}
+												type="button"
+												className={cx('pv-chip', x.kind)}
+												disabled={x.kind === 'removed'}
+												title={
+													x.kind === 'removed'
+														? 'Removed from the app'
+														: `Open ${x.title} (${x.kind === 'new' ? 'new screen' : 'changed'})`
+												}
+												onClick={() => setGoScreen({ screen: x.id, n: (goScreen?.n ?? 0) + 1 })}
+											>
+												{x.title}
+												<i>{x.kind === 'new' ? 'New' : x.kind === 'removed' ? 'Removed' : 'Changed'}</i>
+											</button>
+										))}
+										{requirement.change.shared.length > 0 && (
+											<span
+												className="pv-chip shared"
+												title={`Changed for every screen: ${requirement.change.shared.join(', ')}`}
+											>
+												Look, menu or data
+												<i>Changed</i>
+											</span>
+										)}
+									</>
+								) : (
+									<>
+										<Icon name="check" size={13} />
+										<span className="min-w-0 flex-1">
+											<b>Current app, no changes yet.</b> The preview updates here as the agent works.
+										</span>
+									</>
+								)}
+							</div>
+						)}
+						{confirmDiscard && (
+							<div className="pv-editing" role="alertdialog">
+								<Icon name="alert" size={13} />
+								<span className="min-w-0 flex-1">
+									<b>Discard this change?</b> Your app stays exactly as it is now.
+								</span>
+								<Button
+									size="xs"
+									variant="primary"
+									loading={discard.isPending}
+									onClick={() => discard.mutate(undefined, { onSettled: () => setConfirmDiscard(false) })}
+								>
+									Discard
+								</Button>
+								<Button size="xs" onClick={() => setConfirmDiscard(false)}>
+									Keep it
+								</Button>
+							</div>
+						)}
 						{inBuilder && (
 							<div className="pv-editing" role="status">
 								<Icon name="pen" size={13} />
@@ -705,9 +840,16 @@ export function TemplateBuilderPanel({
 							<PrototypeFrame
 								appId={appId}
 								reqId={requirement.uuid}
-								revision={requirement.prototype_revision}
+								// a change that has the current app behind it is never "no prototype yet", even
+								// when its own revision was never set (changes opened before the revision was copied)
+								revision={
+									requirement.prototype_revision || requirement.change?.baseline.revision || undefined
+								}
 								soon={requirement.prototype_soon}
 								onFocus={onFocus}
+								onBrand={onBrand}
+								baseline={compare === 'current' && !!requirement.change}
+								go={goScreen}
 							/>
 						) : (
 							<EmbeddedBuilder

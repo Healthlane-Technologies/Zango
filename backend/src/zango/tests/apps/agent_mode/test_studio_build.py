@@ -1306,6 +1306,7 @@ class RerunGroupTests(unittest.TestCase):
         for layer in ("ui", "design"):
             source = (scripts / f"{layer}.py").read_text(encoding="utf-8")
             groups = set(_re.search(r"^GROUPS = \[(.*)\]$", source, _re.M).group(1).replace('"', "").replace(" ", "").split(","))
+            groups |= set(_re.findall(r'"(\w+)": g_\w+', source))  # runner-only groups (design gallery: --only gallery)
             ids = source + ((scripts / "flows.py").read_text(encoding="utf-8") if layer == "ui" else "")  # ui.flow.* live in flows.py
             for prefix in set(_re.findall(rf"{layer}\.([a-z_]+)\.", ids)):
                 group = studio_build._group_of(layer, f"{layer}.{prefix}.x.admin")

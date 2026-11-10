@@ -25,6 +25,8 @@ and `.zas/test_users.json` are yours from the previous build: keep them and rege
 1. **Phase 3, every module in `plan.md` order**: `models.py`, `forms.py`, `workflow.py`,
    `detail.py` (heroes), `tables.py`, `views.py`, `urls.py`, `policies.json`, `hooks.py`/`tasks.py`
    (stubs first), `__init__.py`; register each module in `settings.json` `modules` + `app_routes`.
+   Then `backend/zas_registry.py` (`references/examples/zas_registry.py`): every model, workflow and
+   module's `hooks` by plain relative import.
    You cannot `py_compile`: read your files back and be exact about imports and names.
 2. **Phase 4, every hole in `.zas/holes.md`** by `references/custom-code.md`, with the
    `# zas:hole H-NN` marker and a status. You cannot run `--audit-holes`; the platform runs it after

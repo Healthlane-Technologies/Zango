@@ -25,7 +25,7 @@ derived name (contracts.md §1).
 | `app.custom_requirements[]` | holes `app__req__N` | [custom-code](../custom-code.md) |
 | `choice_sets.<code>` | `[{id, label, color?}]` | `<CODE>_CHOICES` constants ([models](../map/models.md)) |
 | `roles[]` (list or map) | keyed by `name`; `slug` added | `roles.json`, policies, menus ([access](../map/access.md)) |
-| `roles[].landing / menu[]` | menu items `{page, label, icon}` or `{group, icon, items}` | AppBuilder menu per role ([pages-menus](../map/pages-menus.md)) |
+| `roles[].landing / menu[]` | menu items `{page, label, icon}` or `{group, icon, items}`; `{page: my_downloads}` is the reserved My Downloads item (roles that can export; [pages-menus](../map/pages-menus.md) §5) | AppBuilder menu per role ([pages-menus](../map/pages-menus.md)) |
 | `roles[].menu[].count` | `true` or `{where}` on a crud page's item → `{where, ast}` | `makeShell` asks `get_table_metadata&zas_menu=<page>` → `zas.menu_count` (role-scoped) |
 | `pages[]` | `title` defaults to the entity plural; `export = Page_<code>` | AppBuilder route ([pages-menus](../map/pages-menus.md)) |
 | `pages[].stats` (crud) | each `{label, count \| sum, where, format, icon, tone, hint}` → `key` s1…, `where` → `ast` | `zas.stats[<page>]` in the table metadata (role-scoped), drawn by `ZasTable` as `.zas-lstat` tiles |

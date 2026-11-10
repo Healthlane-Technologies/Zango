@@ -74,11 +74,28 @@ def inline(html: str, js: str) -> str:
     return html[:start] + js + html[end:]
 
 
+# Where kit.css applies in the app: a page zas-render.js draws and its popovers (RenderedPage.tsx).
+# The kit page's rules are bare (.d-head, .d-step, body, :root ...) and the app build folds every
+# stylesheet into one (cssCodeSplit: false), so unscoped they reach the React pages and the app's
+# own screens too: .d-head{margin:0 -28px} pushed a custom 360 header past the page edge.
+KIT_SCOPE = ".zr-page, .zr-pop-root"
+_KEYFRAMES_RE = re.compile(r"@keyframes[^{]*\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}")
+_HTML_BODY_RE = re.compile(r"(^|[{}])\s*html\s*,\s*body\s*\{[^{}]*\}", re.M)
+_BODY_RE = re.compile(r"(^|[{}])\s*body\s*\{", re.M)
+
+
 def kit_css(html: str) -> str:
-    """The runtime's kit.css: every <style> of the kit page, in order."""
-    return CSS_HEADER + "\n".join(
-        re.findall(r"<style[^>]*>(.*?)</style>", html, re.S | re.I)
-    )
+    """The runtime's kit.css: every <style> of the kit page, in order, scoped to KIT_SCOPE.
+    Inside the scope :root becomes :scope (the tokens), the body rule goes on the page root
+    and html,body (the kit page's full height) is dropped; @keyframes stay outside (names are
+    global either way)."""
+    css = "\n".join(re.findall(r"<style[^>]*>(.*?)</style>", html, re.S | re.I))
+    keyframes = _KEYFRAMES_RE.findall(css)
+    css = _KEYFRAMES_RE.sub("", css)
+    css = re.sub(r":root\b", ":scope", css)
+    css = _HTML_BODY_RE.sub(r"\1", css)
+    css = _BODY_RE.sub(r"\1.zr-page{", css)
+    return CSS_HEADER + "\n".join(keyframes) + f"\n@scope ({KIT_SCOPE}) {{\n{css}\n}}\n"
 
 
 def kit_icons(html: str) -> str:

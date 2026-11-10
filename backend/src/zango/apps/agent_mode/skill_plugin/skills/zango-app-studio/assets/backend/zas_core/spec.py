@@ -9,10 +9,13 @@ here, so generated classes stay short: they declare Zango fields and set
 
 The file is re-read when its mtime changes, so a spec refresh needs no restart
 for config-only changes. Changes to models/forms/tables still need one.
+
+Classes and hooks come from backend/zas_registry.py, which the build writes per app with
+plain relative imports (`from .vendors.models import Vendor`). zas_core is the same in
+every app, so it never names an app module itself; it imports that one file, inside the
+functions below because the app's models import zas_core.
 """
 
-import functools
-import importlib
 import json
 import logging
 import os
@@ -24,9 +27,6 @@ _PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "spec.json")
 _lock = threading.Lock()
 _cache = {"mtime": None, "data": None}
 
-# backend package, e.g. "workspaces.vendor_hub.backend" - siblings are importable from it
-BACKEND_PKG = __package__.rsplit(".", 1)[0] if __package__ and "." in __package__ else "backend"
-
 
 def load():
     """The whole resolved spec (dict). Raises if spec.json is missing."""
@@ -37,7 +37,6 @@ def load():
                 with open(_PATH, encoding="utf-8") as f:
                     _cache["data"] = json.load(f)
                 _cache["mtime"] = mtime
-                _model.cache_clear()
     return _cache["data"]
 
 
@@ -76,46 +75,36 @@ def hole_fn(where):
     return None
 
 
-def _import(module, name):
-    return importlib.import_module(f"{BACKEND_PKG}.{module}.{name}")
-
-
-@functools.lru_cache(maxsize=None)
-def _model(code):
-    E = entity(code)
-    mod = _import(E["module"], "models")
-    return getattr(mod, E["names"]["model"])
-
-
 def model(code):
     """Model class for an entity code."""
-    return _model(code)
+    from ..zas_registry import MODELS
+
+    try:
+        return MODELS[code]
+    except KeyError:
+        raise KeyError(f"zas: entity {code!r} is missing from MODELS in backend/zas_registry.py")
 
 
 def workflow_class(code):
-    E = entity(code)
-    if not E.get("workflow"):
+    if not entity(code).get("workflow"):
         return None
-    try:
-        return getattr(_import(E["module"], "workflow"), E["names"]["workflow"])
-    except (ImportError, AttributeError):
-        logger.exception("zas: workflow class for %s not found", code)
-        return None
+    from ..zas_registry import WORKFLOWS
 
-
-def table_class(code):
-    E = entity(code)
-    return getattr(_import(E["module"], "tables"), E["names"]["table"])
+    WF = WORKFLOWS.get(code)
+    if WF is None:
+        logger.error("zas: workflow class for %s is missing from WORKFLOWS in backend/zas_registry.py", code)
+    return WF
 
 
 def hook(module, fn):
     """A function from backend/<module>/hooks.py, or None (logged) if not written yet."""
     if not fn:
         return None
-    try:
-        hooks = _import(module, "hooks")
-    except ImportError:
-        logger.warning("zas: backend/%s/hooks.py not found (looking for %s)", module, fn)
+    from ..zas_registry import HOOKS
+
+    hooks = HOOKS.get(module)
+    if hooks is None:
+        logger.warning("zas: hooks of module %s are missing from HOOKS in backend/zas_registry.py (looking for %s)", module, fn)
         return None
     f = getattr(hooks, fn, None)
     if f is None:

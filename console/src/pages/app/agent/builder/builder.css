@@ -973,12 +973,20 @@
 
 /* ---------- preview-only pane: the app's live preview, everything else behind ⋯ ---------- */
 .bld.pv .pv-h {
-	flex-wrap: nowrap;
+	/* wraps rather than pushing the ⋯ menu off the right edge when the pane is narrow */
+	flex-wrap: wrap;
+	row-gap: 6px;
 	min-width: 0;
 	margin-bottom: 10px;
 }
+.bld.pv .pv-h .mono {
+	white-space: nowrap;
+}
 .bld.pv .pv-h > .ml-auto {
-	flex-shrink: 0;
+	flex: 0 1 auto;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	min-width: 0;
 }
 .pv-pill {
 	display: inline-flex;
@@ -1047,6 +1055,159 @@
 	color: var(--accent-t);
 	font-size: 12.5px;
 }
+/* A change request: compare with the current app, and the screens the change touched */
+.pv-seg {
+	flex: none;
+	white-space: nowrap;
+	display: inline-flex;
+	padding: 2px;
+	gap: 2px;
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	background: var(--sunk, #f3f4f6);
+}
+.pv-seg button {
+	white-space: nowrap;
+	padding: 3px 10px;
+	border-radius: 6px;
+	font-size: 12px;
+	font-weight: 550;
+	color: var(--t3);
+}
+.pv-seg button.on {
+	background: var(--panel, #fff);
+	color: var(--t1);
+	box-shadow: 0 1px 2px rgba(15, 18, 32, 0.08);
+}
+.pv-change {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+	padding: 7px 8px 7px 12px;
+	margin-bottom: 8px;
+	border: 1px solid var(--border);
+	border-radius: 10px;
+	background: var(--panel, #fff);
+	font-size: 12.5px;
+	color: var(--t2);
+}
+.pv-change-l {
+	font-weight: 600;
+	color: var(--t3);
+	margin-right: 2px;
+}
+.pv-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 2px 4px 2px 9px;
+	border-radius: 999px;
+	border: 1px solid var(--accent-soft);
+	background: var(--accent-soft);
+	color: var(--accent-t);
+	font-size: 12px;
+	font-weight: 550;
+}
+.pv-chip i {
+	font-style: normal;
+	padding: 1px 7px;
+	border-radius: 999px;
+	background: var(--panel, #fff);
+	font-size: 10.5px;
+	font-weight: 600;
+}
+.pv-chip.new {
+	border-color: var(--green-soft);
+	background: var(--green-soft);
+	color: var(--green-t);
+}
+.pv-chip.removed {
+	text-decoration: line-through;
+	opacity: 0.7;
+	cursor: default;
+}
+.pv-chip.shared {
+	cursor: default;
+}
+button.pv-chip:not(:disabled):hover {
+	filter: brightness(0.97);
+}
+/* A change request: compare with the current app, and the screens the change touched */
+.pv-seg {
+	display: inline-flex;
+	padding: 2px;
+	gap: 2px;
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	background: var(--sunk, #f3f4f6);
+}
+.pv-seg button {
+	padding: 3px 10px;
+	border-radius: 6px;
+	font-size: 12px;
+	font-weight: 550;
+	color: var(--t3);
+}
+.pv-seg button.on {
+	background: var(--panel, #fff);
+	color: var(--t1);
+	box-shadow: 0 1px 2px rgba(15, 18, 32, 0.08);
+}
+.pv-change {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+	padding: 7px 8px 7px 12px;
+	margin-bottom: 8px;
+	border: 1px solid var(--border);
+	border-radius: 10px;
+	background: var(--panel, #fff);
+	font-size: 12.5px;
+	color: var(--t2);
+}
+.pv-change-l {
+	font-weight: 600;
+	color: var(--t3);
+	margin-right: 2px;
+}
+.pv-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 2px 4px 2px 9px;
+	border-radius: 999px;
+	border: 1px solid var(--accent-soft);
+	background: var(--accent-soft);
+	color: var(--accent-t);
+	font-size: 12px;
+	font-weight: 550;
+}
+.pv-chip i {
+	font-style: normal;
+	padding: 1px 7px;
+	border-radius: 999px;
+	background: var(--panel, #fff);
+	font-size: 10.5px;
+	font-weight: 600;
+}
+.pv-chip.new {
+	border-color: var(--green-soft);
+	background: var(--green-soft);
+	color: var(--green-t);
+}
+.pv-chip.removed {
+	text-decoration: line-through;
+	opacity: 0.7;
+	cursor: default;
+}
+.pv-chip.shared {
+	cursor: default;
+}
+button.pv-chip:not(:disabled):hover {
+	filter: brightness(0.97);
+}
 .pv-sheet .bv-yaml {
 	height: calc(100vh - 200px);
 }
@@ -1094,8 +1255,13 @@
 .rv-sec.rv-chat .rv-q {
 	flex-wrap: wrap;
 }
+.rv-sec.rv-chat .rv-q > div {
+	/* Never squeezed beside the path: take the row, the path wraps below. */
+	flex: 1 1 calc(100% - 30px);
+	overflow-wrap: anywhere;
+}
 .rv-sec.rv-chat .rv-where {
-	max-width: 100%;
+	max-width: calc(100% - 30px);
 	margin-left: 30px;
 }
 .rv-sec.rv-chat .rv-opts {

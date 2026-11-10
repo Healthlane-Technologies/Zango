@@ -6,13 +6,18 @@ Every app gets the same behaviour from here; the build writes only the prompts
 (tools.py) and the hand-written tasks that call run_from_code().
 
     on_event(entity, obj, event, ...)   create / update / transition / tag / delete triggers (from mixins.py)
-    run(code, obj=…, trigger=…)          start a run: background (Celery task zas_ai_run) or inline
-    execute(run)                         call the Zango agent and deliver the answer
+    run(code, obj=…, trigger=…)          queue a run (Celery task zas_ai_run); the screen polls it
+    execute(run)                         call the Zango agent and deliver the answer (in the task)
     accept(s, user, values) / discard    a person decides on a suggestion
-    chat(code, obj, message, session)    the "Ask AI" panel (inline, with memory)
-    form_assist(code, values, files)     fill an unsaved form from its documents (inline)
-    run_from_code(code, obj, variables)  for hand-written tasks (uses_ai); returns a Result, never raises
+    chat(code, obj, message, session)    the "Ask AI" panel: queues one turn (with memory); polled
+    form_assist(code, values, files)     fill an unsaved form from its documents: queued; polled
+    run_later(code, obj, then=…)         from a hook during a save: queue the run, then call `then`
+    run_from_code(code, obj, variables)  inside a task (uses_ai); returns a Result, never raises
     schedule_tick(now)                   schedule triggers (zas_ai_tick runs every minute)
+
+An agent never runs inside a web request: every call happens in the zas_ai_run Celery task (or in
+a task the app wrote), and the screen polls `?action=zas_ai&run=<id>`. run_from_code refuses to
+run during a request; a hook uses run_later instead.
 
 What the AI sees: only the agent's context fields, related rows and files, and only
 records the acting person can see (built-in tools are scoped the same way).
@@ -253,13 +258,14 @@ def _fake(a):
 
 
 def call(a, request=None, role=None, system_variables=None, user_variables=None, input=None, files=None,
-         session_id=None, triggered_by="user"):
-    """One Zango agent call. Returns (answer, session_id): a dict for kind fields, text otherwise."""
+         session_id=None, triggered_by="user", obj=None):
+    """One Zango agent call. Returns (answer, session_id): a dict for kind fields, text otherwise.
+    obj: the record the helper works on, handed to its tools through acting()."""
     if fake_on():
         return _fake(a), session_id
     from zango.ai.exceptions import AgentDisabled, BudgetExceeded, OutputParseError, ProviderDisabled, ZangoAIError
     client = _client(a)
-    token = _acting.set({"agent": a, "request": request, "role": role})
+    token = _acting.set({"agent": a, "request": request, "role": role, "record": obj})
     try:
         kw = {"system_variables": system_variables or None, "triggered_by": triggered_by, "files": files or None}
         if input is not None:
@@ -288,7 +294,9 @@ def call(a, request=None, role=None, system_variables=None, user_variables=None,
 
 
 def acting():
-    """While an agent runs: {agent, request, role}. The built-in tools read it."""
+    """While an agent runs: {agent, request, role, record}. Tools read it: `record` is the model
+    instance the helper works on (None for list buttons and form fill); `request.user` is the person
+    who started it, None for task and schedule runs; `role` is "" when no person started it."""
     return _acting.get()
 
 
@@ -298,9 +306,9 @@ def _payload_role(request):
     return access.role_name(request) if request is not None else ""
 
 
-def run(code, obj=None, trigger="button", request=None, rows=None, input=None, inline=None, check=True, snapshot=False):
-    """Start a run. inline (default: the agent's run setting, async for background triggers)
-    executes it now; otherwise it is queued for the zas_ai_run task once the transaction commits."""
+def run(code, obj=None, trigger="button", request=None, rows=None, input=None, check=True, snapshot=False, extra=None):
+    """Queue a run for the zas_ai_run task (sent once the transaction commits) and return it; the
+    caller polls it. extra: more inputs the task reads (a chat message, a form's values and files)."""
     a = agent(code)
     role = _payload_role(request)
     if check and request is not None and not can_run(a, role):
@@ -313,12 +321,10 @@ def run(code, obj=None, trigger="button", request=None, rows=None, input=None, i
         inputs={k: v for k, v in {"rows": [str(x.object_uuid) for x in rows] if rows is not None else None,
                                   "input": input,
                                   # a deleted record is gone by the time a background run starts
-                                  "record": record_text(a, obj) if snapshot and obj is not None else None}.items()
+                                  "record": record_text(a, obj) if snapshot and obj is not None else None,
+                                  **(extra or {})}.items()
                 if v is not None},
         created_by=user if getattr(user, "pk", None) and type(user).__name__ == "AppUserModel" else None)
-    inline = (a["run"] == "inline") if inline is None else inline
-    if inline:
-        return execute(r, request=request, obj=obj, rows=rows)
     _enqueue(r)
     return r
 
@@ -328,9 +334,11 @@ def _enqueue(r):
         try:
             from zango.core.tasks import zango_task_executor
             zango_task_executor.delay(connection.tenant.name, TASK, run_id=r.pk)
-        except Exception:
-            logger.exception("zas: could not queue AI run %s; running it now", r.pk)
-            execute(r)
+        except Exception:  # never run it here instead: an agent does not run in a request
+            logger.exception("zas: could not queue AI run %s", r.pk)
+            type(r).objects.filter(pk=r.pk, status="queued").update(
+                status="failed", error="The background worker could not be reached. Try again in a minute.",
+                finished_at=timezone.now())
     transaction.on_commit(go)
 
 
@@ -359,23 +367,94 @@ def execute(r, request=None, obj=None, rows=None):
         if rows is None and "rows" in (r.inputs or {}):
             qs = zs.model(a["entity"]).objects.filter(object_uuid__in=r.inputs["rows"])
             rows = list(access.scope_queryset(a["entity"], qs, req) if r.role else qs)
-        sv, uv = variables(a, obj=obj, rows=rows, request=req if r.role else None, role=r.role,
-                           input=(r.inputs or {}).get("input"), snapshot=(r.inputs or {}).get("record"))
-        answer, _ = call(a, request=req, role=r.role, system_variables=sv, user_variables=uv,
-                         files=files_of(a, obj) if a["context"]["files"] and obj is not None else None,
-                         triggered_by="user" if r.trigger in ("button", "chat", "form_assist") else
-                         ("cron" if r.trigger == "schedule" else "celery"))
-        r.result = _clean(a, answer)
+        inp = r.inputs or {}
+        by = "user" if r.trigger in ("button", "chat", "form_assist") else ("cron" if r.trigger == "schedule" else "celery")
+        if r.trigger == "chat":
+            sv, _ = variables(a, obj=obj, rows=rows, request=req if r.role else None, role=r.role)
+            answer, sid = call(a, request=req, role=r.role, system_variables=sv, input=inp.get("message") or "",
+                               session_id=inp.get("session_id") or None, triggered_by=by, obj=obj,
+                               files=files_of(a, obj) if a["context"]["files"] and obj is not None else None)
+            r.result, r.inputs = answer, {**inp, "session_out": sid}
+        elif r.trigger == "form_assist":
+            sv, uv = variables(a, values=inp.get("values") or {}, request=req if r.role else None, role=r.role)
+            answer, _ = call(a, request=req, role=r.role, system_variables=sv, user_variables=uv, triggered_by=by,
+                             files=files_of(a, uploads=_stored_files(inp.get("files"))) or None)
+            r.result = _clean(a, answer)
+        else:
+            sv, uv = variables(a, obj=obj, rows=rows, request=req if r.role else None, role=r.role,
+                               input=inp.get("input"), snapshot=inp.get("record"))
+            answer, _ = call(a, request=req, role=r.role, system_variables=sv, user_variables=uv,
+                             files=files_of(a, obj) if a["context"]["files"] and obj is not None else None,
+                             triggered_by=by, obj=obj)
+            r.result = _clean(a, answer)
         r.status = "done"
-        deliver(a, r, obj)
+        if r.trigger != "form_assist":
+            deliver(a, r, obj)
     except Unavailable as e:
         r.status, r.error = "unavailable", str(e)
     except Exception as e:  # noqa: BLE001 - a run never breaks the caller
         logger.exception("zas: AI run %s (%s) failed", r.pk, r.agent)
         r.status, r.error = "failed", _message(e)
+    finally:
+        _drop_files((r.inputs or {}).get("files"))
     r.finished_at = timezone.now()
     r.save()
+    _then(a, r, obj)
     return r
+
+
+def _then(a, r, obj):
+    """run_later's continuation: <module>/hooks.py::<then>(obj, Result), after the run, whatever its status."""
+    name = (r.inputs or {}).get("then")
+    if not name:
+        return
+    fn = zs.hook(zs.entity(a["entity"])["module"], name) if a.get("entity") else None
+    if fn is None:
+        r.error = (r.error + "\n" if r.error else "") + f"then: {name} is not in hooks.py"
+        r.save(update_fields=["error", "modified_at"])
+        return
+    try:
+        fn(obj, Result(r.status, r.result, r.error, r.pk, run_payload(r)))
+    except Exception as e:  # noqa: BLE001
+        logger.exception("zas: %s after AI run %s failed", name, r.pk)
+        r.error = (r.error + "\n" if r.error else "") + f"then: {_message(e)}"
+        r.save(update_fields=["error", "modified_at"])
+
+
+# Form fill uploads wait in storage for the task, which removes them after the run.
+def _store_files(uploads):
+    import uuid
+    from django.core.files.storage import default_storage
+    out = []
+    for f in uploads or []:
+        name = default_storage.save(f"zas_ai_uploads/{uuid.uuid4().hex}/{os.path.basename(f.name)}", f)
+        out.append({"path": name, "name": os.path.basename(f.name), "type": getattr(f, "content_type", None) or _mime(f.name)})
+    return out
+
+
+class _Stored:
+    def __init__(self, d):
+        from django.core.files.storage import default_storage
+        self.name, self.content_type, self._path, self._st = d["name"], d.get("type"), d["path"], default_storage
+
+    def read(self):
+        with self._st.open(self._path, "rb") as fh:
+            return fh.read()
+
+
+def _stored_files(files):
+    return [_Stored(d) for d in files or []]
+
+
+def _drop_files(files):
+    if not files:
+        return
+    from django.core.files.storage import default_storage
+    for d in files:
+        try:
+            default_storage.delete(d["path"])
+        except Exception:  # noqa: BLE001
+            logger.warning("zas: could not remove AI upload %s", d.get("path"))
 
 
 def _message(e):
@@ -481,66 +560,96 @@ def discard(s, request):
     s.save()
 
 
-# ───────────────────────────── inline helpers ─────────────────────────────
+# ───────────────────────────── chat and form fill (queued; the screen polls) ─────────────────────────────
 
 def chat(code, obj, message, request, session_id=None, rows=None):
-    """One chat turn. Returns {answer, session_id, run}."""
+    """Queue one chat turn. Returns the run payload; when it is done its `result` is the answer and
+    `session_id` the conversation to send with the next message."""
     a = agent(code)
     role = _payload_role(request)
     if not can_run(a, role):
         raise Denied(f"{role} may not use {a['name']}")
-    ZasAiRun, _ = _models()
-    user = getattr(request, "user", None)
-    r = ZasAiRun.objects.create(agent=code, entity=a.get("entity") or "", record_uuid=str(getattr(obj, "object_uuid", "") or ""),
-                                trigger="chat", role=role or "", status="running", inputs={"message": message[:2000]},
-                                created_by=user if type(user).__name__ == "AppUserModel" else None)
-    sv, _ = variables(a, obj=obj, rows=rows, request=request, role=role)
-    try:
-        answer, session_id = call(a, request=request, role=role, system_variables=sv, input=message, session_id=session_id)
-        r.status, r.result = "done", answer
-    except Unavailable as e:
-        r.status, r.error, answer = "unavailable", str(e), None
-    except Exception as e:  # noqa: BLE001
-        logger.exception("zas: AI chat %s failed", code)
-        r.status, r.error, answer = "failed", _message(e), None
-    r.finished_at = timezone.now()
-    r.save()
-    return {"answer": answer, "session_id": session_id, "run": run_payload(r)}
+    r = run(code, obj=obj, trigger="chat", request=request, rows=rows, check=False,
+            extra={"message": (message or "")[:2000], "session_id": session_id or None})
+    return run_payload(r)
 
 
 def form_assist(code, values, uploads, request):
-    """Fill an unsaved form from its documents. Returns {form field: value} (nothing is saved)."""
+    """Queue filling an unsaved form from its documents (kept in storage until the run is over).
+    Returns the run payload; when it is done its `values` are {form field: value}. Nothing is saved."""
     a = agent(code)
     role = _payload_role(request)
     if not can_run(a, role):
         raise Denied(f"{role} may not use {a['name']}")
-    ZasAiRun, _ = _models()
-    user = getattr(request, "user", None)
-    r = ZasAiRun.objects.create(agent=code, entity=a.get("entity") or "", trigger="form_assist", role=role or "",
-                                status="running", created_by=user if type(user).__name__ == "AppUserModel" else None)
-    sv, uv = variables(a, values=values or {}, request=request, role=role)
+    r = run(code, trigger="form_assist", request=request, check=False,
+            extra={"values": {k: _jsonable(v) for k, v in (values or {}).items()}, "files": _store_files(uploads) or None})
+    return run_payload(r)
+
+
+def call_tool(code, tool_name, tool_input, request=None, obj=None):
+    """Test-only (POST ?action=zas_ai_tool, DEBUG): run one of a helper's tools the way a run of that
+    helper would — through Zango's tool executor (input checked against the tool's schema, timeout),
+    with acting() set: as `request`'s person and role, or as the system (request None: a task run).
+    The fake AI never calls tools, so this is how tests reach them. Returns {status, output, error}."""
+    a = agent(code)
+    if tool_name not in (a.get("tools") or []):
+        raise ValueError(f"{tool_name!r} is not one of {a['name']}'s tools ({', '.join(a.get('tools') or []) or 'none'})")
+    from zango.ai.tools.executor import ToolExecutor
+    role = _payload_role(request) if request is not None else ""
+    req = request if request is not None else _RunRequest(None, "")
+    token = _acting.set({"agent": a, "request": req, "role": role, "record": obj})
     try:
-        answer, _ = call(a, request=request, role=role, system_variables=sv, user_variables=uv,
-                         files=files_of(a, uploads=uploads) or None)
-        r.status, r.result = "done", _clean(a, answer)
-    except Unavailable as e:
-        r.status, r.error = "unavailable", str(e)
-    except Exception as e:  # noqa: BLE001
-        logger.exception("zas: AI form fill %s failed", code)
-        r.status, r.error = "failed", _message(e)
-    r.finished_at = timezone.now()
-    r.save()
-    return {"values": {k: _jsonable(v) for k, v in writes(a, r.result).items()} if r.status == "done" else {},
-            "run": run_payload(r)}
+        res = ToolExecutor().execute(tool_name, dict(tool_input or {}))
+    finally:
+        _acting.reset(token)
+    return {"status": res.status, "output": res.output, "error": res.error_message}
+
+
+IN_REQUEST = ("{code} was called during a web request: an agent runs only in a background task. "
+              "From a hook use run_later(\"{code}\", obj=…, then=\"<hooks.py function>\") (references/map/ai.md).")
+
+
+def in_request():
+    """True while Django is answering a web request (zango's middleware keeps the current request)."""
+    try:
+        from zango.core.utils import get_current_request
+        return get_current_request() is not None
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def run_later(code, obj=None, then=None, variables=None, user=None):
+    """From a hook that runs during a save: queue the helper and return the run at once. In the task,
+    after the run, <module>/hooks.py::<then>(obj, res) gets the Result (any status) and does the
+    rest (open the case, flag the record). user: who it is for (tools see them; the run is a system
+    run, as from a task). Never raises."""
+    try:
+        agent(code)
+    except KeyError as e:
+        logger.error("zas: run_later: %s", e)
+        return None
+    inp = (variables or {}).get("input") if isinstance(variables, dict) else variables
+    ZasAiRun, _ = _models()
+    a = agent(code)
+    r = ZasAiRun.objects.create(agent=code, entity=a.get("entity") or "", record_uuid=str(getattr(obj, "object_uuid", "") or ""),
+                                trigger="task", status="queued",
+                                inputs={k: v for k, v in {"input": inp, "then": then}.items() if v is not None},
+                                created_by=user if getattr(user, "pk", None) and type(user).__name__ == "AppUserModel" else None)
+    _enqueue(r)
+    return r
 
 
 def run_from_code(code, obj=None, variables=None, triggered_by="celery"):
-    """For hand-written tasks and hooks (custom requirements with uses_ai). Synchronous; never raises.
+    """For hand-written tasks (custom requirements with uses_ai): runs the helper now, in the task that
+    calls it. Never inside a web request: there it returns a failed Result (use run_later). Never raises.
 
         res = run_from_code("invoice_triage", obj=invoice, variables={"input": email_text})
         if res.ok: ...res.result...        # dict for kind fields, text otherwise
         elif res.status == "unavailable":  # no AI account yet: carry on without it
     """
+    if in_request():
+        logger.error("zas: " + IN_REQUEST.format(code=code))
+        return Result("failed", error=IN_REQUEST.format(code=code))
     try:
         a = agent(code)
     except KeyError as e:
@@ -571,7 +680,7 @@ def on_event(entity_code, obj, event, request=None, transition=None, tag=None, c
                     continue
                 if t.get("when_ast") is not None and not zx.evaluate(t["when_ast"], obj, access.expr_ctx(request)):
                     continue
-                run(a["code"], obj=obj, trigger=event, request=request, inline=False, check=False,
+                run(a["code"], obj=obj, trigger=event, request=request, check=False,
                     snapshot=event == "delete")
                 break  # one run per helper per event
     except Exception:  # noqa: BLE001
@@ -619,14 +728,14 @@ def schedule_tick(now=None, limit=200):
             if not _cron_match(t.get("cron"), now):
                 continue
             if not a.get("entity"):
-                run(a["code"], trigger="schedule", inline=False, check=False)
+                run(a["code"], trigger="schedule", check=False)
                 n += 1
                 continue
             qs = zs.model(a["entity"]).objects.all()
             if t.get("when_ast") is not None:
                 qs = qs.filter(zx.to_q(t["when_ast"], qs.model, {}))
             for obj in qs.order_by("id")[:limit]:
-                run(a["code"], obj=obj, trigger="schedule", inline=False, check=False)
+                run(a["code"], obj=obj, trigger="schedule", check=False)
                 n += 1
     return n
 
@@ -655,15 +764,22 @@ def run_payload(r):
     a = next((x for x in agents() if x["code"] == r.agent), None) or {"name": r.agent, "output": {"kind": "text", "fields": []}}
     sugg = None
     if r.status == "done" and a.get("review") == "suggest":
-        s = r.suggestions.filter(status="pending").first() if r.pk else None
+        # query the model, not r.suggestions: Zango reloads app models, so the reverse accessor may be missing
+        s = _models()[1].objects.filter(run_id=r.pk, status="pending").first() if r.pk else None
         sugg = suggestion_payload(s) if s else None
     labels = {f["key"]: f.get("label") or f["key"] for f in a["output"].get("fields") or []}
     result = r.result
     if a["output"]["kind"] == "fields" and isinstance(result, dict):
         result = [{"key": k, "label": labels.get(k, k), "value": v} for k, v in result.items()]
-    return {"id": r.pk, "agent": r.agent, "name": a["name"], "status": r.status, "trigger": r.trigger,
-            "kind": a["output"]["kind"], "result": result, "error": r.error, "applied": r.applied,
-            "suggestion": sugg, "record_uuid": r.record_uuid or None}
+    out = {"id": r.pk, "agent": r.agent, "name": a["name"], "status": r.status, "trigger": r.trigger,
+           "kind": a["output"]["kind"], "result": result, "error": r.error, "applied": r.applied,
+           "suggestion": sugg, "record_uuid": r.record_uuid or None}
+    if r.trigger == "chat":
+        out["session_id"] = (r.inputs or {}).get("session_out") or (r.inputs or {}).get("session_id")
+    if r.trigger == "form_assist":
+        out["values"] = ({k: _jsonable(v) for k, v in writes(a, r.result).items()}
+                         if r.status == "done" and a.get("output", {}).get("kind") else {})
+    return out
 
 
 def clicks(entity_code, role, where):

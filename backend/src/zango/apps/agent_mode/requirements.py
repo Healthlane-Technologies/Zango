@@ -637,6 +637,20 @@ _OPEN_FIRST_DRAFT = (
     '"screen-writer"), several in ONE message so they run in parallel, each with a '
     "brief: screen id, purpose, personas, records and fields, actions and their outcomes, "
     "states to show. Review what they report and fix shared parts yourself.\n"
+    "- The look starts from the platform's default design, which the zango-prototype skill's "
+    "references/example holds part for part (rail with logo tile, who card and menu counts; "
+    "header band; lists in one card with search, segmented filters, sortable headers, two-line "
+    "cells and a pager; record pages with an icon tile, stepper, tabs and a summary rail): write "
+    "its tokens.css and app.css unchanged, its shell.js with your counts, and every list, record "
+    "and home screen the way its samples.js, sample.js and bench.js are built. Never invent a "
+    "palette or a dark sidebar; a different look only when the user asks or gives a reference.\n"
+    "- The brand colour is `app.theme.primary` in the YAML (#4F46E5 unless the user names one): "
+    "the preview sets --brand from it and its colour picker changes it. Never write a brand hex in "
+    "a part; use var(--brand) and the shades tokens.css derives from it.\n"
+    "- Every entity with a list page also gets a record page, a `record` screen in the "
+    "prototype opened by clicking anywhere on the row (data-act on the <tr>), and a "
+    '`detail_views` entry in the YAML, even for a "simple" app: simple means few fields and '
+    "tabs, not no record page (spec_mark_ready refuses without one).\n"
 )
 
 _OPEN_PROTOTYPE_BODY = (
@@ -694,8 +708,27 @@ _OPEN_UPLOADS = (
     "after the first draft is on screen, and say which parts you took from the references."
 )
 
+# A fixed platform page: the crud package's list of finished exports. Said once, to every drawing mode.
+_MY_DOWNLOADS_RULE = (
+    "\n- My Downloads: every role that can export (`export` in an entity's access) ends its menu "
+    "with `{page: my_downloads, label: My Downloads, icon: download}`; a role that cannot export "
+    "gets none (the build adds it to exporting roles anyway, so the preview must show it; a role "
+    "may opt out with `no_downloads: true`). It is the platform's own page of finished exports, so declare no page and write no "
+    "custom screen for it: draw the item in that persona's prototype menu and, once, a simple "
+    "My Downloads screen (Report title, Initiated at, Status, File) mapped as `maps: "
+    '/system/@my_downloads` in `prototype.screens`. A request like "recruiters need somewhere to '
+    'pick up their exports" is answered by it, not designed: do the change in this turn and '
+    "never ask the user which columns to show, whose files (only the signed-in user's own), how "
+    "long files stay (the platform decides) or where it goes (last item of the menu). Afterwards "
+    "say what you added and that those are fixed.\n"
+)
+
 _OPEN_PROTOTYPE_APPEND = (
-    _OPEN_PROTOTYPE_HEAD + _OPEN_FIRST_DRAFT + _OPEN_PROTOTYPE_BODY + _OPEN_UPLOADS
+    _OPEN_PROTOTYPE_HEAD
+    + _OPEN_FIRST_DRAFT
+    + _OPEN_PROTOTYPE_BODY
+    + _MY_DOWNLOADS_RULE
+    + _OPEN_UPLOADS
 )
 
 
@@ -725,6 +758,17 @@ _DESIGN_FEATURES = (
     "  - menu: `roles[].menu` with groups (section labels), icons and counts (`count: true | "
     "{where}` on a crud page's item); the user card at the top of the sidebar: `app.shell: "
     "{user: top}`\n"
+    "  - My Downloads: every role that can export (`export` in an entity's access) ends its menu "
+    "with `{page: my_downloads, label: My Downloads, icon: download}`; a role that cannot export "
+    "gets none. It is the crud package's own page of finished exports, so there is no page to "
+    "declare: draw the item in that persona's prototype menu and, once, a simple My Downloads "
+    "screen (Report title, Initiated at, Status, File), mapped as `maps: /system/@my_downloads` "
+    "in `prototype.screens`. The readiness check warns for a role that can export and lacks it. "
+    'It is a fixed platform page, so a request like "recruiters need somewhere to pick up their '
+    'exports" is answered by it, not designed: never ask the user which columns to show (ID, '
+    "Report Title, Initiated At, Status, File), whose files (only the signed-in user's own), how "
+    "long files stay (the platform decides) or where it goes (last item of the menu). Say what "
+    "you added and that those are fixed\n"
     "  Not drawn by the kit: a search box in the top bar.\n"
 )
 
@@ -886,7 +930,10 @@ def build_analyst_options(
             + (
                 # Template mode edits an existing prototype: it has no first draft and
                 # takes uploads as references, so those two parts are left out.
-                _OPEN_PROTOTYPE_HEAD + _OPEN_PROTOTYPE_BODY + _TEMPLATE_MODE_APPEND
+                _OPEN_PROTOTYPE_HEAD
+                + _OPEN_PROTOTYPE_BODY
+                + _MY_DOWNLOADS_RULE
+                + _TEMPLATE_MODE_APPEND
                 if getattr(requirement, "mode", "") == "template"
                 else _OPEN_PROTOTYPE_APPEND
             ),

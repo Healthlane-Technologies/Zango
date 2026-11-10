@@ -723,8 +723,34 @@ def _conclude(run, status, extra, recorder) -> dict:
             extra.get("pending_actions") or [], extra.get("studio_checkpoint") or {}
         )
     else:
+        if run.requires_restart:
+            _signal_worker_restart(recorder)
         run.finalize(status, **extra)
     return {"status": run.status, "events": recorder.seq}
+
+
+def _signal_worker_restart(recorder) -> None:
+    """Local dev: restart the app worker so it loads the build's new tasks."""
+    from django.conf import settings as dj
+
+    from .models import EventKind, EventLevel
+    from .postrun import signal_worker_restart
+
+    try:
+        touched = signal_worker_restart(
+            getattr(dj, "AGENT_MODE_RESTART_SIGNAL_FILE", ""), str(dj.BASE_DIR)
+        )
+    except OSError:
+        logger.exception("agent_mode: could not touch the restart signal file")
+        return
+    if touched:
+        recorder.emit(
+            EventKind.SYS,
+            "Restarting the app worker to load the new tasks.",
+            level=EventLevel.SYS,
+            data={"restart_signal_file": touched},
+        )
+        recorder.flush()
 
 
 def _handle_build_tool(call, studio, tenant, emit) -> None:
@@ -1959,6 +1985,13 @@ def _record_analyst_reply(req, text_parts, session_id, cost, bench=None) -> dict
 
     req.is_thinking = False
     req.error_message = ""
+    if req.status != RequirementStatus.APPROVED:
+        from .prototype_changes import retitle_change
+
+        try:
+            retitle_change(req)
+        except Exception:  # noqa: BLE001 - a title is never worth failing the turn
+            logger.exception("agent_mode: retitle failed for %s", req.pk)
     req.save()
     return {
         "status": req.status,

@@ -149,6 +149,23 @@ class LandmarkTests(unittest.TestCase):
         self.assertEqual(detail["label"], ["Collected by"])
         self.assertEqual(detail["title"], [])  # a long record name is data, not copy
 
+    def test_a_prefixed_tab_class_is_a_tab(self):
+        # the skill example draws record tabs as <button class="d-tab">, without role="tab"
+        marks = PL.landmarks(
+            '<main><div class="d-tabs"><button class="d-tab on">Details</button>'
+            '<button class="d-tab">Feedback<span class="n">2</span></button></div>'
+            '<button class="z-btn">Reject</button></main>'
+        )
+        self.assertEqual(marks["tab"], ["Details", "Feedback"])
+        self.assertEqual(marks["button"], ["Reject"])
+
+    def test_the_example_record_page_marks_its_tabs(self):
+        screen = (
+            Path(PL.__file__).resolve().parents[2]
+            / "zango-prototype/references/example/screens/sample.js"
+        ).read_text()
+        self.assertIn('role="tab"', screen)
+
 
 class CoverageTests(unittest.TestCase):
     def setUp(self):
@@ -162,6 +179,13 @@ class CoverageTests(unittest.TestCase):
         result = pc.coverage(spec(), self.bundle)
         self.assertEqual(result["menu"], [])
         self.assertEqual(result["screens"], [])
+
+    def test_a_platform_page_is_not_compared_with_the_spec(self):
+        # My Downloads is served by the platform: its title and columns are in no spec
+        doc = spec()
+        doc["prototype"]["screens"][4] = {"id": "tour", "maps": "/system/@my_downloads"}
+        ids = [s["id"] for s in pc.coverage(doc, self.bundle)["screens"]]
+        self.assertNotIn("tour", ids)
 
     def test_a_dropped_column_status_tab_and_section_are_named(self):
         doc = spec()
