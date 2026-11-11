@@ -100,9 +100,17 @@ default account; with no working default it makes a placeholder as before.
       banner, logos, Connect drawer (platform account or own key), linked-key card in the edit drawer.
 - [x] Tests: `test_ai_build` 19 green. Local DB migrated (all 68 apps).
 - [x] Claude subscription for local testing (`ai/providers/claude_subscription.py`): same switch as Build with AI
-      (`AGENT_MODE_AUTH=subscription` + `CLAUDE_CODE_OAUTH_TOKEN` + DEBUG), one tool-less turn through the Claude
-      Code CLI per call; no tools, no files, schema asked for not enforced, cost 0. Hidden and "not connected"
-      when the switch is off. The build prefers it for new and waiting accounts.
+      (`AGENT_MODE_AUTH=subscription` + `CLAUDE_CODE_OAUTH_TOKEN` + DEBUG), one turn through the Claude Code
+      CLI per call; no files, schema asked for not enforced, cost 0. Hidden and "not connected" when the switch
+      is off. The build prefers it for new and waiting accounts.
+- [x] Tool support for it (2026-11-07): the agent's tools are shown to the CLI as an in-process MCP server with
+      stub handlers and `max_turns=1`; the provider returns the `ToolUseBlock`s as `stop_reason="tool_use"` and
+      `AgentClient`/`ToolExecutor` run and log them (nothing runs in the CLI). Probed for real first: a
+      `can_use_tool` deny with `interrupt=True` aborts the CLI after the FIRST call (parallel calls lost,
+      `error_during_execution`), so the plan's fallback is used (all 4 parallel calls arrive; the turn ends with
+      `error_max_turns`, which the provider accepts only when calls arrived). Do not put the tools in
+      `allowed_tools` together with `can_use_tool`: allowed tools skip it. Earlier calls/results go into the next
+      prompt as text. Tests: `SubscriptionTests` in `test_ai_build`.
 - [x] Claude Opus 5.5 / Sonnet 5.5 in the Anthropic model list (per-model cache-read price); Sonnet 5.5 is
       the recommended default and the spec default (pack 1.1.41, re-imported locally).
 - [x] Checked in Chrome: Settings → AI accounts (empty state, wizard, card, drawer), App → AI → Providers
@@ -117,6 +125,7 @@ default account; with no working default it makes a placeholder as before.
 
 ## Log
 
+- 2026-11-07: subscription provider supports tools (see P3a). Tools run through Zango's ToolExecutor only.
 - 2026-11-06: P2 code done (checker, runtime back + front, platform AI step, docs, tests). Not yet run end to end in a real build.
 
 - 2026-11-06: AI placements everywhere (rows, list header, forms, 360 tabs/panels); pack 1.1.40 re-imported locally.
