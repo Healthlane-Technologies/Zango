@@ -77,7 +77,14 @@ class _ToolDecorator:
         self.__module__ = func.__module__
 
     def __call__(self, *args, **kwargs):
-        return self._func(*args, **kwargs)
+        # A parameter the model left out would otherwise arrive as the ToolParam
+        # descriptor itself; hand the function its real default instead.
+        bound = inspect.signature(self._func).bind(*args, **kwargs)
+        for name, param in inspect.signature(self._func).parameters.items():
+            if name not in bound.arguments and isinstance(param.default, ToolParam):
+                if param.default.default is not _MISSING:
+                    bound.arguments[name] = param.default.default
+        return self._func(*bound.args, **bound.kwargs)
 
 
 def tool(
